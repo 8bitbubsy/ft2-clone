@@ -11,3 +11,6 @@ If these don't work for you, you'll have to compile the code manually.
 
 # Compiling the code
 Please read HOW-TO-COMPILE.txt file in the repository.
+
+PS: The source code is quite hackish and hardcoded. \
+My first priority is _accuracy_, not flexibility and clean code.
