@@ -1,0 +1,12 @@
+
+*.db
+*.ilk
+*.pdb
+*.log
+*.res
+*.tlog
+*.obj
+*.idb
+*.exe
+*.cache
+vs2019_project/.vs/ft2-clone/v16/.suo

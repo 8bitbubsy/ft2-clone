@@ -18,7 +18,7 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
     Ubuntu/Debian and similar: build-essential libsdl2-dev
     Fedora: gcc gcc-c++ alsa-lib-devel SDL2-devel
     Others: www.google.com (you want gcc, g++ (or c++), alsa dev and SDL2 dev)
- 2. Compile the FT2 clone:     (folder: "ft2clone")
+ 2. Compile the FT2 clone:     (folder: "ft2-clone")
     chmod +x make-linux.sh     (only needed once)
     ./make-linux.sh
     
@@ -33,7 +33,7 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
  1. Download Visual Studio Community 2019 (it's free)
  2. Start the installer and select the "Desktop development with C++" package
  3. Install and wait for it to finish...
- 4. Open "ft2clone\vs2019_project\ft2-clone.sln"
+ 4. Open "ft2-clone\vs2019_project\ft2-clone.sln"
  5. If you're missing the Windows 10 SDK, then you need to change the Windows
     SDK version used in the project settings for both debug and release x86/x64.
  6. Compile (make sure it's in Release mode. Also note x86/x64)
@@ -44,6 +44,6 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
  2. Download the SDL 2.0.10 framework here:
     https://www.libsdl.org/release/SDL2-2.0.10.dmg
  3. Inside the package, copy SDL2.framework to /Library/Frameworks/
- 4. Compile the FT2 clone:     (folder: "ft2clone"):
+ 4. Compile the FT2 clone:     (folder: "ft2-clone"):
     chmod +x make-macos.sh      (only needed once)
    ./make-macos.sh
