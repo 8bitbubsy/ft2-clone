@@ -1,4 +1,4 @@
-# ft2clone
+# ft-2clone
 Fasttracker II clone for Windows/macOS/Linux
 
 Aims to be a **highly accurate** clone of the classic Fasttracker II MS-DOS software.
