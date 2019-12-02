@@ -1,7 +1,7 @@
 # ft2-clone
 Fasttracker II clone for Windows/macOS/Linux
 
-Aims to be a **highly accurate** clone of the classic Fasttracker II MS-DOS software.
+Aims to be a **highly accurate** clone of the classic Fasttracker II software for MS-DOS.
 
 # Releases
 Windows/macOS binary releases can always be found at [16-bits.org](https://16-bits.org/ft2.php).
