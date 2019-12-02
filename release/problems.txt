@@ -1,0 +1,8 @@
+If you have any problems, read Help -> "Problems/FAQ" inside the program.
+Also read "Known bugs".
+
+If the program can't start at all, then I recommend that you send me a mail
+to olav.sorensen@live.no
+
+If you selected a big window size by accident and can't go back, press
+ALT+ENTER to enter fullscreen, then you go to Config and reset the config.

@@ -1,0 +1,33 @@
+#include <winver.h>
+#include "ft2_header.h" // PROG_VER_STR
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     1,0,0,0
+FILETYPE        VFT_APP
+
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904b0"
+		BEGIN
+			VALUE "FileDescription",  "Fasttracker II clone for Windows"
+			VALUE "ProductName",      "Fasttracker II clone"
+			VALUE "ProductVersion",   PROG_VER_STR
+#ifdef _WIN64
+			VALUE "InternalName",     "ft2-clone-win64"
+			VALUE "OriginalFilename", "ft2-clone-win64.exe"
+#else
+			VALUE "InternalName",     "ft2-clone-win32"
+			VALUE "OriginalFilename", "ft2-clone-win32.exe"
+#endif
+			VALUE "LegalCopyright",   "Copyright © Olav ""8bitbubsy"" Sørensen"
+		END
+	END
+
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x0409, 1200
+	END
+END
+
+IDI_MAIN_ICON ICON "gfxdata\\icon\\ft2-clone.ico"

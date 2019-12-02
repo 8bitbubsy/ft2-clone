@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDocumentTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>XM</string>
+                <string>xm</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ft2-clone-macos.icns</string>
+            <key>CFBundleTypeName</key>
+            <string>Fasttracker II module</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+        </dict>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>MOD</string>
+                <string>MOD</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ft2-clone-macos.icns</string>
+            <key>CFBundleTypeName</key>
+            <string>ProTracker module</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+        </dict>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>S3M</string>
+                <string>s3m</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ft2-clone-macos.icns</string>
+            <key>CFBundleTypeName</key>
+            <string>Scream Tracker 3 module</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+        </dict>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>STM</string>
+                <string>stm</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ft2-clone-macos.icns</string>
+            <key>CFBundleTypeName</key>
+            <string>Scream Tracker 2 module</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+        </dict>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>XI</string>
+                <string>xi</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ft2-clone-macos.icns</string>
+            <key>CFBundleTypeName</key>
+            <string>Fasttracker II instrument</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+        </dict>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>XT</string>
+                <string>xt</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ft2-clone-macos.icns</string>
+            <key>CFBundleTypeName</key>
+            <string>Fasttracker II pattern track</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+        </dict>
+        <dict>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>XP</string>
+                <string>xp</string>
+            </array>
+            <key>CFBundleTypeIconFile</key>
+            <string>ft2-clone-macos.icns</string>
+            <key>CFBundleTypeName</key>
+            <string>Fasttracker II pattern</string>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+        </dict>
+    </array>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>English</string>
+    <key>CFBundleExecutable</key>
+    <string>ft2-clone-macos</string>
+    <key>CFBundleGetInfoString</key>
+    <string>Fasttracker II clone</string>
+    <key>CFBundleIconFile</key>
+    <string>ft2-clone-macos.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>org.16-bits.ft2-clone-macos</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Fasttracker II clone</string>
+    <key>CFBundleDisplayName</key>
+    <string>Fasttracker II clone</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleShortVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleSignature</key>
+    <string>Ft2c</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © Olav "8bitbubsy" Sørensen
+https://16-bits.org</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.7</string>
+    <key>CGDisableCoalescedUpdates</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>

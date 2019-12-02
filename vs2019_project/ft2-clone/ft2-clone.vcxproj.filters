@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\src\ft2_audio.c" />
+    <ClCompile Include="..\..\src\ft2_config.c" />
+    <ClCompile Include="..\..\src\ft2_edit.c" />
+    <ClCompile Include="..\..\src\ft2_gui.c" />
+    <ClCompile Include="..\..\src\ft2_help.c" />
+    <ClCompile Include="..\..\src\ft2_inst_ed.c" />
+    <ClCompile Include="..\..\src\ft2_keyboard.c" />
+    <ClCompile Include="..\..\src\ft2_main.c" />
+    <ClCompile Include="..\..\src\ft2_mouse.c" />
+    <ClCompile Include="..\..\src\ft2_nibbles.c" />
+    <ClCompile Include="..\..\src\ft2_replayer.c" />
+    <ClCompile Include="..\..\src\ft2_scopes.c" />
+    <ClCompile Include="..\..\src\ft2_video.c" />
+    <ClCompile Include="..\..\src\ft2_sample_ed.c" />
+    <ClCompile Include="..\..\src\ft2_pattern_ed.c" />
+    <ClCompile Include="..\..\src\ft2_sample_loader.c" />
+    <ClCompile Include="..\..\src\ft2_sample_saver.c" />
+    <ClCompile Include="..\..\src\ft2_diskop.c" />
+    <ClCompile Include="..\..\src\ft2_unicode.c" />
+    <ClCompile Include="..\..\src\ft2_midi.c" />
+    <ClCompile Include="..\..\src\ft2_wav_renderer.c" />
+    <ClCompile Include="..\..\src\ft2_about.c" />
+    <ClCompile Include="..\..\src\ft2_trim.c" />
+    <ClCompile Include="..\..\src\ft2_checkboxes.c" />
+    <ClCompile Include="..\..\src\ft2_pushbuttons.c" />
+    <ClCompile Include="..\..\src\ft2_radiobuttons.c" />
+    <ClCompile Include="..\..\src\ft2_scrollbars.c" />
+    <ClCompile Include="..\..\src\ft2_textboxes.c" />
+    <ClCompile Include="..\..\src\ft2_sysreqs.c" />
+    <ClCompile Include="..\..\src\ft2_module_loader.c" />
+    <ClCompile Include="..\..\src\ft2_module_saver.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_fonts.c">
+      <Filter>graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_logo.c">
+      <Filter>graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_mouse.c">
+      <Filter>graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_nibbles.c">
+      <Filter>graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_sampler.c">
+      <Filter>graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ft2_mix.c" />
+    <ClCompile Include="..\..\src\ft2_sampling.c" />
+    <ClCompile Include="..\..\src\ft2_audioselector.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_scopes.c">
+      <Filter>graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_instr.c">
+      <Filter>graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_midi.c">
+      <Filter>graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ft2_events.c" />
+    <ClCompile Include="..\..\src\ft2_pattern_draw.c" />
+    <ClCompile Include="..\..\src\ft2_sample_ed_features.c" />
+    <ClCompile Include="..\..\src\rtmidi\RtMidi.cpp">
+      <Filter>rtmidi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\rtmidi\rtmidi_c.cpp">
+      <Filter>rtmidi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ft2_palette.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\ft2_audio.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_config.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_edit.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_gui.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_header.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_help.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_inst_ed.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_keyboard.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_mouse.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_nibbles.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_replayer.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_scopes.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_sample_ed.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_pattern_ed.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_sample_loader.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_sample_saver.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_video.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_diskop.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_unicode.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_midi.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_wav_renderer.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_about.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_trim.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_checkboxes.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_pushbuttons.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_radiobuttons.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_scrollbars.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_textboxes.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_sysreqs.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_module_loader.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_module_saver.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_gfxdata.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_mix.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_sampling.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_audioselector.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_mix_macros.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_events.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_pattern_draw.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_palette.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_sample_ed_features.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\rtmidi\RtMidi.h">
+      <Filter>rtmidi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\rtmidi\rtmidi_c.h">
+      <Filter>rtmidi</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="headers">
+      <UniqueIdentifier>{559f399e-331e-4688-8a7d-328ca6739456}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="graphics">
+      <UniqueIdentifier>{c6fad604-509b-4072-b181-d47835f08428}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="rtmidi">
+      <UniqueIdentifier>{95e882a1-e589-4684-a3cb-48e0a1d073aa}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\src\ft2-clone.rc" />
+  </ItemGroup>
+</Project>

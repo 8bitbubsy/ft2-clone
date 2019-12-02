@@ -1,0 +1,49 @@
+---- Guide on how to compile the FT2 clone for Mac/Windows/Linux ---
+
+LINUX NOTE: This code is NOT big-endian compatible! And converting it would take
+            a ton of time, as I fread()/fwrite() directly to/from structs and
+            stuff (like original FT2). The structs are also packed, with
+            unaligned 16-bit/32-bit entries, so the clone might fail on certain
+            CPUs (except x86/x86_64, ARM11 and never). The clone might also
+            behave slightly wrong if bitshift-right on signed numbers is
+            compiled into using logical shift (LSR/SHR) instead of arithmetic
+            shift (ASR/SAR). Most CPUs have ASR/SAR instructions.
+              
+      
+Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
+
+
+== COMPILING ON LINUX (little-endian only!) ==
+ 1. Install the following packages:
+    Ubuntu/Debian and similar: build-essential libsdl2-dev
+    Fedora: gcc gcc-c++ alsa-lib-devel SDL2-devel
+    Others: www.google.com (you want gcc, g++ (or c++), alsa dev and SDL2 dev)
+ 2. Compile the FT2 clone:     (folder: "ft2-clone-code")
+    chmod +x make-linux.sh     (only needed once)
+    ./make-linux.sh
+    
+ Note: If you want faster audio mixing (for SLOW devices), pass -DLERPMIX
+       to the GCC command line (edit make-linux.sh). This will yield slightly
+       more blurry sound when interpolation is activated, though...
+       
+ Known issues: Audio recording (sampling) can update VERY slowly or not work at
+               all... I have no idea why, it works really well on Windows/maCOS.
+
+== COMPILING ON WINDOWS 7 SP1 OR NEWER ==
+ 1. Download Visual Studio Community 2019 (it's free)
+ 2. Start the installer and select the "Desktop development with C++" package
+ 3. Install and wait for it to finish...
+ 4. Open "ft2-clone-code\vs2019_project\ft2-clone.sln"
+ 5. If you're missing the Windows 10 SDK, then you need to change the Windows
+    SDK version used in the project settings for both debug and release x86/x64.
+ 6. Compile (make sure it's in Release mode. Also note x86/x64)
+
+
+== COMPILING ON MAC OS X 10.7 OR NEWER ==
+ 1. Download and install the "Command Line Tools" XCode package (google it)
+ 2. Download the SDL 2.0.10 framework here:
+    https://www.libsdl.org/release/SDL2-2.0.10.dmg
+ 3. Inside the package, copy SDL2.framework to /Library/Frameworks/
+ 4. Compile the FT2 clone:     (folder: "ft2-clone-code"):
+    chmod +x make-macos.sh      (only needed once)
+   ./make-macos.sh

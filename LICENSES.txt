@@ -1,0 +1,14 @@
+This project uses the following licenses:
+
+Source code (BSD 3-clause):
+src\LICENSE.txt
+
+rtmidi:
+src\rtmidi\LICENSE.txt
+
+Graphics, except a few bitmaps: by Magnus Högdahl
+(CC BY-NC-SA 4.0):
+src\gfxdata\bmp\LICENSE.txt
+
+SDL2:
+vs2019_project\ft2-clone\sdl\COPYING.txt
