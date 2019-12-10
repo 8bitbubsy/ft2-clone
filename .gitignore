@@ -10,3 +10,4 @@
 *.exe
 *.cache
 vs2019_project/.vs/ft2-clone/v16/.suo
+*.ipch
