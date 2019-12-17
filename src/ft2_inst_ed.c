@@ -220,7 +220,8 @@ static void drawMIDICh(void)
 	instrTyp *ins = getCurDispInstr();
 
 	assert(ins->midiChannel <= 15);
-	sprintf(str, "%02d", ins->midiChannel + 1);
+	uint8_t disp = ins->midiChannel + 1;
+	sprintf(str, "%02d", disp);
 	textOutFixed(156, 132, PAL_FORGRND, PAL_DESKTOP, str);
 }
 

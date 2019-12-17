@@ -12,7 +12,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.03"
+#define PROG_VER_STR "1.04"
 
 // do NOT change these! It will only mess things up...
 
@@ -90,7 +90,7 @@ struct editor_t
 		bool scopesShown, diskOpShown, nibblesShown, transposeShown, instEditorExtShown;
 		bool sampleEditorExtShown, advEditShown, wavRendererShown, trimScreenShown;
 		bool drawBPMFlag, drawSpeedFlag, drawGlobVolFlag, drawPosEdFlag, drawPattNumLenFlag;
-		bool updatePosSections;
+		bool updatePosSections, updatePosEdScrollBar;
 		uint8_t oldTopLeftScreen;
 
 		// bottom screens

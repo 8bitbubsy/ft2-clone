@@ -246,7 +246,7 @@ void cbConfigFramework(void);
 void cbConfigLineColors(void);
 void cbConfigChanNums(void);
 void cbConfigShowVolCol(void);
-void cbHardwareMouse(void);
+void cbSoftwareMouse(void);
 void cbSampCutToBuff(void);
 void cbPattCutToBuff(void);
 void cbKillNotesAtStop(void);

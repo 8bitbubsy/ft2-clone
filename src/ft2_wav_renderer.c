@@ -169,7 +169,7 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 
 	editor.wavIsRendering = true;
 
-	setPos(songPos, 0);
+	setPos(songPos, 0, true);
 	playMode = PLAYMODE_SONG;
 	songPlaying = true;
 

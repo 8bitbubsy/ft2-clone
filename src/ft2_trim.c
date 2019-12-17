@@ -99,7 +99,7 @@ static int16_t getUsedTempSamples(uint16_t nr)
 		i--;
 
 	/* Yes, 'i' can be -1 here, and will be set to at least 0
-	** because of ins->ta values. Possibly an FT2 bug... */
+	 * because of ins->ta values. Possibly an FT2 bug... */
 	for (j = 0; j < 96; j++)
 	{
 		if (ins->ta[j] > i)
@@ -655,7 +655,7 @@ static bool tmpPatternEmpty(uint16_t nr, uint8_t antChn)
 				return false;
 		}
 
-		scanPtr += sizeof (tonTyp) * MAX_VOICES;
+		scanPtr += TRACK_WIDTH;
 	}
 
 	return true;
@@ -970,7 +970,7 @@ static int32_t SDLCALL trimThreadFunc(void *ptr)
 void trimThreadDone(void)
 {
 	if (removePatt)
-		setPos(song.songPos, song.pattPos);
+		setPos(song.songPos, song.pattPos, false);
 
 	if (removeInst)
 	{

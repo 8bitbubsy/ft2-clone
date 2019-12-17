@@ -111,6 +111,8 @@ void resetChannels(void)
 		ch->oldPan = 128;
 		ch->outPan = 128;
 		ch->finalPan = 128;
+
+		ch->stOff = !editor.chnMode[i]; // set channel mute flag from global mute flag
 	}
 
 	if (audioWasntLocked)
@@ -148,78 +150,30 @@ void tuneSample(sampleTyp *s, uint32_t midCFreq)
 	}
 }
 
-bool setPatternLen(uint16_t nr, int16_t len)
+void setPatternLen(uint16_t nr, int16_t len)
 {
 	bool audioWasntLocked;
-	tonTyp *newPtr;
 
 	assert(nr < MAX_PATTERNS);
 
-	len = CLAMP(len, 1, MAX_PATT_LEN);
-	if (len == pattLens[nr])
-		return true;
+	if ((len < 1 || len > MAX_PATT_LEN) || len == pattLens[nr])
+		return;
 
 	audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
-	if (patt[nr] == NULL)
-	{
-		pattLens[nr] = len;
+	pattLens[nr] = len;
 
-		if (editor.editPattern == song.pattNr)
-			song.pattLen = pattLens[nr];
-
-		if (song.pattPos >= pattLens[nr])
-			song.pattPos = pattLens[nr] - 1;
-
-		editor.pattPos = song.pattPos;
-
-		checkMarkLimits();
-
-		if (audioWasntLocked)
-			unlockAudio();
-
-		editor.ui.updatePatternEditor = true;
-		editor.ui.updatePosSections = true;
-
-		return true;
-	}
-
-	newPtr = (tonTyp *)realloc(patt[nr], len * TRACK_WIDTH);
-	if (newPtr == NULL)
-	{
-		okBox(0, "Status message", "Not enough memory!");
-
-		if (audioWasntLocked)
-			unlockAudio();
-
-		return false;
-	}
-
-	patt[nr] = newPtr;
-
-	// if we enlarged the pattern length, wipe the new data
-	if (len >= pattLens[nr])
-	{
-		if (len > pattLens[nr])
-			memset(&patt[nr][pattLens[nr] * MAX_VOICES], 0, (len - pattLens[nr]) * TRACK_WIDTH);
-
-		pattLens[nr] = len;
-	}
-	else
-	{
-		pattLens[nr] = len;
+	if (patt[nr] != NULL)
 		killPatternIfUnused(nr);
+
+	song.pattLen = pattLens[nr];
+	if (song.pattPos >= song.pattLen)
+	{
+		song.pattPos = song.pattLen - 1;
+		editor.pattPos = song.pattPos;
 	}
-
-	if (editor.editPattern == song.pattNr)
-		song.pattLen = pattLens[nr];
-
-	if (song.pattPos >= pattLens[nr])
-		song.pattPos = pattLens[nr] - 1;
-
-	editor.pattPos = song.pattPos;
 
 	checkMarkLimits();
 
@@ -228,8 +182,6 @@ bool setPatternLen(uint16_t nr, int16_t len)
 
 	editor.ui.updatePatternEditor = true;
 	editor.ui.updatePosSections = true;
-
-	return true;
 }
 
 int16_t getUsedSamples(int16_t nr)
@@ -2203,7 +2155,7 @@ void resetMusic(void)
 	if (audioWasntLocked)
 		unlockAudio();
 
-	setPos(0, 0);
+	setPos(0, 0, false);
 
 	if (!songPlaying)
 	{
@@ -2212,7 +2164,7 @@ void resetMusic(void)
 	}
 }
 
-void setPos(int16_t songPos, int16_t pattPos)
+void setPos(int16_t songPos, int16_t pattPos, bool resetTimer)
 {
 	bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
@@ -2255,7 +2207,8 @@ void setPos(int16_t songPos, int16_t pattPos)
 		}
 	}
 
-	song.timer = 1;
+	if (resetTimer)
+		song.timer = 1;
 
 	if (audioWasntLocked)
 		unlockAudio();
@@ -2836,7 +2789,7 @@ bool setupReplayer(void)
 	song.initialTempo = song.tempo;
 
 	setFrqTab(true);
-	setPos(0, 0);
+	setPos(0, 0, true);
 
 	if (!allocateInstr(0))
 	{
@@ -2876,9 +2829,9 @@ void startPlaying(int8_t mode, int16_t row)
 	assert(mode != PLAYMODE_IDLE && mode != PLAYMODE_EDIT);
 
 	if (mode == PLAYMODE_PATT || mode == PLAYMODE_RECPATT)
-		setPos(-1, row);
+		setPos(-1, row, true);
 	else
-		setPos(editor.songPos, row);
+		setPos(editor.songPos, row, true);
 
 	playMode = mode;
 	songPlaying = true;
@@ -3181,12 +3134,15 @@ void stopVoices(void)
 
 void decSongPos(void)
 {
+	if (song.songPos == 0)
+		return;
+
 	bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
 	if (song.songPos > 0)
-		setPos(song.songPos - 1, 0);
+		setPos(song.songPos - 1, 0, true);
 
 	if (audioWasntLocked)
 		unlockAudio();
@@ -3194,12 +3150,15 @@ void decSongPos(void)
 
 void incSongPos(void)
 {
+	if (song.songPos == song.len-1)
+		return;
+
 	bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
 	if (song.songPos < song.len-1)
-		setPos(song.songPos + 1, 0);
+		setPos(song.songPos + 1, 0, true);
 
 	if (audioWasntLocked)
 		unlockAudio();

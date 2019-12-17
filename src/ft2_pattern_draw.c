@@ -75,6 +75,8 @@ void drawPatternBorders(void)
 	else if (chans == 10 && !config.ptnS3M)
 		chans = 12;
 
+	assert(chans >= 2 && chans <= 12);
+
 	chanWidth = chanWidths[(chans / 2) - 1] + 2;
 
 	// fill scrollbar framework (if needed)
@@ -359,9 +361,11 @@ static void showNoteNum(uint8_t pal, uint16_t xPos, uint16_t yPos, int16_t ton)
 {
 	xPos += 3;
 
+	assert(ton >= 0 && ton <= 97);
+
 	if (editor.ui.numChannelsShown <= 4)
 	{
-		if (ton == 0)
+		if (ton <= 0 || ton > 97)
 			drawEmptyNoteBig(xPos, yPos, pal);
 		else if (ton == 97)
 			drawKeyOffBig(xPos, yPos, pal);
@@ -370,7 +374,7 @@ static void showNoteNum(uint8_t pal, uint16_t xPos, uint16_t yPos, int16_t ton)
 	}
 	else
 	{
-		if (ton == 0)
+		if (ton <= 0 || ton > 97)
 			drawEmptyNoteMedium(xPos, yPos, pal);
 		else if (ton == 97)
 			drawKeyOffMedium(xPos, yPos, pal);
@@ -499,9 +503,11 @@ static void showNoteNumNoVolColumn(uint8_t pal, uint16_t xPos, uint16_t yPos, in
 {
 	xPos += 3;
 
+	assert(ton >= 0 && ton <= 97);
+
 	if (editor.ui.numChannelsShown <= 6)
 	{
-		if (ton == 0)
+		if (ton <= 0 || ton > 97)
 			drawEmptyNoteBig(xPos, yPos, pal);
 		else if (ton == 97)
 			drawKeyOffBig(xPos, yPos, pal);
@@ -510,7 +516,7 @@ static void showNoteNumNoVolColumn(uint8_t pal, uint16_t xPos, uint16_t yPos, in
 	}
 	else if (editor.ui.numChannelsShown <= 8)
 	{
-		if (ton == 0)
+		if (ton <= 0 || ton > 97)
 			drawEmptyNoteMedium(xPos, yPos, pal);
 		else if (ton == 97)
 			drawKeyOffMedium(xPos, yPos, pal);
@@ -519,7 +525,7 @@ static void showNoteNumNoVolColumn(uint8_t pal, uint16_t xPos, uint16_t yPos, in
 	}
 	else
 	{
-		if (ton == 0)
+		if (ton <= 0 || ton > 97)
 			drawEmptyNoteSmall(xPos, yPos, pal);
 		else if (ton == 97)
 			drawKeyOffSmall(xPos, yPos, pal);
@@ -668,12 +674,15 @@ void writePattern(int16_t currRow, int16_t pattern)
 	void (*drawVolEfx)(uint8_t, uint16_t, uint16_t, uint8_t);
 	void (*drawEfx)(uint8_t, uint16_t, uint16_t, uint8_t, uint8_t);
 
-	// we're too lazy to erase things, just render the whole pattern framework first (fast enough on modern PCs)
+	/* We're too lazy to carefully erase things as needed, just render
+	** the whole pattern framework first (fast enough on modern PCs) */
 	drawPatternBorders();
 
 	chans = editor.ui.numChannelsShown;
 	if (chans > editor.ui.maxVisibleChannels)
 		chans = editor.ui.maxVisibleChannels;
+
+	assert(chans >= 2 && chans <= 12);
 
 	// get channel width
 	chanWidth = chanWidths[(chans / 2) - 1];
@@ -1067,8 +1076,6 @@ static void drawNoteMedium(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, i
 	uint8_t note;
 	uint32_t *dstPtr, pixVal, fontOffset, char1, char2, char3;
 
-	assert(ton >= 1 && ton <= 97);
-
 	ton--;
 
 	note  =  ton % 12;
@@ -1157,8 +1164,6 @@ static void drawNoteBig(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, int1
 	const uint8_t *ch1Ptr, *ch2Ptr, *ch3Ptr;
 	uint8_t note;
 	uint32_t *dstPtr, pixVal, fontOffset, char1, char2, char3;
-
-	assert(ton >= 1 && ton <= 97);
 
 	ton--;
 

@@ -347,7 +347,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 				pattLen = pattLens[editor.editPattern];
 				if (playMode == PLAYMODE_EDIT && pattLen >= 1)
-					setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen);
+					setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
 				editor.ui.updatePatternEditor = true;
 				setSongModifiedFlag();

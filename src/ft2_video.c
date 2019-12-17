@@ -266,6 +266,11 @@ void updateRenderSizeVars(void)
 		video.renderX = 0;
 		video.renderY = 0;
 	}
+
+	// for mouse cursor creation
+	video.xScale = (uint32_t)round(video.renderW / (double)SCREEN_W);
+	video.yScale = (uint32_t)round(video.renderH / (double)SCREEN_H);
+	createMouseCursors();
 }
 
 void enterFullscreen(void)
@@ -887,8 +892,8 @@ bool setupWindow(void)
 		video.vsync60HzPresent = false;
 
 	video.window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-					SCREEN_W * video.upscaleFactor, SCREEN_H * video.upscaleFactor,
-					windowFlags);
+		SCREEN_W * video.upscaleFactor, SCREEN_H * video.upscaleFactor,
+		windowFlags);
 
 	if (video.window == NULL)
 	{
@@ -909,7 +914,7 @@ bool setupRenderer(void)
 {
 	uint32_t rendererFlags;
 
-	rendererFlags = 0;
+	rendererFlags = SDL_RENDERER_ACCELERATED;
 	if (video.vsync60HzPresent)
 		rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
 
@@ -1016,6 +1021,13 @@ void handleRedrawing(void)
 						else if (playMode == PLAYMODE_RECPATT) textOut(115, 80, PAL_FORGRND, "> Rec. ptn. <");
 					}
 				}
+			}
+
+			if (editor.ui.updatePosEdScrollBar)
+			{
+				editor.ui.updatePosEdScrollBar = false;
+				setScrollBarPos(SB_POS_ED, song.songPos, false);
+				setScrollBarEnd(SB_POS_ED, (song.len - 1) + 5);
 			}
 
 			if (!editor.ui.extended)

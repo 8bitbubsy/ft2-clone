@@ -349,7 +349,7 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength)
 
 	for (a = 0; a <= b; a++)
 	{
-		pattTmp[a] = (tonTyp *)calloc(64 * MAX_VOICES, sizeof (tonTyp));
+		pattTmp[a] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
 		if (pattTmp[a] == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
@@ -674,7 +674,7 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength)
 	ap = h_STM.ap;
 	for (i = 0; i < ap; i++)
 	{
-		pattTmp[i] = (tonTyp *)calloc(64 * MAX_VOICES, sizeof (tonTyp));
+		pattTmp[i] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
 		if (pattTmp[i] == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
@@ -1099,7 +1099,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength)
 
 		if (j > 0 && j <= 12288)
 		{
-			pattTmp[i] = (tonTyp *)calloc(64 * MAX_VOICES, sizeof (tonTyp));
+			pattTmp[i] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
 			if (pattTmp[i] == NULL)
 			{
 				okBoxThreadSafe(0, "System message", "Not enough memory!");
@@ -2215,14 +2215,14 @@ static bool loadPatterns(FILE *f, uint16_t antPtn)
 
 		if (ph.dataLen > 0)
 		{
-			a = ph.pattLen * TRACK_WIDTH;
-
-			pattTmp[i] = (tonTyp *)malloc(a + 16); // + 16 = a little extra for safety
+			pattTmp[i] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
 			if (pattTmp[i] == NULL)
 			{
 				okBoxThreadSafe(0, "System message", "Not enough memory!");
 				return false;
 			}
+
+			a = ph.pattLen * TRACK_WIDTH;
 
 			pattPtr = (uint8_t *)pattTmp[i];
 			memset(pattPtr, 0, a);
@@ -2321,7 +2321,7 @@ static void setupLoadedModule(void)
 
 	resetChannels();
 	refreshScopes();
-	setPos(0, 0);
+	setPos(0, 0, false);
 	setSpeed(song.speed);
 
 	editor.tmpPattern = editor.editPattern; // set kludge variable

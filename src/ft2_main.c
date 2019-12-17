@@ -120,8 +120,6 @@ int main(int argc, char *argv[])
 	}
 	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
-	createSDL2Cursors();
-
 	/* Text input is started by default in SDL2, turn it off to remove ~2ms spikes per key press.
 	** We manuallay start it again when a text edit box is activated, and stop it when done.
 	** Ref.: https://bugzilla.libsdl.org/show_bug.cgi?id=4166 */
@@ -233,18 +231,18 @@ static void initializeVars(void)
 {
 	int32_t i;
 
-	cpu.hasSSE  = SDL_HasSSE();
+	cpu.hasSSE = SDL_HasSSE();
 	cpu.hasSSE2 = SDL_HasSSE2();
 
 	// clear common structs
-	memset(&video,    0, sizeof (video));
-	memset(&keyb,     0, sizeof (keyb));
-	memset(&mouse,    0, sizeof (mouse));
-	memset(&editor,   0, sizeof (editor));
+	memset(&video, 0, sizeof (video));
+	memset(&keyb, 0, sizeof (keyb));
+	memset(&mouse, 0, sizeof (mouse));
+	memset(&editor, 0, sizeof (editor));
 	memset(&pattMark, 0, sizeof (pattMark));
 	memset(&pattSync, 0, sizeof (pattSync));
-	memset(&chSync,   0, sizeof (chSync));
-	memset(&song,     0, sizeof (song));
+	memset(&chSync, 0, sizeof (chSync));
+	memset(&song, 0, sizeof (song));
 
 	for (i = 0; i < MAX_VOICES; i++)
 	{
@@ -307,7 +305,7 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	freeMidiInputDeviceList();
 	windUpFTHelp();
 	freeTextBoxes();
-	freeSDL2Cursors();
+	freeMouseCursors();
 
 	if (midi.inputDeviceName != NULL)
 	{

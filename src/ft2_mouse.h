@@ -30,8 +30,8 @@ struct mouse_t
 #define MOUSE_GLASS_ANI_FRAMES 22
 #define MOUSE_CLOCK_ANI_FRAMES 5
 
-void freeSDL2Cursors(void);
-void createSDL2Cursors(void);
+void freeMouseCursors(void);
+bool createMouseCursors(void);
 
 void setMousePosToCenter(void);
 void setMouseShape(int16_t shape);

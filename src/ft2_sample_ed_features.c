@@ -84,7 +84,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	int8_t *p1, *p2, *src8, *dst8;
 	int16_t *src16, *dst16;
 	uint32_t newLen, mask, resampleLen;
-	uint64_t posfrac64, delta64;
+	uint64_t posFrac64, delta64;
 	double dNewLen, dLenMul;
 	sampleTyp *s;
 
@@ -96,7 +96,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	s = &instr[editor.curInstr]->samp[editor.curSmp];
 
 	mask = (s->typ & 16) ? 0xFFFFFFFE : 0xFFFFFFFF;
-	dLenMul = pow(2.0, smpEd_RelReSmp * (1.0 / 12.0));
+	dLenMul = exp2(smpEd_RelReSmp / 12.0);
 
 	dNewLen = s->len * dLenMul;
 	if (dNewLen > (double)MAX_SAMPLE_LEN)
@@ -116,9 +116,9 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	p1 = s->pek;
 
 	// don't use the potentially clamped newLen value here
-	delta64 = ((uint64_t)s->len << 32) / (uint64_t)(s->len * dLenMul);
+	delta64 = ((uint64_t)s->len << 32) / (uint64_t)(s->len * dLenMul); // 32.32 fixed point delta
 
-	posfrac64 = 0;
+	posFrac64 = 0; // 32.32 fixed point position.fraction
 
 	pauseAudio();
 	restoreSample(s);
@@ -133,8 +133,8 @@ static int32_t SDLCALL resampleThread(void *ptr)
 			resampleLen = newLen / 2;
 			for (uint32_t i = 0; i < resampleLen; i++)
 			{
-				dst16[i] = src16[posfrac64 >> 32];
-				posfrac64 += delta64;
+				dst16[i] = src16[posFrac64 >> 32];
+				posFrac64 += delta64;
 			}
 		}
 		else
@@ -144,8 +144,8 @@ static int32_t SDLCALL resampleThread(void *ptr)
 
 			for (uint32_t i = 0; i < newLen; i++)
 			{
-				dst8[i] = src8[posfrac64 >> 32];
-				posfrac64 += delta64;
+				dst8[i] = src8[posFrac64 >> 32];
+				posFrac64 += delta64;
 			}
 		}
 	}
@@ -159,8 +159,8 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	s->repS = (int32_t)(s->repS * dLenMul) & mask;
 	s->repL = (int32_t)(s->repL * dLenMul) & mask;
 
-	if (s->repS > s->len)
-		s->repS = s->len;
+	if (s->repS >= s->len)
+		s->repS = s->len - 1;
 
 	if (s->repS+s->repL > s->len)
 		s->repL = s->len - s->repS;
@@ -172,7 +172,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 		s->repL &= 0xFFFFFFFE;
 	}
 
-	if (s->repL == 0)
+	if (s->repL <= 0)
 		s->typ &= ~3; // disable loop
 
 	fixSample(s);
@@ -228,7 +228,7 @@ static void drawResampleBox(void)
 	s = &instr[editor.curInstr]->samp[editor.curSmp];
 
 	mask = (s->typ & 16) ? 0xFFFFFFFE : 0xFFFFFFFF;
-	dLenMul = pow(2.0, smpEd_RelReSmp * (1.0 / 12.0));
+	dLenMul = exp2(smpEd_RelReSmp / 12.0);
 
 	dNewLen = s->len * dLenMul;
 	if (dNewLen > (double)MAX_SAMPLE_LEN)

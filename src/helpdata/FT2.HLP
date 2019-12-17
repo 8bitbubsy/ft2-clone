@@ -864,9 +864,10 @@ END
 macOS/OS X: Change ALT+F4/ALT+F5 keys in the OS to something else. Also for GNU/Linux.
 >@X020
 >@C001Q: The mouse cursor is delayed/laggy!
->@C002A: Enable "VSync off" in Config -> Miscellaneous. This however, will
->@X035introduce stuttering because the rendering rate is not exact to your
->monitor's rate. Alternatively, enable "Hardware mouse" in Config -> Layout.
+>@C002A: Make sure "Software mouse" is disabled in Config -> Layout.
+>@X035Alternatively, you can enable "VSync off" in Config -> Miscellaneous.
+>This however, will introduce stuttering because the rendering rate is
+>not exact to your monitor's rate.
 >@X020
 >@C001Q: Will you implement MIDI out functionality?
 >@C002A: No, sorry. This is very difficult to implement correctly when having
@@ -911,6 +912,8 @@ see the individual sample points, it will look like normal.
 I only poll input once per frame (60Hz), so the frequency is a tad low. It has
 to be like this for several reasons, though...
 >@X010
+>@C002- macOS / OS X: "Hardware mode" mouse looks blurry on retina Macs
+>@X010
 >- macOS / OS X: Holding down a mouse button won't trap the mouse cursor
 >@X021inside the window. This is related to a kludge that simply doesn't work
 very well in macOS. The mouse movement would freeze for some time after a mouse
@@ -929,9 +932,5 @@ button was held down.
 >@X021you may experience visual stuttering because VSync will not be used then.
 I highly recommend running your monitor at 60Hz if you're a hardcore user
 of this program.
->
->@X010- macOS / OS X: If "Hardware mouse" is enabled, the mouse cursor won't
->@X021change when the program is busy. The macOS "wait" cursor is missing in
-SDL2...
 
 END

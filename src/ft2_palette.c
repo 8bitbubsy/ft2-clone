@@ -129,6 +129,13 @@ static void paletteDragMoved(void)
 		return;
 	}
 
+	if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	{
+		updatePaletteEditor(); // resets colors/contrast vars
+		okBox(0, "System message", "Mouse color can only be changed when \"Software mouse\" is enabled.");
+		return;
+	}
+
 	nr = FTC_EditOrder[cfg_ColorNr];
 	p = (uint8_t)config.cfg_StdPalNr;
 

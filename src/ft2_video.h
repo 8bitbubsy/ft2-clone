@@ -22,8 +22,8 @@ struct video_t
 	bool fullscreen, vsync60HzPresent, showFPSCounter;
 	int32_t renderX, renderY, renderW, renderH, displayW, displayH;
 	uint32_t *frameBuffer, palette[PAL_NUM], vblankTimeLen, vblankTimeLenFrac;
-	uint32_t xScaleMul, yScaleMul;
-	double dMonitorRefreshRate;
+	uint32_t xScale, yScale;
+	double dMonitorRefreshRate, dMouseXMul, dMouseYMul;
 #ifdef _WIN32
 	HWND hWnd;
 #endif

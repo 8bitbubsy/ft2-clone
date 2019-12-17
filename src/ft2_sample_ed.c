@@ -300,7 +300,7 @@ uint32_t getSampleMiddleCRate(sampleTyp *s)
 	// replayer is shifting the finetune to the right by 3
 	dFTune = (s->fine >> 3) / (128.0 / (double)(1 << 3));
 
-	return (uint32_t)round(8363.0 * pow(2.0, (s->relTon + dFTune) / 12.0));
+	return (uint32_t)round(8363.0 * exp2((s->relTon + dFTune) / 12.0));
 }
 
 int32_t getSampleRangeStart(void)

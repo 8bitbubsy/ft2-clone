@@ -19,40 +19,145 @@
 #include "ft2_gfxdata.h"
 #include "ft2_audioselector.h"
 #include "ft2_midi.h"
+#include "ft2_gfxdata.h"
+
+#define NUM_CURSORS 6
 
 static bool mouseBusyGfxBackwards;
 static int16_t mouseShape;
 static int32_t mouseModeGfxOffs, mouseBusyGfxFrame;
+static SDL_Cursor *cursors[NUM_CURSORS];
 
-static SDL_Cursor *cArrow, *cIBeam, *cBusy;
-
-void freeSDL2Cursors(void)
+static bool setSystemCursor(SDL_Cursor *cursor)
 {
-	if (cArrow != NULL)
+	if (cursor == NULL)
 	{
-		SDL_FreeCursor(cArrow);
-		cArrow = NULL;
+		SDL_SetCursor(SDL_GetDefaultCursor());
+		return false;
 	}
 
-	if (cIBeam != NULL)
-	{
-		SDL_FreeCursor(cIBeam);
-		cIBeam = NULL;
-	}
-
-	if (cBusy != NULL)
-	{
-		SDL_FreeCursor(cBusy);
-		cBusy = NULL;
-	}
-
+	SDL_SetCursor(cursor);
+	return true;
 }
 
-void createSDL2Cursors(void)
+void freeMouseCursors(void)
 {
-	cArrow = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
-	cIBeam = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
-	cBusy = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_WAIT);
+	SDL_SetCursor(SDL_GetDefaultCursor());
+	for (uint32_t i = 0; i < NUM_CURSORS; i++)
+	{
+		if (cursors[i] != NULL)
+		{
+			SDL_FreeCursor(cursors[i]);
+			cursors[i] = NULL;
+		}
+	}
+}
+
+bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse pointer shape
+{
+	freeMouseCursors();
+
+	const uint8_t *cursorsSrc = mouseCursors;
+	switch (config.mouseType)
+	{
+		case MOUSE_IDLE_SHAPE_NICE:   cursorsSrc += 0 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+		case MOUSE_IDLE_SHAPE_UGLY:   cursorsSrc += 1 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+		case MOUSE_IDLE_SHAPE_AWFUL:  cursorsSrc += 2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+		case MOUSE_IDLE_SHAPE_USABLE: cursorsSrc += 3 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+		default: break;
+	}
+
+	for (uint32_t i = 0; i < NUM_CURSORS; i++)
+	{
+		SDL_Surface *surface = SDL_CreateRGBSurface(0, MOUSE_CURSOR_W*video.yScale, MOUSE_CURSOR_H*video.yScale, 32, 0, 0, 0, 0);
+		if (surface == NULL)
+		{
+			freeMouseCursors();
+			config.specialFlags2 &= ~HARDWARE_MOUSE; // enable software mouse
+			return false;
+		}
+
+		uint32_t colorkey = SDL_MapRGB(surface->format, 0x00, 0xFF, 0x00); // colorkey
+		uint32_t fg = SDL_MapRGB(surface->format, 0xFF, 0xFF, 0xFF); // foreground
+		uint32_t border = SDL_MapRGB(surface->format, 0x00, 0x00, 0x00); // border
+
+		SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
+		SDL_SetColorKey(surface, SDL_TRUE, colorkey);
+		SDL_SetSurfaceRLE(surface, SDL_TRUE);
+
+		const uint8_t *srcPixels8;
+		if (i == 3) // text edit cursor
+			srcPixels8 = &mouseCursors[12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)];
+		else if (i == 4) // mouse busy (wall clock)
+			srcPixels8 = &mouseCursorBusyClock[2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]; // pick a good still-frame
+		else if (i == 5) // mouse busy (hourglass)
+			srcPixels8 = &mouseCursorBusyGlass[2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]; // pick a good still-frame
+		else // normal idle cursor + disk op. "delete/rename" cursors
+			srcPixels8 = &cursorsSrc[i * (4 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H))];
+
+		SDL_LockSurface(surface);
+
+		uint32_t *dstPixels32 = (uint32_t *)surface->pixels;
+
+		for (int32_t k = 0; k < surface->w*surface->h; k++) // fill surface with colorkey pixels
+			dstPixels32[k] = colorkey;
+
+		// blit upscaled cursor to surface
+		for (uint32_t y = 0; y < MOUSE_CURSOR_H; y++)
+		{
+			uint32_t *outX = &dstPixels32[(y * video.yScale) * surface->w];
+			for (uint32_t yScale = 0; yScale < video.yScale; yScale++)
+			{
+				for (uint32_t x = 0; x < MOUSE_CURSOR_W; x++)
+				{
+					uint8_t srcPix = srcPixels8[(y * MOUSE_CURSOR_W) + x];
+					if (srcPix != PAL_TRANSPR)
+					{
+						uint32_t pixel = colorkey;
+						if (srcPix == PAL_MOUSEPT)
+							pixel = fg;
+						else if (srcPix == PAL_BCKGRND)
+							pixel = border;
+
+						for (uint32_t xScale = 0; xScale < video.yScale; xScale++)
+							outX[xScale] = pixel;
+					}
+
+					outX += video.xScale;
+				}
+			}
+		}
+		SDL_UnlockSurface(surface);
+
+		uint32_t hotX = 0;
+		uint32_t hotY = 0;
+
+		if (i == 3) // text edit cursor bias
+		{
+			hotX = 2 * video.xScale;
+			hotY = 6 * video.yScale;
+		}
+
+		cursors[i] = SDL_CreateColorCursor(surface, hotX, hotY);
+		if (cursors[i] == NULL)
+		{
+			SDL_FreeSurface(surface);
+			freeMouseCursors();
+			config.specialFlags2 &= ~HARDWARE_MOUSE; // enable software mouse
+			return false;
+		}
+
+		SDL_FreeSurface(surface);
+	}
+
+	if (config.specialFlags2 & HARDWARE_MOUSE)
+	{
+		     if (mouse.mode == MOUSE_MODE_NORMAL) setSystemCursor(cursors[0]);
+		else if (mouse.mode == MOUSE_MODE_DELETE) setSystemCursor(cursors[1]);
+		else if (mouse.mode == MOUSE_MODE_RENAME) setSystemCursor(cursors[2]);
+	}
+
+	return true;
 }
 
 void setMousePosToCenter(void)
@@ -75,6 +180,12 @@ void animateBusyMouse(void)
 {
 	if (config.mouseAnimType == MOUSE_BUSY_SHAPE_CLOCK)
 	{
+		if (config.specialFlags2 & HARDWARE_MOUSE)
+		{
+			setSystemCursor(cursors[4]);
+			return;
+		}
+
 		if ((editor.framesPassed % 7) == 6)
 		{
 			if (mouseBusyGfxBackwards)
@@ -100,6 +211,12 @@ void animateBusyMouse(void)
 	}
 	else
 	{
+		if (config.specialFlags2 & HARDWARE_MOUSE)
+		{
+			setSystemCursor(cursors[5]);
+			return;
+		}
+
 		if ((editor.framesPassed % 5) == 4)
 		{
 			mouseBusyGfxFrame = (mouseBusyGfxFrame + 1) % MOUSE_GLASS_ANI_FRAMES;
@@ -126,17 +243,24 @@ void setMouseShape(int16_t shape)
 		gfxPtr = &mouseCursors[mouseModeGfxOffs];
 		switch (shape)
 		{
-			case MOUSE_IDLE_SHAPE_NICE:    gfxPtr += 0  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_UGLY:    gfxPtr += 1  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_AWFUL:   gfxPtr += 2  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_USABLE:  gfxPtr += 3  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_TEXT_EDIT:     gfxPtr += 12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_NICE:   gfxPtr += 0  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_UGLY:   gfxPtr += 1  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_AWFUL:  gfxPtr += 2  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_USABLE: gfxPtr += 3  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_TEXT_EDIT:    gfxPtr += 12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
 			default: return;
 		}
 	}
 
 	mouseShape = shape;
 	changeSpriteData(SPRITE_MOUSE_POINTER, gfxPtr);
+
+	if (config.specialFlags2 & HARDWARE_MOUSE)
+	{
+		     if (mouse.mode == MOUSE_MODE_NORMAL) setSystemCursor(cursors[0]);
+		else if (mouse.mode == MOUSE_MODE_DELETE) setSystemCursor(cursors[1]);
+		else if (mouse.mode == MOUSE_MODE_RENAME) setSystemCursor(cursors[2]);
+	}
 }
 
 static void setTextEditMouse(void)
@@ -145,8 +269,8 @@ static void setTextEditMouse(void)
 	mouse.xBias = -2;
 	mouse.yBias = -6;
 
-	if (config.specialFlags2 & HARDWARE_MOUSE && cIBeam != NULL)
-		SDL_SetCursor(cIBeam);
+	if (config.specialFlags2 & HARDWARE_MOUSE)
+		setSystemCursor(cursors[3]);
 }
 
 static void clearTextEditMouse(void)
@@ -155,8 +279,8 @@ static void clearTextEditMouse(void)
 	mouse.xBias = 0;
 	mouse.yBias = 0;
 
-	if (config.specialFlags2 & HARDWARE_MOUSE && cArrow != NULL)
-		SDL_SetCursor(cArrow);
+	if (config.specialFlags2 & HARDWARE_MOUSE)
+		setSystemCursor(cursors[0]);
 }
 
 static void changeCursorIfOverTextBoxes(void)
@@ -238,8 +362,8 @@ void mouseAnimOn(void)
 	editor.busy = true;
 	setMouseShape(config.mouseAnimType);
 
-	if (config.specialFlags2 & HARDWARE_MOUSE && cBusy != NULL)
-		SDL_SetCursor(cBusy);
+	//if (config.specialFlags2 & HARDWARE_MOUSE && cBusy != NULL)
+	//	SDL_SetCursor(cBusy);
 }
 
 void mouseAnimOff(void)
@@ -250,8 +374,8 @@ void mouseAnimOff(void)
 	editor.busy = false;
 	setMouseShape(config.mouseType);
 
-	if (config.specialFlags2 & HARDWARE_MOUSE && cArrow != NULL)
-		SDL_SetCursor(cArrow);
+	//if (config.specialFlags2 & HARDWARE_MOUSE && cArrow != NULL)
+	//	SDL_SetCursor(cArrow);
 }
 
 static void mouseWheelDecRow(void)
@@ -265,7 +389,7 @@ static void mouseWheelDecRow(void)
 	if (pattPos < 0)
 		pattPos = pattLens[editor.editPattern] - 1;
 
-	setPos(-1, pattPos);
+	setPos(-1, pattPos, true);
 }
 
 static void mouseWheelIncRow(void)
@@ -279,7 +403,7 @@ static void mouseWheelIncRow(void)
 	if (pattPos > (pattLens[editor.editPattern] - 1))
 		pattPos = 0;
 
-	setPos(-1, pattPos);
+	setPos(-1, pattPos, true);
 }
 
 void mouseWheelHandler(bool directionUp)
@@ -633,13 +757,8 @@ void handleLastGUIObjectDown(void)
 
 void updateMouseScaling(void)
 {
-	double dScaleX, dScaleY;
-
-	dScaleX = video.renderW / (double)SCREEN_W;
-	dScaleY = video.renderH / (double)SCREEN_H;
-
-	video.xScaleMul = (dScaleX == 0.0) ? 65536 : (uint32_t)round(65536.0 / dScaleX);
-	video.yScaleMul = (dScaleY == 0.0) ? 65536 : (uint32_t)round(65536.0 / dScaleY);
+	video.dMouseXMul = (double)SCREEN_W / video.renderW;
+	video.dMouseYMul = (double)SCREEN_H / video.renderH;
 }
 
 void readMouseXY(void)
@@ -693,9 +812,9 @@ void readMouseXY(void)
 	if (mx < 0) mx = 0;
 	if (my < 0) mx = 0;
 
-	// multiply coords by video scaling factors
-	mx = (((uint32_t)mx * video.xScaleMul) + (1 << 15)) >> 16; // rounded
-	my = (((uint32_t)my * video.yScaleMul) + (1 << 15)) >> 16;
+	// multiply coords by video upscaling factors (don't round)
+	mx = (uint32_t)(mx * video.dMouseXMul);
+	my = (uint32_t)(my * video.dMouseYMul);
 
 	if (mx >= SCREEN_W) mx = SCREEN_W - 1;
 	if (my >= SCREEN_H) my = SCREEN_H - 1;

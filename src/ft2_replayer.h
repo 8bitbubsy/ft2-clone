@@ -278,7 +278,7 @@ void resetMusic(void);
 void startPlaying(int8_t mode, int16_t row);
 void stopPlaying(void);
 void stopVoices(void);
-void setPos(int16_t songPos, int16_t pattPos);
+void setPos(int16_t songPos, int16_t pattPos, bool resetTimer);
 void pauseMusic(void); // stops reading pattern data
 void resumeMusic(void); // starts reading pattern data
 void setSongModifiedFlag(void);
@@ -291,7 +291,7 @@ void conv8BitSample(int8_t *p, int32_t len, bool stereo);
 void conv16BitSample(int8_t *p, int32_t len, bool stereo);
 void delta2Samp(int8_t *p, int32_t len, uint8_t typ);
 void samp2Delta(int8_t *p, int32_t len, uint8_t typ);
-bool setPatternLen(uint16_t nr, int16_t len);
+void setPatternLen(uint16_t nr, int16_t len);
 void setFrqTab(bool linear);
 void mainPlayer(void); // periodically called from audio callback
 void resetChannels(void);

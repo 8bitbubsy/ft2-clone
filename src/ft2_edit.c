@@ -252,7 +252,7 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 
 	pattLen = pattLens[editor.editPattern];
 	if (playMode == PLAYMODE_EDIT && pattLen >= 1)
-		setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen);
+		setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
 	if (i == 0) // if we inserted a zero, check if pattern is empty, for killing
 		killPatternIfUnused(editor.editPattern);
@@ -459,7 +459,7 @@ void recordNote(uint8_t note, int8_t vol)
 				{
 					// increase row (only in edit mode)
 					if (pattLen >= 1)
-						setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen);
+						setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 				}
 				else
 				{
@@ -524,7 +524,7 @@ void recordNote(uint8_t note, int8_t vol)
 				{
 					// increase row (only in edit mode)
 					if (pattLen >= 1)
-						setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen);
+						setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 				}
 				else
 				{
@@ -598,7 +598,7 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 		// increase row (only in edit mode)
 		pattLen = pattLens[editor.editPattern];
 		if (playMode == PLAYMODE_EDIT && pattLen >= 1)
-			setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen);
+			setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
 		editor.ui.updatePatternEditor = true;
 		setSongModifiedFlag();
@@ -673,7 +673,7 @@ void writeFromMacroSlot(uint8_t slot)
 	}
 
 	if (playMode == PLAYMODE_EDIT && pattLen >= 1)
-		setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen);
+		setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
 	killPatternIfUnused(editor.editPattern);
 
@@ -723,35 +723,30 @@ void insertPatternLine(void)
 
 	nr = editor.editPattern;
 
-	if (setPatternLen(nr, pattLens[nr] + config.recTrueInsert)) // config.recTrueInsert is 0 or 1
+	setPatternLen(nr, pattLens[nr] + config.recTrueInsert); // config.recTrueInsert is 0 or 1
+
+	pattPtr = patt[nr];
+	if (pattPtr != NULL)
 	{
-		pattPtr = patt[nr];
-		if (pattPtr != NULL)
+		pattPos = editor.pattPos;
+		pattLen = pattLens[nr];
+
+		if (pattLen > 1)
 		{
-			pattPos = editor.pattPos;
-			pattLen = pattLens[nr];
-
-			if (pattLen > 1)
+			for (int32_t i = pattLen-2; i >= pattPos; i--)
 			{
-				for (int32_t i = pattLen-2; i >= pattPos; i--)
-				{
-					for (int32_t j = 0; j < MAX_VOICES; j++)
-						pattPtr[((i + 1) * MAX_VOICES) + j] = pattPtr[(i * MAX_VOICES) + j];
-				}
+				for (int32_t j = 0; j < MAX_VOICES; j++)
+					pattPtr[((i + 1) * MAX_VOICES) + j] = pattPtr[(i * MAX_VOICES) + j];
 			}
-
-			memset(&pattPtr[pattPos * MAX_VOICES], 0, TRACK_WIDTH);
-
-			killPatternIfUnused(nr);
 		}
 
-		editor.ui.updatePatternEditor = true;
-		setSongModifiedFlag();
+		memset(&pattPtr[pattPos * MAX_VOICES], 0, TRACK_WIDTH);
+
+		killPatternIfUnused(nr);
 	}
-	else
-	{
-		okBox(0, "System message", "Not enough memory!");
-	}
+
+	editor.ui.updatePatternEditor = true;
+	setSongModifiedFlag();
 }
 
 void deletePatternNote(void)
