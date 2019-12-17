@@ -1904,29 +1904,55 @@ static void updatePtnLen(void)
 	uint16_t len = pattLens[editor.editPattern];
 
 	song.pattLen = len;
-	editor.pattPos = song.pattPos = CLAMP(song.pattPos, 0, len - 1);
+	if (song.pattPos >= len)
+	{
+		song.pattPos = len - 1;
+		editor.pattPos = song.pattPos;
+	}
 
 	checkMarkLimits();
 }
 
 void pbEditPattUp(void)
 {
-	if (editor.editPattern == 255)
-		return;
+	if (songPlaying)
+	{
+		if (song.pattNr == 255)
+			return;
+	}
+	else
+	{
+		if (editor.editPattern == 255)
+			return;
+	}
 
 	bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
-	if (editor.editPattern < 255)
+	if (songPlaying)
 	{
-		editor.editPattern++;
+		if (song.pattNr < 255)
+		{
+			song.pattNr++;
+			updatePtnLen();
 
-		song.pattNr = editor.editPattern;
-		updatePtnLen();
+			editor.ui.updatePatternEditor = true;
+			editor.ui.updatePosSections = true;
+		}
+	}
+	else
+	{
+		if (editor.editPattern < 255)
+		{
+			editor.editPattern++;
 
-		editor.ui.updatePatternEditor = true;
-		editor.ui.updatePosSections = true;
+			song.pattNr = editor.editPattern;
+			updatePtnLen();
+
+			editor.ui.updatePatternEditor = true;
+			editor.ui.updatePosSections = true;
+		}
 	}
 
 	if (audioWasntLocked)
@@ -1935,22 +1961,44 @@ void pbEditPattUp(void)
 
 void pbEditPattDown(void)
 {
-	if (editor.editPattern == 0)
-		return;
+	if (songPlaying)
+	{
+		if (song.pattNr == 0)
+			return;
+	}
+	else
+	{
+		if (editor.editPattern == 0)
+			return;
+	}
 
 	bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
-	if (editor.editPattern > 0)
+	if (songPlaying)
 	{
-		editor.editPattern--;
+		if (song.pattNr > 0)
+		{
+			song.pattNr--;
+			updatePtnLen();
 
-		song.pattNr = editor.editPattern;
-		updatePtnLen();
+			editor.ui.updatePatternEditor = true;
+			editor.ui.updatePosSections = true;
+		}
+	}
+	else
+	{
+		if (editor.editPattern > 0)
+		{
+			editor.editPattern--;
 
-		editor.ui.updatePatternEditor = true;
-		editor.ui.updatePosSections = true;
+			song.pattNr = editor.editPattern;
+			updatePtnLen();
+
+			editor.ui.updatePatternEditor = true;
+			editor.ui.updatePosSections = true;
+		}
 	}
 
 	if (audioWasntLocked)
