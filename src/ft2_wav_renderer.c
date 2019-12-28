@@ -18,7 +18,7 @@
 #include "ft2_audio.h"
 #include "ft2_wav_renderer.h"
 
-#define TICKS_PER_RENDER_CHUNK 32
+#define TICKS_PER_RENDER_CHUNK 64
 
 enum
 {
@@ -38,7 +38,7 @@ typedef struct wavHeader_t
 static char WAV_SysReqText[192];
 static uint8_t WDBitDepth = 16, WDStartPos, WDStopPos, *wavRenderBuffer;
 static int16_t WDAmp;
-static uint32_t WDFrequency = 44100;
+static uint32_t WDFrequency = 48000;
 static SDL_Thread *thread;
 
 static void updateWavRenderer(void)

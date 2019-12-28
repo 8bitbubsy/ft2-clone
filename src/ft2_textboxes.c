@@ -223,7 +223,7 @@ static void setCursorToMarkEnd(textBox_t *t)
 static void copyMarkedText(textBox_t *t)
 {
 	int32_t length, start, end;
-	char *utf8Text;
+	char *utf8Text, oldChar;
 
 	if (!textIsMarked())
 		return;
@@ -237,12 +237,22 @@ static void copyMarkedText(textBox_t *t)
 	if (length < 1)
 		return;
 
+	/* Change mark-end character to NUL so that we
+	 * we only copy the marked section of the string.
+	 * There's always room for a NUL at the end of
+	 * the text box string, so this is safe.
+	 */
+	oldChar = t->textPtr[end];
+	t->textPtr[end] = '\0';
+
 	utf8Text = cp437ToUtf8(&t->textPtr[start]);
 	if (utf8Text != NULL)
 	{
 		SDL_SetClipboardText(utf8Text);
 		free(utf8Text);
 	}
+
+	t->textPtr[end] = oldChar; // set back original character
 }
 
 static void cutMarkedText(textBox_t *t)

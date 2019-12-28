@@ -520,6 +520,16 @@ void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 	}
 }
 
+void textOutBorder(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t borderPaletteIndex, const char *textPtr)
+{
+	textOut(x,   y-1, borderPaletteIndex, textPtr); // top
+	textOut(x+1, y,   borderPaletteIndex, textPtr); // right
+	textOut(x,   y+1, borderPaletteIndex, textPtr); // bottom
+	textOut(x-1, y,   borderPaletteIndex, textPtr); // left
+
+	textOut(x, y, paletteIndex, textPtr);
+}
+
 // fixed width
 void textOutFixed(uint16_t x, uint16_t y, uint8_t fgPaltete, uint8_t bgPalette, const char *textPtr)
 {

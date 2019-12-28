@@ -7,7 +7,7 @@
 
 // ported from original FT2 code
 
-#define NUM_STARS 512
+#define NUM_STARS 650
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
 #define FT2_LOGO_W 449
@@ -113,7 +113,7 @@ static void aboutInit(void)
 			hastighet = 0;
 			for (i = 0; i < NUM_STARS; i++)
 			{
-				if (i < (NUM_STARS / 4))
+				if (i < NUM_STARS/4)
 				{
 					starcrd[i].z = (int16_t)random32(0xFFFF) - 0x8000;
 					starcrd[i].y = (int16_t)random32(0xFFFF) - 0x8000;
@@ -127,8 +127,8 @@ static void aboutInit(void)
 					ww = (((M_PI * 2.0) / 5.0) * n) + (r / 12000.0) + (w / 3000000.0);
 					h = ((sqr(r) / 30000) * (random32(10000) - 5000)) / 12000;
 
-					starcrd[i].x = (int16_t)trunc(r * cos(ww));
-					starcrd[i].y = (int16_t)trunc(r * sin(ww));
+					starcrd[i].x = (int16_t)(r * cos(ww));
+					starcrd[i].y = (int16_t)(r * sin(ww));
 					starcrd[i].z = (int16_t)h;
 				}
 			}
@@ -155,6 +155,10 @@ static void aboutInit(void)
 		default:
 			break;
 	}
+
+	star_a.x = 0;
+	star_a.y = 748;
+	star_a.z = 200;
 
 	for (i = 0; i < NUM_STARS; i++)
 		lastStarScreenPos[i] = -1;
@@ -186,7 +190,8 @@ static void realStars(void)
 		star = &starcrd[i];
 		star->z += hastighet;
 
-		z = (((xz * star->x) >> 16) + ((yz * star->y) >> 16) + ((zz * star->z) >> 16)) + 9000;
+		z = ((xz * star->x) >> 16) + ((yz * star->y) >> 16) + ((zz * star->z) >> 16);
+		z += 9000;
 		if (z <= 100)
 			continue;
 
@@ -207,7 +212,7 @@ static void realStars(void)
 			col = ((uint8_t)~(z >> 8) >> 3) - (22 - 8);
 			if (col < 24)
 			{
-				video.frameBuffer[screenBufferPos] = video.palette[starColConv[col]] & 0xFFFFFF;
+				video.frameBuffer[screenBufferPos] = video.palette[starColConv[col]] & 0x00FFFFFF;
 				lastStarScreenPos[i] = screenBufferPos;
 			}
 		}
@@ -245,12 +250,12 @@ void showAboutScreen(void) // called once when About screen is opened
 
 	x = 5 + (SCREEN_W - textWidth(infoString)) / 2;
 	y = 147;
-	textOut(x, y, PAL_FORGRND, infoString);
+	textOutBorder(x, y, PAL_FORGRND, PAL_BUTTON2, infoString);
 
 	sprintf(verText, "v%s (compiled on %s)", PROG_VER_STR, __DATE__);
 	x = ((3 + ABOUT_SCREEN_W) - textWidth(verText)) / 2;
 	y = (3 + ABOUT_SCREEN_H) - ((FONT1_CHAR_H - 2) + 3);
-	textOut(x, y, PAL_FORGRND, verText);
+	textOutBorder(x, y, PAL_FORGRND, PAL_BUTTON2, verText);
 
 	aboutInit();
 

@@ -93,6 +93,7 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr);
 void charOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr);
 void charOutOutlined(uint16_t x, uint16_t y, uint8_t paletteIndex, char chr);
 void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr);
+void textOutBorder(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t borderPaletteIndex, const char *textPtr);
 void textOutFixed(uint16_t x, uint16_t y, uint8_t fgPaltete, uint8_t bgPalette, const char *textPtr);
 void bigTextOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr);
 void bigTextOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, const char *textPtr);
