@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAS_MIDI
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
@@ -32,3 +34,5 @@ void scrollMidiInputDevListDown(void);
 void sbMidiInputSetPos(uint32_t pos);
 bool testMidiInputDeviceListMouseDown(void);
 int32_t SDLCALL initMidiFunc(void *ptr);
+
+#endif

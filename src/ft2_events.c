@@ -105,6 +105,7 @@ void handleThreadEvents(void)
 
 void handleEvents(void)
 {
+#ifdef HAS_MIDI
 	// called after MIDI has been initialized
 	if (midi.rescanDevicesFlag)
 	{
@@ -114,6 +115,7 @@ void handleEvents(void)
 		if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
 			drawMidiInputList();
 	}
+#endif
 
 	if (editor.trimThreadWasDone)
 	{
@@ -396,7 +398,6 @@ void setupCrashHandler(void)
 static void handleInput(void)
 {
 	char *inputText;
-	uint8_t vibDepth;
 	uint32_t eventType;
 	SDL_Event event;
 	SDL_Keycode key;
@@ -472,8 +473,10 @@ static void handleInput(void)
 		}
 		else if (event.type == SDL_MOUSEWHEEL)
 		{
-			     if (event.wheel.y > 0) mouseWheelHandler(MOUSE_WHEEL_UP);
-			else if (event.wheel.y < 0) mouseWheelHandler(MOUSE_WHEEL_DOWN);
+			if (event.wheel.y > 0)
+				mouseWheelHandler(MOUSE_WHEEL_UP);
+			else if (event.wheel.y < 0)
+				mouseWheelHandler(MOUSE_WHEEL_DOWN);
 		}
 		else if (event.type == SDL_DROPFILE)
 		{
@@ -527,8 +530,10 @@ static void handleInput(void)
 			editor.programRunning = false;
 	}
 
+#ifdef HAS_MIDI
 	// MIDI vibrato
-	vibDepth = (midi.currMIDIVibDepth >> 9) & 0x0F;
+	uint8_t vibDepth = (midi.currMIDIVibDepth >> 9) & 0x0F;
 	if (vibDepth > 0)
 		recordMIDIEffect(0x04, 0xA0 | vibDepth);
+#endif
 }

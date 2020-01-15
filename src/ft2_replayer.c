@@ -1452,7 +1452,11 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 	}
 
 	// *** AUTO VIBRATO ***
+#ifdef HAS_MIDI
 	if (ch->midiVibDepth > 0 || ins->vibDepth > 0)
+#else
+	if (ins->vibDepth > 0)
+#endif
 	{
 		if (ch->eVibSweep > 0)
 		{
@@ -1474,12 +1478,13 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 			autoVibAmp = ch->eVibAmp;
 		}
 
+#ifdef HAS_MIDI
 		// non-FT2 hack to make modulation wheel work when auto vibrato rate is zero
 		if (ch->midiVibDepth > 0 && ins->vibRate == 0)
 			ins->vibRate = 0x20;
 
 		autoVibAmp += ch->midiVibDepth;
-
+#endif
 		ch->eVibPos += ins->vibRate;
 
 		     if (ins->vibTyp == 1) autoVibVal = (ch->eVibPos > 127) ? 64 : -64; // square
@@ -1500,11 +1505,14 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 	else
 	{
 		ch->finalPeriod = ch->outPeriod;
+
+#ifdef HAS_MIDI
 		if (midi.enable)
 		{
 			ch->finalPeriod -= ch->midiPitch;
 			ch->status |= IS_Period;
 		}
+#endif
 	}
 }
 
@@ -2879,8 +2887,10 @@ void stopPlaying(void)
 	if (songWasPlaying)
 		editor.pattPos = song.pattPos;
 
+#ifdef HAS_MIDI
 	midi.currMIDIVibDepth = 0;
 	midi.currMIDIPitch = 0;
+#endif
 
 	memset(editor.keyOnTab, 0, sizeof (editor.keyOnTab));
 

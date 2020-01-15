@@ -1,8 +1,9 @@
 /* This file contains the routines for the following sample editor functions:
-** - Resampler
-** - Echo
-** - Mix
-** - Volume */
+ * - Resampler
+ * - Echo
+ * - Mix
+ * - Volume
+ */
 
 // for finding memory leaks in debug mode with Visual Studio
 #if defined _DEBUG && defined _MSC_VER

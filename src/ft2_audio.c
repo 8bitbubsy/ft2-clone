@@ -168,10 +168,8 @@ void setSpeed(uint16_t bpm)
 		tickTimeLen = (uint32_t)dInt;
 
 		// fractional part (scaled to 0..2^32-1)
-		dFrac *= UINT32_MAX + 1.0;
-		if (dFrac > (double)UINT32_MAX)
-			dFrac = (double)UINT32_MAX;
-		tickTimeLenFrac = (uint32_t)dFrac;
+		dFrac *= UINT32_MAX;
+		tickTimeLenFrac = (uint32_t)(dFrac + 0.5);
 	}
 }
 
@@ -1038,9 +1036,8 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 			chQueuePush(chSyncData);
 
 			audio.tickTime64 += tickTimeLen;
-
 			audio.tickTime64Frac += tickTimeLenFrac;
-			if (audio.tickTime64Frac >= (1ULL << 32))
+			if (audio.tickTime64Frac > 0xFFFFFFFF)
 			{
 				audio.tickTime64Frac &= 0xFFFFFFFF;
 				audio.tickTime64++;
@@ -1055,7 +1052,7 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 			b = pmpLeft;
 
 		mixAudio(stream, b, pmpChannels);
-		stream += (b * pmpCountDiv);
+		stream += b * pmpCountDiv;
 
 		a -= b;
 		pmpLeft -= b;
@@ -1133,24 +1130,23 @@ void updateSendAudSamplesRoutine(bool lockMixer)
 
 static void calcAudioLatencyVars(uint16_t haveSamples, int32_t haveFreq)
 {
-	double dAudioLatencySecs, dInt, dFrac;
+	double dHaveFreq, dAudioLatencySecs, dInt, dFrac;
 
-	if (haveFreq == 0)
+	dHaveFreq = haveFreq;
+	if (dHaveFreq == 0.0)
 		return; // panic!
 
-	dAudioLatencySecs = haveSamples / (double)haveFreq;
+	dAudioLatencySecs = haveSamples / dHaveFreq;
 
-	// dear SDL2, haveSamples and haveFreq better not be bogus values...
+	// XXX: haveSamples and haveFreq better not be bogus values...
 	dFrac = modf(dAudioLatencySecs * editor.dPerfFreq, &dInt);
 
 	// integer part
 	audio.audLatencyPerfValInt = (uint32_t)dInt;
 
 	// fractional part (scaled to 0..2^32-1)
-	dFrac *= UINT32_MAX + 1.0;
-	if (dFrac > (double)UINT32_MAX)
-		dFrac = (double)UINT32_MAX;
-	audio.audLatencyPerfValFrac = (uint32_t)round(dFrac);
+	dFrac *= UINT32_MAX;
+	audio.audLatencyPerfValFrac = (uint32_t)(dFrac + 0.5);
 
 	audio.dAudioLatencyMs = dAudioLatencySecs * 1000.0;
 }
@@ -1200,8 +1196,10 @@ bool setupAudio(bool showErrorMsg)
 	// get audio buffer size from config special flags
 
 	configAudioBufSize = 1024;
-	     if (config.specialFlags & BUFFSIZE_512)  configAudioBufSize = 512;
-	else if (config.specialFlags & BUFFSIZE_2048) configAudioBufSize = 2048;
+	if (config.specialFlags & BUFFSIZE_512)
+		configAudioBufSize = 512;
+	else if (config.specialFlags & BUFFSIZE_2048)
+		configAudioBufSize = 2048;
 
 	audio.wantFreq = config.audioFreq;
 	audio.wantSamples = configAudioBufSize;
@@ -1211,8 +1209,8 @@ bool setupAudio(bool showErrorMsg)
 	memset(&want, 0, sizeof (want));
 
 	// these three may change after opening a device, but our mixer is dealing with it
-	want.freq     = config.audioFreq;
-	want.format   = (config.specialFlags & BITDEPTH_24) ? AUDIO_F32 : AUDIO_S16;
+	want.freq = config.audioFreq;
+	want.format = (config.specialFlags & BITDEPTH_24) ? AUDIO_F32 : AUDIO_S16;
 	want.channels = 2;
 	// -------------------------------------------------------------------------------
 	want.callback = mixCallback;

@@ -477,12 +477,14 @@ void mouseWheelHandler(bool directionUp)
 						directionUp ? scrollAudInputDevListUp() : scrollAudInputDevListDown();
 				}
 			}
+#ifdef HAS_MIDI
 			else if (editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
 			{
 				// midi input device selector
 				if (mouse.x >= 110 && mouse.x <= 503 && mouse.y <= 173)
 					directionUp ? scrollMidiInputDevListUp() : scrollMidiInputDevListDown();
 			}
+#endif
 		}
 
 		if (!editor.ui.aboutScreenShown  && !editor.ui.helpScreenShown &&
@@ -707,15 +709,18 @@ void mouseButtonDownHandler(uint8_t mouseButton)
 	if (editor.ui.sysReqShown)
 		return;
 
-	if (testInstrVolEnvMouseDown(false))    return;
-	if (testInstrPanEnvMouseDown(false))    return;
-	if (testDiskOpMouseDown(false))         return;
-	if (testPianoKeysMouseDown(false))      return;
-	if (testSamplerDataMouseDown())         return;
-	if (testPatternDataMouseDown())         return;
-	if (testScopesMouseDown())              return;
-	if (testAudioDeviceListsMouseDown())    return;
+	if (testInstrVolEnvMouseDown(false)) return;
+	if (testInstrPanEnvMouseDown(false)) return;
+	if (testDiskOpMouseDown(false))      return;
+	if (testPianoKeysMouseDown(false))   return;
+	if (testSamplerDataMouseDown())      return;
+	if (testPatternDataMouseDown())      return;
+	if (testScopesMouseDown())           return;
+	if (testAudioDeviceListsMouseDown()) return;
+
+#ifdef HAS_MIDI
 	if (testMidiInputDeviceListMouseDown()) return;
+#endif
 }
 
 void handleLastGUIObjectDown(void)

@@ -1186,6 +1186,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
+#ifdef HAS_MIDI
 			else if (keyb.leftCtrlPressed)
 			{
 				editor.currConfigScreen = 3;
@@ -1194,6 +1195,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
+#endif
 			break;
 
 		case SDLK_5:

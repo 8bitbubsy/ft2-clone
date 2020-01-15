@@ -65,7 +65,10 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	{ 4, 19, 87, RB_GROUP_CONFIG_SELECT, rbConfigIODevices },
 	{ 4, 35, 59, RB_GROUP_CONFIG_SELECT, rbConfigLayout },
 	{ 4, 51, 99, RB_GROUP_CONFIG_SELECT, rbConfigMiscellaneous },
+
+#ifdef HAS_MIDI
 	{ 4, 67, 74, RB_GROUP_CONFIG_SELECT, rbConfigMidiInput },
+#endif
 
 	// ------ CONFIG AUDIO ------
 

@@ -345,10 +345,12 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 556, 158, 22, 13, 1, 4, ARROW_LEFT_STRING,              NULL,    configMIDISensDown,  NULL },
 	{ 607, 158, 22, 13, 1, 4, ARROW_RIGHT_STRING,             NULL,    configMIDISensUp,    NULL },
 
+#ifdef HAS_MIDI
 	// ------ CONFIG MIDI PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,                 funcOnUp
 	{ 483,   2, 18, 13, 1, 4, ARROW_UP_STRING,   NULL,    scrollMidiInputDevListUp,   NULL },
 	{ 483, 158, 18, 13, 1, 4, ARROW_DOWN_STRING, NULL,    scrollMidiInputDevListDown, NULL },
+#endif
 
 	// ------ DISK OP. PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,       funcOnUp

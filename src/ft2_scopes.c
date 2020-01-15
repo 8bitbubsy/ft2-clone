@@ -19,6 +19,7 @@
 #include "ft2_scopes.h"
 #include "ft2_mouse.h"
 #include "ft2_video.h"
+#include "ft2_scopedraw.h"
 
 enum
 {
@@ -36,19 +37,6 @@ typedef struct scopeState_t
 	uint8_t typ;
 	int32_t len, repS, repL, playOffset;
 } scopeState_t;
-
-// actual scope data
-typedef struct scope_t
-{
-	volatile bool active;
-	const int8_t *sampleData8;
-	const int16_t *sampleData16;
-	int8_t SVol;
-	bool wasCleared, sample16Bit;
-	uint8_t loopType;
-	int32_t SRepS, SRepL, SLen, SPos;
-	uint32_t SFrq, SPosDec, posXOR;
-} scope_t;
 
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
 static uint32_t oldVoiceDelta, oldSFrq, scopeTimeLen, scopeTimeLenFrac;
@@ -408,7 +396,7 @@ static void scopeTrigger(uint8_t ch, sampleTyp *s, int32_t playOffset)
 	tempState.sample16Bit = sampleIs16Bit;
 	tempState.loopType = loopType;
 
-	tempState.posXOR = 0; // forwards
+	tempState.SPosDir = 1; // forwards
 	tempState.SLen = (loopType > 0) ? (loopBegin + loopLength) : length;
 	tempState.SRepS = loopBegin;
 	tempState.SRepL = loopLength;
@@ -454,14 +442,14 @@ static void updateScopes(void)
 		// scope position update
 
 		tempState.SPosDec += tempState.SFrq;
-		tempState.SPos += ((tempState.SPosDec >> 16) ^ tempState.posXOR);
+		tempState.SPos += ((tempState.SPosDec >> 16) * tempState.SPosDir);
 		tempState.SPosDec &= 0xFFFF;
 
 		// handle loop wrapping or sample end
 
-		if (tempState.posXOR == 0xFFFFFFFF && tempState.SPos < tempState.SRepS) // sampling backwards (definitely pingpong loop)
+		if (tempState.SPosDir == -1 && tempState.SPos < tempState.SRepS) // sampling backwards (definitely pingpong loop)
 		{
-			tempState.posXOR = 0; // change direction to forwards
+			tempState.SPosDir = 1; // change direction to forwards
 
 			if (tempState.SRepL < 2)
 				tempState.SPos = tempState.SRepS;
@@ -488,7 +476,7 @@ static void updateScopes(void)
 			}
 			else // pingpong loop
 			{
-				tempState.posXOR = 0xFFFFFFFF; // change direction to backwards
+				tempState.SPosDir = -1; // change direction to backwards
 				tempState.SPos = (tempState.SLen - 1) - loopOverflowVal;
 				assert(tempState.SPos >= tempState.SRepS && tempState.SPos < tempState.SLen);
 			}
@@ -500,118 +488,11 @@ static void updateScopes(void)
 	scopesUpdatingFlag = false;
 }
 
-static void scopeLine(int16_t x1, int16_t y1, int16_t y2)
-{
-	int16_t d, sy, dy;
-	uint16_t ay;
-	int32_t pitch;
-	uint32_t pixVal, *dst32;
-
-	dy = y2 - y1;
-	ay = ABS(dy);
-	sy = SGN(dy);
-
-	pixVal = video.palette[PAL_PATTEXT];
-	pitch = sy * SCREEN_W;
-
-	dst32 = &video.frameBuffer[(y1 * SCREEN_W) + x1];
-	*dst32 = pixVal;
-
-	if (ay <= 1)
-	{
-		if (ay != 0)
-			dst32 += pitch;
-
-		*++dst32 = pixVal;
-		return;
-	}
-
-	d = 2 - ay;
-
-	ay *= 2;
-	while (y1 != y2)
-	{
-		if (d >= 0)
-		{
-			d -= ay;
-			dst32++;
-		}
-
-		y1 += sy;
-		d  += 2;
-
-		 dst32 += pitch;
-		*dst32  = pixVal;
-	}
-}
-
-static inline int8_t getScaledScopeSample8(scope_t *sc, int32_t drawPos)
-{
-	if (!sc->active)
-		return 0;
-
-	assert(drawPos >= 0 && drawPos < sc->SLen);
-	return (sc->sampleData8[drawPos] * sc->SVol) >> 8;
-}
-
-static inline int8_t getScaledScopeSample16(scope_t *sc, int32_t drawPos)
-{
-	if (!sc->active)
-		return 0;
-
-	assert(drawPos >= 0 && drawPos < sc->SLen);
-	return (int8_t)((sc->sampleData16[drawPos] * sc->SVol) >> 16);
-}
-
-#define SCOPE_UPDATE_DRAWPOS \
-	scopeDrawFrac += s.SFrq >> 6; \
-	scopeDrawPos += ((scopeDrawFrac >> 16) ^ drawPosXOR); \
-	scopeDrawFrac &= 0xFFFF; \
-	\
-	if (drawPosXOR == 0xFFFFFFFF && scopeDrawPos < s.SRepS) /* sampling backwards (definitely pingpong loop) */ \
-	{ \
-		drawPosXOR = 0; /* change direction to forwards */ \
-		\
-		if (s.SRepL < 2) \
-			scopeDrawPos = s.SRepS; \
-		else \
-			scopeDrawPos = s.SRepS + ((s.SRepS - scopeDrawPos - 1) % s.SRepL); \
-		\
-		assert(scopeDrawPos >= s.SRepS && scopeDrawPos < s.SLen); \
-	} \
-	else if (scopeDrawPos >= s.SLen) \
-	{ \
-		if (s.SRepL < 2) \
-			loopOverflowVal = 0; \
-		else \
-			loopOverflowVal = (scopeDrawPos - s.SLen) % s.SRepL; \
-		\
-		if (s.loopType == LOOP_NONE) \
-		{ \
-			s.active = false; \
-		} \
-		else if (s.loopType == LOOP_FORWARD) \
-		{ \
-			scopeDrawPos = s.SRepS + loopOverflowVal; \
-			assert(scopeDrawPos >= s.SRepS && scopeDrawPos < s.SLen); \
-		} \
-		else /* pingpong loop */ \
-		{ \
-			drawPosXOR = 0xFFFFFFFF; /* change direction to backwards */ \
-			scopeDrawPos = (s.SLen - 1) - loopOverflowVal; \
-			assert(scopeDrawPos >= s.SRepS && scopeDrawPos < s.SLen); \
-		} \
-		\
-	} \
-	assert(scopeDrawPos >= 0); \
-
 void drawScopes(void)
 {
-	int16_t y1, y2, sample, scopeLineY;
+	int16_t scopeLineY;
 	const uint16_t *scopeLens;
-	uint16_t chansPerRow, x16, scopeXOffs, scopeYOffs, scopeDrawLen;
-	int32_t scopeDrawPos, loopOverflowVal;
-	uint32_t x, len, drawPosXOR, scopeDrawFrac, scopePixelColor;
+	uint16_t chansPerRow, scopeXOffs, scopeYOffs, scopeDrawLen;
 	volatile scope_t *sc;
 	scope_t s;
 
@@ -651,80 +532,9 @@ void drawScopes(void)
 			// clear scope background
 			clearRect(scopeXOffs, scopeYOffs, scopeDrawLen, SCOPE_HEIGHT);
 
-			scopeDrawPos = s.SPos;
-			scopeDrawFrac = 0;
-			drawPosXOR = s.posXOR;
-
-			// draw current scope
-			if (config.specialFlags & LINED_SCOPES)
-			{
-				// LINE SCOPE
-
-				if (s.sample16Bit)
-				{
-					y1 = scopeLineY - getScaledScopeSample16(&s, scopeDrawPos);
-					SCOPE_UPDATE_DRAWPOS
-
-					x16 = scopeXOffs;
-					len = scopeXOffs + (scopeDrawLen - 1);
-
-					for (; x16 < len; x16++)
-					{
-						y2 = scopeLineY - getScaledScopeSample16(&s, scopeDrawPos);
-						scopeLine(x16, y1, y2);
-						y1 = y2;
-
-						SCOPE_UPDATE_DRAWPOS
-					}
-				}
-				else
-				{
-					y1 = scopeLineY - getScaledScopeSample8(&s, scopeDrawPos);
-					SCOPE_UPDATE_DRAWPOS
-
-					x16 = scopeXOffs;
-					len = scopeXOffs + (scopeDrawLen - 1);
-
-					for (; x16 < len; x16++)
-					{
-						y2 = scopeLineY - getScaledScopeSample8(&s, scopeDrawPos);
-						scopeLine(x16, y1, y2);
-						y1 = y2;
-
-						SCOPE_UPDATE_DRAWPOS
-					}
-				}
-			}
-			else
-			{
-				// PIXEL SCOPE
-
-				scopePixelColor = video.palette[PAL_PATTEXT];
-
-				x = scopeXOffs;
-				len = scopeXOffs + scopeDrawLen;
-
-				if (s.sample16Bit)
-				{
-					for (; x < len; x++)
-					{
-						sample = getScaledScopeSample16(&s, scopeDrawPos);
-						video.frameBuffer[((scopeLineY - sample) * SCREEN_W) + x] = scopePixelColor;
-
-						SCOPE_UPDATE_DRAWPOS
-					}
-				}
-				else
-				{
-					for (; x < len; x++)
-					{
-						sample = getScaledScopeSample8(&s, scopeDrawPos);
-						video.frameBuffer[((scopeLineY - sample) * SCREEN_W) + x] = scopePixelColor;
-
-						SCOPE_UPDATE_DRAWPOS
-					}
-				}
-			}
+			// draw scope
+			bool linedScopes = !!(config.specialFlags & LINED_SCOPES);
+			scopeDrawRoutineTable[(linedScopes * 6) + (s.sample16Bit * 3) + s.loopType](&s, scopeXOffs, scopeLineY, scopeDrawLen);
 		}
 		else
 		{
@@ -850,12 +660,11 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 
 		// update next tick time
 		timeNext64 += scopeTimeLen;
-
 		timeNext64Frac += scopeTimeLenFrac;
-		if (timeNext64Frac >= (1ULL << 32))
+		if (timeNext64Frac > 0xFFFFFFFF)
 		{
-			timeNext64++;
 			timeNext64Frac &= 0xFFFFFFFF;
+			timeNext64++;
 		}
 	}
 
@@ -872,11 +681,9 @@ bool initScopes(void)
 	// integer part
 	scopeTimeLen = (uint32_t)dInt;
 
-	// fractional part scaled to 0..2^32-1
-	dFrac *= UINT32_MAX + 1.0;
-	if (dFrac > (double)UINT32_MAX)
-		dFrac = (double)UINT32_MAX;
-	scopeTimeLenFrac = (uint32_t)round(dFrac);
+	// fractional part (scaled to 0..2^32-1)
+	dFrac *= UINT32_MAX;
+	scopeTimeLenFrac = (uint32_t)(dFrac + 0.5);
 
 	scopeThread = SDL_CreateThread(scopeThreadFunc, NULL, NULL);
 	if (scopeThread == NULL)

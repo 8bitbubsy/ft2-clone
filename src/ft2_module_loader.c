@@ -2278,8 +2278,11 @@ static void setupLoadedModule(void)
 
 	editor.currVolEnvPoint = 0;
 	editor.currPanEnvPoint = 0;
+
+#ifdef HAS_MIDI
 	midi.currMIDIVibDepth = 0;
 	midi.currMIDIPitch = 0;
+#endif
 
 	memset(editor.keyOnTab, 0, sizeof (editor.keyOnTab));
 

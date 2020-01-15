@@ -197,7 +197,9 @@ void configMIDISensUp(void);
 void rbConfigIODevices(void);
 void rbConfigLayout(void);
 void rbConfigMiscellaneous(void);
+#ifdef HAS_MIDI
 void rbConfigMidiInput(void);
+#endif
 void rbConfigSbs512(void);
 void rbConfigSbs1024(void);
 void rbConfigSbs2048(void);

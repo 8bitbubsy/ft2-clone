@@ -13,6 +13,19 @@ void drawScopes(void);
 void drawScopeFramework(void);
 bool initScopes(void);
 
+// actual scope data
+typedef struct scope_t
+{
+	volatile bool active;
+	const int8_t *sampleData8;
+	const int16_t *sampleData16;
+	int8_t SVol;
+	bool wasCleared, sample16Bit;
+	uint8_t loopType;
+	int32_t SPosDir, SRepS, SRepL, SLen, SPos;
+	uint32_t SFrq, SPosDec;
+} scope_t;
+
 typedef struct lastChInstr_t
 {
 	uint8_t sampleNr, instrNr;

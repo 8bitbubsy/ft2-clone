@@ -45,8 +45,10 @@ enum // SCROLLBARS
 	// Config Miscellaneous
 	SB_MIDI_SENS,
 
+#ifdef HAS_MIDI
 	// Config Midi
 	SB_MIDI_INPUT_SCROLL,
+#endif
 
 	// Disk Op.
 	SB_DISKOP_LIST,

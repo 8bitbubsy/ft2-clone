@@ -76,9 +76,6 @@ static void drawFPSCounter(void)
 	uint16_t xPos, yPos;
 	double dRefreshRate, dAudLatency;
 
-	if (!video.showFPSCounter)
-		return;
-
 	if (editor.framesPassed >= FPS_SCAN_FRAMES && (editor.framesPassed % FPS_SCAN_FRAMES) == 0)
 	{
 		dAvgFPS = dRunningFPS * (1.0 / FPS_SCAN_FRAMES);
@@ -163,7 +160,10 @@ void flipFrame(void)
 	uint32_t windowFlags = SDL_GetWindowFlags(video.window);
 
 	renderSprites();
-	drawFPSCounter();
+
+	if (video.showFPSCounter)
+		drawFPSCounter();
+
 	SDL_UpdateTexture(video.texture, NULL, video.frameBuffer, SCREEN_W * sizeof (int32_t));
 	SDL_RenderClear(video.renderer);
 	SDL_RenderCopy(video.renderer, video.texture, NULL, NULL);
@@ -363,7 +363,7 @@ bool setupSprites(void)
 	// setup refresh buffer (used to clear sprites after each frame)
 	for (uint32_t i = 0; i < SPRITE_NUM; i++)
 	{
-		sprites[i].refreshBuffer = (uint32_t *)malloc((sprites[i].w * sprites[i].h) * sizeof (int32_t));
+		sprites[i].refreshBuffer = (uint32_t *)malloc(sprites[i].w * sprites[i].h * sizeof (int32_t));
 		if (sprites[i].refreshBuffer == NULL)
 			return false;
 	}
@@ -423,7 +423,7 @@ void eraseSprites(void)
 	uint32_t *dst32;
 	sprite_t *s;
 
-	for (i = (SPRITE_NUM - 1); i >= 0; i--) // erasing must be done in reverse order
+	for (i = SPRITE_NUM-1; i >= 0; i--) // erasing must be done in reverse order
 	{
 		s = &sprites[i];
 		if (s->x >= SCREEN_W) // sprite is hidden, don't erase
@@ -725,11 +725,9 @@ void waitVBL(void)
 	}
 
 	// update next frame time
-
 	timeNext64 += video.vblankTimeLen;
-
 	timeNext64Frac += video.vblankTimeLenFrac;
-	if (timeNext64Frac >= (1ULL << 32))
+	if (timeNext64Frac > 0xFFFFFFFF)
 	{
 		timeNext64Frac &= 0xFFFFFFFF;
 		timeNext64++;
