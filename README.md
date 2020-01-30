@@ -6,8 +6,8 @@ Aims to be a **highly accurate** clone of the classic Fasttracker II software fo
 
 # Screenshots
 
-![Example #1](https://16-bits.org/ft2-clone-1.png)
-![Example #2](https://16-bits.org/ft2-clone-2.png)
+![Example #1](https://16-bits.org/ft2-clone-3.png)
+![Example #2](https://16-bits.org/ft2-clone-4.png)
 
 # Releases
 Windows/macOS binary releases can always be found at [16-bits.org](https://16-bits.org/ft2.php).
