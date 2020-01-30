@@ -5,6 +5,7 @@
 #include "ft2_unicode.h"
 
 void loadMusic(UNICHAR *filenameU);
+bool loadMusicUnthreaded(UNICHAR *filenameU); // for development testing
 bool handleModuleLoadFromArg(int argc, char **argv);
 void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck);
 void handleLoadMusicEvents(void);

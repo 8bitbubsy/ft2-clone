@@ -23,6 +23,7 @@
 #include "ft2_mouse.h"
 #include "ft2_scopes.h"
 #include "ft2_pattern_ed.h"
+#include "ft2_pattern_draw.h"
 #include "ft2_sample_ed.h"
 #include "ft2_nibbles.h"
 #include "ft2_inst_ed.h"
@@ -33,13 +34,6 @@
 #include "ft2_module_loader.h"
 #include "ft2_midi.h"
 
-// for FPS counter
-#define FPS_SCAN_FRAMES 60
-#define FPS_RENDER_W 280
-#define FPS_RENDER_H (((FONT1_CHAR_H + 1) * 8) + 1)
-#define FPS_RENDER_X 2
-#define FPS_RENDER_Y 2
-
 static const uint8_t textCursorData[12] =
 {
 	PAL_FORGRND, PAL_FORGRND, PAL_FORGRND,
@@ -49,17 +43,28 @@ static const uint8_t textCursorData[12] =
 };
 
 static bool songIsModified;
-static char buf[1024], wndTitle[128 + PATH_MAX];
-static uint64_t frameStartTime, timeNext64, timeNext64Frac;
+static char wndTitle[128 + PATH_MAX];
+static uint64_t timeNext64, timeNext64Frac;
 static sprite_t sprites[SPRITE_NUM];
+
+// for FPS counter
+#define FPS_SCAN_FRAMES 60
+#define FPS_RENDER_W 280
+#define FPS_RENDER_H (((FONT1_CHAR_H + 1) * 8) + 1)
+#define FPS_RENDER_X 2
+#define FPS_RENDER_Y 2
+
+static char fpsTextBuf[1024];
+static uint64_t frameStartTime;
 static double dRunningFPS, dFrameTime, dAvgFPS;
+// ------------------
 
 static void drawReplayerData(void);
 
 void resetFPSCounter(void)
 {
 	editor.framesPassed = 0;
-	buf[0] = '\0';
+	fpsTextBuf[0] = '\0';
 	dRunningFPS = VBLANK_HZ;
 	dFrameTime = 1000.0 / VBLANK_HZ;
 }
@@ -106,7 +111,7 @@ static void drawFPSCounter(void)
 	if (dAudLatency < 0.0 || dAudLatency > 999999999.9999)
 		dAudLatency = 999999999.9999; // prevent number from overflowing text box
 
-	sprintf(buf, "Frames per second: %.4f\n" \
+	sprintf(fpsTextBuf, "Frames per second: %.4f\n" \
 	             "Monitor refresh rate: %.1fHz (+/-)\n" \
 	             "59..61Hz GPU VSync used: %s\n" \
 	             "Audio frequency: %.1fkHz (expected %.1fkHz)\n" \
@@ -126,7 +131,7 @@ static void drawFPSCounter(void)
 	xPos = FPS_RENDER_X + 3;
 	yPos = FPS_RENDER_Y + 3;
 
-	textPtr = buf;
+	textPtr = fpsTextBuf;
 	while (*textPtr != '\0')
 	{
 		ch = *textPtr++;
@@ -210,7 +215,7 @@ void showErrorMsgBox(const char *fmt, ...)
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", strBuf, video.window);
 }
 
-void updateRenderSizeVars(void)
+static void updateRenderSizeVars(void)
 {
 	int32_t di;
 #ifdef __APPLE__
@@ -754,11 +759,13 @@ void closeVideo(void)
 		video.window = NULL;
 	}
 
-	if (video.frameBuffer != NULL)
+	if (video.frameBufferUnaligned != NULL)
 	{
-		free(video.frameBuffer);
-		video.frameBuffer = NULL;
+		free(video.frameBufferUnaligned);
+		video.frameBufferUnaligned = NULL;
 	}
+
+	video.frameBuffer = NULL;
 }
 
 void setWindowSizeFromConfig(bool updateRenderer)
@@ -854,7 +861,7 @@ bool recreateTexture(void)
 	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H);
 	if (video.texture == NULL)
 	{
-		showErrorMsgBox("Couldn't create a %dx%d GPU texture:\n%s\n\nIs your GPU (+ driver) too old?", SCREEN_W, SCREEN_H, SDL_GetError());
+		showErrorMsgBox("Couldn't create a %dx%d GPU texture:\n\"%s\"\n\nIs your GPU (+ driver) too old?", SCREEN_W, SCREEN_H, SDL_GetError());
 		return false;
 	}
 
@@ -930,7 +937,7 @@ bool setupRenderer(void)
 
 		if (video.renderer == NULL)
 		{
-			showErrorMsgBox("Couldn't create SDL renderer:\n%s\n\nIs your GPU (+ driver) too old?",
+			showErrorMsgBox("Couldn't create SDL renderer:\n\"%s\"\n\nIs your GPU (+ driver) too old?",
 				SDL_GetError());
 			return false;
 		}
@@ -946,18 +953,21 @@ bool setupRenderer(void)
 
 	if (!recreateTexture())
 	{
-		showErrorMsgBox("Couldn't create a %dx%d GPU texture:\n%s\n\nIs your GPU (+ driver) too old?",
+		showErrorMsgBox("Couldn't create a %dx%d GPU texture:\n\"%s\"\n\nIs your GPU (+ driver) too old?",
 			SCREEN_W, SCREEN_H, SDL_GetError());
 		return false;
 	}
 
 	// framebuffer used by SDL (for texture)
-	video.frameBuffer = (uint32_t *)malloc(SCREEN_W * SCREEN_H * sizeof (int32_t));
-	if (video.frameBuffer == NULL)
+	video.frameBufferUnaligned = (uint32_t *)MALLOC_PAD(SCREEN_W * SCREEN_H * sizeof (int32_t), 256);
+	if (video.frameBufferUnaligned == NULL)
 	{
 		showErrorMsgBox("Not enough memory!");
 		return false;
 	}
+
+	// we want an aligned pointer
+	video.frameBuffer = (uint32_t *)ALIGN_PTR(video.frameBufferUnaligned, 256);
 
 	if (!setupSprites())
 		return false;
@@ -1033,16 +1043,20 @@ void handleRedrawing(void)
 				if (!editor.ui.diskOpShown)
 					drawPlaybackTime();
 
-				     if (editor.ui.sampleEditorExtShown) handleSampleEditorExtRedrawing();
-				else if (editor.ui.scopesShown) drawScopes();
+				if (editor.ui.sampleEditorExtShown)
+					handleSampleEditorExtRedrawing();
+				else if (editor.ui.scopesShown)
+					drawScopes();
 			}
 		}
 	}
 
 	drawReplayerData();
 
-	     if (editor.ui.instEditorShown) handleInstEditorRedrawing();
-	else if (editor.ui.sampleEditorShown) handleSamplerRedrawing();
+	if (editor.ui.instEditorShown)
+		handleInstEditorRedrawing();
+	else if (editor.ui.sampleEditorShown)
+		handleSamplerRedrawing();
 
 	// blink text edit cursor
 	if (editor.editTextFlag && mouse.lastEditBox != -1)

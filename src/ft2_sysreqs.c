@@ -41,12 +41,41 @@ static SDL_Keycode shortCut[NUM_SYSREQ_TYPES][5] =
 	{ SDLK_m, SDLK_s, SDLK_c, 0,      0 },
 };
 
+typedef struct quitType_t
+{
+	const char *text;
+	uint8_t typ;
+} quitType_t;
+
+#define QUIT_MESSAGES 16
+
+// 8bitbubsy: Removed the MS-DOS ones...
+static quitType_t quitMessage[QUIT_MESSAGES] =
+{
+	{ "Do you really want to quit?", 2 },
+	{ "Musicians, press >Cancel<.  Lamers, press >OK<", 1 },
+	{ "Tired already?", 2 },
+	{ "Dost thou wish to leave with such hasty abandon?", 2 },
+	{ "So, you think you can quit this easily, huh?", 2 },
+	{ "Hey, what is the matter? You are not quiting now, are you?", 2 },
+	{ "Rome was not built in one day! Quit really?", 2 },
+	{ "For Work and Worry, press YES.  For Delectation and Demos, press NO.", 2 },
+	{ "Did you really press the right key?", 2 },
+	{ "You are a lamer, aren't you? Press >OK< to confirm.", 1 },
+	{ "Hope ya did some good. Press >OK< to quit.", 1 },
+	{ "Quit? Only for a good reason you are allowed to press >OK<.", 1 },
+	{ "Are we at the end of a Fasttracker round?", 2 },
+	{ "Are you just another boring user?", 2 },
+	{ "Hope you're doing the compulsory \"Exit ceremony\" before pressing >OK<.", 1 },
+	{ "Fasttracker...", 3 }
+};
+
 static void drawWindow(uint16_t w)
 {
 	const uint16_t h = SYSTEM_REQUEST_H;
 	uint16_t x, y;
 
-	x = (SCREEN_W / 2) - (w / 2);
+	x = (SCREEN_W - w) / 2;
 	y = editor.ui.extended ? 91 : SYSTEM_REQUEST_Y;
 
 	// main fill
@@ -85,8 +114,10 @@ static bool mouseButtonDownLogic(uint8_t mouseButton)
 		return false;
 	}
 
-	     if (mouseButton == SDL_BUTTON_LEFT) mouse.leftButtonPressed = true;
-	else if (mouseButton == SDL_BUTTON_RIGHT) mouse.rightButtonPressed = true;
+	if (mouseButton == SDL_BUTTON_LEFT)
+		mouse.leftButtonPressed = true;
+	else if (mouseButton == SDL_BUTTON_RIGHT)
+		mouse.rightButtonPressed = true;
 
 	// don't do mouse down testing here if we already are using an object
 	if (mouse.lastUsedObjectType != OBJECT_NONE)
@@ -105,8 +136,10 @@ static bool mouseButtonDownLogic(uint8_t mouseButton)
 
 static bool mouseButtonUpLogic(uint8_t mouseButton)
 {
-	     if (mouseButton == SDL_BUTTON_LEFT) mouse.leftButtonPressed = false;
-	else if (mouseButton == SDL_BUTTON_RIGHT) mouse.rightButtonPressed = false;
+	if (mouseButton == SDL_BUTTON_LEFT)
+		mouse.leftButtonPressed = false;
+	else if (mouseButton == SDL_BUTTON_RIGHT)
+		mouse.rightButtonPressed = false;
 
 	editor.textCursorBlinkCounter = 0;
 
@@ -118,13 +151,12 @@ static bool mouseButtonUpLogic(uint8_t mouseButton)
 }
 
 // WARNING: This routine must ONLY be called from the main input/video thread!
-int16_t okBox(int16_t typ, char *headline, char *text)
+int16_t okBox(int16_t typ, const char *headline, const char *text)
 {
 #define PUSHBUTTON_W 80
 
 	int16_t returnVal, oldLastUsedObjectID, oldLastUsedObjectType;
 	uint16_t x, y, i, tlen, hlen, wlen, tx, knp, headlineX, textX;
-	const uint16_t mid = SCREEN_W / 2;
 	SDL_Event inputEvent;
 	pushButton_t *p;
 	checkBox_t *c;
@@ -172,9 +204,9 @@ int16_t okBox(int16_t typ, char *headline, char *text)
 	if (wlen > 600)
 		wlen = 600;
 
-	headlineX = mid - (hlen / 2);
-	textX = mid - (tlen / 2);
-	x = mid - (wlen / 2);
+	headlineX = (SCREEN_W - hlen) / 2;
+	textX = (SCREEN_W - tlen) / 2;
+	x = (SCREEN_W - wlen) / 2;
 
 	// the box y position differs in extended pattern editor mode
 	y = editor.ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
@@ -184,7 +216,7 @@ int16_t okBox(int16_t typ, char *headline, char *text)
 	{
 		p = &pushButtons[i];
 
-		p->x = (mid - (tx / 2)) + (i * 100);
+		p->x = ((SCREEN_W - tx) / 2) + (i * 100);
 		p->y = y + 42;
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
@@ -231,8 +263,10 @@ int16_t okBox(int16_t typ, char *headline, char *text)
 
 		if (mouse.leftButtonPressed || mouse.rightButtonPressed)
 		{
-			     if (mouse.lastUsedObjectType == OBJECT_PUSHBUTTON) handlePushButtonsWhileMouseDown();
-			else if (mouse.lastUsedObjectType == OBJECT_CHECKBOX) handleCheckBoxesWhileMouseDown();
+			if (mouse.lastUsedObjectType == OBJECT_PUSHBUTTON)
+				handlePushButtonsWhileMouseDown();
+			else if (mouse.lastUsedObjectType == OBJECT_CHECKBOX)
+				handleCheckBoxesWhileMouseDown();
 		}
 
 		while (SDL_PollEvent(&inputEvent))
@@ -330,7 +364,7 @@ int16_t okBox(int16_t typ, char *headline, char *text)
 ** - This routine must ONLY be called from the main input/video thread!!
 ** - edText must be null-terminated
 */
-int16_t inputBox(int16_t typ, char *headline, char *edText, uint16_t maxStrLen)
+int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxStrLen)
 {
 #define PUSHBUTTON_W 80
 #define TEXTBOX_W 250
@@ -338,7 +372,6 @@ int16_t inputBox(int16_t typ, char *headline, char *edText, uint16_t maxStrLen)
 	char *inputText;
 	int16_t returnVal, oldLastUsedObjectID, oldLastUsedObjectType;
 	uint16_t y, wlen, tx, knp, headlineX, i;
-	const uint16_t mid = SCREEN_W / 2;
 	SDL_Event inputEvent;
 	pushButton_t *p;
 	textBox_t *t;
@@ -389,7 +422,7 @@ int16_t inputBox(int16_t typ, char *headline, char *edText, uint16_t maxStrLen)
 	mouseAnimOff();
 
 	wlen = textWidth(headline);
-	headlineX = mid - (wlen / 2);
+	headlineX = (SCREEN_W - wlen) / 2;
 
 	// count number of buttons
 	knp = 0;
@@ -412,7 +445,7 @@ int16_t inputBox(int16_t typ, char *headline, char *edText, uint16_t maxStrLen)
 	y = editor.ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set further text box settings
-	t->x = mid - (TEXTBOX_W / 2);
+	t->x = (SCREEN_W - TEXTBOX_W) / 2;
 	t->y = y + 24;
 	t->visible = true;
 
@@ -423,7 +456,7 @@ int16_t inputBox(int16_t typ, char *headline, char *edText, uint16_t maxStrLen)
 
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
-		p->x = (mid - (tx / 2)) + (i * 100);
+		p->x = ((SCREEN_W - tx) / 2) + (i * 100);
 		p->y = y + 42;
 		p->caption = buttonText[typ][i];
 		p->visible = true;
@@ -452,8 +485,10 @@ int16_t inputBox(int16_t typ, char *headline, char *edText, uint16_t maxStrLen)
 
 		if (mouse.leftButtonPressed || mouse.rightButtonPressed)
 		{
-			     if (mouse.lastUsedObjectType == OBJECT_PUSHBUTTON) handlePushButtonsWhileMouseDown();
-			else if (mouse.lastUsedObjectType == OBJECT_TEXTBOX) handleTextBoxWhileMouseDown();
+			if (mouse.lastUsedObjectType == OBJECT_PUSHBUTTON)
+				handlePushButtonsWhileMouseDown();
+			else if (mouse.lastUsedObjectType == OBJECT_TEXTBOX)
+				handleTextBoxWhileMouseDown();
 		}
 
 		while (SDL_PollEvent(&inputEvent))
@@ -575,7 +610,7 @@ int16_t inputBox(int16_t typ, char *headline, char *edText, uint16_t maxStrLen)
 }
 
 // WARNING: This routine must NOT be called from the main input/video thread!
-int16_t okBoxThreadSafe(int16_t typ, char *headline, char *text)
+int16_t okBoxThreadSafe(int16_t typ, const char *headline, const char *text)
 {
 	// block multiple calls before they are completed (for safety)
 	while (okBoxData.active)
@@ -592,10 +627,34 @@ int16_t okBoxThreadSafe(int16_t typ, char *headline, char *text)
 	return okBoxData.returnData;
 }
 
+static bool askQuit_RandomMsg(void)
+{
+	uint8_t msg = rand() % QUIT_MESSAGES;
+	int16_t button = okBox(quitMessage[msg].typ, "System request", quitMessage[msg].text);
+
+	return (button == 1) ? true : false;
+}
+
+bool askUnsavedChanges(uint8_t type)
+{
+	int16_t button;
+	
+	if (type == ASK_TYPE_QUIT)
+	{
+		button = okBox(2, "System request",
+			"You have unsaved changes in your song. Do you still want to quit and lose ALL changes?");
+	}
+	else
+	{
+		button = okBox(2, "System request",
+			"You have unsaved changes in your song. Load new song and lose ALL changes?");
+	}
+
+	return (button == 1) ? true : false;
+}
+
 int16_t quitBox(bool skipQuitMsg)
 {
-	char *text;
-
 	if (editor.ui.sysReqShown)
 		return 0;
 
@@ -603,9 +662,7 @@ int16_t quitBox(bool skipQuitMsg)
 		return 1;
 
 	if (song.isModified)
-		text = "You have unsaved changes in your song. Do you still want to quit and lose ALL changes?";
-	else
-		text = "Do you really want to quit?";
+		return askUnsavedChanges(ASK_TYPE_QUIT);
 
-	return okBox(2, "System request", text);
+	return askQuit_RandomMsg();
 }

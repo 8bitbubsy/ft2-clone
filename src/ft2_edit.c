@@ -1858,7 +1858,7 @@ static bool askForScaleFade(char *msg)
 	uint8_t err;
 
 	sprintf(volstr, "%0.2f,%0.2f", dVolScaleFK1, dVolScaleFK2);
-	if (inputBox(2, msg, volstr, sizeof (volstr) - 1) != 1)
+	if (inputBox(1, msg, volstr, sizeof (volstr) - 1) != 1)
 		return false;
 
 	err = false;

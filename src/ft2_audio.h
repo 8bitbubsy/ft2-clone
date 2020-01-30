@@ -26,7 +26,7 @@ struct audio_t
 	volatile bool locked, resetSyncTickTimeFlag, volumeRampingFlag, interpolationFlag;
 	bool linearFreqTable, rescanAudioDevicesSupported;
 	int32_t inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
-	int32_t quickVolSizeVal, *mixBufferL, *mixBufferR;
+	int32_t quickVolSizeVal, *mixBufferL, *mixBufferR, *mixBufferLUnaligned, *mixBufferRUnaligned;
 	uint32_t freq;
 	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac;
 	uint64_t tickTime64, tickTime64Frac;

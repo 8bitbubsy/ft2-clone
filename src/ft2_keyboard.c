@@ -107,8 +107,10 @@ void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepea
 
 	if (editor.ui.sysReqShown)
 	{
-		     if (keycode == SDLK_RETURN) editor.ui.sysReqEnterPressed = true;
-		else if (keycode == SDLK_ESCAPE) editor.ui.sysReqShown = false;
+		if (keycode == SDLK_RETURN)
+			editor.ui.sysReqEnterPressed = true;
+		else if (keycode == SDLK_ESCAPE)
+			editor.ui.sysReqShown = false;
 
 		return;
 	}
@@ -858,7 +860,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				video.showFPSCounter ^= 1;
 				if (!video.showFPSCounter)
 				{
-					if (editor.ui.extended) // Mr. Kludge, my only friend
+					if (editor.ui.extended) // yet another kludge...
 						exitPatternEditorExtended();
 
 					showTopScreen(false);
@@ -1025,15 +1027,19 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_v:
 			if (keyb.leftAltPressed)
 			{
-				     if (editor.ui.sampleEditorShown) sampPaste();
-				else if (!editor.ui.instEditorShown)  scaleFadeVolumeBlock();
+				if (editor.ui.sampleEditorShown)
+					sampPaste();
+				else if (!editor.ui.instEditorShown)
+					scaleFadeVolumeBlock();
 
 				return true;
 			}
 			else if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
 			{
-				     if (editor.ui.sampleEditorShown) sampPaste();
-				else if (!editor.ui.instEditorShown)  scaleFadeVolumePattern();
+				if (editor.ui.sampleEditorShown)
+					sampPaste();
+				else if (!editor.ui.instEditorShown)
+					scaleFadeVolumePattern();
 
 				return true;
 			}

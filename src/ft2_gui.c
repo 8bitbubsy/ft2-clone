@@ -734,22 +734,22 @@ void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t pale
 
 void blit32(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h)
 {
-    uint32_t* dstPtr;
+	uint32_t* dstPtr;
 
-    assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-    dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-    for (uint32_t y = 0; y < h; y++)
-    {
-        for (uint32_t x = 0; x < w; x++)
-        {
-            if (srcPtr[x] != 0x00FF00)
-                dstPtr[x] = srcPtr[x] | 0xFF000000; // most significant 8 bits = palette number. 0xFF because no true palette
-        }
+	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (uint32_t y = 0; y < h; y++)
+	{
+		for (uint32_t x = 0; x < w; x++)
+		{
+			if (srcPtr[x] != 0x00FF00)
+				dstPtr[x] = srcPtr[x] | 0xFF000000; // most significant 8 bits = palette number. 0xFF because no true palette
+		}
 
-        srcPtr += w;
-        dstPtr += SCREEN_W;
-    }
+		srcPtr += w;
+		dstPtr += SCREEN_W;
+	}
 }
 
 void blit(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h)

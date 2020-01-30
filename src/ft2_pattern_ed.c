@@ -21,6 +21,8 @@
 #include "ft2_mouse.h"
 #include "ft2_video.h"
 
+#include "ft2_module_loader.h"
+
 // for pattern marking w/ keyboard
 static int8_t lastChMark;
 static int16_t lastRowMark;
@@ -657,7 +659,13 @@ void patternEditorExtended(void)
 	drawFramework(2,  2, 51, 20, FRAMEWORK_TYPE2);
 	drawFramework(2, 31, 51, 20, FRAMEWORK_TYPE2);
 
+	// force updating of end/page/length when showing scrollbar
+	scrollBars[SB_POS_ED].oldEnd = 0xFFFFFFFF;
+	scrollBars[SB_POS_ED].oldPage = 0xFFFFFFFF;
+	scrollBars[SB_POS_ED].oldPos = 0xFFFFFFFF;
+
 	showScrollBar(SB_POS_ED);
+
 	showPushButton(PB_POSED_POS_UP);
 	showPushButton(PB_POSED_POS_DOWN);
 	showPushButton(PB_POSED_INS);
@@ -2063,6 +2071,10 @@ void drawPosEdNums(int16_t songPos)
 {
 	uint8_t y;
 	int16_t entry;
+	uint32_t color1, color2;
+
+	color1 = video.palette[PAL_PATTEXT];
+	color2 = video.palette[PAL_FORGRND];
 
 	if (songPos >= song.len)
 		songPos = song.len - 1;
@@ -2092,13 +2104,13 @@ void drawPosEdNums(int16_t songPos)
 
 		if (editor.ui.extended)
 		{
-			pattTwoHexOut(8,  4 + (y * 9), PAL_PATTEXT, (uint8_t)entry);
-			pattTwoHexOut(32, 4 + (y * 9), PAL_PATTEXT, song.songTab[entry]);
+			pattTwoHexOut(8,  4 + (y * 9), (uint8_t)entry, color1);
+			pattTwoHexOut(32, 4 + (y * 9), song.songTab[entry], color1);
 		}
 		else
 		{
-			pattTwoHexOut(8,  4 + (y * 8), PAL_PATTEXT, (uint8_t)entry);
-			pattTwoHexOut(32, 4 + (y * 8), PAL_PATTEXT, song.songTab[entry]);
+			pattTwoHexOut(8,  4 + (y * 8), (uint8_t)entry, color1);
+			pattTwoHexOut(32, 4 + (y * 8), song.songTab[entry], color1);
 		}
 	}
 
@@ -2107,13 +2119,13 @@ void drawPosEdNums(int16_t songPos)
 	// middle
 	if (editor.ui.extended)
 	{
-		pattTwoHexOut(8,  23, PAL_FORGRND, (uint8_t)songPos);
-		pattTwoHexOut(32, 23, PAL_FORGRND, song.songTab[songPos]);
+		pattTwoHexOut(8,  23, (uint8_t)songPos, color2);
+		pattTwoHexOut(32, 23, song.songTab[songPos], color2);
 	}
 	else
 	{
-		pattTwoHexOut(8,  22, PAL_FORGRND, (uint8_t)songPos);
-		pattTwoHexOut(32, 22, PAL_FORGRND, song.songTab[songPos]);
+		pattTwoHexOut(8,  22, (uint8_t)songPos, color2);
+		pattTwoHexOut(32, 22, song.songTab[songPos], color2);
 	}
 
 	// bottom two
@@ -2125,13 +2137,13 @@ void drawPosEdNums(int16_t songPos)
 
 		if (editor.ui.extended)
 		{
-			pattTwoHexOut(8,  33 + (y * 9), PAL_PATTEXT, (uint8_t)entry);
-			pattTwoHexOut(32, 33 + (y * 9), PAL_PATTEXT, song.songTab[entry]);
+			pattTwoHexOut(8,  33 + (y * 9), (uint8_t)entry, color1);
+			pattTwoHexOut(32, 33 + (y * 9), song.songTab[entry], color1);
 		}
 		else
 		{
-			pattTwoHexOut(8,  32 + (y * 8), PAL_PATTEXT, (uint8_t)entry);
-			pattTwoHexOut(32, 32 + (y * 8), PAL_PATTEXT, song.songTab[entry]);
+			pattTwoHexOut(8,  32 + (y * 8), (uint8_t)entry, color1);
+			pattTwoHexOut(32, 32 + (y * 8), song.songTab[entry], color1);
 		}
 	}
 }
@@ -2256,7 +2268,7 @@ void drawPlaybackTime(void)
 	char str[2 + 1];
 	uint32_t a, MI_TimeH, MI_TimeM, MI_TimeS;
 
-	a = ((song.musicTime / 256) * 5) / 512;
+	a = ((song.musicTime >> 8) * 5) >> 9;
 	MI_TimeH = a / 3600;
 	a -= (MI_TimeH * 3600);
 	MI_TimeM = a / 60;
@@ -2803,6 +2815,7 @@ void pbToggleBadge(void)
 
 void resetChannelOffset(void)
 {
+	editor.ui.pattChanScrollShown = song.antChn > getMaxVisibleChannels();
 	editor.cursor.object = CURSOR_NOTE;
 	editor.cursor.ch = 0;
 	setScrollBarPos(SB_CHAN_SCROLL, 0, true);

@@ -422,7 +422,7 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 	if (ton > 96) // non-FT2 security (should never happen because I clamp in the patt loaders now)
 		ton = 96;
 
-	smp = ins->ta[ton-1] & 0x0F;
+	smp = ins->ta[ton-1] & 0xF;
 	ch->sampleNr = smp;
 
 	s = &ins->samp[smp];
@@ -1208,9 +1208,9 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 	uint8_t envPos;
 	int16_t autoVibVal, panTmp;
 	uint16_t autoVibAmp, tmpPeriod, envVal;
-	int32_t vol, tmp32;
+	int32_t tmp32;
+	uint32_t vol;
 	instrTyp *ins;
-	double dVol;
 
 	ins = ch->instrSeg;
 
@@ -1257,7 +1257,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 						{
 							envPos = ins->envVRepS;
 							ch->envVCnt = ins->envVP[envPos][0];
-							ch->envVAmp = (ins->envVP[envPos][1] & 0xFF) << 8;
+							ch->envVAmp = ins->envVP[envPos][1] << 8;
 						}
 					}
 
@@ -1284,7 +1284,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 						ch->envVIPValue = 0;
 						if (ins->envVP[envPos][0] > ins->envVP[envPos-1][0])
 						{
-							ch->envVIPValue = ((ins->envVP[envPos][1] - ins->envVP[envPos-1][1]) & 0xFF) << 8;
+							ch->envVIPValue = (ins->envVP[envPos][1] - ins->envVP[envPos-1][1]) << 8;
 							ch->envVIPValue /= (ins->envVP[envPos][0] - ins->envVP[envPos-1][0]);
 
 							envVal = ch->envVAmp;
@@ -1303,10 +1303,10 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 				ch->envVAmp += ch->envVIPValue;
 
 				envVal = ch->envVAmp;
-				if ((envVal >> 8) > 0x40)
+				if (envVal > 64*256)
 				{
-					if ((envVal >> 8) > (0x40+0xC0)/2)
-						envVal = 16384;
+					if (envVal > 128*256)
+						envVal = 64*256;
 					else
 						envVal = 0;
 
@@ -1314,41 +1314,36 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 				}
 			}
 
-			/* old integer method with low precision (FT2 way)
+			/* original FT2 method with lower precision (finalVol = 0..256)
 			envVal >>= 8;
 			ch->finalVol = (song.globVol * (((envVal * ch->outVol) * ch->fadeOutAmp) >> (16 + 2))) >> 7;
 			*/
 
-			/* calculate with four times more precision (+ rounding).
-			** also, env. range is now 0..16384 instead of being shifted to 0..64. */
+			/* calculate with four times more precision (finalVol = 0..2048)
+			** Also, vol envelope range is now 0..16384 instead of being shifted to 0..64
+			*/
 
-			dVol = song.globVol * ch->outVol * ch->fadeOutAmp;
-			dVol *= envVal; // we need a float mul because it would overflow 32-bit integer
-			dVol *= 1.0 / ((64.0 * 64.0 * 32768.0 * 16384.0) / 2048.0); // 0..2048 (real FT2 is 0..256)
+			uint32_t vol1 = song.globVol * ch->outVol * ch->fadeOutAmp; // 0..64 * 0..64 * 0..32768 = 0..134217728
+			uint32_t vol2 = envVal << 2; // 0..16384 * 2^2 = 0..65536
 
-			vol = (int32_t)(dVol + 0.5);
-			if (vol > 2048)
-				vol = 2048;
+			vol = ((uint64_t)vol1 * vol2) >> 32; // 0..2048
 
-			ch->finalVol = (uint16_t)vol;
 			ch->status |= IS_Vol;
 		}
 		else
 		{
-			/* old integer method with low precision (FT2 way)
+			/* original FT2 method with lower precision (finalVol = 0..256)
 			ch->finalVol = (song.globVol * (((ch->outVol << 4) * ch->fadeOutAmp) >> 16)) >> 7;
 			*/
 
-			// calculate with four times more precision (+ rounding)
-			dVol = song.globVol * ch->outVol * ch->fadeOutAmp;
-			dVol *= 1.0 / ((64.0 * 64.0 * 32768.0) / 2048.0); // 0..2048 (real FT2 is 0..256)
-
-			vol = (int32_t)(dVol + 0.5);
-			if (vol > 2048)
-				vol = 2048;
-
-			ch->finalVol = (uint16_t)vol;
+			// calculate with four times more precision (finalVol = 0..2048)
+			vol = (song.globVol * ch->outVol * ch->fadeOutAmp) >> 16; // 0..64 * 0..64 * 0..32768 = 0..2048
 		}
+
+		if (vol > 2047)
+			vol = 2047; // range is now 0..2047 to prevent MUL overflow when voice volume is calculated
+
+		ch->finalVol = (uint16_t)vol;
 	}
 	else
 	{
@@ -1365,7 +1360,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 
 		if (++ch->envPCnt == ins->envPP[envPos][0])
 		{
-			ch->envPAmp = (ins->envPP[envPos][1] & 0xFF) << 8;
+			ch->envPAmp = ins->envPP[envPos][1] << 8;
 
 			envPos++;
 			if (ins->envPTyp & 4)
@@ -1379,7 +1374,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 						envPos = ins->envPRepS;
 
 						ch->envPCnt = ins->envPP[envPos][0];
-						ch->envPAmp = (ins->envPP[envPos][1] & 0xFF) << 8;
+						ch->envPAmp = ins->envPP[envPos][1] << 8;
 					}
 				}
 
@@ -1406,7 +1401,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 					ch->envPIPValue = 0;
 					if (ins->envPP[envPos][0] > ins->envPP[envPos-1][0])
 					{
-						ch->envPIPValue = ((ins->envPP[envPos][1] - ins->envPP[envPos-1][1]) & 0xFF) << 8;
+						ch->envPIPValue = (ins->envPP[envPos][1] - ins->envPP[envPos-1][1]) << 8;
 						ch->envPIPValue /= (ins->envPP[envPos][0] - ins->envPP[envPos-1][0]);
 
 						envVal = ch->envPAmp;
@@ -1425,10 +1420,10 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 			ch->envPAmp += ch->envPIPValue;
 
 			envVal = ch->envPAmp;
-			if ((envVal >> 8) > 0x40)
+			if (envVal > 64*256)
 			{
-				if ((envVal >> 8) > (0x40+0xC0)/2)
-					envVal = 16384;
+				if (envVal > 128*256)
+					envVal = 64*256;
 				else
 					envVal = 0;
 
@@ -1441,9 +1436,9 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 			panTmp = 0 - panTmp;
 		panTmp += 128;
 
-		envVal -= (32 * 256);
+		envVal -= 32*256;
 
-		ch->finalPan = ch->outPan + ((((int16_t)envVal * (panTmp << 3)) >> 16) & 0xFF);
+		ch->finalPan = ch->outPan + (uint8_t)(((int16_t)envVal * panTmp) >> 13);
 		ch->status |= IS_Pan;
 	}
 	else
@@ -2589,7 +2584,7 @@ void updateChanNums(void)
 		}
 	}
 
-	editor.ui.pattChanScrollShown = (song.antChn > getMaxVisibleChannels());
+	editor.ui.pattChanScrollShown = song.antChn > getMaxVisibleChannels();
 
 	if (editor.ui.patternEditorShown)
 	{

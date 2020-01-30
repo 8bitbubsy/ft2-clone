@@ -86,6 +86,10 @@ static const uint16_t scopeLenTab[16][32] =
 	/* 32 ch */ {15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15}
 };
 
+// ft2_pattern_draw.c
+extern const char chDecTab1[MAX_VOICES+1];
+extern char chDecTab2[MAX_VOICES+1];
+
 void resetOldScopeRates(void)
 {
 	oldVoiceDelta = 0;
@@ -175,8 +179,8 @@ static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t ch
 		}
 		else
 		{
-			charOutOutlined(scopeXOffs, scopeYOffs, PAL_MOUSEPT, '0' + (channel / 10));
-			charOutOutlined(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, '0' + (channel % 10));
+			charOutOutlined(scopeXOffs, scopeYOffs, PAL_MOUSEPT, chDecTab1[channel]);
+			charOutOutlined(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, chDecTab2[channel]);
 		}
 	}
 	else
@@ -187,8 +191,8 @@ static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t ch
 		}
 		else
 		{
-			charOut(scopeXOffs, scopeYOffs, PAL_MOUSEPT, '0' + (channel / 10));
-			charOut(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, '0' + (channel % 10));
+			charOut(scopeXOffs, scopeYOffs, PAL_MOUSEPT, chDecTab1[channel]);
+			charOut(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, chDecTab2[channel]);
 		}
 	}
 }
@@ -597,7 +601,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 			if (ch->voiceDelta != oldVoiceDelta)
 			{
 				oldVoiceDelta = ch->voiceDelta;
-				oldSFrq = (uint32_t)((oldVoiceDelta * audio.dScopeFreqMul) + 0.5); // rounded
+				oldSFrq = (int32_t)((oldVoiceDelta * audio.dScopeFreqMul) + 0.5); // rounded
 			}
 
 			sc->SFrq = oldSFrq;

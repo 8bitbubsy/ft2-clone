@@ -38,6 +38,9 @@ enum
 	PAL_TEXTMRK = 17,
 	PAL_BOXSLCT = 18,
 
+	// modifiable with setCustomPalColor()
+	PAL_CUSTOM = 19,
+
 	PAL_NUM
 };
 
@@ -48,6 +51,8 @@ typedef struct pal16_t
 
 extern uint8_t cfg_ColorNr;
 extern pal16 palTable[12][16];
+
+void setCustomPalColor(uint32_t color);
 
 uint8_t palMax(int32_t c);
 void setPal16(pal16 *p, bool redrawScreen);

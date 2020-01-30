@@ -788,24 +788,28 @@ void relToneDown(void)
 
 void volEnvAdd(void)
 {
-	int16_t i;
+	int16_t i, ant;
 	instrTyp *ins = instr[editor.curInstr];
 
-	if (ins == NULL || editor.curInstr == 0 || ins->envVPAnt >= 12)
+	ant = ins->envVPAnt;
+	if (ins == NULL || editor.curInstr == 0 || ant >= 12)
 		return;
 
 	i = (int16_t)editor.currVolEnvPoint;
+	if (i < 0 || i >= ant)
+	{
+		i = ant-1;
+		if (i < 0)
+			i = 0;
+	}
 
-	if (i < 0 || i >= ins->envVPAnt)
-		i = ins->envVPAnt - 1;
-
-	if (i < ins->envVPAnt-1 && ins->envVP[i+1][0]-ins->envVP[i][0] < 2)
+	if (i < ant-1 && ins->envVP[i+1][0]-ins->envVP[i][0] < 2)
 		return;
 
 	if (ins->envVP[i][0] >= 323)
 		return;
 
-	for (int16_t j = ins->envVPAnt; j > i; j--)
+	for (int16_t j = ant; j > i; j--)
 	{
 		ins->envVP[j][0] = ins->envVP[j-1][0];
 		ins->envVP[j][1] = ins->envVP[j-1][1];
@@ -815,7 +819,7 @@ void volEnvAdd(void)
 	if (ins->envVRepS > i) { ins->envVRepS++; drawVolEnvRepS(); }
 	if (ins->envVRepE > i) { ins->envVRepE++; drawVolEnvRepE(); }
 
-	if (i < ins->envVPAnt-1)
+	if (i < ant-1)
 	{
 		ins->envVP[i+1][0] = (ins->envVP[i][0] + ins->envVP[i+2][0]) / 2;
 		ins->envVP[i+1][1] = (ins->envVP[i][1] + ins->envVP[i+2][1]) / 2;
@@ -840,7 +844,6 @@ void volEnvDel(void)
 	uint8_t drawSust, drawRepS, drawRepE;
 	int16_t i;
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0 || ins->envVPAnt <= 2)
 		return;
 
@@ -873,6 +876,11 @@ void volEnvDel(void)
 	if (drawRepS) drawVolEnvRepS();
 	if (drawRepE) drawVolEnvRepE();
 
+	if (ins->envVPAnt == 0)
+		editor.currVolEnvPoint = 0;
+	else if (editor.currVolEnvPoint >= ins->envVPAnt)
+		editor.currVolEnvPoint = ins->envVPAnt-1;
+
 	updateVolEnv = true;
 	setSongModifiedFlag();
 }
@@ -880,7 +888,6 @@ void volEnvDel(void)
 void volEnvSusUp(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -896,7 +903,6 @@ void volEnvSusUp(void)
 void volEnvSusDown(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -912,7 +918,6 @@ void volEnvSusDown(void)
 void volEnvRepSUp(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -928,7 +933,6 @@ void volEnvRepSUp(void)
 void volEnvRepSDown(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -944,7 +948,6 @@ void volEnvRepSDown(void)
 void volEnvRepEUp(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -960,7 +963,6 @@ void volEnvRepEUp(void)
 void volEnvRepEDown(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -975,24 +977,28 @@ void volEnvRepEDown(void)
 
 void panEnvAdd(void)
 {
-	int16_t i;
+	int16_t i, ant;
 	instrTyp *ins = instr[editor.curInstr];
 
-	if (ins == NULL || editor.curInstr == 0 || ins->envPPAnt >= 12)
+	ant = ins->envPPAnt;
+	if (ins == NULL || editor.curInstr == 0 || ant >= 12)
 		return;
 
 	i = (int16_t)editor.currPanEnvPoint;
+	if (i < 0 || i >= ant)
+	{
+		i = ant-1;
+		if (i < 0)
+			i = 0;
+	}
 
-	if (i < 0 || i >= ins->envPPAnt)
-		i = ins->envPPAnt - 1;
-
-	if (i < ins->envPPAnt-1 && ins->envPP[i+1][0]-ins->envPP[i][0] < 2)
+	if (i < ant-1 && ins->envPP[i+1][0]-ins->envPP[i][0] < 2)
 		return;
 
 	if (ins->envPP[i][0] >= 323)
 		return;
 
-	for (int16_t j = ins->envPPAnt; j > i; j--)
+	for (int16_t j = ant; j > i; j--)
 	{
 		ins->envPP[j][0] = ins->envPP[j-1][0];
 		ins->envPP[j][1] = ins->envPP[j-1][1];
@@ -1002,7 +1008,7 @@ void panEnvAdd(void)
 	if (ins->envPRepS > i) { ins->envPRepS++; drawPanEnvRepS(); }
 	if (ins->envPRepE > i) { ins->envPRepE++; drawPanEnvRepE(); }
 
-	if (i < ins->envPPAnt-1)
+	if (i < ant-1)
 	{
 		ins->envPP[i+1][0] = (ins->envPP[i][0] + ins->envPP[i+2][0]) / 2;
 		ins->envPP[i+1][1] = (ins->envPP[i][1] + ins->envPP[i+2][1]) / 2;
@@ -1027,7 +1033,6 @@ void panEnvDel(void)
 	uint8_t drawSust, drawRepS, drawRepE;
 	int16_t i;
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0 || ins->envPPAnt <= 2)
 		return;
 
@@ -1060,6 +1065,11 @@ void panEnvDel(void)
 	if (drawRepS) drawPanEnvRepS();
 	if (drawRepE) drawPanEnvRepE();
 
+	if (ins->envPPAnt == 0)
+		editor.currPanEnvPoint = 0;
+	else if (editor.currPanEnvPoint >= ins->envPPAnt)
+		editor.currPanEnvPoint = ins->envPPAnt-1;
+
 	updatePanEnv = true;
 	setSongModifiedFlag();
 }
@@ -1067,7 +1077,6 @@ void panEnvDel(void)
 void panEnvSusUp(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -1083,7 +1092,6 @@ void panEnvSusUp(void)
 void panEnvSusDown(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -1099,7 +1107,6 @@ void panEnvSusDown(void)
 void panEnvRepSUp(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -1115,7 +1122,6 @@ void panEnvRepSUp(void)
 void panEnvRepSDown(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -1131,7 +1137,6 @@ void panEnvRepSDown(void)
 void panEnvRepEUp(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -1147,7 +1152,6 @@ void panEnvRepEUp(void)
 void panEnvRepEDown(void)
 {
 	instrTyp *ins = instr[editor.curInstr];
-
 	if (ins == NULL || editor.curInstr == 0)
 		return;
 
@@ -1975,7 +1979,7 @@ static void writeEnvelope(int32_t nr)
 
 	// draw center line on pan envelope
 	if (nr == 1)
-		envelopeLine(nr, 8, 33, 335, 33, PAL_BLCKMRK);
+		envelopeLine(nr, 8, 33, 332, 33, PAL_BLCKMRK);
 
 	if (ins == NULL)
 		return;
@@ -2035,38 +2039,48 @@ static void writeEnvelope(int32_t nr)
 	// draw envelope
 	for (i = 0; i < nd; i++)
 	{
-		x = curEnvP[i][0]; x = CLAMP(x, 0, 340);
-		y = curEnvP[i][1]; y = CLAMP(y, 0,  64);
+		x = curEnvP[i][0];
+		y = curEnvP[i][1];
 
-		envelopeDot(nr, 7 + x, 64 - y);
+		x = CLAMP(x, 0, 324);
+		
+		if (nr == 0)
+			y = CLAMP(y, 0, 64);
+		else
+			y = CLAMP(y, 0, 63);
 
-		// draw "envelope selected" data
-		if (i == selected)
+		if ((uint16_t)curEnvP[i][0] <= 324)
 		{
-			envelopeLine(nr, 5  + x, 64 - y, 5  + x, 66 - y, PAL_BLCKTXT);
-			envelopeLine(nr, 11 + x, 64 - y, 11 + x, 66 - y, PAL_BLCKTXT);
-			envelopePixel(nr, 5, 65 - y, PAL_BLCKTXT);
-			envelopePixel(nr, 8 + x, 65, PAL_BLCKTXT);
-		}
+			envelopeDot(nr, 7 + x, 64 - y);
 
-		// draw loop start marker
-		if (i == ls)
-		{
-			envelopeLine(nr, x + 6, 1, x + 10, 1, PAL_PATTEXT);
-			envelopeLine(nr, x + 7, 2, x +  9, 2, PAL_PATTEXT);
-			envelopeVertLine(nr, x + 8, 1, PAL_PATTEXT);
-		}
+			// draw "envelope selected" data
+			if (i == selected)
+			{
+				envelopeLine(nr, 5  + x, 64 - y, 5  + x, 66 - y, PAL_BLCKTXT);
+				envelopeLine(nr, 11 + x, 64 - y, 11 + x, 66 - y, PAL_BLCKTXT);
+				envelopePixel(nr, 5, 65 - y, PAL_BLCKTXT);
+				envelopePixel(nr, 8 + x, 65, PAL_BLCKTXT);
+			}
 
-		// draw sustain marker
-		if (i == sp)
-			envelopeVertLine(nr, x + 8, 1, PAL_BLCKTXT);
+			// draw loop start marker
+			if (i == ls)
+			{
+				envelopeLine(nr, x + 6, 1, x + 10, 1, PAL_PATTEXT);
+				envelopeLine(nr, x + 7, 2, x +  9, 2, PAL_PATTEXT);
+				envelopeVertLine(nr, x + 8, 1, PAL_PATTEXT);
+			}
 
-		// draw loop end marker
-		if (i == le)
-		{
-			envelopeLine(nr, x + 6, 65, x + 10, 65, PAL_PATTEXT);
-			envelopeLine(nr, x + 7, 64, x +  9, 64, PAL_PATTEXT);
-			envelopeVertLine(nr, x + 8, 1, PAL_PATTEXT);
+			// draw sustain marker
+			if (i == sp)
+				envelopeVertLine(nr, x + 8, 1, PAL_BLCKTXT);
+
+			// draw loop end marker
+			if (i == le)
+			{
+				envelopeLine(nr, x + 6, 65, x + 10, 65, PAL_PATTEXT);
+				envelopeLine(nr, x + 7, 64, x +  9, 64, PAL_PATTEXT);
+				envelopeVertLine(nr, x + 8, 1, PAL_PATTEXT);
+			}
 		}
 
 		// draw envelope line
@@ -2465,13 +2479,16 @@ bool testInstrVolEnvMouseDown(bool mouseButtonDown)
 			if (editor.currVolEnvPoint == ant-1)
 			{
 				minX = ins->envVP[editor.currVolEnvPoint-1][0] + 1;
-				maxX = 325;
+				maxX = 324;
 			}
 			else
 			{
 				minX = ins->envVP[editor.currVolEnvPoint-1][0] + 1;
 				maxX = ins->envVP[editor.currVolEnvPoint+1][0] - 1;
 			}
+
+			minX = CLAMP(minX, 0, 324);
+			maxX = CLAMP(maxX, 0, 324);
 
 			ins->envVP[editor.currVolEnvPoint][0] = (int16_t)(CLAMP(mx, minX, maxX));
 			updateVolEnv = true;
@@ -2561,13 +2578,16 @@ bool testInstrPanEnvMouseDown(bool mouseButtonDown)
 			if (editor.currPanEnvPoint == ant-1)
 			{
 				minX = ins->envPP[editor.currPanEnvPoint-1][0] + 1;
-				maxX = 325;
+				maxX = 324;
 			}
 			else
 			{
 				minX = ins->envPP[editor.currPanEnvPoint-1][0] + 1;
 				maxX = ins->envPP[editor.currPanEnvPoint+1][0] - 1;
 			}
+
+			minX = CLAMP(minX, 0, 324);
+			maxX = CLAMP(maxX, 0, 324);
 
 			ins->envPP[editor.currPanEnvPoint][0] = (int16_t)(CLAMP(mx, minX, maxX));
 			updatePanEnv = true;
@@ -3102,7 +3122,7 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 				goto loadDone;
 			}
 
-			// sanitize stuff for malicious instruments
+			// sanitize stuff for broken/unsupported instruments
 			ih.midiProgram = CLAMP(ih.midiProgram, 0, 127);
 			ih.midiBend = CLAMP(ih.midiBend, 0, 36);
 
@@ -3127,6 +3147,15 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 			if (ih.envPRepS > 11) ih.envPRepS = 11;
 			if (ih.envPRepE > 11) ih.envPRepE = 11;
 			if (ih.envPSust > 11) ih.envPSust = 11;
+
+			for (int16_t i = 0; i < 12; i++)
+			{
+				if ((uint16_t)ih.envVP[i][0] > 32767) ih.envVP[i][0] = 32767;
+				if ((uint16_t)ih.envPP[i][0] > 32767) ih.envPP[i][0] = 32767;
+				if ((uint16_t)ih.envVP[i][1] > 64) ih.envVP[i][1] = 64;
+				if ((uint16_t)ih.envPP[i][1] > 63) ih.envPP[i][1] = 63;
+			}
+
 			// ----------------------------------------
 
 			memcpy(instr[editor.curInstr]->ta, ih.ta, INSTR_SIZE);

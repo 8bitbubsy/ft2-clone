@@ -1810,8 +1810,6 @@ xmLoadError:
 
 void loadMusic(UNICHAR *filenameU)
 {
-	int32_t i;
-
 	if (musicIsLoading)
 		return;
 
@@ -1831,7 +1829,7 @@ void loadMusic(UNICHAR *filenameU)
 	// prevent stuck instrument names from previous module
 	memset(&songTmp, 0, sizeof (songTmp));
 
-	for (i = 0; i < MAX_PATTERNS; i++)
+	for (uint32_t i = 0; i < MAX_PATTERNS; i++)
 		pattLensTmp[i] = 64;
 
 	thread = SDL_CreateThread(loadMusicThread, NULL, NULL);
@@ -1844,6 +1842,35 @@ void loadMusic(UNICHAR *filenameU)
 	}
 
 	SDL_DetachThread(thread);
+}
+
+bool loadMusicUnthreaded(UNICHAR *filenameU) // for development testing
+{
+	if (editor.tmpFilenameU == NULL)
+		return false;
+
+	// clear deprecated pointers from possible last loading session (super important)
+	memset(pattTmp,  0, sizeof (pattTmp));
+	memset(instrTmp, 0, sizeof (instrTmp));
+
+	// prevent stuck instrument names from previous module
+	memset(&songTmp, 0, sizeof (songTmp));
+
+	for (uint32_t i = 0; i < MAX_PATTERNS; i++)
+		pattLensTmp[i] = 64;
+
+	UNICHAR_STRCPY(editor.tmpFilenameU, filenameU);
+
+	loadMusicThread(NULL);
+	editor.loadMusicEvent = EVENT_NONE;
+
+	if (moduleLoaded)
+	{
+		setupLoadedModule();
+		return true;
+	}
+
+	return false;
 }
 
 static void freeTmpModule(void)
@@ -1925,7 +1952,7 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 			if (!allocateTmpInstr(i))
 				return false;
 
-			// sanitize stuff for malicious instruments
+			// sanitize stuff for broken/unsupported instruments
 			ih.midiProgram = CLAMP(ih.midiProgram, 0, 127);
 			ih.midiBend = CLAMP(ih.midiBend, 0, 36);
 
@@ -1941,20 +1968,29 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 				if (ih.ta[j] > 15)
 					ih.ta[j] = 15;
 			}
+
+			if (ih.envVPAnt > 12) ih.envVPAnt = 12;
+			if (ih.envVRepS > 11) ih.envVRepS = 11;
+			if (ih.envVRepE > 11) ih.envVRepE = 11;
+			if (ih.envVSust > 11) ih.envVSust = 11;
+			if (ih.envPPAnt > 12) ih.envPPAnt = 12;
+			if (ih.envPRepS > 11) ih.envPRepS = 11;
+			if (ih.envPRepE > 11) ih.envPRepE = 11;
+			if (ih.envPSust > 11) ih.envPSust = 11;
+
+			for (j = 0; j < 12; j++)
+			{
+				if ((uint16_t)ih.envVP[j][0] > 32767) ih.envVP[j][0] = 32767;
+				if ((uint16_t)ih.envPP[j][0] > 32767) ih.envPP[j][0] = 32767;
+				if ((uint16_t)ih.envVP[j][1] > 64) ih.envVP[j][1] = 64;
+				if ((uint16_t)ih.envPP[j][1] > 63) ih.envPP[j][1] = 63;
+				
+			}
 			// ----------------------------------------
 
 			// copy over final instrument data from temp buffer
 			memcpy(instrTmp[i], ih.ta, INSTR_SIZE);
 			instrTmp[i]->antSamp = ih.antSamp;
-
-			if (instrTmp[i]->envVPAnt > 12) instrTmp[i]->envVPAnt = 12;
-			if (instrTmp[i]->envVRepS > 11) instrTmp[i]->envVRepS = 11;
-			if (instrTmp[i]->envVRepE > 11) instrTmp[i]->envVRepE = 11;
-			if (instrTmp[i]->envVSust > 11) instrTmp[i]->envVSust = 11;
-			if (instrTmp[i]->envPPAnt > 12) instrTmp[i]->envPPAnt = 12;
-			if (instrTmp[i]->envPRepS > 11) instrTmp[i]->envPRepS = 11;
-			if (instrTmp[i]->envPRepE > 11) instrTmp[i]->envPRepE = 11;
-			if (instrTmp[i]->envPSust > 11) instrTmp[i]->envPSust = 11;
 		}
 
 		if (fread(ih.samp, ih.antSamp * sizeof (sampleHeaderTyp), 1, f) != 1)
@@ -2501,7 +2537,7 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 			SDL_RestoreWindow(video.window);
 			SDL_RaiseWindow(video.window);
 
-			if (okBox(2, "System request", "You have unsaved changes in your song. Load new song and lose all changes?") != 1)
+			if (!askUnsavedChanges(ASK_TYPE_LOAD_SONG))
 			{
 				free(fullPathU);
 				return;

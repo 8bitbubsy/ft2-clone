@@ -75,6 +75,7 @@ typedef struct scrollBar_t // DO NOT TOUCH!
 	bool visible;
 	uint8_t state;
 	uint32_t pos, page, end;
+	uint32_t oldPos, oldPage, oldEnd;
 	uint16_t thumbX, thumbY, thumbW, thumbH; 
 } scrollBar_t;
 

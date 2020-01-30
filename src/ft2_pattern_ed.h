@@ -74,7 +74,6 @@ void cursorLeft(void);
 void cursorRight(void);
 void chanLeft(void);
 void chanRight(void);
-void writePattern(int16_t currRow, int16_t pattern);
 void showPatternEditor(void);
 void updateInstrumentSwitcher(void);
 void hidePatternEditor(void);

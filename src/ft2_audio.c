@@ -20,7 +20,7 @@
 
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
-static int32_t masterVol, amp, oldAudioFreq, speedVal, pmpLeft, randSeed = INITIAL_DITHER_SEED;
+static int32_t masterVol, masterAmp, oldAudioFreq, speedVal, pmpLeft, randSeed = INITIAL_DITHER_SEED;
 static uint32_t tickTimeLen, tickTimeLenFrac, oldSFrq, oldSFrqRev = 0xFFFFFFFF;
 static float fAudioAmpMul;
 static voice_t voice[MAX_VOICES * 2];
@@ -124,9 +124,9 @@ void setAudioAmp(int16_t ampFactor, int16_t master, bool bitDepth32Flag)
 
 	// calculate channel amp
 
-	if (amp != ampFactor)
+	if (masterAmp != ampFactor)
 	{
-		amp = ampFactor;
+		masterAmp = ampFactor;
 
 		// make all channels update volume because of amp change
 		for (uint32_t i = 0; i < song.antChn; i++)
@@ -164,10 +164,18 @@ void setSpeed(uint16_t bpm)
 		// number of samples per tick -> tick length for performance counter
 		dFrac = modf(speedVal * audio.dSpeedValMul, &dInt);
 
-		// integer part
-		tickTimeLen = (uint32_t)dInt;
+		/* - integer part -
+		** Cast to int32_t so that the compiler will use fast SSE2 float->int instructions.
+		** This result won't be above 2^31, so this is safe.
+		*/
+		tickTimeLen = (int32_t)dInt;
 
-		// fractional part (scaled to 0..2^32-1)
+		/* - fractional part (scaled to 0..2^32-1) -
+		** We have to resort to slow float->int conversion here because the result
+		** can be above 2^31. In 64-bit mode, this will still use a fast SSE2 instruction.
+		** Anyhow, this function won't be called that many times a second in worst case,
+		** so it's not a big issue at all.
+		*/
 		dFrac *= UINT32_MAX;
 		tickTimeLenFrac = (uint32_t)(dFrac + 0.5);
 	}
@@ -194,7 +202,7 @@ static inline void voiceUpdateVolumes(uint8_t i, uint8_t status)
 
 	v = &voice[i];
 
-	volL = v->SVol * amp; // 0..2047 * 1..32 = 0..65504
+	volL = v->SVol * masterAmp; // 0..2047 * 1..32 = 0..65504
 
 	// (0..65504 * 0..65536) >> 4 = 0..268304384
 	volR = ((uint32_t)volL * panningTab[v->SPan]) >> 4;
@@ -331,7 +339,6 @@ void mix_SaveIPVolumes(void) // for volume ramping
 void mix_UpdateChannelVolPanFrq(void)
 {
 	uint8_t status;
-	uint16_t vol;
 	stmTyp *ch;
 	voice_t *v;
 
@@ -347,13 +354,7 @@ void mix_UpdateChannelVolPanFrq(void)
 
 			// volume change
 			if (status & IS_Vol)
-			{
-				vol = ch->finalVol;
-				if (vol > 0) // yes, FT2 does this!
-					vol--;
-
-				v->SVol = vol;
-			}
+				v->SVol = ch->finalVol;
 
 			// panning change
 			if (status & IS_Pan)
@@ -1063,28 +1064,35 @@ static bool setupAudioBuffers(void)
 {
 	const uint32_t sampleSize = sizeof (int32_t);
 
-	audio.mixBufferL = (int32_t *)malloc(MAX_WAV_RENDER_SAMPLES_PER_TICK * sampleSize);
-	audio.mixBufferR = (int32_t *)malloc(MAX_WAV_RENDER_SAMPLES_PER_TICK * sampleSize);
+	audio.mixBufferLUnaligned = (int32_t *)MALLOC_PAD(MAX_WAV_RENDER_SAMPLES_PER_TICK * sampleSize, 256);
+	audio.mixBufferRUnaligned = (int32_t *)MALLOC_PAD(MAX_WAV_RENDER_SAMPLES_PER_TICK * sampleSize, 256);
 
-	if (audio.mixBufferL == NULL || audio.mixBufferR == NULL)
+	if (audio.mixBufferLUnaligned == NULL || audio.mixBufferRUnaligned == NULL)
 		return false;
+
+	// make aligned main pointers
+	audio.mixBufferL = (int32_t *)ALIGN_PTR(audio.mixBufferLUnaligned, 256);
+	audio.mixBufferR = (int32_t *)ALIGN_PTR(audio.mixBufferRUnaligned, 256);
 
 	return true;
 }
 
 static void freeAudioBuffers(void)
 {
-	if (audio.mixBufferL != NULL)
+	if (audio.mixBufferLUnaligned != NULL)
 	{
-		free(audio.mixBufferL);
-		audio.mixBufferL = NULL;
+		free(audio.mixBufferLUnaligned);
+		audio.mixBufferLUnaligned = NULL;
 	}
 
-	if (audio.mixBufferR != NULL)
+	if (audio.mixBufferRUnaligned != NULL)
 	{
-		free(audio.mixBufferR);
-		audio.mixBufferR = NULL;
+		free(audio.mixBufferRUnaligned);
+		audio.mixBufferRUnaligned = NULL;
 	}
+
+	audio.mixBufferL = NULL;
+	audio.mixBufferR = NULL;
 }
 
 void updateSendAudSamplesRoutine(bool lockMixer)

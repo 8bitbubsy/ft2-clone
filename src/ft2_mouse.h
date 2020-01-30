@@ -32,7 +32,6 @@ struct mouse_t
 
 void freeMouseCursors(void);
 bool createMouseCursors(void);
-
 void setMousePosToCenter(void);
 void setMouseShape(int16_t shape);
 void setMouseMode(uint8_t mode);

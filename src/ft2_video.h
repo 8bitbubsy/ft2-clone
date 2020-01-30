@@ -18,16 +18,18 @@ enum
 
 struct video_t
 {
-	uint8_t upscaleFactor;
-	bool fullscreen, vsync60HzPresent, showFPSCounter;
-	int32_t renderX, renderY, renderW, renderH, displayW, displayH;
-	uint32_t *frameBuffer, palette[PAL_NUM], vblankTimeLen, vblankTimeLenFrac;
+	bool fullscreen, showFPSCounter;
 	uint32_t xScale, yScale;
-	double dMonitorRefreshRate, dMouseXMul, dMouseYMul;
+	uint32_t *frameBuffer, palette[PAL_NUM], vblankTimeLen, vblankTimeLenFrac;
 #ifdef _WIN32
 	HWND hWnd;
 #endif
 	SDL_Window *window;
+	double dMonitorRefreshRate, dMouseXMul, dMouseYMul;
+	uint8_t upscaleFactor;
+	bool vsync60HzPresent;
+	int32_t renderX, renderY, renderW, renderH, displayW, displayH;
+	uint32_t *frameBufferUnaligned;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
 	SDL_Surface *iconSurface;
@@ -48,7 +50,6 @@ void endFPSCounter(void);
 void flipFrame(void);
 void showErrorMsgBox(const char *fmt, ...);
 void updateWindowTitle(bool forceUpdate);
-void setPalettePreset(int16_t palettePreset);
 void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatus);
 bool setupWindow(void);
 bool setupRenderer(void);
@@ -67,8 +68,8 @@ void hideSprite(uint8_t sprite);
 void handleRedrawing(void);
 void enterFullscreen(void);
 void leaveFullScreen(void);
-void toggleFullScreen(void);
 void setWindowSizeFromConfig(bool updateRenderer);
 bool recreateTexture(void);
+void toggleFullScreen(void);
 void setupWaitVBL(void);
 void waitVBL(void);

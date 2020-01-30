@@ -103,6 +103,13 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
+	if (!cpu.hasSSE2)
+	{
+		showErrorMsgBox("Your computer's processor doesn't have the SSE2 instruction set\n" \
+		                "which is needed for this program to run. Sorry!");
+		return 0;
+	}
+
 	setupWin32Usleep();
 	disableWasapi(); // disable problematic WASAPI SDL2 audio driver on Windows (causes clicks/pops sometimes...)
 #endif
@@ -192,6 +199,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32 // on Windows we show the window at this point
 	SDL_ShowWindow(video.window);
 #endif
+
 	if (config.windowFlags & START_IN_FULLSCR)
 	{
 		video.fullscreen = true;

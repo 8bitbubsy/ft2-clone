@@ -29,6 +29,7 @@
 #include "ft2_midi.h"
 #include "ft2_gfxdata.h"
 #include "ft2_palette.h"
+#include "ft2_pattern_draw.h"
 
 // defined at the bottom of this file
 extern const uint8_t defConfigData[CONFIG_FILE_SIZE];
@@ -190,6 +191,7 @@ static void loadConfigFromBuffer(uint8_t defaults)
 	changeBadgeType(config.id_TritonProd);
 	editor.ui.maxVisibleChannels = (uint8_t)(2 + ((config.ptnMaxChannels + 1) * 2));
 	setPal16(palTable[config.cfg_StdPalNr], true);
+	updatePattFontPtrs();
 
 	unlockMixerCallback();
 }
@@ -813,8 +815,10 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_SOUND_BUFF_SIZE);
 
 	tmpID = RB_CONFIG_SBS_1024;
-	     if (config.specialFlags & BUFFSIZE_512)  tmpID = RB_CONFIG_SBS_512;
-	else if (config.specialFlags & BUFFSIZE_2048) tmpID = RB_CONFIG_SBS_2048;
+	if (config.specialFlags & BUFFSIZE_512)
+		tmpID = RB_CONFIG_SBS_512;
+	else if (config.specialFlags & BUFFSIZE_2048)
+		tmpID = RB_CONFIG_SBS_2048;
 
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -1873,6 +1877,7 @@ void rbConfigFontCapitals(void)
 {
 	config.ptnFont = PATT_FONT_CAPITALS;
 	checkRadioButton(RB_CONFIG_FONT_CAPITALS);
+	updatePattFontPtrs();
 	redrawPatternEditor();
 }
 
@@ -1880,6 +1885,7 @@ void rbConfigFontLowerCase(void)
 {
 	config.ptnFont = PATT_FONT_LOWERCASE;
 	checkRadioButton(RB_CONFIG_FONT_LOWERCASE);
+	updatePattFontPtrs();
 	redrawPatternEditor();
 }
 
@@ -1887,6 +1893,7 @@ void rbConfigFontFuture(void)
 {
 	config.ptnFont = PATT_FONT_FUTURE;
 	checkRadioButton(RB_CONFIG_FONT_FUTURE);
+	updatePattFontPtrs();
 	redrawPatternEditor();
 }
 
@@ -1894,6 +1901,7 @@ void rbConfigFontBold(void)
 {
 	config.ptnFont = PATT_FONT_BOLD;
 	checkRadioButton(RB_CONFIG_FONT_BOLD);
+	updatePattFontPtrs();
 	redrawPatternEditor();
 }
 

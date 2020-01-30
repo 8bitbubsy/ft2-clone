@@ -1089,7 +1089,7 @@ static void fileListPressed(int32_t index)
 				// in case of UTF8 -> CP437 encoding failure, there can be question marks. Remove them...
 				removeQuestionmarksFromString(FReq_NameTemp);
 
-				if (inputBox(2, dirEntry->isDir ? "Enter new directory name:" : "Enter new filename:", FReq_NameTemp, PATH_MAX - 1) == 1)
+				if (inputBox(1, dirEntry->isDir ? "Enter new directory name:" : "Enter new filename:", FReq_NameTemp, PATH_MAX - 1) == 1)
 				{
 					if ((FReq_NameTemp == NULL) || (FReq_NameTemp[0] == '\0'))
 					{
