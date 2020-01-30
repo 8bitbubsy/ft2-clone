@@ -13,5 +13,6 @@ If these don't work for you, you'll have to compile the code manually.
 Please read HOW-TO-COMPILE.txt file in the repository.
 
 PS: The source code is quite hackish and hardcoded. \
-My first priority is _accuracy_, not flexibility and clean code. \
+My first priority is to make an _accurate_ 1:1 clone, and not to make flexible and easily modifiable code.
+
 Big parts of the code (except GUI) are directly ported from the original FT2 source code, with permission to use a BSD 3-Clause license.
