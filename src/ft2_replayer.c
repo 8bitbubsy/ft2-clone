@@ -419,7 +419,7 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 	ch->instrSeg = ins;
 	ch->mute = ins->mute;
 
-	if (ton > 96) // non-FT2 security (should never happen because I clamp in the patt loaders now)
+	if (ton > 96) // non-FT2 security (should never happen because I clamp in the patt. loader now)
 		ton = 96;
 
 	smp = ins->ta[ton-1] & 0xF;
@@ -1114,7 +1114,7 @@ static void getNewNote(stmTyp *ch, tonTyp *p)
 	ch->eff = p->eff;
 	ch->tonTyp = (p->instr << 8) | p->ton;
 
-	if (ch->stOff == 1)
+	if (ch->stOff)
 	{
 		checkMoreEffects(ch);
 		return;
@@ -1233,7 +1233,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 		}
 	}
 
-	if (ch->mute != 1)
+	if (!ch->mute)
 	{
 		// *** VOLUME ENVELOPE ***
 		envVal = 0;

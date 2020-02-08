@@ -221,6 +221,7 @@ int main(int argc, char *argv[])
 	setupWaitVBL();
 	handleModuleLoadFromArg(argc, argv);
 
+	editor.mainLoopOngoing = true;
 	while (editor.programRunning)
 	{
 		beginFPSCounter();

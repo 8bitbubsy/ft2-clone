@@ -12,7 +12,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.07"
+#define PROG_VER_STR "1.08"
 
 // do NOT change these! It will only mess things up...
 
@@ -122,6 +122,7 @@ struct editor_t
 	UNICHAR *tmpFilenameU, *tmpInstrFilenameU; // used by saving/loading threads
 	UNICHAR *configFileLocation, *audioDevConfigFileLocation, *midiConfigFileLocation;
 
+	volatile bool mainLoopOngoing;
 	volatile bool busy, scopeThreadMutex, programRunning, wavIsRendering, wavReachedEndFlag;
 	volatile bool updateCurSmp, updateCurInstr, diskOpReadDir, diskOpReadDone, updateWindowTitle;
 	volatile uint8_t loadMusicEvent;

@@ -34,8 +34,8 @@ enum
 
 // DO NOT TOUCH!
 #define MIN_BPM 32
-#define TRACK_WIDTH (5 * MAX_VOICES)
 #define MAX_VOICES 32
+#define TRACK_WIDTH (5 * MAX_VOICES)
 #define MAX_NOTES ((12 * 10 * 16) + 16)
 #define MAX_PATTERNS 256
 #define MAX_PATT_LEN 256
@@ -43,7 +43,6 @@ enum
 #define MAX_SMP_PER_INST 16
 #define MAX_ORDERS 256
 #define STD_ENV_SIZE ((6*2*12*2*2) + (6*8*2) + (6*5*2) + (6*2*2))
-#define INSTR_SIZE 232
 #define INSTR_HEADER_SIZE 263
 #define INSTR_XI_HEADER_SIZE 298
 #define MAX_SAMPLE_LEN 0x3FFFFFFF
@@ -123,7 +122,7 @@ typedef struct sampleHeaderTyp_t // DO NOT TOUCH!
 	int8_t fine;
 	uint8_t typ, pan;
 	int8_t relTon;
-	uint8_t reserved;
+	uint8_t nameLen;
 	char name[22];
 }
 #ifdef __GNUC__
@@ -157,67 +156,51 @@ __attribute__ ((packed))
 #endif
 instrHeaderTyp;
 
-typedef struct sampleTyp_t  // DO NOT TOUCH!
-{
-	int32_t len, repS, repL;
-	uint8_t vol;
-	int8_t fine;
-	uint8_t typ, pan;
-	int8_t relTon;
-	uint8_t reserved;
-	char name[22 + 1]; // +1 for tracker NUL termination, not present in sample header
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
-	// stuff from now on can be touched
-	int8_t *pek;
-	uint8_t fixed;
+typedef struct sampleTyp_t
+{
+	char name[22+1];
+	bool fixed;
+	int8_t fine, relTon, *pek;
+	uint8_t vol, typ, pan;
 	int16_t fixedSmp1;
 #ifndef LERPMIX
 	int16_t fixedSmp2;
 #endif
-	int32_t fixedPos;
-}
-#ifdef __GNUC__
-__attribute__ ((packed))
-#endif
-sampleTyp;
+	int32_t fixedPos, len, repS, repL;
+} sampleTyp;
 
-typedef struct instrTyp_t // DO NOT TOUCH!
+typedef struct instrTyp_t
 {
-	uint8_t ta[96];
-	int16_t envVP[12][2], envPP[12][2];
+	bool midiOn, mute;
+	uint8_t midiChannel, ta[96];
 	uint8_t envVPAnt, envPPAnt;
 	uint8_t envVSust, envVRepS, envVRepE;
 	uint8_t envPSust, envPRepS, envPRepE;
 	uint8_t envVTyp, envPTyp;
 	uint8_t vibTyp, vibSweep, vibDepth, vibRate;
 	uint16_t fadeOut;
-	uint8_t midiOn, midiChannel;
-	int16_t midiProgram, midiBend;
-	uint8_t mute, reserved[15];
-	int16_t antSamp;
+	int16_t envVP[12][2], envPP[12][2], midiProgram, midiBend;
+	int16_t antSamp; // used by loader only
 	sampleTyp samp[16];
-}
-#ifdef __GNUC__
-__attribute__ ((packed))
-#endif
-instrTyp;
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
+} instrTyp;
 
 typedef struct stmTyp_t
 {
+	bool envSustainActive, stOff, mute;
 	volatile uint8_t status, tmpStatus;
 	int8_t relTonNr, fineTune;
-	uint8_t sampleNr, instrNr, stOff, effTyp, eff, smpOffset, tremorSave, tremorPos;
-	uint8_t globVolSlideSpeed, panningSlideSpeed, mute, waveCtrl, portaDir;
+	uint8_t sampleNr, instrNr, effTyp, eff, smpOffset, tremorSave, tremorPos;
+	uint8_t globVolSlideSpeed, panningSlideSpeed, waveCtrl, portaDir;
 	uint8_t glissFunk, vibPos, tremPos, vibSpeed, vibDepth, tremSpeed, tremDepth;
 	uint8_t pattPos, loopCnt, volSlideSpeed, fVolSlideUpSpeed, fVolSlideDownSpeed;
 	uint8_t fPortaUpSpeed, fPortaDownSpeed, ePortaUpSpeed, ePortaDownSpeed;
 	uint8_t portaUpSpeed, portaDownSpeed, retrigSpeed, retrigCnt, retrigVol;
 	uint8_t volKolVol, tonNr, envPPos, eVibPos, envVPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
-	bool envSustainActive;
 	int16_t midiCurChannel, midiCurTone, midiCurVibDepth, midiCurPeriod, midiCurPitch;
 	int16_t midiBend, midiPortaPeriod, midiPitch, realPeriod, envVIPValue, envPIPValue;
 	uint16_t finalVol, outPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
@@ -230,15 +213,13 @@ typedef struct stmTyp_t
 
 typedef struct songTyp_t
 {
-	uint8_t antChn, pattDelTime, pattDelTime2, pBreakPos, songTab[MAX_ORDERS];
 	bool pBreakFlag, posJumpFlag, isModified;
+	char name[20+1], instrName[1+MAX_INST][22+1];
+	uint8_t curReplayerTimer, curReplayerPattPos, curReplayerSongPos, curReplayerPattNr; // used for audio/video sync queue
+	uint8_t antChn, pattDelTime, pattDelTime2, pBreakPos, songTab[MAX_ORDERS];
 	int16_t songPos, pattNr, pattPos, pattLen;
 	uint16_t len, repS, speed, tempo, globVol, timer, ver, initialTempo;
-	char name[20 + 1], instrName[1 + MAX_INST][22 + 1];
 	uint32_t musicTime;
-
-	// used for audio/video sync queue
-	uint8_t curReplayerTimer, curReplayerPattPos, curReplayerSongPos, curReplayerPattNr;
 } songTyp;
 
 typedef struct tonTyp_t

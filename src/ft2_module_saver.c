@@ -13,7 +13,8 @@
 #include "ft2_module_loader.h"
 
 /* These savers are directly ported, so they should act identical to FT2
-** except for some very minor changes. */
+** except for some very minor changes.
+*/
 
 static SDL_Thread *thread;
 
@@ -31,9 +32,10 @@ bool saveXM(UNICHAR *filenameU)
 	size_t result;
 	songHeaderTyp h;
 	patternHeaderTyp ph;
+	instrTyp *ins;
 	instrHeaderTyp ih;
-	sampleTyp *srcSmp;
-	sampleHeaderTyp *dstSmp;
+	sampleTyp *s;
+	sampleHeaderTyp *dst;
 	FILE *f;
 
 	f = UNICHAR_FOPEN(filenameU, "wb");
@@ -135,6 +137,8 @@ bool saveXM(UNICHAR *filenameU)
 		}
 	}
 
+	memset(&ih, 0, sizeof (ih)); // important, clears reserved stuff
+
 	for (i = 1; i <= ai; i++)
 	{
 		if (instr[i] == NULL)
@@ -153,19 +157,55 @@ bool saveXM(UNICHAR *filenameU)
 
 		if (a > 0)
 		{
-			memcpy(ih.ta, instr[j], INSTR_SIZE);
+			ins = instr[j];
+
+			memcpy(ih.ta, ins->ta, 96);
+			memcpy(ih.envVP, ins->envVP, 12*2*sizeof(int16_t));
+			memcpy(ih.envPP, ins->envPP, 12*2*sizeof(int16_t));
+			ih.envVPAnt = ins->envVPAnt;
+			ih.envPPAnt = ins->envPPAnt;
+			ih.envVSust = ins->envVSust;
+			ih.envVRepS = ins->envVRepS;
+			ih.envVRepE = ins->envVRepE;
+			ih.envPSust = ins->envPSust;
+			ih.envPRepS = ins->envPRepS;
+			ih.envPRepE = ins->envPRepE;
+			ih.envVTyp = ins->envVTyp;
+			ih.envPTyp = ins->envPTyp;
+			ih.vibTyp = ins->vibTyp;
+			ih.vibSweep = ins->vibSweep;
+			ih.vibDepth = ins->vibDepth;
+			ih.vibRate = ins->vibRate;
+			ih.fadeOut = ins->fadeOut;
+			ih.midiOn = ins->midiOn ? 1 : 0;
+			ih.midiChannel = ins->midiChannel;
+			ih.midiProgram = ins->midiProgram;
+			ih.midiBend = ins->midiBend;
+			ih.mute = ins->mute ? 1 : 0;
 			ih.instrSize = INSTR_HEADER_SIZE;
 			
-			for (k = 1; k <= a; k++)
+			for (k = 0; k < a; k++)
 			{
-				srcSmp = &instr[j]->samp[k-1];
-				dstSmp = &ih.samp[k-1];
+				s = &instr[j]->samp[k];
+				dst = &ih.samp[k];
 
-				memset(dstSmp->name, ' ', 22);
+				dst->len = s->len;
+				dst->repS = s->repS;
+				dst->repL = s->repL;
+				dst->vol = s->vol;
+				dst->fine = s->fine;
+				dst->typ = s->typ;
+				dst->pan = s->pan;
+				dst->relTon = s->relTon;
 
-				memcpy(dstSmp, srcSmp, 12+4+2 + strlen(srcSmp->name));
-				if (srcSmp->pek == NULL)
-					dstSmp->len = 0;
+				uint8_t nameLen = (uint8_t)strlen(s->name);
+
+				dst->nameLen = nameLen;
+				memset(dst->name, ' ', 22);
+				memcpy(dst->name, s->name, nameLen);
+
+				if (s->pek == NULL)
+					dst->len = 0;
 			}
 		}
 		else
@@ -182,18 +222,18 @@ bool saveXM(UNICHAR *filenameU)
 
 		for (k = 1; k <= a; k++)
 		{
-			srcSmp = &instr[j]->samp[k-1];
-			if (srcSmp->pek != NULL)
+			s = &instr[j]->samp[k-1];
+			if (s->pek != NULL)
 			{
-				restoreSample(srcSmp);
-				samp2Delta(srcSmp->pek, srcSmp->len, srcSmp->typ);
+				restoreSample(s);
+				samp2Delta(s->pek, s->len, s->typ);
 
-				result = fwrite(srcSmp->pek, 1, srcSmp->len, f);
+				result = fwrite(s->pek, 1, s->len, f);
 
-				delta2Samp(srcSmp->pek, srcSmp->len, srcSmp->typ);
-				fixSample(srcSmp);
+				delta2Samp(s->pek, s->len, s->typ);
+				fixSample(s);
 
-				if (result != (size_t)srcSmp->len) // write not OK
+				if (result != (size_t)s->len) // write not OK
 				{
 					fclose(f);
 					okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");

@@ -612,6 +612,9 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 // WARNING: This routine must NOT be called from the main input/video thread!
 int16_t okBoxThreadSafe(int16_t typ, const char *headline, const char *text)
 {
+	if (!editor.mainLoopOngoing)
+		return 0; // main loop was not even started yet, bail out.
+
 	// block multiple calls before they are completed (for safety)
 	while (okBoxData.active)
 		SDL_Delay(1000 / VBLANK_HZ);

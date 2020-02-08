@@ -59,7 +59,8 @@ bool allocatePattern(uint16_t nr) // for tracker use only, not in loader!
 		 * do that to avoid out of bondary row look-up between out-of-sync replayer
 		 * state and tracker state (yes it used to happen, rarely). We're not wasting
 		 * too much RAM for a modern computer anyway. Worst case: 256 allocated
-		 * patterns would be ~10MB. */
+		 * patterns would be ~10MB.
+		 */
 
 		patt[nr] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
 		if (patt[nr] == NULL)
@@ -891,7 +892,7 @@ void handlePatternDataMouseDown(bool mouseButtonHeld)
 	{
 		if (mouse.x < 29)
 		{
-			scrollBarScrollUp(SB_CHAN_SCROLL,   1);
+			scrollBarScrollUp(SB_CHAN_SCROLL, 1);
 			forceMarking = true;
 		}
 		else if (mouse.x > 604)
@@ -1517,6 +1518,7 @@ void jumpToChannel(uint8_t channel) // for ALT+q..i ALT+a..k
 	if (editor.ui.pattChanScrollShown)
 	{
 		assert(song.antChn > editor.ui.numChannelsShown);
+
 		if (channel >= editor.ui.channelOffset+editor.ui.numChannelsShown)
 			scrollBarScrollDown(SB_CHAN_SCROLL, (channel - (editor.ui.channelOffset + editor.ui.numChannelsShown)) + 1);
 		else if (channel < editor.ui.channelOffset)
@@ -2307,12 +2309,12 @@ void changeLogoType(uint8_t logoType)
 	if (logoType == 0)
 	{
 		pushButtons[PB_LOGO].bitmapUnpressed = &ft2LogoBadges[(154 * 32) * 0];
-		pushButtons[PB_LOGO].bitmapPressed   = &ft2LogoBadges[(154 * 32) * 1];
+		pushButtons[PB_LOGO].bitmapPressed = &ft2LogoBadges[(154 * 32) * 1];
 	}
 	else
 	{
 		pushButtons[PB_LOGO].bitmapUnpressed = &ft2LogoBadges[(154 * 32) * 2];
-		pushButtons[PB_LOGO].bitmapPressed   = &ft2LogoBadges[(154 * 32) * 3];
+		pushButtons[PB_LOGO].bitmapPressed = &ft2LogoBadges[(154 * 32) * 3];
 	}
 
 	drawPushButton(PB_LOGO);
@@ -2325,12 +2327,12 @@ void changeBadgeType(uint8_t badgeType)
 	if (badgeType == 0)
 	{
 		pushButtons[PB_BADGE].bitmapUnpressed = &ft2InfoBadges[(25 * 32) * 0];
-		pushButtons[PB_BADGE].bitmapPressed   = &ft2InfoBadges[(25 * 32) * 1];
+		pushButtons[PB_BADGE].bitmapPressed = &ft2InfoBadges[(25 * 32) * 1];
 	}
 	else
 	{
 		pushButtons[PB_BADGE].bitmapUnpressed = &ft2InfoBadges[(25 * 32) * 2];
-		pushButtons[PB_BADGE].bitmapPressed   = &ft2InfoBadges[(25 * 32) * 3];
+		pushButtons[PB_BADGE].bitmapPressed = &ft2InfoBadges[(25 * 32) * 3];
 	}
 
 	drawPushButton(PB_BADGE);
@@ -2701,7 +2703,7 @@ static void zapSong(void)
 	song.songPos = 0;
 	song.globVol = 64;
 
-	memset(song.name,    0, sizeof (song.name));
+	memset(song.name, 0, sizeof (song.name));
 	memset(song.songTab, 0, sizeof (song.songTab));
 
 	// zero all pattern data and reset pattern lengths
@@ -2916,7 +2918,7 @@ void expandPattern(void)
 		editor.pattPos = song.pattPos;
 
 		editor.ui.updatePatternEditor = true;
-		editor.ui.updatePosSections   = true;
+		editor.ui.updatePosSections = true;
 
 		unlockMixerCallback();
 		setSongModifiedFlag();

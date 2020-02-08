@@ -49,7 +49,8 @@ void unstuckLastUsedGUIElement(void)
 	if (mouse.lastUsedObjectID == OBJECT_ID_NONE)
 	{
 		/* if last object ID is OBJECT_ID_NONE, check if we moved the
-		** sample data loop pins, and unstuck them if so */
+		** sample data loop pins, and unstuck them if so
+		*/
 
 		if (editor.ui.leftLoopPinMoving)
 		{
@@ -311,11 +312,11 @@ uint16_t textWidth16(const char *textPtr)
 void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal;
+	uint32_t *dstPtr, pixVal, tmp;
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
-	chr &= 0x7F;
+	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
@@ -327,8 +328,10 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	{
 		for (uint32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
-			if (srcPtr[x])
-				dstPtr[x] = pixVal;
+			// carefully written like this to generate conditional move instructions (font data is hard to predict)
+			tmp = dstPtr[x];
+			if (srcPtr[x] != 0) tmp = pixVal;
+			dstPtr[x] = tmp;
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -343,7 +346,7 @@ void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalett
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
-	chr &= 0x7F;
+	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
@@ -355,8 +358,8 @@ void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalett
 
 	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < 7; x++)
-			dstPtr[x] = srcPtr[x] ? fg : bg;
+		for (uint32_t x = 0; x < FONT1_CHAR_W-1; x++)
+			dstPtr[x] = srcPtr[x] ? fg : bg; // compiles nicely into conditional move instructions
 
 		srcPtr += FONT1_WIDTH;
 		dstPtr += SCREEN_W;
@@ -376,32 +379,37 @@ void charOutOutlined(uint16_t x, uint16_t y, uint8_t paletteIndex, char chr)
 void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal1, pixVal2;
+	uint32_t *dstPtr1, *dstPtr2, pixVal1, pixVal2, tmp;
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
-	chr &= 0x7F;
+	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
 	pixVal1 = video.palette[paletteIndex];
 	pixVal2 = video.palette[shadowPaletteIndex];
-	srcPtr  = &font1Data[chr * FONT1_CHAR_W];
-	dstPtr  = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	srcPtr = &font1Data[chr * FONT1_CHAR_W];
+	dstPtr1 = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	dstPtr2 = dstPtr1 + (SCREEN_W+1);
 
 	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
 	{
 		for (uint32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
-			if (srcPtr[x])
-			{
-				dstPtr[x+(SCREEN_W+1)] = pixVal2;
-				dstPtr[x] = pixVal1;
-			}
+			// carefully written like this to generate conditional move instructions (font data is hard to predict)
+			tmp = dstPtr2[x];
+			if (srcPtr[x] != 0) tmp = pixVal2;
+			dstPtr2[x] = tmp;
+
+			tmp = dstPtr1[x];
+			if (srcPtr[x] != 0) tmp = pixVal1;
+			dstPtr1[x] = tmp;
 		}
 
 		srcPtr += FONT1_WIDTH;
-		dstPtr += SCREEN_W;
+		dstPtr1 += SCREEN_W;
+		dstPtr2 += SCREEN_W;
 	}
 }
 
@@ -409,14 +417,14 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 {
 	const uint8_t *srcPtr;
 	uint16_t width;
-	uint32_t *dstPtr, pixVal;
+	uint32_t *dstPtr, pixVal, tmp;
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	if (xPos > clipX)
 		return;
 
-	chr &= 0x7F;
+	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
@@ -432,8 +440,10 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 	{
 		for (uint32_t x = 0; x < width; x++)
 		{
-			if (srcPtr[x])
-				dstPtr[x] = pixVal;
+			// carefully written like this to generate conditional move instructions (font data is hard to predict)
+			tmp = dstPtr[x];
+			if (srcPtr[x] != 0) tmp = pixVal;
+			dstPtr[x] = tmp;
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -444,11 +454,11 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal;
+	uint32_t *dstPtr, pixVal, tmp;
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
-	chr &= 0x7F;
+	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
@@ -460,8 +470,10 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	{
 		for (uint32_t x = 0; x < FONT2_CHAR_W; x++)
 		{
-			if (srcPtr[x])
-				dstPtr[x] = pixVal;
+			// carefully written like this to generate conditional move instructions (font data is hard to predict)
+			tmp = dstPtr[x];
+			if (srcPtr[x] != 0) tmp = pixVal;
+			dstPtr[x] = tmp;
 		}
 
 		srcPtr += FONT2_WIDTH;
@@ -472,32 +484,37 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal1, pixVal2;
+	uint32_t *dstPtr1, *dstPtr2, pixVal1, pixVal2, tmp;
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
-	chr &= 0x7F;
+	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
 	pixVal1 = video.palette[paletteIndex];
 	pixVal2 = video.palette[shadowPaletteIndex];
-	srcPtr  = &font2Data[chr * FONT2_CHAR_W];
-	dstPtr  = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	srcPtr = &font2Data[chr * FONT2_CHAR_W];
+	dstPtr1 = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	dstPtr2 = dstPtr1 + (SCREEN_W+1);
 
 	for (uint32_t y = 0; y < FONT2_CHAR_H; y++)
 	{
 		for (uint32_t x = 0; x < FONT2_CHAR_W; x++)
 		{
-			if (srcPtr[x])
-			{
-				dstPtr[x+(SCREEN_W+1)] = pixVal2;
-				dstPtr[x] = pixVal1;
-			}
+			// carefully written like this to generate conditional move instructions (font data is hard to predict)
+			tmp = dstPtr2[x];
+			if (srcPtr[x] != 0) tmp = pixVal2;
+			dstPtr2[x] = tmp;
+
+			tmp = dstPtr1[x];
+			if (srcPtr[x] != 0) tmp = pixVal1;
+			dstPtr1[x] = tmp;
 		}
 
 		srcPtr += FONT2_WIDTH;
-		dstPtr += SCREEN_W;
+		dstPtr1 += SCREEN_W;
+		dstPtr2 += SCREEN_W;
 	}
 }
 
@@ -632,7 +649,7 @@ void textOutClipX(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *text
 void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, uint8_t numDigits)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal;
+	uint32_t *dstPtr, pixVal, tmp;
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
@@ -648,8 +665,10 @@ void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, ui
 		{
 			for (uint32_t x = 0; x < FONT6_CHAR_W; x++)
 			{
-				if (srcPtr[x])
-					dstPtr[x] = pixVal;
+				// carefully written like this to generate conditional move instructions (font data is hard to predict)
+				tmp = dstPtr[x];
+				if (srcPtr[x] != 0) tmp = pixVal;
+				dstPtr[x] = tmp;
 			}
 
 			srcPtr += FONT6_WIDTH;
@@ -680,7 +699,7 @@ void hexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette
 		for (uint32_t y = 0; y < FONT6_CHAR_H; y++)
 		{
 			for (uint32_t x = 0; x < FONT6_CHAR_W; x++)
-				dstPtr[x] = srcPtr[x] ? fg : bg;
+				dstPtr[x] = srcPtr[x] ? fg : bg; // compiles nicely into conditional move instructions
 
 			srcPtr += FONT6_WIDTH;
 			dstPtr += SCREEN_W;
@@ -935,13 +954,13 @@ void drawFramework(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t type)
 
 void showTopLeftMainScreen(bool restoreScreens)
 {
-	editor.ui.diskOpShown          = false;
+	editor.ui.diskOpShown = false;
 	editor.ui.sampleEditorExtShown = false;
-	editor.ui.instEditorExtShown   = false;
-	editor.ui.transposeShown       = false;
-	editor.ui.advEditShown         = false;
-	editor.ui.wavRendererShown     = false;
-	editor.ui.trimScreenShown      = false;
+	editor.ui.instEditorExtShown = false;
+	editor.ui.transposeShown = false;
+	editor.ui.advEditShown = false;
+	editor.ui.wavRendererShown = false;
+	editor.ui.trimScreenShown = false;
 
 	editor.ui.scopesShown = true;
 	if (restoreScreens)
@@ -949,13 +968,13 @@ void showTopLeftMainScreen(bool restoreScreens)
 		switch (editor.ui.oldTopLeftScreen)
 		{
 			default: break;
-			case 1: editor.ui.diskOpShown          = true; break;
+			case 1: editor.ui.diskOpShown = true; break;
 			case 2: editor.ui.sampleEditorExtShown = true; break;
-			case 3: editor.ui.instEditorExtShown   = true; break;
-			case 4: editor.ui.transposeShown       = true; break;
-			case 5: editor.ui.advEditShown         = true; break;
-			case 6: editor.ui.wavRendererShown     = true; break;
-			case 7: editor.ui.trimScreenShown      = true; break;
+			case 3: editor.ui.instEditorExtShown = true; break;
+			case 4: editor.ui.transposeShown = true; break;
+			case 5: editor.ui.advEditShown = true; break;
+			case 6: editor.ui.wavRendererShown = true; break;
+			case 7: editor.ui.trimScreenShown = true; break;
 		}
 
 		if (editor.ui.oldTopLeftScreen > 0)
@@ -1205,10 +1224,22 @@ void showTopScreen(bool restoreScreens)
 {
 	editor.ui.scopesShown = false;
 
-	     if (editor.ui.aboutScreenShown)  showAboutScreen();
-	else if (editor.ui.configScreenShown) showConfigScreen();
-	else if (editor.ui.helpScreenShown)   showHelpScreen();
-	else if (editor.ui.nibblesShown)      showNibblesScreen();
+	if (editor.ui.aboutScreenShown)
+	{
+		showAboutScreen();
+	}
+	else if (editor.ui.configScreenShown)
+	{
+		showConfigScreen();
+	}
+	else if (editor.ui.helpScreenShown)
+	{
+		showHelpScreen();
+	}
+	else if (editor.ui.nibblesShown)
+	{
+		showNibblesScreen();
+	}
 	else
 	{
 		showTopLeftMainScreen(restoreScreens); // updates editor.ui.scopesShown

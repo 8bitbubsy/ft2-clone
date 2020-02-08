@@ -156,7 +156,6 @@ void exitWavRenderer(void)
 
 static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 {
-	uint8_t i, oldMuteFlags[MAX_VOICES];
 	uint32_t maxSamplesPerTick, sampleSize;
 
 	maxSamplesPerTick = ((frq * 5) / 2) / MIN_BPM; // absolute max samples per tidck
@@ -173,16 +172,7 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 	playMode = PLAYMODE_SONG;
 	songPlaying = true;
 
-	// store mute states
-	for (i = 0; i < MAX_VOICES; i++)
-		oldMuteFlags[i] = stm[i].stOff;
-
 	resetChannels();
-
-	// restore mute states
-	for (i = 0; i < MAX_VOICES; i++)
-		stm[i].stOff = oldMuteFlags[i];
-
 	setNewAudioFreq(frq);
 	setAudioAmp(amp, config.masterVol, (WDBitDepth == 32));
 

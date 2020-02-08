@@ -22,9 +22,12 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
     chmod +x make-linux.sh     (only needed once)
     ./make-linux.sh
     
+ Note: If you don't have libstdc++ and/or can't compile rtmidi, try running
+       make-linux-nomidi.sh instead.
+    
  Note: If you want faster audio mixing (for SLOW devices), pass -DLERPMIX
-       to the GCC command line (edit make-linux.sh). This will yield slightly
-       more blurry sound when interpolation is activated, though...
+       to the GCC command line (edit make-linux.sh/make-linux-nomidi.sh). This
+       will lower the resampling interpolation quality, though...
        
  Known issues: Audio recording (sampling) can update VERY slowly or not work at
                all... I have no idea why, it works really well on Windows/maCOS.
