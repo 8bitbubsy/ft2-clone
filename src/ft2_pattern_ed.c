@@ -21,8 +21,6 @@
 #include "ft2_mouse.h"
 #include "ft2_video.h"
 
-#include "ft2_module_loader.h"
-
 // for pattern marking w/ keyboard
 static int8_t lastChMark;
 static int16_t lastRowMark;

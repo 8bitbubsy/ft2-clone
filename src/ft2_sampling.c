@@ -233,8 +233,6 @@ static void drawSamplingPreview(void)
 	int32_t smpIdx, smpNum;
 	uint32_t *centerPtrL, *centerPtrR, pixVal;
 
-#define SAMPLEL_AREA_Y_CENTER 250
-
 	pixVal = video.palette[PAL_PATTEXT];
 
 	// select buffer currently not being written to (double-buffering)
@@ -338,19 +336,18 @@ void handleSamplingUpdates(void)
 
 void startSampling(void)
 {
-	int16_t result;
-
 #if SDL_PATCHLEVEL < 5
-	okBox(2, "System message", "This program needs to be compiled with SDL 2.0.5 or later to support audio sampling.");
+	okBox(0, "System message", "This program needs to be compiled with SDL 2.0.5 or later to support audio sampling.");
 	return;
 #else
+	int16_t result;
 	SDL_AudioSpec want, have;
 	sampleTyp *s, *nextSmp;
 
 	if (editor.samplingAudioFlag || editor.curInstr == 0)
 		return;
 
-	result = okBox(9, "System request", "Stereo sampling will use the next sample slot. While ongoing, press any key to stop. ");
+	result = okBox(9, "System request", "Stereo sampling will use the next sample slot. While ongoing, press any key to stop.");
 	if (result == 0 || result == 3)
 		return;
 

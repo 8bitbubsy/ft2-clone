@@ -81,7 +81,7 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{   3,  91,  76, 12, cbToggleAutoSaveConfig },
 	{ 389, 132,  90, 12, cbConfigInterpolation },
 	{ 389, 145, 107, 12, cbConfigVolRamp },
-	{ 389, 158 , 94, 12, cbConfigDither },
+	{ 389, 158 , 84, 12, cbConfigDither },
 	{ 113,  14, 108, 12, cbConfigPattStretch },
 	{ 113,  27, 117, 12, cbConfigHexCount },
 	{ 113,  40,  81, 12, cbConfigAccidential },

@@ -11,4 +11,4 @@ gcc -DNDEBUG src/gfxdata/*.c src/*.c -lSDL2 -lm -Wshadow -Winit-self -Wall -Wno-
 
 rm src/gfxdata/*.o src/*.o &> /dev/null
 
-echo Done! The executable is in the folder named \'release/other\'.
+echo Done. The executable can be found in \'release/other\' if everything went well.

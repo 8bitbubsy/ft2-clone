@@ -30,7 +30,8 @@
 ** You will experience a lot of headaches if you dig into this file...
 ** If something looks to be wrong, it's probably right!
 **
-** The actual module load routines are ported from FT2 and slightly modified. */
+** The actual module load routines are ported from FT2 and slightly modified.
+*/
 
 enum
 {
@@ -39,6 +40,19 @@ enum
 	FORMAT_MOD = 2,
 	FORMAT_S3M = 3,
 	FORMAT_STM = 4
+};
+
+// .MOD types
+enum
+{
+	FORMAT_MK, // ProTracker or compatible
+	FORMAT_FLT, // StarTrekker (4-channel modules only)
+	FORMAT_FT2, // FT2 (or other trackers, multichannel)
+	FORMAT_STK, // The Ultimate SoundTracker (15 samples)
+	FORMAT_NT, // NoiseTracker
+	FORMAT_HMNT, // His Master's NoiseTracker (special one)
+
+	FORMAT_UNKNOWN // may be The Ultimate Soundtracker (set to FORMAT_STK later)
 };
 
 // DO NOT TOUCH THESE STRUCTS!
@@ -161,13 +175,55 @@ static bool allocateTmpInstr(int16_t nr)
 	return true;
 }
 
+#define IS_ID(s, b) !strncmp(s, b, 4)
+
+static uint8_t getModType(uint8_t *numChannels, const char *id)
+{
+	uint8_t modFormat = FORMAT_UNKNOWN;
+	*numChannels = 4;
+
+	if (IS_ID("M.K.", id) || IS_ID("M!K!", id) || IS_ID("NSMS", id) || IS_ID("LARD", id) || IS_ID("PATT", id))
+	{
+		modFormat = FORMAT_MK; // ProTracker or compatible	
+	}
+	else if (id[1] == 'C' && id[2] == 'H' && id[3] == 'N')
+	{
+		modFormat = FORMAT_FT2; // FT2 or generic multichannel
+		*numChannels = id[0] - '0';
+	}
+	else if (id[2] == 'C' && (id[3] == 'H' || id[3] == 'N'))
+	{
+		modFormat = FORMAT_FT2; // FT2 or generic multichannel
+		*numChannels = ((id[0] - '0') * 10) + (id[1] - '0');
+	}
+	else if (IS_ID("FLT4", id))
+	{
+		modFormat = FORMAT_FLT; // StarTrekker (4-channel modules only)
+	}
+	else if (IS_ID("FLT8", id))
+	{
+		modFormat = FORMAT_FLT; // StarTrekker (4-channel modules only)
+		*numChannels = 8;
+	}
+	else if (IS_ID("N.T.", id))
+	{
+		modFormat = FORMAT_NT; // NoiseTracker
+	}
+	else if (IS_ID("M&K!", id) || IS_ID("FEST", id))
+	{
+		modFormat = FORMAT_HMNT; // His Master's NoiseTracker
+	}
+
+	return modFormat;
+}
+
 static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 {
 	char ID[16];
-	bool modIsUST, modIsFEST, modIsNT;
-	uint8_t bytes[4];
+	bool mightBeSTK, lateSTKVerFlag, veryLateSTKVerFlag;
+	uint8_t bytes[4], modFormat, numChannels;
 	int16_t i, j, k, ai;
-	uint16_t a, b, period, ciaPeriod;
+	uint16_t a, b, period;
 	tonTyp *ton;
 	sampleTyp *s;
 	songMOD31HeaderTyp h_MOD31;
@@ -175,6 +231,14 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 	int16_t (*showMsg)(int16_t, const char *, const char *);
 
 	showMsg = fromExternalThread ? okBoxThreadSafe : okBox;
+
+	veryLateSTKVerFlag = false; // "DFJ SoundTracker III" nad later
+	lateSTKVerFlag = false; // "TJC SoundTracker II" and later
+	mightBeSTK = false;
+
+	memset(&songTmp, 0, sizeof (songTmp));
+	memset(&h_MOD31, 0, sizeof (songMOD31HeaderTyp));
+	memset(&h_MOD15, 0, sizeof (songMOD15HeaderTyp));
 
 	// start loading MOD
 
@@ -200,7 +264,7 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 		goto modLoadError;
 	}
 
-	if (fileLength < 1596 || fileLength > 20842494) // minimum and maximum possible size for an FT2 .mod
+	if (fileLength < 1596 || fileLength > 20842494) // minimum and maximum possible size for a supported .mod
 	{
 		showMsg(0, "System message", "Error: This file is either not a module, or is not supported.");
 		goto modLoadError;
@@ -212,63 +276,23 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 		goto modLoadError;
 	}
 
-	modIsFEST = false;
-	modIsNT = false;
-	modIsUST = false;
+	modFormat = getModType(&numChannels, h_MOD31.sig);
 
-	if (!strncmp(h_MOD31.sig, "N.T.", 4))
+	if (modFormat == FORMAT_FLT && numChannels == 8)
 	{
-		j = 4;
-		modIsNT = true;
-	}
-	else if (!strncmp(h_MOD31.sig, "FEST", 4) || !strncmp(h_MOD31.sig, "M&K!", 4))
-	{
-		modIsFEST = true;
-		modIsNT = true;
-		j = 4;
-	}
-	else if (!strncmp(h_MOD31.sig, "M!K!", 4) || !strncmp(h_MOD31.sig, "M.K.", 4) || !strncmp(h_MOD31.sig, "FLT4", 4))
-	{
-		j = 4;
-	}
-	else if (!strncmp(h_MOD31.sig, "OCTA", 4) || !strncmp(h_MOD31.sig, "FLT8", 4) || !strncmp(h_MOD31.sig, "CD81", 4))
-	{
-		j = 8;
-	}
-	else
-	{
-		j = 0;
-		for (i = 0; i < 32; i++)
-		{
-			if (!strncmp(h_MOD31.sig, modSig[i], 4))
-			{
-				j = i + 1;
-				break;
-			}
-			else if (j == 31)
-			{
-				j = -1; // ID not recignized
-			}
-		}
-	}
-
-	// unsupported MOD
-	if (j == -1)
-	{
-		showMsg(0, "System message", "Error: This file is either not a module, or is not supported.");
+		showMsg(0, "System message", "8-channel Startrekker modules are not supported!");
 		goto modLoadError;
 	}
 
-	if (j > 0)
+	if (modFormat != FORMAT_UNKNOWN)
 	{
-		modIsUST = false;
 		if (fileLength < sizeof (h_MOD31))
 		{
 			showMsg(0, "System message", "Error: This file is either not a module, or is not supported.");
 			goto modLoadError;
 		}
 
-		songTmp.antChn = (uint8_t)j;
+		songTmp.antChn = numChannels;
 		songTmp.len = h_MOD31.len;
 		songTmp.repS = h_MOD31.repS;
 		memcpy(songTmp.songTab, h_MOD31.songTab, 128);
@@ -276,40 +300,96 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 	}
 	else
 	{
-		modIsUST = true;
+		mightBeSTK = true;
 		if (fileLength < sizeof (h_MOD15))
 		{
-			showMsg(0, "System message", "Error: This file is either not a module, or is not supported.");
+			showMsg(0, "System message", "Error: This file is not a module!");
 			goto modLoadError;
 		}
 
-		fseek(f, 0, SEEK_SET);
+		rewind(f);
 		if (fread(&h_MOD15, 1, sizeof (h_MOD15), f) != sizeof (h_MOD15))
 		{
 			showMsg(0, "System message", "Error: This file is either not a module, or is not supported.");
 			goto modLoadError;
 		}
 
-		songTmp.antChn = 4;
+		songTmp.antChn = numChannels;
 		songTmp.len = h_MOD15.len;
 		songTmp.repS = h_MOD15.repS;
 		memcpy(songTmp.songTab, h_MOD15.songTab, 128);
 		ai = 15;
 	}
 
-	if (songTmp.antChn == 0 || songTmp.len < 1)
+	if (modFormat == FORMAT_MK && songTmp.len == 129)
+		songTmp.len = 127; // fixes a specific copy of beatwave.mod
+
+	if (songTmp.antChn == 0 || songTmp.len < 1 || songTmp.len > 128 || (mightBeSTK && songTmp.repS > 220))
 	{
 		showMsg(0, "System message", "Error: This file is either not a module, or is not supported.");
 		goto modLoadError;
 	}
 
-	if (!strncmp(h_MOD31.sig, "M.K.", 4) && songTmp.len == 129)
-		songTmp.len = 127; // fixes a specific copy of beatwave.mod by Sidewinder
-
-	if (songTmp.len > 128 || (modIsUST && (songTmp.repS == 0 || songTmp.repS > 220)))
+	for (a = 0; a < ai; a++)
 	{
-		showMsg(0, "System message", "Error: This file is either not a module, or is not supported.");
-		goto modLoadError;
+		songMODInstrHeaderTyp *smp = &h_MOD31.instr[a];
+
+		if (modFormat != FORMAT_HMNT) // most of "His Master's Noisetracker" songs have junk sample names, so let's not load them
+		{
+			// trim off spaces at end of name
+			for (i = 21; i >= 0; i--)
+			{
+				if (smp->name[i] == ' ' || smp->name[i] == 0x1A)
+					smp->name[i] = '\0';
+				else
+					break;
+			}
+
+			memcpy(songTmp.instrName[1+a], smp->name, 22);
+			songTmp.instrName[1+a][22] = '\0';
+		}
+
+		/* Only late versions of Ultimate SoundTracker could have samples larger than 9999 bytes.
+		** If found, we know for sure that this is a late STK module.
+		*/
+		if (mightBeSTK && 2*SWAP16(smp->len) > 9999)
+			lateSTKVerFlag = true;
+	}
+
+	songTmp.speed = 125;
+	if (mightBeSTK)
+	{
+		/* If we're still here at this point and the mightBeSTK flag is set,
+		** then it's most likely a proper The Ultimate SoundTracker (STK/UST) module.
+		*/
+		modFormat = FORMAT_STK;
+
+		if (h_MOD15.repS == 0)
+			h_MOD15.repS = 120;
+
+		// jjk55.mod by Jesper Kyd has a bogus STK tempo value that should be ignored
+		if (!strcmp("jjk55", h_MOD31.name))
+			h_MOD15.repS = 120;
+
+		// The "restart pos" field in STK is the inital tempo (must be converted to BPM first)
+		if (h_MOD15.repS != 120) // 120 is a special case and means 50Hz (125BPM)
+		{
+			if (h_MOD15.repS > 220)
+				h_MOD15.repS = 220;
+
+			// convert UST tempo to BPM
+			uint16_t ciaPeriod = (240 - songTmp.repS) * 122;
+			double dHz = 709379.0 / ciaPeriod;
+			int32_t BPM = (int32_t)((dHz * (125.0 / 50.0)) + 0.5);
+
+			songTmp.speed = (uint16_t)BPM;
+		}
+
+		songTmp.repS = 0;
+	}
+	else if (songTmp.repS >= songTmp.len)
+	{
+		songTmp.repS = 0;
 	}
 
 	// trim off spaces at end of name
@@ -324,32 +404,16 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 	memcpy(songTmp.name, h_MOD31.name, 20);
 	songTmp.name[20] = '\0';
 
-	for (a = 0; a < ai; a++)
-	{
-		// trim off spaces at end of name
-		for (i = 21; i >= 0; i--)
-		{
-			if (h_MOD31.instr[a].name[i] == ' ' || h_MOD31.instr[a].name[i] == 0x1A)
-				h_MOD31.instr[a].name[i] = '\0';
-			else
-				break;
-		}
-
-		memcpy(songTmp.instrName[1+a], h_MOD31.instr[a].name, 22);
-		songTmp.instrName[1+a][22] = '\0';
-	}
-
+	// count number of patterns
 	b = 0;
 	for (a = 0; a < 128; a++)
 	{
 		if (songTmp.songTab[a] > b)
 			b = songTmp.songTab[a];
 	}
+	b++;
 
-	if (songTmp.len < 255)
-		memset(&songTmp.songTab[songTmp.len], 0, 256 - songTmp.len);
-
-	for (a = 0; a <= b; a++)
+	for (a = 0; a < b; a++)
 	{
 		pattTmp[a] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
 		if (pattTmp[a] == NULL)
@@ -385,6 +449,22 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 				ton->instr = (bytes[0] & 0xF0) | (bytes[2] >> 4);
 				ton->effTyp = bytes[2] & 0x0F;
 				ton->eff = bytes[3];
+
+				if (mightBeSTK)
+				{
+					if (ton->effTyp == 0xC || ton->effTyp == 0xD || ton->effTyp == 0xE)
+					{
+						// "TJC SoundTracker II" and later
+						lateSTKVerFlag = true;
+					}
+
+					if (ton->effTyp == 0xF)
+					{
+						// "DFJ SoundTracker III" and later
+						lateSTKVerFlag = true;
+						veryLateSTKVerFlag = true;
+					}
+				}
 
 				if (ton->effTyp == 0xC)
 				{
@@ -425,35 +505,6 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 						ton->eff = 0;
 					}
 				}
-
-				if (modIsUST)
-				{
-					if (ton->effTyp == 0x01)
-					{
-						// arpeggio
-						ton->effTyp = 0x00;
-					}
-					else if (ton->effTyp == 0x02)
-					{
-						// pitch slide
-						if (ton->eff & 0xF0)
-						{
-							ton->effTyp = 0x02;
-							ton->eff >>= 4;
-						}
-						else if (ton->eff & 0x0F)
-						{
-							ton->effTyp = 0x01;
-						}
-					}
-
-					// I don't remember why I did this...
-					if (ton->effTyp == 0x0D && ton->eff > 0)
-						ton->effTyp = 0x0A;
-				}
-
-				if (modIsNT && ton->effTyp == 0x0D)
-					ton->eff = 0;
 			}
 		}
 
@@ -467,18 +518,111 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 		}
 	}
 
+	// pattern command conversion for non-PT formats
+	if (modFormat == FORMAT_STK || modFormat == FORMAT_FT2 || modFormat == FORMAT_NT || modFormat == FORMAT_HMNT || modFormat == FORMAT_FLT)
+	{
+		for (a = 0; a < b; a++)
+		{
+			if (pattTmp[a] == NULL)
+				continue;
+
+			for (j = 0; j < 64; j++)
+			{
+				for (k = 0; k < songTmp.antChn; k++)
+				{
+					ton = &pattTmp[a][(j * MAX_VOICES) + k];
+
+					if (modFormat == FORMAT_NT || modFormat == FORMAT_HMNT)
+					{
+						// any Dxx == D00 in NT/HMNT
+						if (ton->effTyp == 0xD)
+							ton->eff = 0;
+
+						// effect F with param 0x00 does nothing in NT/HMNT
+						if (ton->effTyp == 0xF && ton->eff == 0)
+							ton->effTyp = 0;
+					}
+					else if (modFormat == FORMAT_FLT) // Startrekker
+					{
+						if (ton->effTyp == 0xE) // remove unsupported "assembly macros" command
+						{
+							ton->effTyp = 0;
+							ton->eff = 0;
+						}
+
+						// Startrekker is always in vblank mode, and limits speed to 0x1F
+						if (ton->effTyp == 0xF && ton->eff > 0x1F)
+							ton->eff = 0x1F;
+					}
+					else if (modFormat == FORMAT_STK)
+					{
+						// convert STK effects to PT effects
+
+						if (!lateSTKVerFlag)
+						{
+							// old SoundTracker 1.x commands
+
+							if (ton->effTyp == 1)
+							{
+								// arpeggio
+								ton->effTyp = 0;
+							}
+							else if (ton->effTyp == 2)
+							{
+								// pitch slide
+								if (ton->eff & 0xF0)
+								{
+									// pitch slide down
+									ton->effTyp = 2;
+									ton->eff >>= 4;
+								}
+								else if (ton->eff & 0x0F)
+								{
+									// pitch slide up
+									ton->effTyp = 1;
+								}
+							}
+						}
+						else
+						{
+							// "DFJ SoundTracker II" or later
+
+							if (ton->effTyp == 0xD)
+							{
+								if (veryLateSTKVerFlag) // "DFJ SoundTracker III" or later
+								{
+									// pattern break w/ no param (param must be cleared to fix some songs)
+									ton->eff = 0;
+								}
+								else
+								{
+									// volume slide
+									ton->effTyp = 0xA;
+								}
+							}
+						}
+
+						// effect F with param 0x00 does nothing in UST/STK (I think?)
+						if (ton->effTyp == 0xF && ton->eff == 0)
+							ton->effTyp = 0;
+					}
+				}
+			}
+		}
+	}
+
 	for (a = 0; a < ai; a++)
 	{
 		if (h_MOD31.instr[a].len == 0)
 			continue;
 
-		if (!allocateTmpInstr(1 + a))
+		if (!allocateTmpInstr(1+a))
 		{
 			showMsg(0, "System message", "Not enough memory!");
 			goto modLoadError;
 		}
 
-		setNoEnvelope(instrTmp[1 + a]);
+		setNoEnvelope(instrTmp[1+a]);
 
 		s = &instrTmp[1+a]->samp[0];
 
@@ -491,34 +635,42 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 			goto modLoadError;
 		}
 
-		memcpy(s->name, songTmp.instrName[1+a], 22);
+		if (modFormat != FORMAT_HMNT) // most of "His Master's Noisetracker" songs have junk sample names, so let's not load them
+			memcpy(s->name, songTmp.instrName[1+a], 22);
 
-		if (modIsFEST)
-			h_MOD31.instr[a].fine = (32 - (h_MOD31.instr[a].fine & 0x1F)) >> 1;
+		if (modFormat == FORMAT_HMNT) // finetune in "His Master's NoiseTracker" is different
+			h_MOD31.instr[a].fine = (uint8_t)((-h_MOD31.instr[a].fine & 0x1F) / 2); // one more bit of precision, + inverted
 
-		if (!modIsUST)
-			s->fine = 8 * ((2 * ((h_MOD31.instr[a].fine & 0x0F) ^ 8)) - 16);
-		else
-			s->fine = 0;
+		if (modFormat != FORMAT_STK)
+			s->fine = 8 * ((2 * ((h_MOD31.instr[a].fine & 0xF) ^ 8)) - 16);
 
 		s->pan = 128;
 
 		s->vol = h_MOD31.instr[a].vol;
-		if (s->vol > 64) s->vol = 64;
+		if (s->vol > 64)
+			s->vol = 64;
 
 		s->repS = 2 * SWAP16(h_MOD31.instr[a].repS);
-
-		if (modIsUST)
-			s->repS /= 2;
-
 		s->repL = 2 * SWAP16(h_MOD31.instr[a].repL);
 
-		if (s->repL <= 2)
+		if (s->repL < 2)
+			s->repL = 2;
+
+		/* Ultimate SoundTracker before version 2.5 had loopStart in bytes, not words
+		** XXX: This has to be verified... It's possible that it was before that,
+		** and that this breaks some modules.
+		*/
+		if (mightBeSTK && !lateSTKVerFlag)
+			s->repS /= 2;
+
+		// fix for poorly converted STK (< v2.5) -> PT/NT modules (FIXME: Worth keeping or not?)
+		if (!mightBeSTK && s->repL > 2 && s->repS+s->repL > s->len)
 		{
-			s->repS = 0;
-			s->repL = 0;
+			if ((s->repS/2) + s->repL <= s->len)
+				s->repS /= 2;
 		}
 
+		// fix overflown loop
 		if (s->repS+s->repL > s->len)
 		{
 			if (s->repS >= s->len)
@@ -532,52 +684,27 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 			}
 		}
 
-		if (s->repL > 2)
-			s->typ = 1;
-		else
-			s->typ = 0;
+		if (s->repS+s->repL > 2)
+			s->typ = 1; // enable loop
 
-		if (modIsUST && (s->repS > 2 && s->repS < s->len))
+		/* For Ultimate SoundTracker modules, only the loop area of a looped sample is played.
+		** Skip loading of eventual data present before loop start.
+		*/
+		if (modFormat == FORMAT_STK && (s->repS > 0 && s->repL < s->len))
 		{
 			s->len -= s->repS;
 			fseek(f, s->repS, SEEK_CUR);
 			s->repS = 0;
 		}
 
-		if (fread(s->pek, s->len, 1, f) == 1)
+		int32_t bytesRead = (int32_t)fread(s->pek, 1, s->len, f);
+		if (bytesRead < s->len)
 		{
-			fixSample(s);
-		}
-		else
-		{
-			free(s->pek);
-			s->pek = NULL;
-			s->len = 0;
-		}
-	}
-
-	songTmp.speed = 125;
-
-	if (modIsUST)
-	{
-		// repS is initialBPM in UST MODs
-
-		if (songTmp.repS != 120) // 120 is a special case and means 50Hz (125BPM)
-		{
-			if (songTmp.repS > 239)
-				songTmp.repS = 239;
-
-			// convert UST tempo to BPM
-			const double dPALAmigaCiaClk = 709379.0;
-			ciaPeriod = (240 - songTmp.repS) * 122;
-			songTmp.speed = (uint16_t)round((dPALAmigaCiaClk / ciaPeriod) * (125.0 / 50.0));
+			int32_t bytesToClear = s->len - bytesRead;
+			memset(&s->pek[bytesRead], 0, bytesToClear);
 		}
 
-		songTmp.repS = 0;
-	}
-	else if (songTmp.repS >= songTmp.len)
-	{
-		songTmp.repS = 0;
+		fixSample(s);
 	}
 
 	fclose(f);
@@ -965,7 +1092,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 	bool check3xx, illegalUxx;
 	uint8_t ha[2048];
 	uint8_t s3mLastDEff[32], s3mLastEEff[32], s3mLastFEff[32];
-	uint8_t s3mLastSEff[32], s3mLastJEff[32], s3mLastGInstr[32], tmp8, typ;
+	uint8_t s3mLastSEff[32], s3mLastJEff[32], s3mLastGInstr[32], typ;
 	int16_t i, j, k, ai, ap, ver, ii, kk, tmp;
 	uint16_t ptnOfs[256];
 	int32_t len;
@@ -1088,11 +1215,11 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 		if (ptnOfs[i]  == 0)
 			continue; // empty pattern
 
-		memset(s3mLastDEff,   0, sizeof (s3mLastDEff));
-		memset(s3mLastEEff,   0, sizeof (s3mLastEEff));
-		memset(s3mLastFEff,   0, sizeof (s3mLastFEff));
-		memset(s3mLastSEff,   0, sizeof (s3mLastSEff));
-		memset(s3mLastJEff,   0, sizeof (s3mLastJEff));
+		memset(s3mLastDEff, 0, sizeof (s3mLastDEff));
+		memset(s3mLastEEff, 0, sizeof (s3mLastEEff));
+		memset(s3mLastFEff, 0, sizeof (s3mLastFEff));
+		memset(s3mLastSEff, 0, sizeof (s3mLastSEff));
+		memset(s3mLastJEff, 0, sizeof (s3mLastJEff));
 		memset(s3mLastGInstr, 0, sizeof (s3mLastGInstr));
 
 		fseek(f, ptnOfs[i] << 4, SEEK_SET);
@@ -1141,7 +1268,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 					// note and sample
 					if (typ & 32)
 					{
-						ton.ton   = pattBuff[k++];
+						ton.ton = pattBuff[k++];
 						ton.instr = pattBuff[k++];
 
 						if (ton.instr > MAX_INST)
@@ -1181,17 +1308,17 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 								if ((s3mLastDEff[ii] & 0xF0) == 0xF0 || (s3mLastDEff[ii] & 0x0F) == 0x0F)
 									ton.eff = s3mLastDEff[ii];
 							}
-							else if (ton.effTyp ==  5) ton.eff = s3mLastEEff[ii];
-							else if (ton.effTyp ==  6) ton.eff = s3mLastFEff[ii];
+							else if (ton.effTyp == 5) ton.eff = s3mLastEEff[ii];
+							else if (ton.effTyp == 6) ton.eff = s3mLastFEff[ii];
 							else if (ton.effTyp == 10) ton.eff = s3mLastJEff[ii];
 							else if (ton.effTyp == 19) ton.eff = s3mLastSEff[ii];
 						}
 						
 						if (ton.eff != 0)
 						{
-							     if (ton.effTyp ==  4) s3mLastDEff[ii] = ton.eff;
-							else if (ton.effTyp ==  5) s3mLastEEff[ii] = ton.eff;
-							else if (ton.effTyp ==  6) s3mLastFEff[ii] = ton.eff;
+							     if (ton.effTyp == 4) s3mLastDEff[ii] = ton.eff;
+							else if (ton.effTyp == 5) s3mLastEEff[ii] = ton.eff;
+							else if (ton.effTyp == 6) s3mLastFEff[ii] = ton.eff;
 							else if (ton.effTyp == 10) s3mLastJEff[ii] = ton.eff;
 							else if (ton.effTyp == 19) s3mLastSEff[ii] = ton.eff;
 						}
@@ -1272,8 +1399,8 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 							}
 							break;
 
-							case 8:  ton.effTyp = 0x04; break; // H
-							case 9:  ton.effTyp = 0x1D; break; // I
+							case 8: ton.effTyp = 0x04; break; // H
+							case 9: ton.effTyp = 0x1D; break; // I
 							case 10: ton.effTyp = 0x00; break; // J
 							case 11: ton.effTyp = 0x06; break; // K
 							case 12: ton.effTyp = 0x05; break; // L
@@ -1291,11 +1418,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 								else if (tmp == 0x2) ton.eff |= 0x50;
 								else if (tmp == 0x3) ton.eff |= 0x40;
 								else if (tmp == 0x4) ton.eff |= 0x70;
-								else if (tmp == 0x08)
-								{
-									ton.effTyp = 0x8;
-									ton.eff <<= 4;
-								}
+								// we ignore S8x (set 4-bit pan) becuase it's not compatible with FT2 panning
 								else if (tmp == 0xB) ton.eff |= 0x60;
 								else if (tmp == 0xC) ton.eff |= 0xC0;
 								else if (tmp == 0xD) ton.eff |= 0xD0;
@@ -1312,7 +1435,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 							case 20: // T
 							{
 								ton.effTyp = 0x0F;
-								if (ton.eff < 0x20)
+								if (ton.eff < 0x21) // Txx with a value lower than 33 (0x21) does nothing in ST3, remove effect
 								{
 									ton.effTyp = 0;
 									ton.eff = 0;
@@ -1320,12 +1443,12 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 							}
 							break;
 
-							case 21: // U
+							case 21: // U (fine vibrato, doesn't exist in FT2, convert to normal vibrato)
 							{
 								if ((ton.eff & 0x0F) != 0)
 								{
-									ton.eff = (ton.eff & 0xF0) | (((ton.eff & 15) + 1) / 4);
-									if ((ton.eff & 0x0F) == 0)
+									ton.eff = (ton.eff & 0xF0) | (((ton.eff & 15) + 1) / 4); // divide depth by 4
+									if ((ton.eff & 0x0F) == 0) // depth too low, remove effect
 									{
 										illegalUxx = true;
 										ton.effTyp = 0;
@@ -1366,9 +1489,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 					if (ton.instr != 0 && ton.effTyp != 0x3)
 						s3mLastGInstr[ii] = ton.instr;
 
-					/* Remove any EDx with no note.
-					** SDx with no note in ST3 = does nothing
-					** EDx with no note in FT2 = still retriggers */
+					// EDx with no note does nothing in ST3 but retrigs in FT2, remove effect
 					if (ton.effTyp == 0xE && (ton.eff & 0xF0) == 0xD0)
 					{
 						if (ton.ton == 0 || ton.ton == 97)
@@ -1376,6 +1497,36 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 							ton.effTyp = 0;
 							ton.eff = 0;
 						}
+					}
+
+					// EDx with a zero will prevent note/instr/vol from updating in ST3, remove everything
+					if (ton.effTyp == 0xE && ton.eff == 0xD0)
+					{
+						ton.ton = 0;
+						ton.instr = 0;
+						ton.vol = 0;
+						ton.effTyp = 0;
+						ton.eff = 0;
+					}
+
+					// ECx with a zero does nothing in ST3 but cuts voice in FT2, remove effect
+					if (ton.effTyp == 0xE && ton.eff == 0xC0)
+					{
+						ton.effTyp = 0;
+						ton.eff = 0;
+					}
+
+					// Vxx with a value higher than 64 (0x40) does nothing in ST3, remove effect
+					if (ton.effTyp == 0x10 && ton.eff > 0x40)
+					{
+						ton.effTyp = 0;
+						ton.eff = 0;
+					}
+
+					if (ton.effTyp > 35)
+					{
+						ton.effTyp = 0;
+						ton.eff = 0;
 					}
 
 					pattTmp[i][(kk * MAX_VOICES) + ii] = ton;
@@ -1461,6 +1612,9 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 
 				memcpy(s->name, h_S3MInstr.name, 21);
 
+				if (h_S3MInstr.c2Spd > 65535)
+					h_S3MInstr.c2Spd = 65535;
+
 				tuneSample(s, h_S3MInstr.c2Spd);
 
 				s->len  = h_S3MInstr.len;
@@ -1517,7 +1671,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 
 						memcpy(s->pek, tmpSmp, h_S3MInstr.len * 2);
 
-						s->len  *= 2;
+						s->len *= 2;
 						s->repS *= 2;
 						s->repL *= 2;
 					}
@@ -1561,6 +1715,8 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 			{
 				pattTon = &pattTmp[i][(j * MAX_VOICES) + k];
 
+				// fix illegal 3xx slides
+
 				if (pattTon->ton > 0 && pattTon->ton < 97)
 					check3xx = pattTon->effTyp != 0x3;
 
@@ -1573,41 +1729,36 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 					}
 				}
 
-				if (pattTon->effTyp == 0x9 && pattTon->eff > 0)
+				/* In ST3 in GUS mode, an overflowed sample offset behaves like this:
+				** - Non-looped sample: Cut voice
+				** - Looped sample: Wrap around loop point
+				**
+				** What we do here is to change the sample offset value to point to
+				** the wrapped sample loop position. This may be off by up to 256 bytes
+				** though...
+				*/
+
+				if (pattTon->effTyp == 0x9 && pattTon->eff > 0 && pattTon->instr > 0 && pattTon->instr <= ai && ai <= 128)
 				{
-					if (pattTon->instr != 0 && pattTon->instr <= ai)
+					s = &instrTmp[pattTon->instr]->samp[0];
+					if (s->len > 0 && (s->typ & 1)) // only handle non-empty looping samples
 					{
-						s = &instrTmp[pattTon->instr]->samp[0];
+						uint32_t loopEnd = s->repS + s->repL;
+						uint32_t offset = pattTon->eff * 256;
 
-						len = s->len;
+						if (offset >= loopEnd)
+						{
+							if (s->repL >= 2)
+								offset = s->repS + ((offset - loopEnd) % s->repL);
+							else
+								offset = s->repS;
 
-						tmp8 = 0;
-						if (len > 0)
-						{
-							tmp8 = pattTon->eff;
-							if (tmp8 >= len/256)
-							{
-								if (len/256 < 1)
-									tmp8 = 0;
-								else
-									tmp8 = (uint8_t)((len/256) - 1);
-							}
-						}
+							offset = (offset + (1 << 7)) >> 8; // convert to rounded sample offset value
+							if (offset > 255)
+								offset = 255;
 
-						if (tmp8 > 0)
-						{
-							pattTon->eff = tmp8;
+							pattTon->eff = (uint8_t)offset;
 						}
-						else
-						{
-							pattTon->effTyp = 0;
-							pattTon->eff = 0;
-						}
-					}
-					else
-					{
-						pattTon->effTyp = 0;
-						pattTon->eff = 0;
 					}
 				}
 			}
@@ -1619,7 +1770,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 	songTmp.antChn = countS3MChannels(ap);
 
 	if (!(config.dontShowAgainFlags & DONT_SHOW_S3M_LOAD_WARNING_FLAG))
-		showMsg(6, "System message", "Warning: S3M channel panning is not compatible with FT2!");
+		showMsg(6, "System message", "Warning: S3M channel panning is ignored because it's not compatible with FT2.");
 
 	moduleLoaded = true;
 	return true;
@@ -2132,8 +2283,12 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 			if (s->pek == NULL)
 				return false;
 
-			if (fread(s->pek, l, 1, f) != 1)
-				return false;
+			int32_t bytesRead = (int32_t)fread(s->pek, 1, l, f);
+			if (bytesRead < l)
+			{
+				int32_t bytesToClear = l - bytesRead;
+				memset(&s->pek[bytesRead], 0, bytesToClear);
+			}
 
 			if (bytesToSkip > 0)
 				fseek(f, bytesToSkip, SEEK_CUR);

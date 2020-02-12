@@ -13,5 +13,5 @@ else
     install_name_tool -change @rpath/SDL2.framework/Versions/A/SDL2 @executable_path/../Frameworks/SDL2.framework/Versions/A/SDL2 release/macos/ft2-clone-macos.app/Contents/MacOS/ft2-clone-macos
     
     rm src/rtmidi/*.o src/gfxdata/*.o src/*.o &> /dev/null
-    echo Done! The executable is in the folder named \'release/macos\'.
+    echo Done. The executable can be found in \'release/macos\' if everything went well.
 fi

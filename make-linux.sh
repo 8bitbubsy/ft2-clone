@@ -11,4 +11,4 @@ gcc -DNDEBUG -DHAS_MIDI -D__LINUX_ALSA__ src/rtmidi/*.cpp src/gfxdata/*.c src/*.
 
 rm src/rtmidi/*.o src/gfxdata/*.o src/*.o &> /dev/null
 
-echo Done! The executable is in the folder named \'release/other\'.
+echo Done. The executable can be found in \'release/other\' if everything went well.

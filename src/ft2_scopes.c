@@ -435,11 +435,11 @@ static void updateScopes(void)
 	scope_t tempState;
 
 	scopesUpdatingFlag = true;
-	for (uint32_t i = 0; i < song.antChn; i++)
-	{
-		sc = &scope[i];
-		tempState = *sc; // cache it
 
+	sc = scope;
+	for (uint32_t i = 0; i < song.antChn; i++, sc++)
+	{
+		tempState = *sc; // cache it
 		if (!tempState.active)
 			continue; // scope is not active, no need
 
@@ -585,15 +585,15 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 	volatile scope_t *sc;
 	sampleTyp *smpPtr;
 
-	for (int32_t i = 0; i < song.antChn; i++)
+	sc = scope;
+	ch = chSyncData->channels;
+	for (int32_t i = 0; i < song.antChn; i++, sc++, ch++)
 	{
-		sc = &scope[i];
-		ch = &chSyncData->channels[i];
 		status = scopeUpdateStatus[i];
 
 		// set scope volume
 		if (status & IS_Vol)
-			sc->SVol = (int8_t)(((ch->finalVol * SCOPE_HEIGHT) + (1 << 10)) >> 11); // rounded
+			sc->SVol = (int8_t)(((ch->finalVol * SCOPE_HEIGHT) + (1 << 15)) >> 16); // rounded
 
 		// set scope frequency
 		if (status & IS_Period)

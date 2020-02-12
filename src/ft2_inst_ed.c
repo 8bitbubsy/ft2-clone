@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include "ft2_header.h"
 #include "ft2_config.h"
 #include "ft2_audio.h"

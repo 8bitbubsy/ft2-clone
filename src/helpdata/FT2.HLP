@@ -781,7 +781,7 @@ Enables the anti-click system in the audio mixer (FT2.08+).
 Please note that original FT2 can't load this config entry,
 clone only.
 
->@X040@C0011.5-bit dither:
+>@X040@C0011-bit dither:
 >@X060@C002
 Works for 16-bit audio mode only.
 Applies random scaled values to the mixed samples before truncating to 16-bit.

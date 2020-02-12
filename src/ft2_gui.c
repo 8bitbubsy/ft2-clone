@@ -312,7 +312,10 @@ uint16_t textWidth16(const char *textPtr)
 void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal, tmp;
+	uint32_t *dstPtr, pixVal;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
@@ -328,10 +331,15 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	{
 		for (uint32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = pixVal;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = pixVal;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -379,7 +387,10 @@ void charOutOutlined(uint16_t x, uint16_t y, uint8_t paletteIndex, char chr)
 void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr1, *dstPtr2, pixVal1, pixVal2, tmp;
+	uint32_t *dstPtr1, *dstPtr2, pixVal1, pixVal2;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
@@ -397,6 +408,13 @@ void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t s
 	{
 		for (uint32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+			{
+				dstPtr2[x] = pixVal2;
+				dstPtr1[x] = pixVal1;
+			}
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr2[x];
 			if (srcPtr[x] != 0) tmp = pixVal2;
@@ -405,6 +423,7 @@ void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t s
 			tmp = dstPtr1[x];
 			if (srcPtr[x] != 0) tmp = pixVal1;
 			dstPtr1[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -417,7 +436,10 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 {
 	const uint8_t *srcPtr;
 	uint16_t width;
-	uint32_t *dstPtr, pixVal, tmp;
+	uint32_t *dstPtr, pixVal;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
@@ -440,10 +462,15 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 	{
 		for (uint32_t x = 0; x < width; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = pixVal;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = pixVal;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -454,7 +481,10 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal, tmp;
+	uint32_t *dstPtr, pixVal;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
@@ -470,10 +500,15 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	{
 		for (uint32_t x = 0; x < FONT2_CHAR_W; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = pixVal;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = pixVal;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT2_WIDTH;
@@ -484,7 +519,10 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr1, *dstPtr2, pixVal1, pixVal2, tmp;
+	uint32_t *dstPtr1, *dstPtr2, pixVal1, pixVal2;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
@@ -502,6 +540,13 @@ static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex,
 	{
 		for (uint32_t x = 0; x < FONT2_CHAR_W; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+			{
+				dstPtr2[x] = pixVal2;
+				dstPtr1[x] = pixVal1;
+			}
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr2[x];
 			if (srcPtr[x] != 0) tmp = pixVal2;
@@ -510,6 +555,7 @@ static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex,
 			tmp = dstPtr1[x];
 			if (srcPtr[x] != 0) tmp = pixVal1;
 			dstPtr1[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT2_WIDTH;
@@ -649,7 +695,10 @@ void textOutClipX(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *text
 void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, uint8_t numDigits)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal, tmp;
+	uint32_t *dstPtr, pixVal;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
@@ -665,10 +714,15 @@ void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, ui
 		{
 			for (uint32_t x = 0; x < FONT6_CHAR_W; x++)
 			{
+#ifdef __arm__
+				if (srcPtr[x] != 0)
+					dstPtr[x] = pixVal;
+#else
 				// carefully written like this to generate conditional move instructions (font data is hard to predict)
 				tmp = dstPtr[x];
 				if (srcPtr[x] != 0) tmp = pixVal;
 				dstPtr[x] = tmp;
+#endif
 			}
 
 			srcPtr += FONT6_WIDTH;
@@ -834,7 +888,7 @@ void vLine(uint16_t x, uint16_t y, uint16_t h, uint8_t paletteIndex)
 	dstPtr = &video.frameBuffer[(y * SCREEN_W) + x];
 	for (uint32_t i = 0; i < h; i++)
 	{
-		*dstPtr  = pixVal;
+		*dstPtr = pixVal;
 		 dstPtr += SCREEN_W;
 	}
 }

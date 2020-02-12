@@ -1,4 +1,5 @@
 #include <stdio.h> // sprintf()
+#include <math.h>
 #include "ft2_header.h"
 #include "ft2_gui.h"
 #include "ft2_pattern_ed.h"

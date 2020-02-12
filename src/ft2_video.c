@@ -775,6 +775,18 @@ void setWindowSizeFromConfig(bool updateRenderer)
 	uint8_t i, oldUpscaleFactor;
 	SDL_DisplayMode dm;
 
+	/* Kludge for Raspbarry Pi. Upscaling of 3x or higher makes everything slow as a snail.
+	** This hack unfortunately applies to any ARM based device, but I doubt 3x/4x would run
+	** smooth on any ARM device suitable for the FT2 clone anyway (excluding tablets/phones).
+	*/
+#ifdef __arm__
+	if ((config.windowFlags & WINSIZE_3X) || (config.windowFlags & WINSIZE_4X))
+	{
+		config.windowFlags &= ~(WINSIZE_1X + WINSIZE_2X + WINSIZE_3X + WINSIZE_4X);
+		config.windowFlags |= WINSIZE_AUTO;
+	}
+#endif
+
 	oldUpscaleFactor = video.upscaleFactor;
 	if (config.windowFlags & WINSIZE_AUTO)
 	{
@@ -793,6 +805,12 @@ void setWindowSizeFromConfig(bool updateRenderer)
 
 			if (i == 0)
 				video.upscaleFactor = 1; // 1x is not going to fit, but use 1x anyways...
+
+			// kludge (read comment above)
+#ifdef __arm__
+			if (video.upscaleFactor > 2)
+				video.upscaleFactor = 2;
+#endif
 		}
 		else
 		{

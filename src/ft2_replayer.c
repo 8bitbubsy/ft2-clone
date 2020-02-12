@@ -1244,7 +1244,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 
 			if (++ch->envVCnt == ins->envVP[envPos][0])
 			{
-				ch->envVAmp = (ins->envVP[envPos][1] & 0xFF) << 8;
+				ch->envVAmp = ins->envVP[envPos][1] << 8;
 
 				envPos++;
 				if (ins->envVTyp & 4)
@@ -1314,34 +1314,25 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 				}
 			}
 
-			/* original FT2 method with lower precision (finalVol = 0..256)
-			envVal >>= 8;
-			ch->finalVol = (song.globVol * (((envVal * ch->outVol) * ch->fadeOutAmp) >> (16 + 2))) >> 7;
-			*/
-
-			/* calculate with four times more precision (finalVol = 0..2048)
+			/* calculate with 256 times more precision (vol = 0..65535)
 			** Also, vol envelope range is now 0..16384 instead of being shifted to 0..64
 			*/
 
 			uint32_t vol1 = song.globVol * ch->outVol * ch->fadeOutAmp; // 0..64 * 0..64 * 0..32768 = 0..134217728
-			uint32_t vol2 = envVal << 2; // 0..16384 * 2^2 = 0..65536
+			uint32_t vol2 = envVal << 7; // 0..16384 * 2^7 = 0..2097152
 
-			vol = ((uint64_t)vol1 * vol2) >> 32; // 0..2048
+			vol = ((uint64_t)vol1 * vol2) >> 32; // 0..65536
 
 			ch->status |= IS_Vol;
 		}
 		else
 		{
-			/* original FT2 method with lower precision (finalVol = 0..256)
-			ch->finalVol = (song.globVol * (((ch->outVol << 4) * ch->fadeOutAmp) >> 16)) >> 7;
-			*/
-
 			// calculate with four times more precision (finalVol = 0..2048)
-			vol = (song.globVol * ch->outVol * ch->fadeOutAmp) >> 16; // 0..64 * 0..64 * 0..32768 = 0..2048
+			vol = (song.globVol * ch->outVol * ch->fadeOutAmp) >> 11; // 0..64 * 0..64 * 0..32768 = 0..65536
 		}
 
-		if (vol > 2047)
-			vol = 2047; // range is now 0..2047 to prevent MUL overflow when voice volume is calculated
+		if (vol > 65535)
+			vol = 65535; // range is now 0..65535 to prevent MUL overflow when voice volume is calculated
 
 		ch->finalVol = (uint16_t)vol;
 	}
@@ -3127,7 +3118,7 @@ void stopVoices(void)
 	editor.curPlaySmp = 255;
 
 	stopAllScopes();
-	resetDitherSeed();
+	resetAudioDither();
 	resetOldRates();
 
 	// wait for scope thread to finish, so that we know pointers aren't deprecated

@@ -977,7 +977,10 @@ void writePattern(int32_t currRow, int32_t pattern)
 void pattTwoHexOut(uint32_t xPos, uint32_t yPos, uint8_t val, uint32_t color)
 {
 	const uint8_t *ch1Ptr, *ch2Ptr;
-	uint32_t *dstPtr, tmp;
+	uint32_t *dstPtr;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	ch1Ptr = &font4Ptr[(val   >> 4) * FONT4_CHAR_W];
 	ch2Ptr = &font4Ptr[(val & 0x0F) * FONT4_CHAR_W];
@@ -987,6 +990,10 @@ void pattTwoHexOut(uint32_t xPos, uint32_t yPos, uint8_t val, uint32_t color)
 	{
 		for (uint32_t x = 0; x < FONT4_CHAR_W; x++)
 		{
+#ifdef __arm__
+			if (ch1Ptr[x] != 0) dstPtr[x] = color;
+			if (ch2Ptr[x] != 0) dstPtr[FONT4_CHAR_W+x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (ch1Ptr[x] != 0) tmp = color;
@@ -995,6 +1002,7 @@ void pattTwoHexOut(uint32_t xPos, uint32_t yPos, uint8_t val, uint32_t color)
 			tmp = dstPtr[FONT4_CHAR_W+x];
 			if (ch2Ptr[x] != 0) tmp = color;
 			dstPtr[FONT4_CHAR_W+x] = tmp;
+#endif
 		}
 
 		ch1Ptr += FONT4_WIDTH;
@@ -1006,7 +1014,10 @@ void pattTwoHexOut(uint32_t xPos, uint32_t yPos, uint8_t val, uint32_t color)
 static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontType, uint32_t color)
 {
 	const uint8_t *srcPtr;
-	uint32_t x, y, *dstPtr, tmp;
+	uint32_t x, y, *dstPtr;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
@@ -1017,10 +1028,15 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 		{
 			for (x = 0; x < FONT3_CHAR_W; x++)
 			{
+#ifdef __arm__
+				if (srcPtr[x] != 0)
+					dstPtr[x] = color;
+#else
 				// carefully written like this to generate conditional move instructions (font data is hard to predict)
 				tmp = dstPtr[x];
 				if (srcPtr[x] != 0) tmp = color;
 				dstPtr[x] = tmp;
+#endif
 			}
 
 			srcPtr += FONT3_WIDTH;
@@ -1034,10 +1050,15 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 		{
 			for (x = 0; x < FONT4_CHAR_W; x++)
 			{
+#ifdef __arm__
+				if (srcPtr[x] != 0)
+					dstPtr[x] = color;
+#else
 				// carefully written like this to generate conditional move instructions (font data is hard to predict)
 				tmp = dstPtr[x];
 				if (srcPtr[x] != 0) tmp = color;
 				dstPtr[x] = tmp;
+#endif
 			}
 
 			srcPtr += FONT4_WIDTH;
@@ -1051,10 +1072,15 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 		{
 			for (x = 0; x < FONT5_CHAR_W; x++)
 			{
+#ifdef __arm__
+				if (srcPtr[x] != 0)
+					dstPtr[x] = color;
+#else
 				// carefully written like this to generate conditional move instructions (font data is hard to predict)
 				tmp = dstPtr[x];
 				if (srcPtr[x] != 0) tmp = color;
 				dstPtr[x] = tmp;
+#endif
 			}
 
 			srcPtr += FONT5_WIDTH;
@@ -1068,10 +1094,15 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 		{
 			for (x = 0; x < FONT7_CHAR_W; x++)
 			{
+#ifdef __arm__
+				if (srcPtr[x] != 0)
+					dstPtr[x] = color;
+#else
 				// carefully written like this to generate conditional move instructions (font data is hard to predict)
 				tmp = dstPtr[x];
 				if (srcPtr[x] != 0) tmp = color;
 				dstPtr[x] = tmp;
+#endif
 			}
 
 			srcPtr += FONT7_WIDTH;
@@ -1083,7 +1114,10 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, tmp;
+	uint32_t *dstPtr;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	srcPtr = &font7Data[18 * FONT7_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
@@ -1092,10 +1126,15 @@ static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (uint32_t x = 0; x < FONT7_CHAR_W*3; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT7_WIDTH;
@@ -1106,7 +1145,10 @@ static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 static void drawKeyOffSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, tmp;
+	uint32_t *dstPtr;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	srcPtr = &font7Data[21 * FONT7_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + (xPos + 2)];
@@ -1115,10 +1157,15 @@ static void drawKeyOffSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (uint32_t x = 0; x < FONT7_CHAR_W*2; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT7_WIDTH;
@@ -1130,7 +1177,10 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t co
 {
 	const uint8_t *ch1Ptr, *ch2Ptr, *ch3Ptr;
 	uint8_t note;
-	uint32_t *dstPtr, char1, char2, char3, tmp;
+	uint32_t *dstPtr, char1, char2, char3;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	assert(ton >= 1 && ton <= 97);
 
@@ -1159,6 +1209,11 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t co
 	{
 		for (uint32_t x = 0; x < FONT7_CHAR_W; x++)
 		{
+#ifdef __arm__
+			if (ch1Ptr[x] != 0) dstPtr[x] = color;
+			if (ch2Ptr[x] != 0) dstPtr[FONT7_CHAR_W+x] = color;
+			if (ch3Ptr[x] != 0) dstPtr[((FONT7_CHAR_W*2)-2)+x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (ch1Ptr[x] != 0) tmp = color;
@@ -1171,6 +1226,7 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t co
 			tmp = dstPtr[((FONT7_CHAR_W*2)-2)+x]; // -2 to get correct alignment for ending glyph
 			if (ch3Ptr[x] != 0) tmp = color;
 			dstPtr[((FONT7_CHAR_W*2)-2)+x] = tmp;
+#endif
 		}
 
 		ch1Ptr += FONT7_WIDTH;
@@ -1183,7 +1239,10 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t co
 static void drawEmptyNoteMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, tmp;
+	uint32_t *dstPtr;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	srcPtr = &font4Ptr[43 * FONT4_CHAR_W];
@@ -1192,10 +1251,15 @@ static void drawEmptyNoteMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (uint32_t x = 0; x < FONT4_CHAR_W*3; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT4_WIDTH;
@@ -1206,7 +1270,10 @@ static void drawEmptyNoteMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 static void drawKeyOffMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, tmp;
+	uint32_t *dstPtr;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	srcPtr = &font4Ptr[40 * FONT4_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
@@ -1215,10 +1282,15 @@ static void drawKeyOffMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (uint32_t x = 0; x < FONT4_CHAR_W*3; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT4_WIDTH;
@@ -1229,7 +1301,10 @@ static void drawKeyOffMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color)
 {
 	const uint8_t *ch1Ptr, *ch2Ptr, *ch3Ptr;
-	uint32_t note, *dstPtr, char1, char2, char3, tmp;
+	uint32_t note, *dstPtr, char1, char2, char3;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	ton--;
 
@@ -1256,6 +1331,11 @@ static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t c
 	{
 		for (uint32_t x = 0; x < FONT4_CHAR_W; x++)
 		{
+#ifdef __arm__
+			if (ch1Ptr[x] != 0) dstPtr[x] = color;
+			if (ch2Ptr[x] != 0) dstPtr[FONT4_CHAR_W+x] = color;
+			if (ch3Ptr[x] != 0) dstPtr[(FONT4_CHAR_W*2)+x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (ch1Ptr[x] != 0) tmp = color;
@@ -1268,6 +1348,7 @@ static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t c
 			tmp = dstPtr[(FONT4_CHAR_W*2)+x];
 			if (ch3Ptr[x] != 0) tmp = color;
 			dstPtr[(FONT4_CHAR_W*2)+x] = tmp;
+#endif
 		}
 
 		ch1Ptr += FONT4_WIDTH;
@@ -1280,7 +1361,10 @@ static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t c
 static void drawEmptyNoteBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, tmp;
+	uint32_t *dstPtr;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	srcPtr = &font4Ptr[67 * FONT4_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
@@ -1289,10 +1373,15 @@ static void drawEmptyNoteBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (uint32_t x = 0; x < FONT4_CHAR_W*6; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT4_WIDTH;
@@ -1303,7 +1392,10 @@ static void drawEmptyNoteBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 static void drawKeyOffBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
 	const uint8_t *srcPtr;
-	uint32_t *dstPtr, tmp;
+	uint32_t *dstPtr;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 
 	srcPtr = &font4Data[61 * FONT4_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
@@ -1312,10 +1404,15 @@ static void drawKeyOffBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (uint32_t x = 0; x < FONT4_CHAR_W*6; x++)
 		{
+#ifdef __arm__
+			if (srcPtr[x] != 0)
+				dstPtr[x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
+#endif
 		}
 
 		srcPtr += FONT4_WIDTH;
@@ -1327,8 +1424,10 @@ static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t colo
 {
 	const uint8_t *ch1Ptr, *ch2Ptr, *ch3Ptr;
 	uint8_t note;
-	uint32_t *dstPtr, char1, char2, char3, tmp;
-
+	uint32_t *dstPtr, char1, char2, char3;
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 	ton--;
 
 	note = noteTab1[ton];
@@ -1354,6 +1453,11 @@ static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t colo
 	{
 		for (uint32_t x = 0; x < FONT5_CHAR_W; x++)
 		{
+#ifdef __arm__
+			if (ch1Ptr[x] != 0) dstPtr[x] = color;
+			if (ch2Ptr[x] != 0) dstPtr[FONT5_CHAR_W+x] = color;
+			if (ch3Ptr[x] != 0) dstPtr[(FONT5_CHAR_W*2)+x] = color;
+#else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
 			tmp = dstPtr[x];
 			if (ch1Ptr[x] != 0) tmp = color;
@@ -1366,6 +1470,7 @@ static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t colo
 			tmp = dstPtr[(FONT5_CHAR_W*2)+x];
 			if (ch3Ptr[x] != 0) tmp = color;
 			dstPtr[(FONT5_CHAR_W*2)+x] = tmp;
+#endif
 		}
 
 		ch1Ptr += FONT5_WIDTH;
