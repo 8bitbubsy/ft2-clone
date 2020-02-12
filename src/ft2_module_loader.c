@@ -656,11 +656,8 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 		if (s->repL < 2)
 			s->repL = 2;
 
-		/* Ultimate SoundTracker before version 2.5 had loopStart in bytes, not words
-		** XXX: This has to be verified... It's possible that it was before that,
-		** and that this breaks some modules.
-		*/
-		if (mightBeSTK && !lateSTKVerFlag)
+		// in The Ultimate SoundTracker, sample loop start is in bytes, not words
+		if (mightBeSTK)
 			s->repS /= 2;
 
 		// fix for poorly converted STK (< v2.5) -> PT/NT modules (FIXME: Worth keeping or not?)
