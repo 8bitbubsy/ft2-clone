@@ -16,7 +16,10 @@ Linux binaries can be found [here](http://phd-sid.ethz.ch/debian/.fasttracker2/)
 If these don't work for you, you'll have to compile the code manually.
 
 # Compiling the code
-Please read HOW-TO-COMPILE.txt file in the repository.
+Build instructions can be found in the repository (HOW-TO-COMPILE.txt).
+
+Keep in mind that the program may fail to compile on Linux, depending on your distribution and GCC version. \
+Please don't nag me about it, and try to use the Linux packages linked to from [16-bits.org](https://16-bits.org/ft2.php) instead.
 
 PS: The source code is quite hackish and hardcoded. \
 My first priority is to make an _accurate_ 1:1 clone, and not to make flexible and easily modifiable code.
