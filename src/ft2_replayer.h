@@ -164,7 +164,7 @@ typedef struct sampleTyp_t
 {
 	char name[22+1];
 	bool fixed;
-	int8_t fine, relTon, *pek;
+	int8_t fine, relTon, *pek, *origPek;
 	uint8_t vol, typ, pan;
 	int16_t fixedSmp1;
 #ifndef LERPMIX
@@ -240,10 +240,10 @@ typedef struct syncedChannel_t // used for audio/video sync queue
 void fixSongName(void); // removes spaces from right side of song name
 void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
 
-void calcReplayRate(uint32_t rate);
+void calcReplayRate(int32_t rate);
 void resetOldRates(void);
-void tuneSample(sampleTyp *s, uint32_t midCFreq);
-uint32_t getFrequenceValue(uint16_t period);
+void tuneSample(sampleTyp *s, int32_t midCFreq);
+uint32_t getFrequenceValue(int32_t period);
 int16_t relocateTon(int16_t period, int8_t relativeNote, stmTyp *ch);
 
 bool allocateInstr(int16_t nr);
@@ -297,7 +297,8 @@ void pbRecPtn(void);
 extern int8_t playMode;
 extern bool linearFrqTab, songPlaying, audioPaused, musicPaused;
 extern volatile bool replayerBusy;
-extern int16_t *note2Period, pattLens[MAX_PATTERNS];
+extern const int16_t *note2Period;
+extern int16_t pattLens[MAX_PATTERNS];
 extern stmTyp stm[MAX_VOICES];
 extern songTyp song;
 extern instrTyp *instr[132];

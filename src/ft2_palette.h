@@ -50,7 +50,6 @@ typedef struct pal16_t
 } pal16;
 
 extern uint8_t cfg_ColorNr;
-extern pal16 palTable[12][16];
 
 void setCustomPalColor(uint32_t color);
 

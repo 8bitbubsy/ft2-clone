@@ -12,16 +12,18 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.09"
+#define PROG_VER_STR "1.10"
 
 // do NOT change these! It will only mess things up...
 
 /* "60Hz" ranges everywhere from 59..61Hz depending on the monitor, so with
-** no vsync we will get stuttering because the rate is not perfect... */
+** no vsync we will get stuttering because the rate is not perfect...
+*/
 #define VBLANK_HZ 60
 
 /* Scopes are clocked at 64Hz instead of 60Hz to prevent possible stutters
-** from monitors not being exactly 60Hz (and unstable non-vsync mode). */
+** from monitors not being exactly 60Hz (and unstable non-vsync mode).
+*/
 #define SCOPE_HZ 64
 
 #define FT2_VBLANK_HZ 70
@@ -31,8 +33,10 @@
 /* Amount of extra bytes to allocate for every instrument sample,
 ** this is used for a hack for resampling interpolation to be
 ** branchless in the inner channel mixer loop.
-** Warning: Do not change this! */
-#define LOOP_FIX_LEN 4
+** Warning: Do not change this!
+*/
+#define LOOP_FIX_LEN 8
+#define SMP_DAT_OFFSET 4
 
 #ifndef _WIN32
 #define _stricmp strcasecmp

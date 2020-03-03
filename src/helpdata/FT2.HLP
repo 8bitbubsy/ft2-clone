@@ -771,9 +771,9 @@ you exit the program.
 >@X060@C002
 The mixing routine interpolates the sample value between the
 sample points to remove unwanted noise in the sound. Real FT2 uses
-2-tap linear interpolation, while this clone uses 3-tap quadratic interpolation for
-improved high frequencies. Turning it off will make the audio sharper,
-but it will also be noisier.
+2-tap linear interpolation, while this clone uses 4-tap cubic spline 
+interpolation for improved high frequencies. Turning it off will make
+the audio sharper, but it will also be noisier.
 
 >@X040@C001Volume ramping:
 >@X060@C002

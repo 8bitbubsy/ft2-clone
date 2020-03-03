@@ -21,6 +21,7 @@
 #include "ft2_wav_renderer.h"
 #include "ft2_trim.h"
 #include "ft2_video.h"
+#include "ft2_tables.h"
 
 static void releaseMouseStates(void)
 {

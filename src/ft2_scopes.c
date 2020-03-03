@@ -20,6 +20,7 @@
 #include "ft2_mouse.h"
 #include "ft2_video.h"
 #include "ft2_scopedraw.h"
+#include "ft2_tables.h"
 
 enum
 {
@@ -45,50 +46,6 @@ static volatile scope_t scope[MAX_VOICES];
 static SDL_Thread *scopeThread;
 
 lastChInstr_t lastChInstr[MAX_VOICES]; // global
-
-static const uint8_t scopeMuteBMPWidths[16] =
-{
-	162,111, 76, 56, 42, 35, 28, 24,
-	 21, 21, 17, 17, 12, 12,  9,  9
-};
-
-static const uint8_t scopeMuteBMPHeights[16] =
-{
-	27, 27, 26, 25, 25, 25, 24, 24,
-	24, 24, 24, 24, 24, 24, 24, 24
-};
-
-static const uint8_t *scopeMuteBMPPointers[16] =
-{
-	scopeMuteBMP1, scopeMuteBMP2, scopeMuteBMP3, scopeMuteBMP4,
-	scopeMuteBMP5, scopeMuteBMP6, scopeMuteBMP7, scopeMuteBMP8,
-	scopeMuteBMP9, scopeMuteBMP9, scopeMuteBMP10,scopeMuteBMP10,
-	scopeMuteBMP11,scopeMuteBMP11,scopeMuteBMP12,scopeMuteBMP12
-};
-
-static const uint16_t scopeLenTab[16][32] =
-{
-	/*  2 ch */ {285,285},
-	/*  4 ch */ {141,141,141,141},
-	/*  6 ch */ {93,93,93,93,93,93},
-	/*  8 ch */ {69,69,69,69,69,69,69,69},
-	/* 10 ch */ {55,55,55,54,54,55,55,55,54,54},
-	/* 12 ch */ {45,45,45,45,45,45,45,45,45,45,45,45},
-	/* 14 ch */ {39,38,38,38,38,38,38,39,38,38,38,38,38,38},
-	/* 16 ch */ {33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33},
-	/* 18 ch */ {29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29},
-	/* 20 ch */ {26,26,26,26,26,26,26,26,25,25,26,26,26,26,26,26,26,26,25,25},
-	/* 22 ch */ {24,24,23,23,23,23,23,23,23,23,23,24,24,23,23,23,23,23,23,23,23,23},
-	/* 24 ch */ {21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21},
-	/* 26 ch */ {20,20,19,19,19,19,19,19,19,19,19,19,19,20,20,19,19,19,19,19,19,19,19,19,19,19},
-	/* 28 ch */ {18,18,18,18,18,18,18,18,17,17,17,17,17,17,18,18,18,18,18,18,18,18,17,17,17,17,17,17},
-	/* 30 ch */ {17,17,17,16,16,16,16,16,16,16,16,16,16,16,16,17,17,17,16,16,16,16,16,16,16,16,16,16,16,16},
-	/* 32 ch */ {15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15}
-};
-
-// ft2_pattern_draw.c
-extern const char chDecTab1[MAX_VOICES+1];
-extern char chDecTab2[MAX_VOICES+1];
 
 void resetOldScopeRates(void)
 {

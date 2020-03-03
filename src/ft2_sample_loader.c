@@ -16,7 +16,8 @@
 #include "ft2_diskop.h"
 
 /* All of these routines were written from scratch and were not present
-** in original FT2. */
+** in original FT2.
+*/
 
 enum
 {
@@ -40,9 +41,10 @@ static void normalize64bitDoubleSigned(double *dSampleData, uint32_t sampleLengt
 
 void freeTmpSample(sampleTyp *s)
 {
-	if (s->pek != NULL)
+	if (s->origPek != NULL)
 	{
-		free(s->pek);
+		free(s->origPek);
+		s->origPek = NULL;
 		s->pek = NULL;
 	}
 
@@ -70,7 +72,7 @@ static int32_t getAIFFRate(uint8_t *in)
 	exp -= 16383;
 
 	dOut = ldexp(lo, -31 + exp) + ldexp(hi, -63 + exp);
-	return (int32_t)round(dOut);
+	return (int32_t)(dOut + 0.5);
 }
 
 static bool aiffIsStereo(FILE *f) // only ran on files that are confirmed to be AIFFs
@@ -98,7 +100,7 @@ static bool aiffIsStereo(FILE *f) // only ran on files that are confirmed to be 
 	bytesRead = 0;
 	while (!feof(f) && bytesRead < filesize-12)
 	{
-		fread(&chunkID, 4, 1, f); chunkID   = SWAP32(chunkID); if (feof(f)) break;
+		fread(&chunkID, 4, 1, f); chunkID = SWAP32(chunkID); if (feof(f)) break;
 		fread(&chunkSize, 4, 1, f); chunkSize = SWAP32(chunkSize); if (feof(f)) break;
 
 		endOfChunk = (ftell(f) + chunkSize) + (chunkSize & 1);
@@ -341,12 +343,14 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 	{
 		// 8-BIT SIGNED PCM
 
-		tmpSmp.pek = (int8_t *)malloc(sampleLength);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc(sampleLength + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto aiffLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(tmpSmp.pek, sampleLength, 1, f) != 1)
 		{
@@ -402,12 +406,14 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 
 		sampleLength /= 2;
 
-		tmpSmp.pek = (int8_t *)malloc(sampleLength * 2);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc((sampleLength * 2) + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto aiffLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(tmpSmp.pek, sampleLength, 2, f) != 2)
 		{
@@ -469,12 +475,14 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 
 		sampleLength /= 3;
 
-		tmpSmp.pek = (int8_t *)malloc((sampleLength * 4) * 2);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc(((sampleLength * 4) * 2) + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto aiffLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(&tmpSmp.pek[sampleLength], sampleLength, 3, f) != 3)
 		{
@@ -557,12 +565,14 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 
 		sampleLength /= 4;
 
-		tmpSmp.pek = (int8_t *)malloc(sampleLength * 4);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc((sampleLength * 4) + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto aiffLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(tmpSmp.pek, sampleLength, 4, f) != 4)
 		{
@@ -636,9 +646,12 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 	}
 
 	// adjust memory needed
-	newPtr = (int8_t *)realloc(tmpSmp.pek, sampleLength + LOOP_FIX_LEN);
+	newPtr = (int8_t *)realloc(tmpSmp.origPek, sampleLength + LOOP_FIX_LEN);
 	if (newPtr != NULL)
-		tmpSmp.pek = newPtr;
+	{
+		tmpSmp.origPek = newPtr;
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
+	}
 
 	// set sample attributes
 	tmpSmp.len = sampleLength;
@@ -714,7 +727,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 
 aiffLoadError:
 	if (f != NULL) fclose(f);
-	if (tmpSmp.pek != NULL) free(tmpSmp.pek);
+	if (tmpSmp.origPek != NULL) free(tmpSmp.origPek);
 
 	stereoSampleLoadMode = -1;
 	sampleIsLoading = false;
@@ -740,7 +753,6 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 	// this is important for the "goto" on load error
 	f = NULL;
 	memset(&tmpSmp, 0, sizeof (tmpSmp));
-
 
 	if (editor.tmpFilenameU == NULL)
 	{
@@ -848,7 +860,7 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 	if (sampleVol > 65535)
 		sampleVol = 65535;
 
-	sampleVol = (uint32_t)round(sampleVol / 1024.0);
+	sampleVol = (int32_t)((sampleVol / 1024.0) + 0.5);
 	if (sampleVol > 64)
 		sampleVol = 64;
 
@@ -870,19 +882,21 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 
 	if (sampleLoopStart > sampleLength-2)
 	{
-		sampleLoopStart  = 0;
+		sampleLoopStart = 0;
 		sampleLoopLength = 0;
 	}
 
 	tmpSmp.pan = 128;
 	tmpSmp.vol = 64;
 
-	tmpSmp.pek = (int8_t *)malloc(sampleLength + LOOP_FIX_LEN);
-	if (tmpSmp.pek == NULL)
+	tmpSmp.origPek = (int8_t *)malloc(sampleLength + LOOP_FIX_LEN);
+	if (tmpSmp.origPek == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "Not enough memory!");
 		goto iffLoadError;
 	}
+
+	tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 	fseek(f, bodyPtr, SEEK_SET);
 	if (fread(tmpSmp.pek, sampleLength, 1, f) != 1)
@@ -999,7 +1013,7 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 
 iffLoadError:
 	if (f != NULL) fclose(f);
-	if (tmpSmp.pek != NULL) free(tmpSmp.pek);
+	if (tmpSmp.origPek != NULL) free(tmpSmp.origPek);
 
 	stereoSampleLoadMode = -1;
 	sampleIsLoading = false;
@@ -1053,12 +1067,14 @@ static int32_t SDLCALL loadRawSample(void *ptr)
 	tmpSmp.pan = 128;
 	tmpSmp.vol = 64;
 
-	tmpSmp.pek = (int8_t *)malloc(filesize + LOOP_FIX_LEN);
-	if (tmpSmp.pek == NULL)
+	tmpSmp.origPek = (int8_t *)malloc(filesize + LOOP_FIX_LEN);
+	if (tmpSmp.origPek == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "Not enough memory!");
 		goto rawLoadError;
 	}
+
+	tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 	if (fread(tmpSmp.pek, filesize, 1, f) != 1)
 	{
@@ -1136,7 +1152,7 @@ static int32_t SDLCALL loadRawSample(void *ptr)
 
 rawLoadError:
 	if (f != NULL) fclose(f);
-	if (tmpSmp.pek != NULL) free(tmpSmp.pek);
+	if (tmpSmp.origPek != NULL) free(tmpSmp.origPek);
 
 	stereoSampleLoadMode = -1;
 	sampleIsLoading = false;
@@ -1169,7 +1185,7 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 	memset(&tmpSmp, 0, sizeof (tmpSmp));
 
 	// zero out chunk pointers and lengths
-	fmtPtr  = 0; fmtLen  = 0;
+	fmtPtr = 0; fmtLen = 0;
 	dataPtr = 0; dataLen = 0;
 	inamPtr = 0; inamLen = 0;
 	xtraPtr = 0; xtraLen = 0;
@@ -1339,12 +1355,14 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 
 	if (bitsPerSample == 8) // 8-BIT INTEGER SAMPLE
 	{
-		tmpSmp.pek = (int8_t *)malloc(sampleLength);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc(sampleLength + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto wavLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(tmpSmp.pek, sampleLength, 1, f) != 1)
 		{
@@ -1403,12 +1421,14 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 	{
 		sampleLength /= 2;
 
-		tmpSmp.pek = (int8_t *)malloc(sampleLength * 2);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc((sampleLength * 2) + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto wavLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(tmpSmp.pek, sampleLength, 2, f) != 2)
 		{
@@ -1468,12 +1488,14 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 	{
 		sampleLength /= 3;
 
-		tmpSmp.pek = (int8_t *)malloc((sampleLength * 4) * 2);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc(((sampleLength * 4) * 2) + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto wavLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(&tmpSmp.pek[sampleLength], sampleLength, 3, f) != 3)
 		{
@@ -1556,12 +1578,14 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 	{
 		sampleLength /= 4;
 
-		tmpSmp.pek = (int8_t *)malloc((sampleLength * 4) + LOOP_FIX_LEN);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc((sampleLength * 4) + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto wavLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(tmpSmp.pek, sampleLength, 4, f) != 4)
 		{
@@ -1636,12 +1660,14 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 	{
 		sampleLength /= 4;
 
-		tmpSmp.pek = (int8_t *)malloc((sampleLength * 4) + LOOP_FIX_LEN);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc((sampleLength * 4) + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto wavLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(tmpSmp.pek, sampleLength, 4, f) != 4)
 		{
@@ -1703,12 +1729,14 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 	{
 		sampleLength /= 8;
 
-		tmpSmp.pek = (int8_t *)malloc((sampleLength * 8) + LOOP_FIX_LEN);
-		if (tmpSmp.pek == NULL)
+		tmpSmp.origPek = (int8_t *)malloc((sampleLength * 8) + LOOP_FIX_LEN);
+		if (tmpSmp.origPek == NULL)
 		{
 			okBoxThreadSafe(0, "System message", "Not enough memory!");
 			goto wavLoadError;
 		}
+
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 
 		if (fread(tmpSmp.pek, sampleLength, 8, f) != 8)
 		{
@@ -1768,9 +1796,12 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 	}
 
 	// adjust memory needed
-	newPtr = (int8_t *)realloc(tmpSmp.pek, sampleLength + LOOP_FIX_LEN);
+	newPtr = (int8_t *)realloc(tmpSmp.origPek, sampleLength + LOOP_FIX_LEN);
 	if (newPtr != NULL)
-		tmpSmp.pek = newPtr;
+	{
+		tmpSmp.origPek = newPtr;
+		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
+	}
 
 	tuneSample(&tmpSmp, sampleRate);
 
@@ -1788,9 +1819,9 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 		{
 			fseek(f, 4 + 4, SEEK_CUR); // skip "samplerData" and "identifier"
 
-			fread(&loopType,  4, 1, f);
+			fread(&loopType, 4, 1, f);
 			fread(&loopStart, 4, 1, f);
-			fread(&loopEnd,   4, 1, f);
+			fread(&loopEnd, 4, 1, f);
 
 			loopEnd++;
 
@@ -1929,7 +1960,7 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 
 wavLoadError:
 	if (f != NULL) fclose(f);
-	if (tmpSmp.pek != NULL) free(tmpSmp.pek);
+	if (tmpSmp.origPek != NULL) free(tmpSmp.origPek);
 
 	stereoSampleLoadMode = -1;
 	sampleIsLoading = false;

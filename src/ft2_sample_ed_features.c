@@ -1,9 +1,9 @@
 /* This file contains the routines for the following sample editor functions:
- * - Resampler
- * - Echo
- * - Mix
- * - Volume
- */
+** - Resampler
+** - Echo
+** - Mix
+** - Volume
+**/
 
 // for finding memory leaks in debug mode with Visual Studio
 #if defined _DEBUG && defined _MSC_VER
@@ -24,8 +24,10 @@
 #include "ft2_sample_ed.h"
 #include "ft2_keyboard.h"
 
+static volatile bool stopThread;
+
 static int8_t smpEd_RelReSmp, mix_Balance = 50;
-static bool stopThread, echo_AddMemory, exitFlag, outOfMemory;
+static bool echo_AddMemory, exitFlag, outOfMemory;
 static int16_t vol_StartVol = 100, vol_EndVol = 100, echo_nEcho = 1, echo_VolChange = 30;
 static int32_t echo_Distance = 0x100;
 static SDL_Thread *thread;
@@ -97,7 +99,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	s = &instr[editor.curInstr]->samp[editor.curSmp];
 
 	mask = (s->typ & 16) ? 0xFFFFFFFE : 0xFFFFFFFF;
-	dLenMul = exp2(smpEd_RelReSmp / 12.0);
+	dLenMul = exp2(smpEd_RelReSmp * (1.0 / 12.0));
 
 	dNewLen = s->len * dLenMul;
 	if (dNewLen > (double)MAX_SAMPLE_LEN)
@@ -114,6 +116,8 @@ static int32_t SDLCALL resampleThread(void *ptr)
 		return true;
 	}
 
+	int8_t *newPtr = p2 + SMP_DAT_OFFSET;
+
 	p1 = s->pek;
 
 	// don't use the potentially clamped newLen value here
@@ -129,9 +133,9 @@ static int32_t SDLCALL resampleThread(void *ptr)
 		if (s->typ & 16)
 		{
 			src16 = (int16_t *)p1;
-			dst16 = (int16_t *)p2;
+			dst16 = (int16_t *)newPtr;
 
-			resampleLen = newLen / 2;
+			resampleLen = newLen >> 1;
 			for (uint32_t i = 0; i < resampleLen; i++)
 			{
 				dst16[i] = src16[posFrac64 >> 32];
@@ -141,7 +145,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 		else
 		{
 			src8 = p1;
-			dst8 = p2;
+			dst8 = newPtr;
 
 			for (uint32_t i = 0; i < newLen; i++)
 			{
@@ -151,24 +155,30 @@ static int32_t SDLCALL resampleThread(void *ptr)
 		}
 	}
 
-	free(p1);
+	free(s->origPek);
 
 	s->relTon = CLAMP(s->relTon + smpEd_RelReSmp, -48, 71);
 
-	s->len = newLen;
-	s->pek = p2;
-	s->repS = (int32_t)(s->repS * dLenMul) & mask;
-	s->repL = (int32_t)(s->repL * dLenMul) & mask;
+	s->len = newLen & mask;
+
+	s->origPek = p2;
+	s->pek = s->origPek + SMP_DAT_OFFSET;
+
+	s->repS = (int32_t)(s->repS * dLenMul);
+	s->repL = (int32_t)(s->repL * dLenMul);
+
+	s->repS &= mask;
+	s->repL &= mask;
 
 	if (s->repS >= s->len)
-		s->repS = s->len - 1;
+		s->repS = s->len-1;
 
 	if (s->repS+s->repL > s->len)
 		s->repL = s->len - s->repS;
 
 	if (s->typ & 16)
 	{
-		s->len  &= 0xFFFFFFFE;
+		s->len &= 0xFFFFFFFE;
 		s->repS &= 0xFFFFFFFE;
 		s->repL &= 0xFFFFFFFE;
 	}
@@ -229,7 +239,7 @@ static void drawResampleBox(void)
 	s = &instr[editor.curInstr]->samp[editor.curSmp];
 
 	mask = (s->typ & 16) ? 0xFFFFFFFE : 0xFFFFFFFF;
-	dLenMul = exp2(smpEd_RelReSmp / 12.0);
+	dLenMul = exp2(smpEd_RelReSmp * (1.0 / 12.0));
 
 	dNewLen = s->len * dLenMul;
 	if (dNewLen > (double)MAX_SAMPLE_LEN)
@@ -428,7 +438,7 @@ static void pbEchoFadeoutUp(void)
 
 static int32_t SDLCALL createEchoThread(void *ptr)
 {
-	int8_t *readPtr, *writePtr, *newPtr;
+	int8_t *readPtr, *writePtr, *writePtr8, *newPtr;
 	bool is16Bit;
 	int16_t *readPtr16, *writePtr16;
 	int32_t nEchoes, distance, readLen, writeLen, i, j;
@@ -445,24 +455,44 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 	is16Bit = (s->typ & 16) ? true : false;
 	distance = echo_Distance * 16;
 
+	// scale value for faster math and suitable rounding for PCM waveforms (DIV -> arithmetic bitshift right)
+	volChange = (echo_VolChange * 256) / 100; // 0..100 -> 0..256
+
+	if (echo_nEcho < 1)
+	{
+		editor.ui.sysReqShown = false;
+		return true;
+	}
+
 	// calculate real number of echoes
-	j = is16Bit ? 32768 : 128; i = 0;
+	j = 32768;
+	i = 0;
 	while (i < echo_nEcho && j > 0)
 	{
-		j = (j * echo_VolChange) / 100;
+		j = (j * volChange) >> 8;
 		i++;
 	}
 	nEchoes = i + 1;
+
+	if (nEchoes < 1)
+	{
+		editor.ui.sysReqShown = false;
+		return true;
+	}
 
 	// set write length (either original length or full echo length)
 	writeLen = readLen;
 	if (echo_AddMemory)
 	{
-		tmp64 = writeLen + ((int64_t)distance * (nEchoes - 1));
+		tmp64 = (int64_t)distance * (nEchoes - 1);
+		if (is16Bit)
+			tmp64 <<= 1;
+
+		tmp64 += writeLen;
 		if (tmp64 > MAX_SAMPLE_LEN)
-			writeLen = MAX_SAMPLE_LEN;
-		else
-			writeLen += distance * (nEchoes - 1);
+			tmp64 = MAX_SAMPLE_LEN;
+
+		writeLen = (int32_t)tmp64;
 
 		if (is16Bit)
 			writeLen &= 0xFFFFFFFE;
@@ -482,18 +512,15 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 
 	writeIdx = 0;
 
-	// scale value for faster math and suitable rounding for PCM waveforms (DIV -> arithmetic bitshift right)
-	volChange = (int32_t)round((echo_VolChange * 256) / 100.0);
-	if (volChange > 256)
-		volChange = 256;
-
 	if (is16Bit)
 	{
 		readPtr16 = (int16_t *)readPtr;
-		writePtr16 = (int16_t *)writePtr;
+		writePtr16 = (int16_t *)&writePtr[SMP_DAT_OFFSET];
 
 		writeLen >>= 1;
-		while (!stopThread && writeIdx < writeLen)
+		readLen >>= 1;
+
+		while (writeIdx < writeLen)
 		{
 			smpOut = 0;
 			smpMul = 32768;
@@ -501,45 +528,57 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 			echoRead = writeIdx;
 			echoCycle = nEchoes;
 
-			while (!stopThread && echoRead > 0 && echoCycle-- > 0)
+			while (!stopThread)
 			{
 				if (echoRead < readLen)
-					smpOut += (readPtr16[echoRead] * smpMul) >> (16-1);
+					smpOut += (readPtr16[echoRead] * smpMul) >> 15;
 
 				smpMul = (smpMul * volChange) >> 8;
+
 				echoRead -= distance;
+				echoCycle--;
+
+				if (echoRead <= 0 || echoCycle <= 0)
+					break;
 			}
 			CLAMP16(smpOut);
 
 			writePtr16[writeIdx++] = (int16_t)smpOut;
 		}
+
 		writeLen <<= 1;
 	}
 	else
 	{
-		while (!stopThread && writeIdx < writeLen)
+		writePtr8 = writePtr + SMP_DAT_OFFSET;
+		while (writeIdx < writeLen)
 		{
 			smpOut = 0;
-			smpMul = 65536;
+			smpMul = 32768;
 
 			echoRead = writeIdx;
 			echoCycle = nEchoes;
 
-			while (!stopThread && echoRead > 0 && echoCycle-- > 0)
+			while (!stopThread)
 			{
 				if (echoRead < readLen)
-					smpOut += (readPtr[echoRead] * smpMul) >> (16-8);
+					smpOut += (readPtr[echoRead] * smpMul) >> (15-8);
 
 				smpMul = (smpMul * volChange) >> 8;
+
 				echoRead -= distance;
+				echoCycle--;
+
+				if (echoRead <= 0 || echoCycle <= 0)
+					break;
 			}
 			CLAMP16(smpOut);
 
-			writePtr[writeIdx++] = (int8_t)(smpOut >> 8);
+			writePtr8[writeIdx++] = (int8_t)(smpOut >> 8);
 		}
 	}
 
-	free(readPtr);
+	free(s->origPek);
 
 	if (stopThread)
 	{
@@ -547,13 +586,25 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 
 		newPtr = (int8_t *)realloc(writePtr, writeIdx + LOOP_FIX_LEN);
 		if (newPtr != NULL)
-			s->pek = newPtr;
+		{
+			s->origPek = newPtr;
+			s->pek = s->origPek + SMP_DAT_OFFSET;
+		}
+		else
+		{
+			if (writePtr != NULL)
+				free(writePtr);
+
+			s->origPek = s->pek = NULL;
+			writeLen = 0;
+		}
 
 		editor.updateCurSmp = true;
 	}
 	else
 	{
-		s->pek = writePtr;
+		s->origPek = writePtr;
+		s->pek = s->origPek + SMP_DAT_OFFSET;
 	}
 
 	if (is16Bit)
@@ -893,10 +944,13 @@ static int32_t SDLCALL mixThread(void *ptr)
 		}
 	}
 
-	mix8Size = (mixTyp & 16) ? (mixLen / 2) : mixLen;
-	dest8Size = (destTyp & 16) ? (destLen / 2) : destLen;
+	bool src16Bits = (mixTyp >> 4) & 1;
+	bool dst16Bits = (destTyp >> 4) & 1;
+
+	mix8Size = src16Bits ? (mixLen >> 1) : mixLen;
+	dest8Size = dst16Bits ? (destLen >> 1) : destLen;
 	max8Size = (dest8Size > mix8Size) ? dest8Size : mix8Size;
-	maxLen = (destTyp & 16) ? (max8Size * 2) : max8Size;
+	maxLen = dst16Bits ? (max8Size << 1) : max8Size;
 
 	if (maxLen <= 0)
 	{
@@ -925,43 +979,49 @@ static int32_t SDLCALL mixThread(void *ptr)
 	pauseAudio();
 
 	restoreSample(&instr[destIns]->samp[destSmp]);
+
+	// restore source sample
 	if (instr[mixIns] != NULL)
 		restoreSample(&instr[mixIns]->samp[mixSmp]);
 
 	// scale value for faster math and suitable rounding for PCM waveforms (DIV -> arithmetic bitshift right)
-	mixMul1 = (int32_t)round((mix_Balance * 256) / 100.0);
-	if (mixMul1 > 256)
-		mixMul1 = 256;
+	mixMul1 = (mix_Balance * 256) / 100;
 	mixMul2 = 256 - mixMul1;
 
+	int8_t *destPek = p + SMP_DAT_OFFSET;
 	for (i = 0; i < max8Size; i++)
 	{
-		x1 = (i >= mix8Size) ? 0 : getSampleValueNr(mixPtr, mixTyp, (mixTyp & 16) ? (i << 1) : i);
-		x2 = (i >= dest8Size) ? 0 : getSampleValueNr(destPtr, destTyp, (destTyp & 16) ? (i << 1) : i);
+		int32_t index16 = i << 1;
 
-		if (!(mixTyp & 16)) x1 <<= 8;
-		if (!(destTyp & 16)) x2 <<= 8;
+		x1 = (i >= mix8Size) ? 0 : getSampleValueNr(mixPtr, mixTyp, src16Bits ? index16 : i);
+		x2 = (i >= dest8Size) ? 0 : getSampleValueNr(destPtr, destTyp, dst16Bits ? index16 : i);
 
-		smp32 = (int32_t)((((int64_t)x1 * mixMul1) + ((int64_t)x2 * mixMul2)) >> 8);
+		if (!src16Bits) x1 <<= 8;
+		if (!dst16Bits) x2 <<= 8;
+
+		smp32 = ((x1 * mixMul1) >> 8) + ((x2 * mixMul2) >> 8);
 		CLAMP16(smp32);
 
-		if (!(destTyp & 16))
+		if (!dst16Bits)
 			smp32 >>= 8;
 
-		putSampleValueNr(p, destTyp, (destTyp & 16) ? (i << 1) : i, (int16_t)smp32);
+		putSampleValueNr(destPek, destTyp, dst16Bits ? index16 : i, (int16_t)smp32);
 	}
 
-	if (instr[destIns]->samp[destSmp].pek != NULL)
-		free(instr[destIns]->samp[destSmp].pek);
+	if (instr[destIns]->samp[destSmp].origPek != NULL)
+		free(instr[destIns]->samp[destSmp].origPek);
 
-	instr[destIns]->samp[destSmp].pek = p;
+	instr[destIns]->samp[destSmp].origPek = p;
+	instr[destIns]->samp[destSmp].pek = instr[destIns]->samp[destSmp].origPek + SMP_DAT_OFFSET;
 	instr[destIns]->samp[destSmp].len = maxLen;
 	instr[destIns]->samp[destSmp].typ = destTyp;
 
-	if (destTyp & 16) // bugfix
+	if (dst16Bits)
 		instr[destIns]->samp[destSmp].len &= 0xFFFFFFFE;
 
 	fixSample(&instr[destIns]->samp[destSmp]);
+
+	// fix source sample
 	if (instr[mixIns] != NULL)
 		fixSample(&instr[mixIns]->samp[mixSmp]);
 

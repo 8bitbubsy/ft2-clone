@@ -357,6 +357,7 @@
     <ClCompile Include="..\..\src\ft2_scopes.c" />
     <ClCompile Include="..\..\src\ft2_scrollbars.c" />
     <ClCompile Include="..\..\src\ft2_sysreqs.c" />
+    <ClCompile Include="..\..\src\ft2_tables.c" />
     <ClCompile Include="..\..\src\ft2_textboxes.c" />
     <ClCompile Include="..\..\src\ft2_trim.c" />
     <ClCompile Include="..\..\src\ft2_unicode.c" />
@@ -424,6 +425,7 @@
     <ClInclude Include="..\..\src\ft2_scopes.h" />
     <ClInclude Include="..\..\src\ft2_scrollbars.h" />
     <ClInclude Include="..\..\src\ft2_sysreqs.h" />
+    <ClInclude Include="..\..\src\ft2_tables.h" />
     <ClInclude Include="..\..\src\ft2_textboxes.h" />
     <ClInclude Include="..\..\src\ft2_trim.h" />
     <ClInclude Include="..\..\src\ft2_unicode.h" />

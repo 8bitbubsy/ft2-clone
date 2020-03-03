@@ -24,6 +24,7 @@
 #include "ft2_midi.h"
 #include "ft2_events.h"
 #include "ft2_video.h"
+#include "ft2_tables.h"
 
 /* This is a *HUGE* mess!
 ** I hope you never have to modify it, and you probably shouldn't either.
@@ -150,7 +151,6 @@ void checkSampleRepeat(sampleTyp *s);
 
 // ft2_replayer.c
 extern const char modSig[32][5];
-extern const uint16_t amigaPeriod[12*8];
 
 static bool allocateTmpInstr(int16_t nr)
 {
@@ -627,13 +627,16 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 		s = &instrTmp[1+a]->samp[0];
 
 		s->len = 2 * SWAP16(h_MOD31.instr[a].len);
-
-		s->pek = (int8_t *)malloc(s->len + LOOP_FIX_LEN);
-		if (s->pek == NULL)
+		
+		s->pek = NULL;
+		s->origPek = (int8_t *)malloc(s->len + LOOP_FIX_LEN);
+		if (s->origPek == NULL)
 		{
 			showMsg(0, "System message", "Not enough memory!");
 			goto modLoadError;
 		}
+
+		s->pek = s->origPek + SMP_DAT_OFFSET;
 
 		if (modFormat != FORMAT_HMNT) // most of "His Master's Noisetracker" songs have junk sample names, so let's not load them
 			memcpy(s->name, songTmp.instrName[1+a], 22);
@@ -726,7 +729,7 @@ static uint8_t stmTempoToBPM(uint8_t tempo) // ported from original ST2.3 replay
 
 	hz -= ((slowdowns[tempo >> 4] * (tempo & 15)) >> 4); // can and will underflow
 
-	bpm = (uint32_t)round(hz * 2.5);
+	bpm = (int32_t)((hz * 2.5) + 0.5);
 	return (uint8_t)CLAMP(bpm, 32, 255); // result can be slightly off, but close enough...
 }
 
@@ -879,7 +882,8 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
 
 				/* Remove any EDx with no note.
 				** SDx with no note in ST3 = does nothing
-				** EDx with no note in FT2 = still retriggers */
+				** EDx with no note in FT2 = still retriggers
+				*/
 				if (ton->effTyp == 0xE && (ton->eff & 0xF0) == 0xD0)
 				{
 					if (ton->ton == 0 || ton->ton == 97)
@@ -931,12 +935,15 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
 
 			s = &instrTmp[1+i]->samp[0];
 
-			s->pek = (int8_t *)malloc(h_STM.instr[i].len + LOOP_FIX_LEN);
-			if (s->pek == NULL)
+			s->pek = NULL;
+			s->origPek = (int8_t *)malloc(h_STM.instr[i].len + LOOP_FIX_LEN);
+			if (s->origPek == NULL)
 			{
 				showMsg(0, "System message", "Not enough memory!");
 				goto stmLoadError;
 			}
+
+			s->pek = s->origPek + SMP_DAT_OFFSET;
 
 			s->len = h_STM.instr[i].len;
 			tuneSample(s, h_STM.instr[i].rate);
@@ -956,7 +963,7 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
 			{
 				s->repS = 0;
 				s->repL = 0;
-				s->typ  = 0;
+				s->typ = 0;
 			}
 
 			if (s->vol > 64)
@@ -1090,9 +1097,9 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 	uint8_t ha[2048];
 	uint8_t s3mLastDEff[32], s3mLastEEff[32], s3mLastFEff[32];
 	uint8_t s3mLastSEff[32], s3mLastJEff[32], s3mLastGInstr[32], typ;
-	int16_t i, j, k, ai, ap, ver, ii, kk, tmp;
+	int16_t ai, ap, ver, ii, kk, tmp;
 	uint16_t ptnOfs[256];
-	int32_t len;
+	int32_t i, j, k, len;
 	tonTyp ton, *pattTon;
 	sampleTyp *s;
 	songS3MHeaderTyp h_S3M;
@@ -1149,7 +1156,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 	}
 
 	if (k <= songTmp.len)
-		songTmp.len -= k;
+		songTmp.len -= (uint16_t)k;
 	else
 		songTmp.len = 0;
 	
@@ -1530,7 +1537,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 				}
 			}
 
-			if (tmpPatternEmpty(i))
+			if (tmpPatternEmpty((uint16_t)i))
 			{
 				if (pattTmp[i] != NULL)
 				{
@@ -1580,7 +1587,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 			}
 			else if (h_S3MInstr.memSeg > 0 && h_S3MInstr.len > 0)
 			{
-				if (!allocateTmpInstr(1 + i))
+				if (!allocateTmpInstr((int16_t)(1 + i)))
 				{
 					showMsg(0, "System message", "Not enough memory!");
 					goto s3mLoadError;
@@ -1590,15 +1597,19 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 				s = &instrTmp[1+i]->samp[0];
 
 				len = h_S3MInstr.len;
+				
+				bool hasLoop = h_S3MInstr.flags & 1;
+				bool stereoSample = (h_S3MInstr.flags >> 1) & 1;
+				bool is16Bit = (h_S3MInstr.flags >> 2) & 1;
+			
+				if (is16Bit) // 16-bit
+					len *= 2;
 
-				if ((h_S3MInstr.flags & 2) != 0) // stereo
+				if (stereoSample) // stereo
 				{
-					stereoSamplesWarn = false;
+					stereoSamplesWarn = true;
 					len *= 2;
 				}
-
-				if ((h_S3MInstr.flags & 4) != 0) // 16-bit
-					len *= 2;
 
 				tmpSmp = (int8_t *)malloc(len + LOOP_FIX_LEN);
 				if (tmpSmp == NULL)
@@ -1607,15 +1618,17 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 					goto s3mLoadError;
 				}
 
+				int8_t *newPtr = tmpSmp + SMP_DAT_OFFSET;
+
 				memcpy(s->name, h_S3MInstr.name, 21);
 
-				if (h_S3MInstr.c2Spd > 65535)
+				if (h_S3MInstr.c2Spd > 65535) // ST3 (and OpenMPT) does this
 					h_S3MInstr.c2Spd = 65535;
 
 				tuneSample(s, h_S3MInstr.c2Spd);
 
-				s->len  = h_S3MInstr.len;
-				s->vol  = h_S3MInstr.vol;
+				s->len = h_S3MInstr.len;
+				s->vol = h_S3MInstr.vol;
 				s->repS = h_S3MInstr.repS;
 				s->repL = h_S3MInstr.repE - h_S3MInstr.repS;
 
@@ -1627,12 +1640,13 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 				{
 					s->repS = 0;
 					s->repL = 0;
+					hasLoop = false;
 				}
 
-				s->typ = (h_S3MInstr.flags & 1) + ((h_S3MInstr.flags & 4) << 2);
-
 				if (s->repL == 0)
-					s->typ &= 16; // turn off loop, keep 16-bit flag only
+					hasLoop = false;
+
+				s->typ = hasLoop + (is16Bit << 4);
 
 				if (s->vol > 64)
 					s->vol = 64;
@@ -1645,28 +1659,25 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 				if ((h_S3MInstr.memSeg<<4)+len > (int32_t)dataLength)
 					len = dataLength - (h_S3MInstr.memSeg << 4);
 
-				if (fread(tmpSmp, len, 1, f) != 1)
+				if (ver == 1)
 				{
-					free(tmpSmp);
-					showMsg(0, "System message", "General I/O error during loading! Is the file in use?");
-					goto s3mLoadError;
+					fseek(f, len, SEEK_CUR); // sample not supported
 				}
-
-				if (ver != 1)
+				else
 				{
-					if ((h_S3MInstr.flags & 4) != 0)
+					if (fread(newPtr, len, 1, f) != 1)
 					{
-						conv16BitSample(tmpSmp, len, h_S3MInstr.flags & 2);
+						free(tmpSmp);
+						showMsg(0, "System message", "General I/O error during loading! Is the file in use?");
+						goto s3mLoadError;
+					}
 
-						s->pek = (int8_t *)malloc((h_S3MInstr.len * 2) + LOOP_FIX_LEN);
-						if (s->pek == NULL)
-						{
-							free(tmpSmp);
-							showMsg(0, "System message", "Not enough memory!");
-							goto s3mLoadError;
-						}
+					if (is16Bit)
+					{
+						conv16BitSample(newPtr, len, stereoSample);
 
-						memcpy(s->pek, tmpSmp, h_S3MInstr.len * 2);
+						s->origPek = tmpSmp;
+						s->pek = s->origPek + SMP_DAT_OFFSET;
 
 						s->len *= 2;
 						s->repS *= 2;
@@ -1674,23 +1685,25 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 					}
 					else
 					{
-						conv8BitSample(tmpSmp, len, h_S3MInstr.flags & 2);
+						conv8BitSample(newPtr, len, stereoSample);
 
-						s->pek = (int8_t *)malloc(h_S3MInstr.len + LOOP_FIX_LEN);
-						if (s->pek == NULL)
+						s->origPek = tmpSmp;
+						s->pek = s->origPek + SMP_DAT_OFFSET;
+					}
+
+					// if stereo sample: reduce memory footprint after sample was downmixed to mono
+					if (stereoSample)
+					{
+						newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
+						if (newPtr != NULL)
 						{
-							free(tmpSmp);
-							showMsg(0, "System message", "Not enough memory!");
-							goto s3mLoadError;
+							s->origPek = newPtr;
+							s->pek = s->origPek + SMP_DAT_OFFSET;
 						}
-
-						memcpy(s->pek, tmpSmp, h_S3MInstr.len);
 					}
 
 					fixSample(s);
 				}
-
-				free(tmpSmp);
 			}
 		}
 	}
@@ -2276,9 +2289,12 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 				l = MAX_SAMPLE_LEN;
 			}
 
-			s->pek = (int8_t *)malloc(l + LOOP_FIX_LEN);
-			if (s->pek == NULL)
+			s->pek = NULL;
+			s->origPek = (int8_t *)malloc(l + LOOP_FIX_LEN);
+			if (s->origPek == NULL)
 				return false;
+
+			s->pek = s->origPek + SMP_DAT_OFFSET;
 
 			int32_t bytesRead = (int32_t)fread(s->pek, 1, l, f);
 			if (bytesRead < l)
@@ -2300,9 +2316,12 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 				s->repL /= 2;
 				s->repS /= 2;
 
-				newPtr = (int8_t *)realloc(s->pek, s->len + LOOP_FIX_LEN);
+				newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
 				if (newPtr != NULL)
-					s->pek = newPtr;
+				{
+					s->origPek = newPtr;
+					s->pek = s->origPek + SMP_DAT_OFFSET;
+				}
 
 				stereoSamplesWarn = true;
 			}
@@ -2519,9 +2538,6 @@ static void setupLoadedModule(void)
 	playMode = PLAYMODE_IDLE;
 	songPlaying = false;
 
-	editor.currVolEnvPoint = 0;
-	editor.currPanEnvPoint = 0;
-
 #ifdef HAS_MIDI
 	midi.currMIDIVibDepth = 0;
 	midi.currMIDIPitch = 0;
@@ -2566,7 +2582,6 @@ static void setupLoadedModule(void)
 	setScrollBarPos(SB_POS_ED, 0, false);
 
 	resetChannels();
-	refreshScopes();
 	setPos(0, 0, false);
 	setSpeed(song.speed);
 
@@ -2579,6 +2594,10 @@ static void setupLoadedModule(void)
 	setFrqTab((loadedFormat == FORMAT_XM) ? linearFreqTable : false);
 	unlockMixerCallback();
 
+	editor.currVolEnvPoint = 0;
+	editor.currPanEnvPoint = 0;
+
+	refreshScopes();
 	exitTextEditing();
 	updateTextBoxPointers();
 	resetChannelOffset();
@@ -2593,9 +2612,8 @@ static void setupLoadedModule(void)
 	// redraw top part of screen
 	if (editor.ui.extended)
 	{
-		// first exit extended mode, then re-enter
-		togglePatternEditorExtended();
-		togglePatternEditorExtended();
+		togglePatternEditorExtended(); // exit
+		togglePatternEditorExtended(); // re-enter (force redrawing)
 	}
 	else
 	{

@@ -11,6 +11,7 @@
 #include "ft2_mouse.h"
 #include "ft2_sample_ed.h"
 #include "ft2_module_loader.h"
+#include "ft2_tables.h"
 
 /* These savers are directly ported, so they should act identical to FT2
 ** except for some very minor changes.
@@ -20,8 +21,15 @@ static SDL_Thread *thread;
 
 static uint16_t packPatt(uint8_t *pattPtr, uint16_t numRows);
 
+static const char modSig[32][5] =
+{
+	"1CHN", "2CHN", "3CHN", "4CHN", "5CHN", "6CHN", "7CHN", "8CHN",
+	"9CHN", "10CH", "11CH", "12CH", "13CH", "14CH", "15CH", "16CH",
+	"17CH", "18CH", "19CH", "20CH", "21CH", "22CH", "23CH", "24CH",
+	"25CH", "26CH", "27CH", "28CH", "29CH", "30CH", "31CH", "32CH"
+};
+
 // ft2_replayer.c
-extern const char modSig[32][5];
 extern const uint16_t amigaPeriod[12*8];
 
 bool saveXM(UNICHAR *filenameU)

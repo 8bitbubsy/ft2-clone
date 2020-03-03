@@ -108,7 +108,7 @@ static int32_t lastMouseX, lastMouseY, saveMouseX, saveMouseY;
 static uint16_t saveInstrNr;
 static SDL_Thread *thread;
 
-extern int16_t *note2Period; // ft2_replayer.c
+extern const int16_t *note2Period; // ft2_replayer.c
 
 void updateInstEditor(void);
 void updateNewInstrument(void);
@@ -126,7 +126,7 @@ static int32_t SDLCALL copyInstrThread(void *ptr)
 	bool error;
 	int8_t *p;
 	int16_t destIns, sourceIns;
-
+	sampleTyp *src, *dst;
 	(void)ptr;
 
 	error = false;
@@ -143,16 +143,24 @@ static int32_t SDLCALL copyInstrThread(void *ptr)
 		if (allocateInstr(destIns))
 		{
 			memcpy(instr[destIns], instr[sourceIns], sizeof (instrTyp));
+
 			for (int16_t i = 0; i < MAX_SMP_PER_INST; i++)
 			{
-				instr[destIns]->samp[i].pek = NULL;
-				if (instr[sourceIns]->samp[i].pek != NULL)
+				src = &instr[sourceIns]->samp[i];
+				dst = &instr[destIns]->samp[i];
+
+				dst->origPek = NULL;
+				dst->pek = NULL;
+
+				if (src->origPek != NULL)
 				{
-					p = (int8_t *)malloc(instr[sourceIns]->samp[i].len + LOOP_FIX_LEN);
+					p = (int8_t *)malloc(src->len + LOOP_FIX_LEN);
 					if (p != NULL)
 					{
-						memcpy(p, instr[sourceIns]->samp[i].pek, instr[sourceIns]->samp[i].len + LOOP_FIX_LEN);
-						instr[destIns]->samp[i].pek = p;
+						dst->origPek = p;
+						dst->pek = dst->origPek + SMP_DAT_OFFSET;
+
+						memcpy(dst->origPek, src->origPek, src->len + LOOP_FIX_LEN);
 					}
 					else error = true;
 				}
@@ -3085,7 +3093,10 @@ void saveInstr(UNICHAR *filenameU, int16_t nr)
 
 static int16_t getPATNote(int32_t freq)
 {
-	return (int16_t)round(((log(freq / (440.0 * 1000.0)) / M_LN2) * 12.0) + 48.0 + 9.0);
+	double dNote = (log2(freq * (1.0 / 440000.0)) * 12.0) + 57.0;
+	int32_t note = (int32_t)(dNote + 0.5);
+
+	return (int16_t)note;
 }
 
 static int32_t SDLCALL loadInstrThread(void *ptr)
@@ -3280,14 +3291,17 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 
 			if (s->len > 0)
 			{
-				s->pek = (int8_t *)malloc(s->len + LOOP_FIX_LEN);
-				if (s->pek == NULL)
+				s->pek = NULL;
+				s->origPek = (int8_t *)malloc(s->len + LOOP_FIX_LEN);
+				if (s->origPek == NULL)
 				{
 					freeInstr(editor.curInstr);
 					resumeAudio();
 					okBoxThreadSafe(0, "System message", "Not enough memory!");
 					goto loadDone;
 				}
+
+				s->pek = s->origPek + SMP_DAT_OFFSET;
 
 				if (fread(s->pek, s->len, 1, f) != 1)
 				{
@@ -3308,9 +3322,12 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 					s->repL /= 2;
 					s->repS /= 2;
 
-					newPtr = (int8_t *)realloc(s->pek, s->len + LOOP_FIX_LEN);
+					newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
 					if (newPtr != NULL)
-						s->pek = newPtr;
+					{
+						s->origPek = newPtr;
+						s->pek = s->origPek + SMP_DAT_OFFSET;
+					}
 
 					stereoWarning = true;
 				}
@@ -3331,7 +3348,10 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 		{
 			// PAT - Gravis Ultrasound GF1 patch
 
-			if (ih_PAT.layers > 1 || ih_PAT.antSamp > 16 || ih_PAT.antSamp == 0)
+			if (ih_PAT.antSamp == 0)
+				ih_PAT.antSamp = 1; // to some patch makers, 0 means 1
+
+			if (ih_PAT.layers > 1 || ih_PAT.antSamp > MAX_SMP_PER_INST)
 			{
 				okBoxThreadSafe(0, "System message", "Incompatible instrument!");
 				goto loadDone;
@@ -3362,8 +3382,9 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 					goto loadDone;
 				}
 
-				s->pek = (int8_t *)malloc(ih_PATWave.waveSize + LOOP_FIX_LEN);
-				if (s->pek == NULL)
+				s->pek = NULL;
+				s->origPek = (int8_t *)malloc(ih_PATWave.waveSize + LOOP_FIX_LEN);
+				if (s->origPek == NULL)
 				{
 					freeInstr(editor.curInstr);
 					resumeAudio();
@@ -3371,15 +3392,17 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 					goto loadDone;
 				}
 
+				s->pek = s->origPek + SMP_DAT_OFFSET;
+
 				if (i == 0)
 				{
 					ins->vibSweep = ih_PATWave.vibSweep;
 
-					ins->vibRate = ih_PATWave.vibRate / 2;
+					ins->vibRate = (ih_PATWave.vibRate + 2) / 4;
 					if (ins->vibRate > 0x3F)
 						ins->vibRate = 0x3F;
 
-					ins->vibDepth = ih_PATWave.vibDepth / 2;
+					ins->vibDepth = (ih_PATWave.vibDepth + 1) / 2;
 					if (ins->vibDepth > 0x0F)
 						ins->vibDepth = 0x0F;
 				}
@@ -3397,38 +3420,41 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 						s->typ |= 1; // forward loop
 				}
 
-				s->pan = ih_PATWave.pan << 4;
+				s->pan = ((ih_PATWave.pan << 4) & 0xF0) | (ih_PATWave.pan & 0xF);
+
+				if (s->typ & 16)
+				{
+					ih_PATWave.waveSize &= 0xFFFFFFFE;
+					ih_PATWave.repS &= 0xFFFFFFFE;
+					ih_PATWave.repE &= 0xFFFFFFFE;
+				}
+
 				s->len = ih_PATWave.waveSize;
+				if (s->len > MAX_SAMPLE_LEN)
+					s->len = MAX_SAMPLE_LEN;
 
 				s->repS = ih_PATWave.repS;
 				if (s->repS > s->len)
 					s->repS = 0;
 
 				s->repL = ih_PATWave.repE - ih_PATWave.repS;
-
-				if (s->typ & 16)
-				{
-					s->len  &= 0xFFFFFFFE;
-					s->repS &= 0xFFFFFFFE;
-					s->repL &= 0xFFFFFFFE;
-				}
-
 				if (s->repL < 0)
 					s->repL = 0;
 
 				if (s->repS+s->repL > s->len)
 					s->repL = s->len - s->repS;
 
-				dFreq = round((1.0 + ih_PATWave.fineTune / 512.0) * ih_PATWave.sampleRate);
-				tuneSample(s, (int32_t)dFreq);
+				dFreq = (1.0 + (ih_PATWave.fineTune / 512.0)) * ih_PATWave.sampleRate;
+				int32_t freq = (int32_t)(dFreq + 0.5);
+				tuneSample(s, freq);
 
-				s->relTon -= (int8_t)(getPATNote(ih_PATWave.rootFrq) - (12*3));
-				s->relTon = CLAMP(s->relTon, -48, 71);
+				a = s->relTon - (getPATNote(ih_PATWave.rootFrq) - (12 * 3));
+				s->relTon = (uint8_t)CLAMP(a, -48, 71);
 
 				a = getPATNote(ih_PATWave.lowFrq);
-				a = CLAMP(a, 0, 95);
-
 				b = getPATNote(ih_PATWave.highFreq);
+
+				a = CLAMP(a, 0, 95);
 				b = CLAMP(b, 0, 95);
 
 				for (j = a; j <= b; j++)

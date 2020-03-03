@@ -37,7 +37,7 @@ static void SDLCALL samplingCallback(void *userdata, Uint8 *stream, int len)
 
 	s = &instr[editor.curInstr]->samp[editor.curSmp];
 
-	newPtr = (int8_t *)realloc(s->pek, s->len + len);
+	newPtr = (int8_t *)realloc(s->origPek, (s->len + len) + LOOP_FIX_LEN);
 	if (newPtr == NULL)
 	{
 		drawSamplingBufferFlag = false;
@@ -45,7 +45,9 @@ static void SDLCALL samplingCallback(void *userdata, Uint8 *stream, int len)
 		return;
 	}
 
-	s->pek = newPtr;
+	s->origPek = newPtr;
+	s->pek = s->origPek + SMP_DAT_OFFSET;
+
 	memcpy(&s->pek[s->len], stream, len);
 
 	s->len += len;
@@ -103,15 +105,16 @@ void stopSampling(void)
 		{
 			nextSmp = &instr[editor.curInstr]->samp[rightChSmpSlot];
 
-			nextSmp->pek = (int8_t *)malloc((currSmp->len / 2) + LOOP_FIX_LEN);
-			if (nextSmp->pek != NULL)
+			nextSmp->origPek = (int8_t *)malloc((currSmp->len >> 1) + LOOP_FIX_LEN);
+			if (nextSmp->origPek != NULL)
 			{
-				nextSmp->len = currSmp->len / 2;
+				nextSmp->pek = nextSmp->origPek + SMP_DAT_OFFSET;
+				nextSmp->len = currSmp->len >> 1;
 
 				src16 = (int16_t *)currSmp->pek;
 				dst16 = (int16_t *)nextSmp->pek;
 
-				len = nextSmp->len / 2;
+				len = nextSmp->len >> 1;
 				for (i = 0; i < len; i++)
 					dst16[i] = src16[(i << 1) + 1];
 			}
@@ -120,28 +123,36 @@ void stopSampling(void)
 				freeSample(editor.curInstr, rightChSmpSlot);
 			}
 
-			currSmp->len /= 2;
+			currSmp->len >>= 1;
 
 			// read left channel data by skipping every other sample
 
 			dst16 = (int16_t *)currSmp->pek;
 
-			len = currSmp->len / 2;
+			len = currSmp->len >> 1;
 			for (i = 0; i < len; i++)
 				dst16[i] = dst16[i << 1];
 		}
 	}
 
-	if (currSmp->pek != NULL)
+	if (currSmp->origPek != NULL)
 	{
-		newPtr = (int8_t *)realloc(currSmp->pek, currSmp->len + LOOP_FIX_LEN);
+		newPtr = (int8_t *)realloc(currSmp->origPek, currSmp->len + LOOP_FIX_LEN);
 		if (newPtr != NULL)
-			currSmp->pek = newPtr;
+		{
+			currSmp->origPek = newPtr;
+			currSmp->pek = currSmp->origPek + SMP_DAT_OFFSET;
+		}
+
+		fixSample(currSmp);
 	}
 	else
 	{
 		freeSample(editor.curInstr, editor.curSmp);
 	}
+
+	if (nextSmp != NULL && nextSmp->origPek != NULL)
+		fixSample(nextSmp);
 
 	updateSampleEditorSample();
 	editor.updateCurInstr = true;

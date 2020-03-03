@@ -218,8 +218,9 @@ int main(int argc, char *argv[])
 	SDL_DetachThread(initMidiThread); // don't wait for this thread, let it clean up when done
 #endif
 
-	setupWaitVBL();
+	setupWaitVBL(); // this is needed for potential okBox() calls in handleModuleLoadFromArg()
 	handleModuleLoadFromArg(argc, argv);
+	setupWaitVBL(); // yes, this is needed again for main loop
 
 	editor.mainLoopOngoing = true;
 	while (editor.programRunning)

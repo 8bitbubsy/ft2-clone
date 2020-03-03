@@ -20,6 +20,7 @@
 #include "ft2_wav_renderer.h"
 #include "ft2_mouse.h"
 #include "ft2_video.h"
+#include "ft2_tables.h"
 
 // for pattern marking w/ keyboard
 static int8_t lastChMark;
@@ -37,12 +38,6 @@ static const uint16_t iSwitchExtX[4] = { 221, 262, 303, 344 };
 
 static int32_t lastMouseX, lastMouseY;
 
-// defined at the bottom of this file
-extern const pattCoordsMouse_t pattCoordMouseTable[2][2][2];
-
-// globalized
-const uint16_t chanWidths[6] = { 141, 141, 93, 69, 45, 45 };
-
 bool allocatePattern(uint16_t nr) // for tracker use only, not in loader!
 {
 	bool audioWasntLocked;
@@ -54,11 +49,11 @@ bool allocatePattern(uint16_t nr) // for tracker use only, not in loader!
 			lockAudio();
 
 		/* Original FT2 allocates only the amount of rows needed, but we don't
-		 * do that to avoid out of bondary row look-up between out-of-sync replayer
-		 * state and tracker state (yes it used to happen, rarely). We're not wasting
-		 * too much RAM for a modern computer anyway. Worst case: 256 allocated
-		 * patterns would be ~10MB.
-		 */
+		** do that to avoid out of bondary row look-up between out-of-sync replayer
+		** state and tracker state (yes it used to happen, rarely). We're not wasting
+		** too much RAM for a modern computer anyway. Worst case: 256 allocated
+		** patterns would be ~10MB.
+		**/
 
 		patt[nr] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
 		if (patt[nr] == NULL)
@@ -2695,7 +2690,7 @@ static void zapSong(void)
 	lockMixerCallback();
 
 	song.len = 1;
-	song.repS = 0; // FT2 doesn't do this...
+	song.repS = 0; // Silly: FT2 doesn't do this!
 	song.speed = 125;
 	song.tempo = 6;
 	song.songPos = 0;
@@ -2744,7 +2739,7 @@ static void zapInstrs(void)
 	for (int16_t i = 1; i <= MAX_INST; i++)
 	{
 		freeInstr(i);
-		memset(song.instrName[i], 0, 23);
+		memset(song.instrName[i], 0, 22 + 1);
 	}
 
 	updateNewInstrument();
@@ -2922,41 +2917,3 @@ void expandPattern(void)
 		setSongModifiedFlag();
 	}
 }
-
-const pattCoordsMouse_t pattCoordMouseTable[2][2][2] =
-{
-	/*
-		uint16_t upperRowsY, midRowY, lowerRowsY;
-		uint16_t numUpperRows;
-	*/
-
-	// no pattern stretch
-	{
-		// no pattern channel scroll
-		{
-			{ 177, 281, 293, 13 }, //   normal pattern editor
-			{  57, 217, 229, 20 }, // extended pattern editor
-		},
-
-		// pattern channel scroll
-		{
-			{ 177, 274, 286, 12 }, //   normal pattern editor
-			{  57, 210, 222, 19 }, // extended pattern editor
-		}
-	},
-
-	// pattern stretch
-	{
-		// no pattern channel scroll
-		{
-			{ 176, 275, 286,  9 }, //   normal pattern editor
-			{  56, 221, 232, 15 }, // extended pattern editor
-		},
-
-		// pattern channel scroll
-		{
-			{ 175, 274, 284,  9 }, //   normal pattern editor
-			{  55, 209, 219, 14 }, // extended pattern editor
-		},
-	}
-};

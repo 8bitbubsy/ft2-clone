@@ -1,27 +1,33 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "ft2_header.h"
 #include "ft2_mix.h"
 #include "ft2_mix_macros.h"
+#include "ft2_tables.h"
 
 /*
-   --------------------- fixed-point audio channel mixer ---------------------
-
-   This file has separate routines for EVERY possible sampling variation:
-   Interpolation, volume ramping, 8-bit, 16-bit, no loop, loop, bidi loop.
-   24 mixing routines in total.
-
-   Every voice has a function pointer set to the according mixing routine on
-   sample trigger (from replayer, but set in audio thread), using a function
-   pointer look-up table.
-   All voices are always cleared (thread safe) when changing any of the above
-   states from the GUI, so no problem there with deprecated cached function
-   pointers.
-
-   Mixing macros can be found in ft2_mix_macros.h.
-
-   Yes, this is a HUGE mess, and I hope you don't need to modify it.
-   If it's not broken, don't try to fix it!
+** --------------------- 32-bit fixed-point audio channel mixer ---------------------
+**              (Note: Mixing macros can be found in ft2_mix_macros.h)
+**
+** 8bitbubsy: This is mostly ported from the i386-asm 32-bit mixer that was introduced in
+** FT2.08 (MS-DOS). It has been changed and improved quite a bit, though...
+**
+** This file has separate routines for EVERY possible sampling variation:
+** Interpolation on/off, volume ramping on/off, 8-bit, 16-bit, no loop, loop, pingpong.
+** (24 mixing routines in total)
+**
+** Every voice has a function pointer set to the according mixing routine on sample
+** trigger (from replayer, but set in audio thread), using a function pointer look-up
+** table. All voices & pointers are always thread-safely cleared when changing any
+** of the above attributes from the GUI, to prevent possible thread-related issues.
+**
+** There's one problem with the 4-tap cubic spline resampling interpolation...
+** On looped samples where loopStart>0, the splines are not correct when reading
+** from the loopStart (or +1?) sample point. The difference in audio is very minor,
+** so it's not a big problem. It just has to stay like this the way the mixer works.
+** In cases where loopStart=0, the sample before index 0 (yes, we allocate enough
+** data and pre-increment main pointer to support negative look-up), is already
+** pre-fixed so that the splines will be correct.
+** ----------------------------------------------------------------------------------
 */
 
 /* ----------------------------------------------------------------------- */
@@ -239,7 +245,7 @@ static void mix8bNoLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos, delta;
 	uint32_t i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	GET_VOL
@@ -309,7 +315,7 @@ static void mix8bLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos, delta;
 	uint32_t i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	GET_VOL
@@ -379,7 +385,7 @@ static void mix8bBidiLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos;
 	uint32_t delta, i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	GET_VOL
@@ -673,7 +679,7 @@ static void mix8bRampNoLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos, delta;
 	uint32_t i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	if ((v->SLVol1 | v->SRVol1 | v->SLVol2 | v->SRVol2) == 0)
@@ -750,7 +756,7 @@ static void mix8bRampLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos, delta;
 	uint32_t i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	if ((v->SLVol1 | v->SRVol1 | v->SLVol2 | v->SRVol2) == 0)
@@ -827,7 +833,7 @@ static void mix8bRampBidiLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos;
 	uint32_t delta, i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	if ((v->SLVol1 | v->SRVol1 | v->SLVol2 | v->SRVol2) == 0)
@@ -1112,7 +1118,7 @@ static void mix16bNoLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos, delta;
 	uint32_t i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	GET_VOL
@@ -1182,7 +1188,7 @@ static void mix16bLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos, delta;
 	uint32_t i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	GET_VOL
@@ -1252,7 +1258,7 @@ static void mix16bBidiLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos;
 	uint32_t delta, i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	GET_VOL
@@ -1546,7 +1552,7 @@ static void mix16bRampNoLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos, delta;
 	uint32_t i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	if ((v->SLVol1 | v->SRVol1 | v->SLVol2 | v->SRVol2) == 0)
@@ -1623,7 +1629,7 @@ static void mix16bRampLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos, delta;
 	uint32_t i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	if ((v->SLVol1 | v->SRVol1 | v->SLVol2 | v->SRVol2) == 0)
@@ -1700,7 +1706,7 @@ static void mix16bRampBidiLoopIntrp(voice_t *v, uint32_t numSamples)
 	register uint32_t pos;
 	uint32_t delta, i, samplesToMix;
 #ifndef LERPMIX
-	int32_t sample3;
+	int32_t sample3, sample4;
 #endif
 
 	if ((v->SLVol1 | v->SRVol1 | v->SLVol2 | v->SRVol2) == 0)

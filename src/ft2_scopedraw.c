@@ -1,6 +1,7 @@
 #include "ft2_scopes.h"
 #include "ft2_scopedraw.h"
 #include "ft2_video.h"
+#include "ft2_palette.h"
 
 /* ----------------------------------------------------------------------- */
 /*                          SCOPE DRAWING MACROS                           */

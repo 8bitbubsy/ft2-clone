@@ -13,6 +13,7 @@
 #include "ft2_pattern_ed.h"
 #include "ft2_sysreqs.h"
 #include "ft2_textboxes.h"
+#include "ft2_tables.h"
 
 enum
 {
@@ -38,30 +39,6 @@ static tonTyp ptnCopyBuff[MAX_PATT_LEN * MAX_VOICES];
 static tonTyp trackCopyBuff[MAX_PATT_LEN];
 
 static const int8_t tickArr[16] = { 16, 8, 0, 4, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1 };
-
-static const SDL_Keycode key2VolTab[] = 
-{
-	SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_MINUS, SDLK_PLUS, SDLK_d,
-	SDLK_u, SDLK_s, SDLK_v, SDLK_p, SDLK_l, SDLK_r, SDLK_m
-};
-#define KEY2VOL_ENTRIES (signed)(sizeof (key2VolTab) / sizeof (SDL_Keycode))
-
-static const SDL_Keycode key2EfxTab[] = 
-{
-	SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6, SDLK_7,
-	SDLK_8, SDLK_9, SDLK_a, SDLK_b, SDLK_c, SDLK_d, SDLK_e, SDLK_f,
-	SDLK_g, SDLK_h, SDLK_i, SDLK_j, SDLK_k, SDLK_l, SDLK_m, SDLK_n,
-	SDLK_o, SDLK_p, SDLK_q, SDLK_r, SDLK_s, SDLK_t, SDLK_u, SDLK_v,
-	SDLK_w, SDLK_x, SDLK_y, SDLK_z
-};
-#define KEY2EFX_ENTRIES (signed)(sizeof (key2EfxTab) / sizeof (SDL_Keycode))
-
-static const SDL_Keycode key2HexTab[] = 
-{
-	SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6, SDLK_7,
-	SDLK_8, SDLK_9, SDLK_a, SDLK_b, SDLK_c, SDLK_d, SDLK_e, SDLK_f
-};
-#define KEY2HEX_ENTRIES (signed)(sizeof (key2HexTab) / sizeof (SDL_Keycode))
 
 void recordNote(uint8_t note, int8_t vol);
 

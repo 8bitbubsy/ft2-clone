@@ -16,7 +16,7 @@
 #include "ft2_audio.h"
 #include "ft2_mouse.h"
 
-// Messy But Works™
+// this is truly a mess, but it works...
 
 static char byteFormatBuffer[64], tmpInstrName[1 + MAX_INST][22 + 1], tmpInstName[MAX_INST][22 + 1];
 static bool removePatt, removeInst, removeSamp, removeChans, removeSmpDataAfterLoop, convSmpsTo8Bit;
@@ -35,6 +35,8 @@ static void freeTmpInstruments(void)
 	{
 		if (tmpInstr[i] != NULL)
 		{
+			// don't free samples, as the pointers are shared with main instruments...
+
 			free(tmpInstr[i]);
 			tmpInstr[i] = NULL;
 		}
@@ -56,7 +58,7 @@ static bool setTmpInstruments(void)
 				return false;
 			}
 
-			memcpy(tmpInstr[i], instr[i], sizeof (instrTyp));
+			tmpInstr[i] = instr[i];
 		}
 	}
 
@@ -99,7 +101,8 @@ static int16_t getUsedTempSamples(uint16_t nr)
 		i--;
 
 	/* Yes, 'i' can be -1 here, and will be set to at least 0
-	 * because of ins->ta values. Possibly an FT2 bug... */
+	** because of ins->ta values. Possibly an FT2 bug...
+	**/
 	for (j = 0; j < 96; j++)
 	{
 		if (ins->ta[j] > i)
@@ -410,10 +413,11 @@ static void wipeSamplesUnused(bool testWipeSize, int16_t ai)
 				{
 					// sample is unused
 
-					if (s->pek != NULL && !testWipeSize)
-						free(s->pek);
+					if (s->origPek != NULL && !testWipeSize)
+						free(s->origPek);
 
 					memset(s, 0, sizeof (sampleTyp));
+					s->origPek = NULL;
 					s->pek = NULL;
 				}
 			}
@@ -484,7 +488,7 @@ static void wipeSmpDataAfterLoop(bool testWipeSize, int16_t ai)
 		for (int16_t j = 0; j < l; j++)
 		{
 			s = &ins->samp[j];
-			if (s->pek != NULL && s->typ & 3 && s->len > 0 && s->len > s->repS+s->repL)
+			if (s->origPek != NULL && s->typ & 3 && s->len > 0 && s->len > s->repS+s->repL)
 			{
 				if (!testWipeSize)
 					restoreSample(s);
@@ -495,14 +499,19 @@ static void wipeSmpDataAfterLoop(bool testWipeSize, int16_t ai)
 					if (s->len <= 0)
 					{
 						s->len = 0;
-						free(s->pek);
+
+						free(s->origPek);
+						s->origPek = NULL;
 						s->pek = NULL;
 					}
 					else
 					{
-						newPtr = (int8_t *)realloc(s->pek, s->len + LOOP_FIX_LEN);
+						newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
 						if (newPtr != NULL)
-							s->pek = newPtr;
+						{
+							s->origPek = newPtr;
+							s->pek = s->origPek + SMP_DAT_OFFSET;
+						}
 					}
 				}
 
@@ -547,37 +556,41 @@ static void convertSamplesTo8bit(bool testWipeSize, int16_t ai)
 		for (int16_t j = 0; j < k; j++)
 		{
 			s = &ins->samp[j];
-			if (s->pek != NULL && (s->typ & 16) && s->len > 0)
+			if (s->origPek != NULL && (s->typ & 16) && s->len > 0)
 			{
 				if (testWipeSize)
 				{
 					s->typ &= ~16;
-					s->len /= 2;
-					s->repL /= 2;
-					s->repS /= 2;
+					s->len >>= 1;
+					s->repL >>= 1;
+					s->repS >>= 1;
 				}
 				else
 				{
 					restoreSample(s);
 
+					assert(s->pek != NULL);
 					src16 = (int16_t *)s->pek;
 					dst8 = s->pek;
 
-					newLen = s->len / 2;
+					newLen = s->len >> 1;
 					for (int32_t a = 0; a < newLen; a++)
 					{
 						smp8 = src16[a] >> 8;
 						dst8[a] = smp8;
 					}
 
-					s->repL /= 2;
-					s->repS /= 2;
-					s->len /= 2;
+					s->repL >>= 1;
+					s->repS >>= 1;
+					s->len >>= 1;
 					s->typ &= ~16;
 
-					newPtr = (int8_t *)realloc(s->pek, s->len + LOOP_FIX_LEN);
+					newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
 					if (newPtr != NULL)
-						s->pek = newPtr;
+					{
+						s->origPek = newPtr;
+						s->pek = s->origPek + SMP_DAT_OFFSET;
+					}
 
 					fixSample(s);
 				}

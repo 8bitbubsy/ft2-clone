@@ -19,6 +19,8 @@ enum
 #define MIN_AUDIO_FREQ 44100
 #define MAX_AUDIO_FREQ 96000
 
+#define CUBIC_TABLE_LEN (8192+1)
+
 struct audio_t
 {
 	char *currInputDevice, *currOutputDevice, *lastWorkingAudioDeviceName;
@@ -32,7 +34,6 @@ struct audio_t
 	uint64_t tickTime64, tickTime64Frac;
 	double dAudioLatencyMs, dSpeedValMul, dScopeFreqMul;
 	SDL_AudioDeviceID dev;
-
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
 } audio;
 
@@ -72,6 +73,11 @@ struct chSync
 	chSyncData_t data[SYNC_QUEUE_LEN + 1];
 } chSync;
 
+extern pattSyncData_t *pattSyncEntry;
+extern chSyncData_t *chSyncEntry;
+
+extern volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
+
 void resetOldRevFreqs(void);
 int32_t pattQueueReadSize(void);
 int32_t pattQueueWriteSize(void);
@@ -106,8 +112,3 @@ void updateSendAudSamplesRoutine(bool lockMixer);
 void mix_SaveIPVolumes(void);
 void mix_UpdateChannelVolPanFrq(void);
 uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth);
-
-extern pattSyncData_t *pattSyncEntry;
-extern chSyncData_t *chSyncEntry;
-
-extern volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;

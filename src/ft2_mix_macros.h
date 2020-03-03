@@ -101,50 +101,40 @@
 
 #ifndef LERPMIX
 
-// 3-tap quadratic interpolation (default - slower, but better quality)
+// 4-tap cubic spline interpolation (default - slower than linear, but better quality)
 
-// in: int32_t s1,s2,s3 = -128..127 | f = 0..65535 (frac) | out: s1 (will exceed 16-bits because of overshoot)
-#define INTERPOLATE8(s1, s2, s3, f) \
+// in: int32_t s0,s1,s2,s3 = -128..127 | f = 0..65535 (frac) | out: 16-bit s0 (will exceed 16-bits because of overshoot)
+#define INTERPOLATE8(s0, s1, s2, s3, f) \
 { \
-	int32_t s4, frac = f >> 1; \
-	\
-	s2 <<= 8; \
-	s4 = ((s1 + s3) << (8 - 1)) - s2; \
-	s4 = ((s4 * frac) >> 16) + s2; \
-	s3 = (s1 + s3) << (8 - 1); \
-	s1 <<= 8; \
-	s3 = (s1 + s3) >> 1; \
-	s1 += ((s4 - s3) * frac) >> 14; \
+	const int16_t *t = fastSincTable + ((f >> 6) & 0x3FC); \
+	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> (FAST_SINC_TABLE_BITS - 8); \
 } \
 
-// in: int32_t s1,s2,s3 = -32768..32767 | f = 0..65535 (frac) | out: s1 (will exceed 16-bits because of overshoot)
-#define INTERPOLATE16(s1, s2, s3, f) \
+// in: int32_t s0,s1,s2,s3 = -32768..32767 | f = 0..65535 (frac) | out: 16-bit s0 (will exceed 16-bits because of overshoot)
+#define INTERPOLATE16(s0, s1, s2, s3, f) \
 { \
-	int32_t s4, frac = f >> 1; \
-	\
-	s4 = ((s1 + s3) >> 1) - s2; \
-	s4 = ((s4 * frac) >> 16) + s2; \
-	s3 = (s1 + s3) >> 1; \
-	s3 = (s1 + s3) >> 1; \
-	s1 += ((s4 - s3) * frac) >> 14; \
+	const int16_t *t = fastSincTable + ((f >> 6) & 0x3FC); \
+	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> FAST_SINC_TABLE_BITS; \
 } \
 
 #define RENDER_8BIT_SMP_INTRP \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[0]; \
-	sample2 = smpPtr[1]; \
-	sample3 = smpPtr[2]; \
-	INTERPOLATE8(sample, sample2, sample3, pos) \
+	sample = smpPtr[-1]; \
+	sample2 = smpPtr[0]; \
+	sample3 = smpPtr[1]; \
+	sample4 = smpPtr[2]; \
+	INTERPOLATE8(sample, sample2, sample3, sample4, pos) \
 	sample <<= 12; \
 	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
 	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
 
 #define RENDER_8BIT_SMP_MONO_INTRP \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[0]; \
-	sample2 = smpPtr[1]; \
-	sample3 = smpPtr[2]; \
-	INTERPOLATE8(sample, sample2, sample3, pos) \
+	sample = smpPtr[-1]; \
+	sample2 = smpPtr[0]; \
+	sample3 = smpPtr[1]; \
+	sample4 = smpPtr[2]; \
+	INTERPOLATE8(sample, sample2, sample3, sample4, pos) \
 	sample <<= 12; \
 	sample = ((int64_t)sample * CDA_LVol) >> 32; \
 	*audioMixL++ += sample; \
@@ -152,20 +142,22 @@
 
 #define RENDER_16BIT_SMP_INTRP \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[0]; \
-	sample2 = smpPtr[1]; \
-	sample3 = smpPtr[2]; \
-	INTERPOLATE16(sample, sample2, sample3, pos) \
+	sample = smpPtr[-1]; \
+	sample2 = smpPtr[0]; \
+	sample3 = smpPtr[1]; \
+	sample4 = smpPtr[2]; \
+	INTERPOLATE16(sample, sample2, sample3, sample4, pos) \
 	sample <<= 12; \
 	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
 	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
 
 #define RENDER_16BIT_SMP_MONO_INTRP \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[0]; \
-	sample2 = smpPtr[1]; \
-	sample3 = smpPtr[2]; \
-	INTERPOLATE16(sample, sample2, sample3, pos) \
+	sample = smpPtr[-1]; \
+	sample2 = smpPtr[0]; \
+	sample3 = smpPtr[1]; \
+	sample4 = smpPtr[2]; \
+	INTERPOLATE16(sample, sample2, sample3, sample4, pos) \
 	sample <<= 12; \
 	sample = ((int64_t)sample * CDA_LVol) >> 32; \
 	*audioMixL++ += sample; \
@@ -178,14 +170,14 @@
 // in: int32_t s1,s2 = -128..127 | f = 0..65535 (frac) | out: s1 = -32768..32767
 #define INTERPOLATE8(s1, s2, f) \
 	s2 -= s1; \
-	s2 = (s2 * (int32_t)f) >> 8; \
+	s2 = (s2 * (int32_t)f) >> (16 - 8); \
 	s1 <<= 8; \
 	s1 += s2; \
 
 // in: int32_t s1,s2 = -32768..32767 | f = 0..65535 (frac) | out: s1 = -32768..32767
 #define INTERPOLATE16(s1, s2, f) \
 	s2 = (s2 - s1) >> 1; \
-	s2 = (s2 * (int32_t)f) >> 15; \
+	s2 = (s2 * (int32_t)f) >> (16 - 1); \
 	s1 += s2; \
 
 #define RENDER_8BIT_SMP_INTRP \

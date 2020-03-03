@@ -12,7 +12,7 @@ void fixSample(sampleTyp *s); // adds wrapped sample after loop/end (for branchl
 void restoreSample(sampleTyp *s); // reverts wrapped sample after loop/end (for branchless mixer interpolation)
 void clearSample(void);
 void clearCopyBuffer(void);
-uint32_t getSampleMiddleCRate(sampleTyp *s);
+int32_t getSampleMiddleCRate(sampleTyp *s);
 int32_t getSampleRangeStart(void);
 int32_t getSampleRangeEnd(void);
 int32_t getSampleRangeLength(void);
