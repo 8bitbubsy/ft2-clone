@@ -23,8 +23,8 @@ static const char *NI_HelpText[] =
 	"The \"Wrap\" option controls whether it's possible to walk through",
 	"the screen edges or not. Turn it on and use your brain to get",
 	"the maximum out of this feature.",
-	"The \"Surround\" option turns nibbles into a completely different",
-	"game. Don't change this option during play! (You'll see why)",
+	"The \"Surround\" option turns Nibbles into a completely different",
+	"game. Don't change this option during play! (you'll see why)",
 	"We wish you many hours of fun playing this game."
 };
 #define NIBBLES_HELP_LINES (sizeof (NI_HelpText) / sizeof (char *))
@@ -43,7 +43,7 @@ typedef struct
 static const char nibblesCheatCode1[] = "skip", nibblesCheatCode2[] = "triton";
 static char nibblesCheatBuffer[16];
 
-const char convHexTable2[10] = { 7, 8, 9, 10, 11, 12, 13, 16, 17, 18 };
+static const char convHexTable2[10] = { 7, 8, 9, 10, 11, 12, 13, 16, 17, 18 };
 static const uint8_t NI_Speeds[4] = { 12, 8, 6, 4 };
 static bool NI_EternalLives;
 static uint8_t NI_CheatIndex, NI_CurSpeed, NI_CurTick60Hz, NI_CurSpeed60Hz, NI_Screen[51][23], NI_Level;
@@ -265,7 +265,7 @@ void nibblesHighScore(void)
 {
 	if (editor.NI_Play)
 	{
-		okBox(0, "System message", "No highscoretable is available during play.");
+		okBox(0, "System message", "The highscore table is not available during play.");
 		return;
 	}
 
@@ -781,13 +781,13 @@ void nibblesPlay(void)
 {
 	if (editor.NI_Play)
 	{
-		if (okBox(2, "Nibbles request", "Restart the current game of nibbles?") != 1)
+		if (okBox(2, "Nibbles request", "Restart the current game of Nibbles?") != 1)
 			return;
 	}
 
 	if (config.NI_Surround && config.NI_AntPlayers == 0)
 	{
-		okBox(0, "Nibbles message", "\"Surround\" is not appropriate in one-player mode.");
+		okBox(0, "Nibbles message", "Surround mode is not appropriate in one-player mode.");
 		return;
 	}
 
@@ -812,7 +812,7 @@ void nibblesHelp(void)
 {
 	if (editor.NI_Play)
 	{
-		okBox(0, "System message", "No help available during play.");
+		okBox(0, "System message", "Help is not available during play.");
 		return;
 	}
 
@@ -827,7 +827,7 @@ void nibblesExit(void)
 {
 	if (editor.NI_Play)
 	{
-		if (okBox(2, "System request", "Quit current game of nibbles?") == 1)
+		if (okBox(2, "System request", "Quit current game of Nibbles?") == 1)
 		{
 			editor.NI_Play = false;
 			exitNibblesScreen();
@@ -910,7 +910,7 @@ void nibblesKeyAdministrator(SDL_Scancode scancode)
 {
 	if (scancode == SDL_SCANCODE_ESCAPE)
 	{
-		if (okBox(2, "System request", "Quit current game of nibbles?") == 1)
+		if (okBox(2, "System request", "Quit current game of Nibbles?") == 1)
 		{
 			editor.NI_Play = false;
 			exitNibblesScreen();

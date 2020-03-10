@@ -346,7 +346,7 @@ enum
 #define RADIOBUTTON_STATES 3
 
 // amount of frames to wait
-#define BUTTON_DOWN_DELAY 8
+#define BUTTON_DOWN_DELAY 16
 
 // font #1/#2 special characters (used for buttons)
 #define ARROW_UP_STRING "\x05"

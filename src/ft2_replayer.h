@@ -244,7 +244,6 @@ void calcReplayRate(int32_t rate);
 void resetOldRates(void);
 void tuneSample(sampleTyp *s, int32_t midCFreq);
 uint32_t getFrequenceValue(int32_t period);
-int16_t relocateTon(int16_t period, int8_t relativeNote, stmTyp *ch);
 
 bool allocateInstr(int16_t nr);
 void freeInstr(int16_t nr);

@@ -106,15 +106,15 @@
 // in: int32_t s0,s1,s2,s3 = -128..127 | f = 0..65535 (frac) | out: 16-bit s0 (will exceed 16-bits because of overshoot)
 #define INTERPOLATE8(s0, s1, s2, s3, f) \
 { \
-	const int16_t *t = fastSincTable + ((f >> 6) & 0x3FC); \
-	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> (FAST_SINC_TABLE_BITS - 8); \
+	const int16_t *t = cubicSplineTable + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
+	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> (CUBIC_QUANTSHIFT-8); \
 } \
 
 // in: int32_t s0,s1,s2,s3 = -32768..32767 | f = 0..65535 (frac) | out: 16-bit s0 (will exceed 16-bits because of overshoot)
 #define INTERPOLATE16(s0, s1, s2, s3, f) \
 { \
-	const int16_t *t = fastSincTable + ((f >> 6) & 0x3FC); \
-	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> FAST_SINC_TABLE_BITS; \
+	const int16_t *t = cubicSplineTable + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
+	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> CUBIC_QUANTSHIFT; \
 } \
 
 #define RENDER_8BIT_SMP_INTRP \

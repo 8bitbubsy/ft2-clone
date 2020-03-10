@@ -128,7 +128,7 @@ songS3MHeaderTyp;
 #endif
 
 static volatile uint8_t loadedFormat;
-static volatile bool stereoSamplesWarn, linearFreqTable, musicIsLoading, moduleLoaded, moduleFailedToLoad;
+static volatile bool linearFreqTable, musicIsLoading, moduleLoaded, moduleFailedToLoad;
 static uint8_t oldPlayMode, pattBuff[12288];
 static const uint8_t stmEff[16] = { 0, 0, 11, 0, 10, 2, 1, 3, 4, 7, 0, 5 ,6, 0, 0, 0 };
 static SDL_Thread *thread;
@@ -1108,8 +1108,6 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 
 	showMsg = fromExternalThread ? okBoxThreadSafe : okBox;
 
-	stereoSamplesWarn = false;
-
 	rewind(f);
 
 	// start loading S3M
@@ -1606,10 +1604,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 					len *= 2;
 
 				if (stereoSample) // stereo
-				{
-					stereoSamplesWarn = true;
 					len *= 2;
-				}
 
 				tmpSmp = (int8_t *)malloc(len + LOOP_FIX_LEN);
 				if (tmpSmp == NULL)
@@ -1708,9 +1703,6 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 		}
 	}
 
-	if (stereoSamplesWarn)
-		showMsg(0, "System message", "Stereo samples were found and will be converted to mono.");
-
 	// non-FT2: fix overflown 9xx and illegal 3xx slides
 
 	for (i = 0; i < ap; i++)
@@ -1804,7 +1796,6 @@ bool doLoadMusic(bool fromExternalThread)
 
 	showMsg = fromExternalThread ? okBoxThreadSafe : okBox;
 
-	stereoSamplesWarn = false;
 	linearFreqTable = false;
 
 	if (editor.tmpFilenameU == NULL)
@@ -1962,9 +1953,6 @@ bool doLoadMusic(bool fromExternalThread)
 			}
 		}
 	}
-
-	if (stereoSamplesWarn)
-		showMsg(0, "System message", "Stereo samples were found and will be converted to mono.");
 
 	fclose(f);
 
@@ -2322,8 +2310,6 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 					s->origPek = newPtr;
 					s->pek = s->origPek + SMP_DAT_OFFSET;
 				}
-
-				stereoSamplesWarn = true;
 			}
 		}
 

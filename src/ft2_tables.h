@@ -7,7 +7,6 @@
 #include "ft2_config.h" // CONFIG_FILE_SIZE
 
 #define LOG_TABLE_BITS 24
-#define FAST_SINC_TABLE_BITS 14
 
 #define KEY2VOL_ENTRIES (signed)(sizeof (key2VolTab) / sizeof (SDL_Keycode))
 #define KEY2EFX_ENTRIES (signed)(sizeof (key2EfxTab) / sizeof (SDL_Keycode))
@@ -22,12 +21,11 @@ extern const int16_t amigaPeriods[1936];
 extern const uint32_t logTab[768];
 
 extern const uint32_t panningTab[257];
-extern const int16_t fastSincTable[256 * 4];
 
 extern pal16 palTable[12][16];
 extern const uint16_t chanWidths[6];
 extern const pattCoordsMouse_t pattCoordMouseTable[2][2][2];
-extern const int16_t sinusTables[256 * 5];
+extern const int16_t sinusTables[256 * 5]; // for 3D stars in About screen
 extern const uint8_t noteTab1[96];
 extern const uint8_t noteTab2[96];
 extern const uint8_t hex2Dec[256];

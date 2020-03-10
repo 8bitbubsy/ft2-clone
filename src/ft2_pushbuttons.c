@@ -126,7 +126,7 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 590,  90, 39, 16, 0, 0, "69-70",           NULL,    NULL,                 pbSetInstrBank14 },
 	{ 590, 107, 39, 16, 0, 0, "71-78",           NULL,    NULL,                 pbSetInstrBank15 },
 	{ 590, 124, 39, 16, 0, 0, "79-80",           NULL,    NULL,                 pbSetInstrBank16 },
-	{ 590, 144, 39, 27, 0, 0, "Swap",            "bank",  NULL,                 pbSwapInstrBank },
+	{ 590, 144, 39, 27, 0, 0, "Swap",            "Bank",  NULL,                 pbSwapInstrBank },
 	{ 566,  99, 18, 13, 1, 4, ARROW_UP_STRING,   NULL,    sampleListScrollUp,   NULL },
 	{ 566, 140, 18, 13, 1, 4, ARROW_DOWN_STRING, NULL,    sampleListScrollDown, NULL },
 
@@ -151,8 +151,8 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	// ------ HELP SCREEN PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,     funcOnUp
 	{   3, 155, 59, 16, 0, 0, "Exit",            NULL,    NULL,           exitHelpScreen },
-	{ 611,   2, 18, 13, 0, 0, ARROW_UP_STRING,   NULL,    helpScrollUp,   NULL },
-	{ 611, 158, 18, 13, 0, 0, ARROW_DOWN_STRING, NULL,    helpScrollDown, NULL },
+	{ 611,   2, 18, 13, 1, 2, ARROW_UP_STRING,   NULL,    helpScrollUp,   NULL },
+	{ 611, 158, 18, 13, 1, 2, ARROW_DOWN_STRING, NULL,    helpScrollDown, NULL },
 
 	// ------ PATTERN EDITOR PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,            text #2, funcOnDown,         funcOnUp
@@ -357,7 +357,7 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{  70,   2, 58, 16, 0, 0, "Save",            NULL,    NULL,             pbDiskOpSave },
 	{  70,  19, 58, 16, 0, 0, "Delete",          NULL,    NULL,             pbDiskOpDelete },
 	{  70,  36, 58, 16, 0, 0, "Rename",          NULL,    NULL,             pbDiskOpRename },
-	{  70,  53, 58, 16, 0, 0, "Make dir",        NULL,    NULL,             pbDiskOpMakeDir },
+	{  70,  53, 58, 16, 0, 0, "Make dir.",        NULL,    NULL,             pbDiskOpMakeDir },
 	{  70,  70, 58, 16, 0, 0, "Refresh",         NULL,    NULL,             pbDiskOpRefresh },
 	{  70,  87, 58, 16, 0, 0, "Set path",        NULL,    NULL,             pbDiskOpSetPath },
 	{  70, 104, 58, 16, 0, 0, "Show all",        NULL,    NULL,             pbDiskOpShowAll },

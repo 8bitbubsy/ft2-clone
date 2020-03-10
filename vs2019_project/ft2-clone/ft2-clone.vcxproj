@@ -141,7 +141,7 @@
     <PostBuildEvent />
     <Manifest />
     <Manifest>
-      <EnableDpiAwareness>true</EnableDpiAwareness>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -212,7 +212,7 @@
     </ResourceCompile>
     <Manifest />
     <Manifest>
-      <EnableDpiAwareness>true</EnableDpiAwareness>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -258,7 +258,7 @@
       </Command>
     </PreBuildEvent>
     <Manifest>
-      <EnableDpiAwareness>true</EnableDpiAwareness>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -312,7 +312,7 @@
       <PreprocessorDefinitions>_WIN64</PreprocessorDefinitions>
     </ResourceCompile>
     <Manifest>
-      <EnableDpiAwareness>true</EnableDpiAwareness>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -334,6 +334,7 @@
     <ClCompile Include="..\..\src\ft2_gui.c" />
     <ClCompile Include="..\..\src\ft2_help.c" />
     <ClCompile Include="..\..\src\ft2_inst_ed.c" />
+    <ClCompile Include="..\..\src\ft2_intrp_table.c" />
     <ClCompile Include="..\..\src\ft2_keyboard.c" />
     <ClCompile Include="..\..\src\ft2_main.c" />
     <ClCompile Include="..\..\src\ft2_midi.c" />
@@ -402,6 +403,7 @@
     <ClInclude Include="..\..\src\ft2_header.h" />
     <ClInclude Include="..\..\src\ft2_help.h" />
     <ClInclude Include="..\..\src\ft2_inst_ed.h" />
+    <ClInclude Include="..\..\src\ft2_intrp_table.h" />
     <ClInclude Include="..\..\src\ft2_keyboard.h" />
     <ClInclude Include="..\..\src\ft2_midi.h" />
     <ClInclude Include="..\..\src\ft2_mix.h" />

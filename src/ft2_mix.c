@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include "ft2_mix.h"
 #include "ft2_mix_macros.h"
-#include "ft2_tables.h"
+#include "ft2_intrp_table.h"
 
 /*
 ** --------------------- 32-bit fixed-point audio channel mixer ---------------------

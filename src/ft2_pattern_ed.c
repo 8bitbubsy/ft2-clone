@@ -527,7 +527,7 @@ static void updatePatternEditorGUI(void)
 		pushButtons[PB_POSED_PATT_UP].y = 20;
 		pushButtons[PB_POSED_PATT_DOWN].y = 20;
 		pushButtons[PB_POSED_DEL].y = 35;
-		pushButtons[PB_SWAP_BANK].caption = "Swap b.";
+		pushButtons[PB_SWAP_BANK].caption = "Swap B.";
 		pushButtons[PB_SWAP_BANK].caption2 = NULL;
 		pushButtons[PB_SWAP_BANK].x = 162;
 		pushButtons[PB_SWAP_BANK].y = 35;
@@ -582,7 +582,7 @@ static void updatePatternEditorGUI(void)
 		pushButtons[PB_POSED_PATT_DOWN].y = 19;
 		pushButtons[PB_POSED_DEL].y = 33;
 		pushButtons[PB_SWAP_BANK].caption = "Swap";
-		pushButtons[PB_SWAP_BANK].caption2 = "bank";
+		pushButtons[PB_SWAP_BANK].caption2 = "Bank";
 		pushButtons[PB_SWAP_BANK].x = 590;
 		pushButtons[PB_SWAP_BANK].y = 144;
 		pushButtons[PB_SWAP_BANK].w = 39;
@@ -614,6 +614,11 @@ static void updatePatternEditorGUI(void)
 			p->y = iSwitchY[i & 7];
 		}
 	}
+
+	// force update even if new values were to be the same as the old ones
+	scrollBars[SB_POS_ED].oldEnd = 0xFFFFFFFF;
+	scrollBars[SB_POS_ED].oldPage = 0xFFFFFFFF;
+	scrollBars[SB_POS_ED].oldPos = 0xFFFFFFFF;
 }
 
 void patternEditorExtended(void)
@@ -652,11 +657,6 @@ void patternEditorExtended(void)
 
 	drawFramework(2,  2, 51, 20, FRAMEWORK_TYPE2);
 	drawFramework(2, 31, 51, 20, FRAMEWORK_TYPE2);
-
-	// force updating of end/page/length when showing scrollbar
-	scrollBars[SB_POS_ED].oldEnd = 0xFFFFFFFF;
-	scrollBars[SB_POS_ED].oldPage = 0xFFFFFFFF;
-	scrollBars[SB_POS_ED].oldPos = 0xFFFFFFFF;
 
 	showScrollBar(SB_POS_ED);
 

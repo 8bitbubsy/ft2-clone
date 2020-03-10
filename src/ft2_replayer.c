@@ -1502,37 +1502,37 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 	}
 }
 
-int16_t relocateTon(int16_t period, int8_t relativeNote, stmTyp *ch)
+// for arpeggio and portamento (semitone-slide mode)
+static int16_t relocateTon(int16_t period, uint8_t arpNote, stmTyp *ch)
 {
-	int8_t fineTune;
-	int32_t loPeriod, hiPeriod, tmpPeriod, tableIndex;
+	int32_t fineTune, loPeriod, hiPeriod, tmpPeriod, tableIndex;
 
-	fineTune = (ch->fineTune >> 3) + 16;
-	hiPeriod = 8 * 12 * 16;
+	fineTune = ((ch->fineTune >> 3) + 16) << 1;
+	hiPeriod = (8 * 12 * 16) * 2;
 	loPeriod = 0;
 
 	for (int8_t i = 0; i < 8; i++)
 	{
-		tmpPeriod = (((loPeriod + hiPeriod) >> 1) & 0xFFFFFFF0) + fineTune;
+		tmpPeriod = (((loPeriod + hiPeriod) >> 1) & 0xFFFFFFE0) + fineTune;
 
-		tableIndex = tmpPeriod - 8;
-		if (tableIndex < 0) // added security check
-			tableIndex = 0;
+		tableIndex = (tmpPeriod - 16) >> 1;
+		tableIndex = CLAMP(tableIndex, 0, 1935); // 8bitbubsy: added security check
 
 		if (period >= note2Period[tableIndex])
-			hiPeriod = tmpPeriod - fineTune;
+			hiPeriod = (tmpPeriod - fineTune) & 0xFFFFFFE0;
 		else
-			loPeriod = tmpPeriod - fineTune;
+			loPeriod = (tmpPeriod - fineTune) & 0xFFFFFFE0;
 	}
 
-	tmpPeriod = loPeriod + fineTune + (relativeNote << 4);
-	if (tmpPeriod < 0) // added security check
+	tmpPeriod = loPeriod + fineTune + (arpNote << 5);
+
+	if (tmpPeriod < 0) // 8bitbubsy: added security check
 		tmpPeriod = 0;
 
-	if (tmpPeriod >= ((8*12*16)+15)-1) // FT2 bug: off-by-one edge case
-		tmpPeriod = (8*12*16)+15;
+	if (tmpPeriod >= (8*12*16+15)*2-1) // FT2 bug: off-by-one edge case
+		tmpPeriod = (8*12*16+15)*2;
 
-	return note2Period[tmpPeriod];
+	return note2Period[tmpPeriod>>1];
 }
 
 static void tonePorta(stmTyp *ch)
@@ -1559,7 +1559,7 @@ static void tonePorta(stmTyp *ch)
 		}
 	}
 
-	if (ch->glissFunk) // semi-tone slide flag
+	if (ch->glissFunk) // semitone-slide flag
 		ch->outPeriod = relocateTon(ch->realPeriod, 0, ch);
 	else
 		ch->outPeriod = ch->realPeriod;

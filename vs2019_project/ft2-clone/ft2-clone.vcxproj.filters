@@ -71,6 +71,7 @@
     <ClCompile Include="..\..\src\ft2_palette.c" />
     <ClCompile Include="..\..\src\ft2_scopedraw.c" />
     <ClCompile Include="..\..\src\ft2_tables.c" />
+    <ClCompile Include="..\..\src\ft2_intrp_table.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\ft2_audio.h">
@@ -203,6 +204,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ft2_tables.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_intrp_table.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

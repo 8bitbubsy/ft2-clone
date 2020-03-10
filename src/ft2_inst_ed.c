@@ -20,6 +20,7 @@
 #include "ft2_sample_loader.h"
 #include "ft2_diskop.h"
 #include "ft2_module_loader.h"
+#include "ft2_tables.h"
 
 #ifdef _MSC_VER
 #pragma pack(push)
@@ -257,32 +258,38 @@ static void drawMIDIBend(void)
 
 void midiChDown(void)
 {
-	scrollBarScrollLeft(SB_INST_EXT_MIDI_CH, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_EXT_MIDI_CH, 1);
 }
 
 void midiChUp(void)
 {
-	scrollBarScrollRight(SB_INST_EXT_MIDI_CH, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_EXT_MIDI_CH, 1);
 }
 
 void midiPrgDown(void)
 {
-	scrollBarScrollLeft(SB_INST_EXT_MIDI_PRG, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_EXT_MIDI_PRG, 1);
 }
 
 void midiPrgUp(void)
 {
-	scrollBarScrollRight(SB_INST_EXT_MIDI_PRG, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_EXT_MIDI_PRG, 1);
 }
 
 void midiBendDown(void)
 {
-	scrollBarScrollLeft(SB_INST_EXT_MIDI_BEND, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_EXT_MIDI_BEND, 1);
 }
 
 void midiBendUp(void)
 {
-	scrollBarScrollRight(SB_INST_EXT_MIDI_BEND, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_EXT_MIDI_BEND, 1);
 }
 
 void sbMidiChPos(uint32_t pos)
@@ -553,7 +560,7 @@ static void drawRelTone(void)
 
 static void setStdVolEnvelope(instrTyp *ins, uint8_t num)
 {
-	if (editor.curInstr == 0)
+	if (editor.curInstr == 0 || ins == NULL)
 		return;
 
 	pauseMusic();
@@ -576,7 +583,7 @@ static void setStdVolEnvelope(instrTyp *ins, uint8_t num)
 
 static void setStdPanEnvelope(instrTyp *ins, uint8_t num)
 {
-	if (editor.curInstr == 0)
+	if (editor.curInstr == 0 || ins == NULL)
 		return;
 
 	pauseMusic();
@@ -660,73 +667,73 @@ static void setOrStorePanEnvPreset(uint8_t num)
 
 void volPreDef1(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStoreVolEnvPreset(1 - 1);
 }
 
 void volPreDef2(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStoreVolEnvPreset(2 - 1);
 }
 
 void volPreDef3(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStoreVolEnvPreset(3 - 1);
 }
 
 void volPreDef4(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStoreVolEnvPreset(4 - 1);
 }
 
 void volPreDef5(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStoreVolEnvPreset(5 - 1);
 }
 
 void volPreDef6(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStoreVolEnvPreset(6 - 1);
 }
 
 void panPreDef1(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStorePanEnvPreset(1 - 1);
 }
 
 void panPreDef2(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStorePanEnvPreset(2 - 1);
 }
 
 void panPreDef3(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStorePanEnvPreset(3 - 1);
 }
 
 void panPreDef4(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStorePanEnvPreset(4 - 1);
 }
 
 void panPreDef5(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStorePanEnvPreset(5 - 1);
 }
 
 void panPreDef6(void)
 {
-	if (editor.curInstr > 0)
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
 		setOrStorePanEnvPreset(6 - 1);
 }
 
@@ -800,9 +807,11 @@ void volEnvAdd(void)
 {
 	int16_t i, ant;
 	instrTyp *ins = instr[editor.curInstr];
+	if (editor.curInstr == 0 || ins == NULL)
+		return;
 
 	ant = ins->envVPAnt;
-	if (ins == NULL || editor.curInstr == 0 || ant >= 12)
+	if (ant >= 12)
 		return;
 
 	i = (int16_t)editor.currVolEnvPoint;
@@ -989,9 +998,11 @@ void panEnvAdd(void)
 {
 	int16_t i, ant;
 	instrTyp *ins = instr[editor.curInstr];
+	if (ins == NULL || editor.curInstr == 0)
+		return;
 
 	ant = ins->envPPAnt;
-	if (ins == NULL || editor.curInstr == 0 || ant >= 12)
+	if (ant >= 12)
 		return;
 
 	i = (int16_t)editor.currPanEnvPoint;
@@ -1176,72 +1187,86 @@ void panEnvRepEDown(void)
 
 void volDown(void)
 {
-	scrollBarScrollLeft(SB_INST_VOL, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_VOL, 1);
 }
 
 void volUp(void)
 {
-	scrollBarScrollRight(SB_INST_VOL, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_VOL, 1);
 }
 
 void panDown(void)
 {
-	scrollBarScrollLeft(SB_INST_PAN, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_PAN, 1);
 }
 
 void panUp(void)
 {
-	scrollBarScrollRight(SB_INST_PAN, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_PAN, 1);
 }
 
 void ftuneDown(void)
 {
-	scrollBarScrollLeft(SB_INST_FTUNE, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_FTUNE, 1);
 }
 
 void ftuneUp(void)
 {
-	scrollBarScrollRight(SB_INST_FTUNE, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_FTUNE, 1);
 }
 
 void fadeoutDown(void)
 {
-	scrollBarScrollLeft(SB_INST_FADEOUT, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_FADEOUT, 1);
 }
 
 void fadeoutUp(void)
 {
-	scrollBarScrollRight(SB_INST_FADEOUT, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_FADEOUT, 1);
 }
 
 void vibSpeedDown(void)
 {
-	scrollBarScrollLeft(SB_INST_VIBSPEED, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_VIBSPEED, 1);
 }
 
 void vibSpeedUp(void)
 {
-	scrollBarScrollRight(SB_INST_VIBSPEED, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_VIBSPEED, 1);
 }
 
 void vibDepthDown(void)
 {
-	scrollBarScrollLeft(SB_INST_VIBDEPTH, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_VIBDEPTH, 1);
 }
 
 void vibDepthUp(void)
 {
-	scrollBarScrollRight(SB_INST_VIBDEPTH, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_VIBDEPTH, 1);
 }
 
 void vibSweepDown(void)
 {
-	scrollBarScrollLeft(SB_INST_VIBSWEEP, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollLeft(SB_INST_VIBSWEEP, 1);
 }
 
 void vibSweepUp(void)
 {
-	scrollBarScrollRight(SB_INST_VIBSWEEP, 1);
+	if (editor.curInstr != 0 && instr[editor.curInstr] != NULL)
+		scrollBarScrollRight(SB_INST_VIBSWEEP, 1);
 }
 
 void setVolumeScroll(uint32_t pos)
@@ -1553,7 +1578,7 @@ static void writePianoNumber(uint8_t note, uint8_t key, uint8_t octave)
 	uint16_t x;
 
 	number = 0;
-	if (instr[editor.curInstr] != NULL && editor.curInstr > 0)
+	if (instr[editor.curInstr] != NULL && editor.curInstr != 0)
 		number = instr[editor.curInstr]->ta[note];
 
 	x = keyDigitXPos[key] + (octave * 77);
@@ -1583,8 +1608,8 @@ void redrawPiano(void)
 	memset(pianoKeyStatus, 0, sizeof (pianoKeyStatus));
 	for (uint8_t i = 0; i < 96; i++)
 	{
-		key = i % 12;
-		octave = i / 12;
+		key = noteTab1[i];
+		octave = noteTab2[i];
 
 		if (keyIsBlackTab[key])
 			drawBlackPianoKey(key, octave, false);
@@ -1602,7 +1627,10 @@ bool testPianoKeysMouseDown(bool mouseButtonDown)
 	instrTyp *ins;
 
 	if (!editor.ui.instEditorShown)
-		return false;
+		return false; // area not clicked
+
+	if (editor.curInstr == 0 || instr[editor.curInstr] == NULL)
+		return true; // area clicked, but don't do anything
 
 	mx = mouse.x;
 	my = mouse.y;
@@ -1621,8 +1649,6 @@ bool testPianoKeysMouseDown(bool mouseButtonDown)
 	}
 
 	ins = instr[editor.curInstr];
-	if (ins == NULL)
-		return true;
 
 	mx -= 8;
 	if (my < 378)
@@ -1665,7 +1691,7 @@ bool testPianoKeysMouseDown(bool mouseButtonDown)
 		if (ins->ta[note] != editor.curSmp)
 		{
 			ins->ta[note] = editor.curSmp;
-			writePianoNumber(note, note % 12, octave);
+			writePianoNumber(note, noteTab2[note], octave);
 			setSongModifiedFlag();
 		}
 	}
@@ -1673,45 +1699,40 @@ bool testPianoKeysMouseDown(bool mouseButtonDown)
 	return true;
 }
 
-static uint8_t getNote(uint8_t i) // returns 1..96
+/* 8bitbubsy: This is my new version of FT2's buggy getNote().
+** It's used to convert a channel's period into a piano key number.
+**
+** It's probably slower in "Amiga frequencies" mode, but at least it doesn't
+** have weird overflow/underflow patterns.
+**
+** Warning: This function intentionally doesn't clamp the output value!
+*/
+static int32_t getPianoKey(int32_t period, int32_t finetune, int32_t relativeTone, bool linearFrequencies)
 {
-	int8_t fineTune;
-	uint8_t note;
-	int32_t period, loPeriod, hiPeriod, tmpPeriod, tableIndex;
-	stmTyp *ch;
+	int32_t note;
 
-	ch = &stm[i];
+	finetune >>= 3; // FT2 does this in the replayer internally
 
-	fineTune = (ch->fineTune >> 3) + 16;
-	hiPeriod = 8 * 12 * 16;
-	loPeriod = 0;
-	period = ch->finalPeriod;
-
-	for (i = 0; i < 8; i++)
+	if (linearFrequencies)
 	{
-		tmpPeriod = (((loPeriod + hiPeriod) >> 1) & 0xFFFFFFF0) + fineTune;
-
-		tableIndex = tmpPeriod - 8;
-		if (tableIndex < 0) // added security check
-			tableIndex = 0;
-
-		if (period >= note2Period[tableIndex])
-			hiPeriod = tmpPeriod - fineTune;
-		else
-			loPeriod = tmpPeriod - fineTune;
+		period = ((10 * 12 * 16 * 4) - period) - (finetune << 2);
+		note = (period + (1 << 5)) >> 6; // rounded
+	}
+	else
+	{
+		double dNote = (log2(period * (1.0 / (1712.0 * 16.0))) * -12.0) - (finetune * (1.0 / 16.0));
+		note = (int32_t)(dNote + 0.5); // rounded
 	}
 
-	if (loPeriod >= ((8*12*16) + 15) - 1) // FT2 bug: off-by-one error
-		loPeriod = (8*12*16) + 15;
-
-	note = (uint8_t)(((loPeriod + 8) >> 4) - ch->relTonNr) + 1;
+	note -= relativeTone;
 	return note;
 }
 
-void drawPiano(void) // draw piano in idle mode
+void drawPiano(void) // draw piano in idle mode (jamming keys)
 {
 	bool keyDown, newStatus[96];
-	uint8_t key, note, octave;
+	uint8_t key, octave;
+	int32_t note;
 	stmTyp *ch;
 
 	memset(newStatus, 0, sizeof (newStatus));
@@ -1722,11 +1743,11 @@ void drawPiano(void) // draw piano in idle mode
 		for (uint8_t i = 0; i < song.antChn; i++)
 		{
 			ch = &stm[i];
-			if (ch->instrNr == editor.curInstr)
+			if (ch->instrNr == editor.curInstr && ch->envSustainActive)
 			{
-				note = getNote(i);
-				if (ch->envSustainActive)
-					newStatus[(note - 1) % 96] = true;
+				note = getPianoKey(ch->finalPeriod, ch->fineTune, ch->relTonNr, linearFrqTab);
+				if (note >= 0 && note <= 95)
+					newStatus[note] = true;
 			}
 		}
 	}
@@ -1737,8 +1758,8 @@ void drawPiano(void) // draw piano in idle mode
 		keyDown = newStatus[i];
 		if (pianoKeyStatus[i] ^ keyDown)
 		{
-			key = i % 12;
-			octave = i / 12;
+			key = noteTab1[i];
+			octave = noteTab2[i];
 
 			if (keyIsBlackTab[key])
 				drawBlackPianoKey(key, octave, keyDown);
@@ -1750,42 +1771,11 @@ void drawPiano(void) // draw piano in idle mode
 	}
 }
 
-static uint8_t getNoteReplayer(syncedChannel_t *ch) // returns 1..96
-{
-	int8_t fineTune;
-	uint8_t note;
-	int32_t period, loPeriod, hiPeriod, tmpPeriod, tableIndex;
-
-	fineTune = (ch->fineTune >> 3) + 16;
-	hiPeriod = 8 * 12 * 16;
-	loPeriod = 0;
-	period = ch->finalPeriod;
-
-	for (uint8_t i = 0; i < 8; i++)
-	{
-		tmpPeriod = (((loPeriod + hiPeriod) >> 1) & 0xFFFFFFF0) + fineTune;
-
-		tableIndex = tmpPeriod - 8;
-		if (tableIndex < 0) // added security check
-			tableIndex = 0;
-
-		if (period >= note2Period[tableIndex])
-			hiPeriod = tmpPeriod - fineTune;
-		else
-			loPeriod = tmpPeriod - fineTune;
-	}
-
-	if (loPeriod >= ((8*12*16) + 15) - 1) // FT2 bug: off-by-one error
-		loPeriod = (8*12*16) + 15;
-
-	note = (uint8_t)(((loPeriod + 8) >> 4) - ch->relTonNr) + 1;
-	return note;
-}
-
-void drawPianoReplayer(chSyncData_t *chSyncData) // draw piano with synced replayer datas
+void drawPianoReplayer(chSyncData_t *chSyncData) // draw piano with synced replayer state (song playing)
 {
 	bool keyDown, newStatus[96];
-	uint8_t key, note, octave;
+	uint8_t key, octave;
+	int32_t note;
 	syncedChannel_t *ch;
 
 	memset(newStatus, 0, sizeof (newStatus));
@@ -1796,11 +1786,11 @@ void drawPianoReplayer(chSyncData_t *chSyncData) // draw piano with synced repla
 		for (uint8_t i = 0; i < song.antChn; i++)
 		{
 			ch = &chSyncData->channels[i];
-			if (ch->instrNr == editor.curInstr)
+			if (ch->instrNr == editor.curInstr && ch->envSustainActive)
 			{
-				note = getNoteReplayer(ch);
-				if (ch->envSustainActive)
-					newStatus[(note - 1) % 96] = true;
+				note = getPianoKey(ch->finalPeriod, ch->fineTune, ch->relTonNr, linearFrqTab);
+				if (note >= 0 && note <= 95)
+					newStatus[note] = true;
 			}
 		}
 	}
@@ -1811,8 +1801,8 @@ void drawPianoReplayer(chSyncData_t *chSyncData) // draw piano with synced repla
 		keyDown = newStatus[i];
 		if (pianoKeyStatus[i] ^ keyDown)
 		{
-			key = i % 12;
-			octave = i / 12;
+			key = noteTab1[i];
+			octave = noteTab2[i];
 
 			if (keyIsBlackTab[key])
 				drawBlackPianoKey(key, octave, keyDown);
