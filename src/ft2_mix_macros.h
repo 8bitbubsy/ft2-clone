@@ -117,6 +117,16 @@
 	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> CUBIC_QUANTSHIFT; \
 } \
 
+/* 8bitbubsy: It may look like we are potentially going out of bounds by looking up sample point
+** -1, 1 and 2, but the sample data is actually padded on both the left (negative) and right side,
+** where correct samples are stored according to loop mode (or no loop).
+**
+** The only issue is that the -1 look-up gets wrong information if loopStart>0 on looped-samples,
+** and the sample-position is at loopStart. The spline will get ever so slighty wrong because of this,
+** but it's barely audible anyway. Doing it elsewise would require a refactoring of how the audio mixer
+** works!
+*/
+
 #define RENDER_8BIT_SMP_INTRP \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
 	sample = smpPtr[-1]; \
@@ -179,6 +189,11 @@
 	s2 = (s2 - s1) >> 1; \
 	s2 = (s2 * (int32_t)f) >> (16 - 1); \
 	s1 += s2; \
+
+/* 8bitbubsy: It may look like we are potentially going out of bounds by looking up sample point
+** 1, but the sample data is actually padded on the right side, where a correct sample is stored
+** according to loop mode (or no loop). This is how original FT2 (MS-DOS) does it as well.
+*/
 
 #define RENDER_8BIT_SMP_INTRP \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
