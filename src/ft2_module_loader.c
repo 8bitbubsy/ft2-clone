@@ -143,7 +143,7 @@ static void setupLoadedModule(void);
 static void freeTmpModule(void);
 static bool loadInstrHeader(FILE *f, uint16_t i);
 static bool loadInstrSample(FILE *f, uint16_t i);
-void unpackPatt(uint8_t *dst, uint16_t inn, uint16_t len, uint8_t antChn);
+void unpackPatt(uint8_t *dst, uint16_t inn, uint16_t len, int32_t antChn);
 static bool tmpPatternEmpty(uint16_t nr);
 static bool loadPatterns(FILE *f, uint16_t antPtn);
 
@@ -2146,7 +2146,7 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 			ins->midiChannel = ih.midiChannel;
 			ins->midiProgram = ih.midiProgram;
 			ins->midiBend = ih.midiBend;
-			ins->mute = (ih.mute > 0) ? true : false;
+			ins->mute = (ih.mute == 1) ? true : false;
 			ins->antSamp = ih.antSamp; // used in loadInstrSample()
 
 			// sanitize stuff for broken/unsupported instruments
@@ -2328,7 +2328,7 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 	return true;
 }
 
-void unpackPatt(uint8_t *dst, uint16_t inn, uint16_t len, uint8_t antChn)
+void unpackPatt(uint8_t *dst, uint16_t inn, uint16_t len, int32_t antChn)
 {
 	uint8_t note, data, *src;
 	int32_t srcEnd, srcIdx;
@@ -2404,7 +2404,7 @@ static bool tmpPatternEmpty(uint16_t nr)
 	return true;
 }
 
-void clearUnusedChannels(tonTyp *p, int16_t pattLen, uint8_t antChn)
+void clearUnusedChannels(tonTyp *p, int16_t pattLen, int32_t antChn)
 {
 	if (p == NULL || antChn >= MAX_VOICES)
 		return;

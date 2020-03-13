@@ -62,7 +62,7 @@ bool saveXM(UNICHAR *filenameU)
 	h.headerSize = 20 + 256;
 	h.len = song.len;
 	h.repS = song.repS;
-	h.antChn = song.antChn;
+	h.antChn = (uint16_t)song.antChn;
 	h.defTempo = song.tempo;
 	h.defSpeed = song.speed;
 

@@ -338,6 +338,8 @@ void calcReplayRate(int32_t rate) // 100% FT2-accurate routine, do not touch!
 	// for volume ramping (FT2 doesn't round here)
 	audio.quickVolSizeVal = rate / 200;
 
+	audio.rampQuickVolMul = (int32_t)round((UINT32_MAX + 1.0) / audio.quickVolSizeVal);
+
 	// for audio/video sync
 	audio.dSpeedValMul = (1.0 / rate) * editor.dPerfFreq;
 }
@@ -2359,14 +2361,14 @@ bool allocateInstr(int16_t nr)
 	return true;
 }
 
-void freeInstr(int16_t nr)
+void freeInstr(int32_t nr)
 {
 	if (instr[nr] == NULL)
 		return; // not allocated
 
 	pauseAudio(); // channel instrument pointers are now cleared
 
-	for (int8_t i = 0; i < 16; i++) // free sample data
+	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++) // free sample data
 	{
 		sampleTyp *s = &instr[nr]->samp[i];
 
@@ -3203,7 +3205,7 @@ void setSyncedReplayerVars(void)
 		if (chSyncEntry == NULL)
 			break;
 
-		for (uint32_t i = 0; i < song.antChn; i++)
+		for (int32_t i = 0; i < song.antChn; i++)
 			scopeUpdateStatus[i] |= chSyncEntry->channels[i].status; // yes, OR the status
 
 		if (!chQueuePop())

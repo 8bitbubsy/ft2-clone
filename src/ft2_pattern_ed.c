@@ -373,7 +373,7 @@ void cursorChannelLeft(void)
 
 	if (editor.cursor.ch == 0)
 	{
-		editor.cursor.ch = song.antChn - 1;
+		editor.cursor.ch = (uint8_t)(song.antChn - 1);
 		if (editor.ui.pattChanScrollShown)
 			setScrollBarPos(SB_CHAN_SCROLL, song.antChn, true);
 	}
@@ -756,7 +756,7 @@ void checkMarkLimits(void)
 	pattMark.markY1 = CLAMP(pattMark.markY1, 0, limit);
 	pattMark.markY2 = CLAMP(pattMark.markY2, 0, limit);
 
-	limit = song.antChn - 1;
+	limit = (uint16_t)(song.antChn - 1);
 	pattMark.markX1 = CLAMP(pattMark.markX1, 0, limit);
 	pattMark.markX2 = CLAMP(pattMark.markX2, 0, limit);
 
@@ -784,7 +784,7 @@ static int8_t mouseXToCh(void) // used to get channel num from mouse x (for patt
 
 	// in some setups there can be non-used channels to the right, do clamping
 	if (ch >= song.antChn)
-		ch  = song.antChn - 1;
+		ch = (int8_t)(song.antChn - 1);
 
 	return ch;
 }
@@ -1483,7 +1483,7 @@ void setChannelScrollPos(uint32_t pos)
 
 	assert(song.antChn > editor.ui.numChannelsShown);
 	if (editor.ui.channelOffset >= song.antChn-editor.ui.numChannelsShown)
-		editor.ui.channelOffset = song.antChn-editor.ui.numChannelsShown;
+		editor.ui.channelOffset = (uint8_t)(song.antChn-editor.ui.numChannelsShown);
 
 	if (editor.cursor.ch >= editor.ui.channelOffset+editor.ui.numChannelsShown)
 	{

@@ -1623,7 +1623,7 @@ void copyBlock(void)
 
 void pasteBlock(void)
 {
-	uint16_t xpos, ypos, j, k, pattLen;
+	int32_t xpos, ypos, j, k, pattLen;
 	tonTyp *pattPtr;
 
 	if (!blockCopied || !allocatePattern(editor.editPattern))
@@ -1645,9 +1645,9 @@ void pasteBlock(void)
 	pattPtr = patt[editor.editPattern];
 
 	pauseMusic();
-	for (uint16_t x = xpos; x <= xpos+j; x++)
+	for (int32_t x = xpos; x <= xpos+j; x++)
 	{
-		for (uint16_t y = ypos; y < ypos+k; y++)
+		for (int32_t y = ypos; y < ypos+k; y++)
 		{
 			assert(x < song.antChn && y < pattLen);
 			pasteNote(&blkCopyBuff[((y - ypos) * MAX_VOICES) + (x - xpos)], &pattPtr[(y * MAX_VOICES) + x]);
@@ -1730,7 +1730,7 @@ void remapPattern(void)
 	pauseMusic();
 	remapInstrXY(editor.editPattern,
 	             0, 0,
-	             song.antChn - 1, pattLens[editor.editPattern] - 1,
+	             (uint16_t)(song.antChn - 1), pattLens[editor.editPattern] - 1,
 	             editor.srcInstr, editor.curInstr);
 	resumeMusic();
 
@@ -1746,13 +1746,13 @@ void remapSong(void)
 		return;
 
 	pauseMusic();
-	for (uint16_t i = 0; i < MAX_PATTERNS; i++)
+	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
 		pattNr = (uint8_t)i;
 
 		remapInstrXY(pattNr,
 		             0, 0,
-		             song.antChn - 1, pattLens[pattNr] - 1,
+		             (uint16_t)(song.antChn - 1), pattLens[pattNr] - 1,
 		             editor.srcInstr, editor.curInstr);
 	}
 	resumeMusic();

@@ -216,8 +216,9 @@ typedef struct songTyp_t
 	bool pBreakFlag, posJumpFlag, isModified;
 	char name[20+1], instrName[1+MAX_INST][22+1];
 	uint8_t curReplayerTimer, curReplayerPattPos, curReplayerSongPos, curReplayerPattNr; // used for audio/video sync queue
-	uint8_t antChn, pattDelTime, pattDelTime2, pBreakPos, songTab[MAX_ORDERS];
+	uint8_t pattDelTime, pattDelTime2, pBreakPos, songTab[MAX_ORDERS];
 	int16_t songPos, pattNr, pattPos, pattLen;
+	int32_t antChn;
 	uint16_t len, repS, speed, tempo, globVol, timer, ver, initialTempo;
 	uint32_t musicTime;
 } songTyp;
@@ -246,7 +247,7 @@ void tuneSample(sampleTyp *s, int32_t midCFreq);
 uint32_t getFrequenceValue(int32_t period);
 
 bool allocateInstr(int16_t nr);
-void freeInstr(int16_t nr);
+void freeInstr(int32_t nr);
 void freeAllInstr(void);
 void freeSample(int16_t nr, int16_t nr2);
 

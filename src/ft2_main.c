@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
 
 	setupWin32Usleep();
 	disableWasapi(); // disable problematic WASAPI SDL2 audio driver on Windows (causes clicks/pops sometimes...)
+	                 // 13.03.2020: This is still needed with SDL 2.0.12...
 #endif
 
 	/* SDL 2.0.9 for Windows has a serious bug where you need to initialize the joystick subsystem

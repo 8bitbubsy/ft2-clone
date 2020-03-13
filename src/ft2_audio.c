@@ -160,6 +160,8 @@ void setSpeed(uint16_t bpm)
 		// - fractional part (scaled to 0..2^32-1) -
 		dFrac *= UINT32_MAX;
 		tickTimeLenFrac = (uint32_t)(dFrac + 0.5);
+
+		audio.rampSpeedValMul = 0xFFFFFFFF / speedVal;
 	}
 }
 
@@ -177,9 +179,9 @@ void audioSetInterpolation(bool interpolation)
 	unlockMixerCallback();
 }
 
-static inline void voiceUpdateVolumes(uint8_t i, uint8_t status)
+static void voiceUpdateVolumes(int32_t i, uint8_t status)
 {
-	int32_t volL, volR;
+	int32_t volL, volR, destVolL, destVolR;
 	uint32_t vol;
 	voice_t *v, *f;
 
@@ -213,8 +215,12 @@ static inline void voiceUpdateVolumes(uint8_t i, uint8_t status)
 				*f = *v; // copy voice
 
 				f->SVolIPLen = audio.quickVolSizeVal;
-				f->SLVolIP = -f->SLVol2 / f->SVolIPLen;
-				f->SRVolIP = -f->SRVol2 / f->SVolIPLen;
+
+				destVolL = -f->SLVol2;
+				destVolR = -f->SRVol2;
+
+				f->SLVolIP = ((int64_t)destVolL * audio.rampQuickVolMul) >> 32;
+				f->SRVolIP = ((int64_t)destVolR * audio.rampQuickVolMul) >> 32;
 
 				f->isFadeOutVoice = true;
 			}
@@ -237,14 +243,26 @@ static inline void voiceUpdateVolumes(uint8_t i, uint8_t status)
 		}
 		else
 		{
-			v->SVolIPLen = (status & IS_QuickVol) ? audio.quickVolSizeVal : speedVal;
-			v->SLVolIP = (volL - v->SLVol2) / v->SVolIPLen;
-			v->SRVolIP = (volR - v->SRVol2) / v->SVolIPLen;
+			destVolL = volL - v->SLVol2;
+			destVolR = volR - v->SRVol2;
+
+			if (status & IS_QuickVol)
+			{
+				v->SVolIPLen = audio.quickVolSizeVal;
+				v->SLVolIP = ((int64_t)destVolL * audio.rampQuickVolMul) >> 32;
+				v->SRVolIP = ((int64_t)destVolR * audio.rampQuickVolMul) >> 32;
+			}
+			else
+			{
+				v->SVolIPLen = speedVal;
+				v->SLVolIP = ((int64_t)destVolL * audio.rampSpeedValMul) >> 32;
+				v->SRVolIP = ((int64_t)destVolR * audio.rampSpeedValMul) >> 32;
+			}
 		}
 	}
 }
 
-static void voiceTrigger(uint8_t i, sampleTyp *s, int32_t position)
+static void voiceTrigger(int32_t i, sampleTyp *s, int32_t position)
 {
 	bool sampleIs16Bit;
 	uint8_t loopType;
@@ -328,7 +346,7 @@ void mix_UpdateChannelVolPanFrq(void)
 	ch = stm;
 	v = voice;
 
-	for (uint8_t i = 0; i < song.antChn; i++, ch++, v++)
+	for (int32_t i = 0; i < song.antChn; i++, ch++, v++)
 	{
 		status = ch->tmpStatus = ch->status; // ch->tmpStatus is used for audio/video sync queue
 		if (status == 0)
@@ -353,7 +371,7 @@ void mix_UpdateChannelVolPanFrq(void)
 		{
 			v->SFrq = getFrequenceValue(ch->finalPeriod);
 
-			if (v->SFrq != oldSFrq)
+			if (v->SFrq != oldSFrq) // this value will very often be the same as before
 			{
 				oldSFrq = v->SFrq;
 
@@ -542,7 +560,7 @@ static void mixAudio(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAud
 	v = voice; // normal voices
 	r = &voice[MAX_VOICES]; // volume ramp voices
 
-	for (uint32_t i = 0; i < song.antChn; i++, v++, r++)
+	for (int32_t i = 0; i < song.antChn; i++, v++, r++)
 	{
 		// call the mixing routine currently set for the voice
 		if (v->mixRoutine != NULL) v->mixRoutine(v, sampleBlockLength); // mix normal voice
@@ -566,7 +584,7 @@ uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth)
 	v = voice; // normal voices
 	r = &voice[MAX_VOICES]; // volume ramp voices
 
-	for (uint32_t i = 0; i < song.antChn; i++, v++, r++)
+	for (int32_t i = 0; i < song.antChn; i++, v++, r++)
 	{
 		// call the mixing routine currently set for the voice
 		if (v->mixRoutine != NULL) v->mixRoutine(v, speedVal); // mix normal voice
@@ -900,7 +918,7 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 			}
 
 			// push channel variables to sync queue
-			for (uint32_t i = 0; i < song.antChn; i++)
+			for (int32_t i = 0; i < song.antChn; i++)
 			{
 				c = &chSyncData.channels[i];
 				s = &stm[i];

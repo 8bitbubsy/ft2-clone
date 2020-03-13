@@ -65,12 +65,12 @@ static bool setTmpInstruments(void)
 	return true;
 }
 
-static void remapInstrInSong(uint8_t src, uint8_t dst, int16_t ap)
+static void remapInstrInSong(uint8_t src, uint8_t dst, int32_t ap)
 {
 	int32_t readLen;
 	tonTyp *pattPtr, *note;
 
-	for (int16_t i = 0; i < ap; i++)
+	for (int32_t i = 0; i < ap; i++)
 	{
 		pattPtr = patt[i];
 		if (pattPtr == NULL)
@@ -149,10 +149,11 @@ static int64_t getTempInsAndSmpSize(void)
 	return currSize64;
 }
 
-static void wipeInstrUnused(bool testWipeSize, int16_t *ai, int16_t ap, uint8_t antChn)
+static void wipeInstrUnused(bool testWipeSize, int16_t *ai, int32_t ap, int32_t antChn)
 {
 	uint8_t newInst;
-	int16_t numInsts, newNumInsts, instToDel, i, j, k, pattLen;
+	int16_t newNumInsts, instToDel, pattLen;
+	int32_t numInsts, i, j, k;
 	tonTyp *pattPtr;
 
 	numInsts = *ai;
@@ -599,7 +600,7 @@ static void convertSamplesTo8bit(bool testWipeSize, int16_t ai)
 	}
 }
 
-static uint16_t getPackedPattSize(tonTyp *pattern, uint16_t numRows, uint8_t antChn)
+static uint16_t getPackedPattSize(tonTyp *pattern, int32_t numRows, int32_t antChn)
 {
 	uint8_t bytes[sizeof (tonTyp)], packBits, *writePtr, *firstBytePtr, *pattPtr;
 	uint16_t totalPackLen;
@@ -609,9 +610,9 @@ static uint16_t getPackedPattSize(tonTyp *pattern, uint16_t numRows, uint8_t ant
 	pattPtr = (uint8_t *)pattern;
 
 	writePtr = pattPtr;
-	for (uint16_t row = 0; row < numRows; row++)
+	for (int32_t row = 0; row < numRows; row++)
 	{
-		for (uint16_t chn = 0; chn < antChn; chn++)
+		for (int32_t chn = 0; chn < antChn; chn++)
 		{
 			bytes[0] = *pattPtr++;
 			bytes[1] = *pattPtr++;
@@ -648,10 +649,10 @@ static uint16_t getPackedPattSize(tonTyp *pattern, uint16_t numRows, uint8_t ant
 	return totalPackLen;
 }
 
-static bool tmpPatternEmpty(uint16_t nr, uint8_t antChn)
+static bool tmpPatternEmpty(uint16_t nr, int32_t antChn)
 {
 	uint8_t *scanPtr;
-	uint32_t pattLen, scanLen;
+	int32_t pattLen, scanLen;
 
 	if (tmpPatt[nr] == NULL)
 		return true;
@@ -660,9 +661,9 @@ static bool tmpPatternEmpty(uint16_t nr, uint8_t antChn)
 	scanLen = antChn * sizeof (tonTyp);
 	pattLen = tmpPattLens[nr];
 
-	for (uint32_t i = 0; i < pattLen; i++)
+	for (int32_t i = 0; i < pattLen; i++)
 	{
-		for (uint32_t j = 0; j < scanLen; j++)
+		for (int32_t j = 0; j < scanLen; j++)
 		{
 			if (scanPtr[j] != 0)
 				return false;
@@ -734,9 +735,8 @@ static int64_t calculateXMSize(void)
 
 static int64_t calculateTrimSize(void)
 {
-	uint8_t antChn;
 	int16_t ap, i, j, k, ai, highestChan, pattLen;
-	int32_t pattDataLen, newPattDataLen;
+	int32_t antChn, pattDataLen, newPattDataLen;
 	int64_t bytes64, oldInstrSize64, newInstrSize64;
 	tonTyp *note, *pattPtr;
 

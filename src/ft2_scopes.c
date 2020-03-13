@@ -97,7 +97,7 @@ void stopAllScopes(void)
 }
 
 // toggle mute
-static void setChannel(int16_t nr, bool on)
+static void setChannel(int32_t nr, bool on)
 {
 	stmTyp *ch;
 
@@ -154,13 +154,13 @@ static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t ch
 	}
 }
 
-static void redrawScope(int16_t ch)
+static void redrawScope(int32_t ch)
 {
-	uint8_t chansPerRow;
 	const uint16_t *scopeLens;
-	uint16_t x, y, i, chanLookup, scopeLen, muteGfxLen, muteGfxX;
+	uint16_t x, y, scopeLen, muteGfxLen, muteGfxX;
+	int32_t i, chanLookup, chansPerRow;
 
-	chansPerRow = song.antChn / 2;
+	chansPerRow = (uint32_t)song.antChn >> 1;
 	chanLookup = chansPerRow - 1;
 	scopeLens = scopeLenTab[chanLookup];
 
@@ -192,7 +192,7 @@ static void redrawScope(int16_t ch)
 	if (!editor.chnMode[i])
 	{
 		muteGfxLen = scopeMuteBMPWidths[chanLookup];
-		muteGfxX = x + ((scopeLen - muteGfxLen) / 2);
+		muteGfxX = x + ((scopeLen - muteGfxLen) >> 1);
 
 		blitFast(muteGfxX, y + 6, scopeMuteBMPPointers[chanLookup], muteGfxLen, scopeMuteBMPHeights[chanLookup]);
 
@@ -209,10 +209,10 @@ void refreshScopes(void)
 		scope[i].wasCleared = false;
 }
 
-static void channelMode(int16_t chn)
+static void channelMode(int32_t chn)
 {
 	bool m, m2, test;
-	int16_t i;
+	int32_t i;
 	
 	assert(chn < song.antChn);
 
@@ -273,10 +273,9 @@ static void channelMode(int16_t chn)
 
 bool testScopesMouseDown(void)
 {
-	int8_t chanToToggle;
-	uint8_t i, chansPerRow;
 	uint16_t x;
 	const uint16_t *scopeLens;
+	int32_t i, chansPerRow, chanToToggle;
 
 	if (!editor.ui.scopesShown)
 		return false;
@@ -286,7 +285,7 @@ bool testScopesMouseDown(void)
 		if (mouse.y > 130 && mouse.y < 134)
 			return true;
 
-		chansPerRow = song.antChn / 2;
+		chansPerRow = (uint32_t)song.antChn >> 1;
 		scopeLens = scopeLenTab[chansPerRow-1];
 
 		// find out if we clicked inside a scope
@@ -394,7 +393,7 @@ static void updateScopes(void)
 	scopesUpdatingFlag = true;
 
 	sc = scope;
-	for (uint32_t i = 0; i < song.antChn; i++, sc++)
+	for (int32_t i = 0; i < song.antChn; i++, sc++)
 	{
 		tempState = *sc; // cache it
 		if (!tempState.active)
@@ -453,19 +452,20 @@ void drawScopes(void)
 {
 	int16_t scopeLineY;
 	const uint16_t *scopeLens;
-	uint16_t chansPerRow, scopeXOffs, scopeYOffs, scopeDrawLen;
+	uint16_t scopeXOffs, scopeYOffs, scopeDrawLen;
+	int32_t chansPerRow;
 	volatile scope_t *sc;
 	scope_t s;
 
 	scopesDisplayingFlag = true;
-	chansPerRow = song.antChn / 2;
+	chansPerRow = (uint32_t)song.antChn >> 1;
 
 	scopeLens = scopeLenTab[chansPerRow-1];
 	scopeXOffs = 3;
 	scopeYOffs = 95;
 	scopeLineY = 112;
 
-	for (int16_t i = 0; i < song.antChn; i++)
+	for (int32_t i = 0; i < song.antChn; i++)
 	{
 		// if we reached the last scope on the row, go to first scope on the next row
 		if (i == chansPerRow)
