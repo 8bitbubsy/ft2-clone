@@ -1742,7 +1742,11 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 
 				if (pattTon->effTyp == 0x9 && pattTon->eff > 0 && pattTon->instr > 0 && pattTon->instr <= ai && ai <= 128)
 				{
-					s = &instrTmp[pattTon->instr]->samp[0];
+					instrTyp *ins = instrTmp[pattTon->instr];
+					if (ins == NULL)
+						continue; // empty instrument (sample)
+
+					s = &ins->samp[0];
 					if (s->len > 0 && (s->typ & 1)) // only handle non-empty looping samples
 					{
 						uint32_t loopEnd = s->repS + s->repL;
