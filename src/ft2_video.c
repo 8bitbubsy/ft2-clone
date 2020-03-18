@@ -1108,7 +1108,7 @@ static void drawReplayerData(void)
 			if (editor.ui.instEditorShown)
 			{
 				if (chSyncEntry != NULL)
-					drawPianoReplayer(chSyncEntry);
+					drawPiano(chSyncEntry);
 			}
 		}
 
@@ -1157,7 +1157,7 @@ static void drawReplayerData(void)
 	}
 	else if (editor.ui.instEditorShown)
 	{
-		drawPiano();
+		drawPiano(NULL);
 	}
 
 	// handle pattern data updates

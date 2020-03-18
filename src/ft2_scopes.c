@@ -378,9 +378,10 @@ static void scopeTrigger(uint8_t ch, sampleTyp *s, int32_t playOffset)
 
 	/* Update live scope now.
 	** In theory it -can- be written to in the middle of a cached read,
-    ** then the read thread writes its own non-updated cached copy back and
+	** then the read thread writes its own non-updated cached copy back and
 	** the trigger never happens. So far I have never seen it happen,
-	** so it's probably very rare. Yes, this is not good coding... */
+	** so it's probably very rare. Yes, this is not good coding...
+	*/
 	*sc = tempState;
 }
 
@@ -558,7 +559,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 			if (ch->voiceDelta != oldVoiceDelta)
 			{
 				oldVoiceDelta = ch->voiceDelta;
-				oldSFrq = (int32_t)((oldVoiceDelta * audio.dScopeFreqMul) + 0.5); // rounded
+				oldSFrq = (int32_t)(((int32_t)oldVoiceDelta * audio.dScopeFreqMul) + 0.5); // rounded
 			}
 
 			sc->SFrq = oldSFrq;

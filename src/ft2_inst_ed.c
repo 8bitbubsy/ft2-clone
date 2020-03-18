@@ -1701,108 +1701,74 @@ bool testPianoKeysMouseDown(bool mouseButtonDown)
 
 /* 8bitbubsy: This is my new version of FT2's buggy getNote().
 ** It's used to convert a channel's period into a piano key number.
+** Or in this case, a voice's frequency into a piano key number.
 **
-** It's probably slower in "Amiga frequencies" mode, but at least it doesn't
-** have weird overflow/underflow patterns.
+** It's probably slower than the original version, but this one is
+** 100% accurate in all (quirky) situations.
 **
 ** Warning: This function intentionally doesn't clamp the output value!
 */
-static int32_t getPianoKey(int32_t period, int32_t finetune, int32_t relativeTone, bool linearFrequencies)
+static int32_t getPianoKey(int32_t voiceDelta, int32_t finetune, int32_t relativeNote)
 {
-	int32_t note;
+	finetune >>= 3; // FT2 does this in the replayer internally (-128..127 -> -16..15)
 
-	finetune >>= 3; // FT2 does this in the replayer internally
+	double dTmp = voiceDelta * audio.dPianoDeltaMul;
+	dTmp = (log2(dTmp) * 12.0) - (finetune * (1.0 / 16.0));
+	int32_t note = (int32_t)(dTmp + 0.5); // rounded
 
-	if (linearFrequencies)
-	{
-		period = ((10 * 12 * 16 * 4) - period) - (finetune << 2);
-		note = (period + (1 << 5)) >> 6; // rounded
-	}
-	else
-	{
-		double dNote = (log2(period * (1.0 / (1712.0 * 16.0))) * -12.0) - (finetune * (1.0 / 16.0));
-		note = (int32_t)(dNote + 0.5); // rounded
-	}
+	note -= relativeNote;
+	// "note" is now the raw piano key number, unaffected by finetune/relativeNote
 
-	note -= relativeTone;
 	return note;
 }
 
-void drawPiano(void) // draw piano in idle mode (jamming keys)
+void drawPiano(chSyncData_t *chSyncData)
 {
-	bool keyDown, newStatus[96];
-	uint8_t key, octave;
+	bool newStatus[96];
 	int32_t note;
-	stmTyp *ch;
 
 	memset(newStatus, 0, sizeof (newStatus));
 
 	// find active notes
 	if (editor.curInstr > 0)
 	{
-		for (uint8_t i = 0; i < song.antChn; i++)
+		if (chSyncData != NULL) // song is playing, use replayer channel state
 		{
-			ch = &stm[i];
-			if (ch->instrNr == editor.curInstr && ch->envSustainActive)
+			syncedChannel_t *c = chSyncData->channels;
+			for (int32_t i = 0; i < song.antChn; i++, c++)
 			{
-				note = getPianoKey(ch->finalPeriod, ch->fineTune, ch->relTonNr, linearFrqTab);
-				if (note >= 0 && note <= 95)
-					newStatus[note] = true;
+				if (c->instrNr == editor.curInstr && c->envSustainActive)
+				{
+					note = getPianoKey(c->voiceDelta, c->fineTune, c->relTonNr);
+					if (note >= 0 && note <= 95)
+						newStatus[note] = true;
+				}
+			}
+		}
+		else // song is not playing (jamming from keyboard/MIDI)
+		{
+			stmTyp *c = stm;
+			for (int32_t i = 0; i < song.antChn; i++, c++)
+			{
+				if (c->instrNr == editor.curInstr && c->envSustainActive)
+				{
+					int32_t voiceDelta = getFrequenceValue(c->finalPeriod);
+					note = getPianoKey(voiceDelta, c->fineTune, c->relTonNr);
+					if (note >= 0 && note <= 95)
+						newStatus[note] = true;
+				}
 			}
 		}
 	}
 
 	// draw keys
-	for (uint8_t i = 0; i < 96; i++)
+	for (int32_t i = 0; i < 96; i++)
 	{
-		keyDown = newStatus[i];
+		bool keyDown = newStatus[i];
 		if (pianoKeyStatus[i] ^ keyDown)
 		{
-			key = noteTab1[i];
-			octave = noteTab2[i];
-
-			if (keyIsBlackTab[key])
-				drawBlackPianoKey(key, octave, keyDown);
-			else
-				drawWhitePianoKey(key, octave, keyDown);
-
-			pianoKeyStatus[i] = keyDown;
-		}
-	}
-}
-
-void drawPianoReplayer(chSyncData_t *chSyncData) // draw piano with synced replayer state (song playing)
-{
-	bool keyDown, newStatus[96];
-	uint8_t key, octave;
-	int32_t note;
-	syncedChannel_t *ch;
-
-	memset(newStatus, 0, sizeof (newStatus));
-
-	// find active notes
-	if (editor.curInstr > 0)
-	{
-		for (uint8_t i = 0; i < song.antChn; i++)
-		{
-			ch = &chSyncData->channels[i];
-			if (ch->instrNr == editor.curInstr && ch->envSustainActive)
-			{
-				note = getPianoKey(ch->finalPeriod, ch->fineTune, ch->relTonNr, linearFrqTab);
-				if (note >= 0 && note <= 95)
-					newStatus[note] = true;
-			}
-		}
-	}
-
-	// draw keys
-	for (uint8_t i = 0; i < 96; i++)
-	{
-		keyDown = newStatus[i];
-		if (pianoKeyStatus[i] ^ keyDown)
-		{
-			key = noteTab1[i];
-			octave = noteTab2[i];
+			uint8_t key = noteTab1[i];
+			uint8_t octave = noteTab2[i];
 
 			if (keyIsBlackTab[key])
 				drawBlackPianoKey(key, octave, keyDown);
@@ -1839,10 +1805,10 @@ static void envelopeLine(int32_t nr, int16_t x1, int16_t y1, int16_t x2, int16_t
 
 	// get coefficients
 	dx = x2 - x1;
-	ax = ABS(dx) * 2;
+	ax = ABS(dx) << 1;
 	sx = SGN(dx);
 	dy = y2 - y1;
-	ay = ABS(dy) * 2;
+	ay = ABS(dy) << 1;
 	sy = SGN(dy);
 	x  = x1;
 	y  = y1;
@@ -1857,7 +1823,7 @@ static void envelopeLine(int32_t nr, int16_t x1, int16_t y1, int16_t x2, int16_t
 	// draw line
 	if (ax > ay)
 	{
-		d = ay - (ax / 2);
+		d = ay - (ax >> 1);
 
 		while (true)
 		{
@@ -1886,7 +1852,7 @@ static void envelopeLine(int32_t nr, int16_t x1, int16_t y1, int16_t x2, int16_t
 	}
 	else
 	{
-		d = ax - (ay / 2);
+		d = ax - (ay >> 1);
 
 		while (true)
 		{

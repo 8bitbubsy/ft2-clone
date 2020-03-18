@@ -26,7 +26,7 @@
 */
 
 static bool bxxOverflow;
-static int32_t oldPeriod;
+static uint16_t oldPeriod;
 static uint32_t oldRate, frequenceDivFactor, frequenceMulFactor;
 static tonTyp nilPatternLine;
 
@@ -342,13 +342,17 @@ void calcReplayRate(int32_t rate) // 100% FT2-accurate routine, do not touch!
 
 	// for audio/video sync
 	audio.dSpeedValMul = (1.0 / rate) * editor.dPerfFreq;
+
+	uint32_t deltaBase = frequenceDivFactor / (1712 * 16); // exact 16.16 delta base for this audio rate
+	audio.dPianoDeltaMul = 1.0 / deltaBase; // for piano in Instr. Ed.
 }
 
 // 100% FT2-accurate routine, do not touch!
-uint32_t getFrequenceValue(int32_t period)
+uint32_t getFrequenceValue(uint16_t period)
 {
 	uint8_t shift;
-	int32_t index, indexQuotient, indexRemainder;
+	uint16_t index;
+	int32_t indexQuotient, indexRemainder;
 	uint32_t rate;
 
 	if (period == 0)
@@ -439,21 +443,17 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 	ch->oldPan = s->pan;
 
 	if (effTyp == 0x0E && (eff & 0xF0) == 0x50)
-		ch->fineTune = ((eff & 0x0F) * 16) - 128; // result is now -128 .. 127
+		ch->fineTune = ((eff & 0x0F) << 4) - 128; // result is now -128..127
 	else
 		ch->fineTune = s->fine;
 
-	if (ton > 0)
+	if (ton != 0)
 	{
-		tmpTon = ((ton - 1) * 16) + (((ch->fineTune >> 3) + 16) & 0xFF);
-		if (tmpTon < MAX_NOTES) // should always happen, but FT2 does this check
+		tmpTon = ((ton - 1) << 4) + (((ch->fineTune >> 3) + 16) & 0xFF);
+		if (tmpTon < MAX_NOTES)
 		{
 			assert(note2Period != NULL);
-			ch->realPeriod = note2Period[tmpTon];
-
-			ch->outPeriod = ch->realPeriod;
-			ch->midiCurPeriod = ch->realPeriod;
-			ch->midiPortaPeriod = ch->realPeriod;
+			ch->outPeriod = ch->realPeriod = note2Period[tmpTon];
 		}
 	}
 
@@ -2837,15 +2837,19 @@ void playTone(uint8_t stmm, uint8_t inst, uint8_t ton, int8_t vol, uint16_t midi
 	assert(stmm < MAX_VOICES && inst < MAX_INST && ton <= 97);
 	ch = &stm[stmm];
 
+	// FT2 bugfix: Don't play tone if certain requirements are not met
 	if (ton != 97)
 	{
-		if (ton < 1 || ton > 96)
+		if (ton == 0 || ton > 96)
 			return;
 
-		s = &ins->samp[ins->ta[ton-1] & 0x0F];
-		if (s->pek == NULL || s->len == 0 || ton+s->relTon <= 0 || ton+s->relTon >= 12*10)
+		s = &ins->samp[ins->ta[ton-1] & 0xF];
+
+		int16_t newTon = (int16_t)ton + s->relTon;
+		if (s->pek == NULL || s->len == 0 || newTon <= 0 || newTon >= 12*10)
 			return;
 	}
+	// -------------------
 
 	lockAudio();
 

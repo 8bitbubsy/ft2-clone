@@ -2616,7 +2616,7 @@ static void setupLoadedModule(void)
 	showBottomScreen(); // redraw bottom screen (also redraws pattern editor)
 
 	if (editor.ui.instEditorShown)
-		drawPiano(); // redraw piano now (since if playing = wait for next tick update)
+		drawPiano(NULL); // redraw piano now (since if playing = wait for next tick update)
 
 	removeSongModifiedFlag();
 

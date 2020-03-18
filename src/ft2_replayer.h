@@ -201,8 +201,7 @@ typedef struct stmTyp_t
 	uint8_t portaUpSpeed, portaDownSpeed, retrigSpeed, retrigCnt, retrigVol;
 	uint8_t volKolVol, tonNr, envPPos, eVibPos, envVPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
-	int16_t midiCurChannel, midiCurTone, midiCurVibDepth, midiCurPeriod, midiCurPitch;
-	int16_t midiBend, midiPortaPeriod, midiPitch, realPeriod, envVIPValue, envPIPValue;
+	int16_t midiPitch, realPeriod, envVIPValue, envPIPValue;
 	uint16_t finalVol, outPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
 	uint16_t envVCnt, envVAmp, envPCnt, envPAmp, eVibAmp, eVibSweep;
 	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;
@@ -244,7 +243,7 @@ void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp nam
 void calcReplayRate(int32_t rate);
 void resetOldRates(void);
 void tuneSample(sampleTyp *s, int32_t midCFreq);
-uint32_t getFrequenceValue(int32_t period);
+uint32_t getFrequenceValue(uint16_t period);
 
 bool allocateInstr(int16_t nr);
 void freeInstr(int32_t nr);

@@ -33,7 +33,7 @@ struct audio_t
 	uint32_t freq;
 	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac;
 	uint64_t tickTime64, tickTime64Frac;
-	double dAudioLatencyMs, dSpeedValMul, dScopeFreqMul;
+	double dAudioLatencyMs, dSpeedValMul, dScopeFreqMul, dPianoDeltaMul;
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
 } audio;
