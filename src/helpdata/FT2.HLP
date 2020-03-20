@@ -756,7 +756,7 @@ changed with respect to the resampling rate.
 >@X040@C001Draw mode:
 >@X060@C002
 By pressing the right mouse button in the sample window, you can
-draw your wave forms manually.
+draw your waveforms manually.
 
 @X020@C001Configuration:
 >
@@ -808,9 +808,9 @@ portamentoes.
 If you use patterns that are longer than 99 lines, you should use
 hex counting since there are only 2 digits in the line number column.
 
->@X040@C001Scope style:
+>@X040@C001Scopes:
 >@X060@C002
-"Original" will show the points in the scopes as pixels (like FT2).
+"Std." (standard) will show the sample points as pixels (like FT2).
 "Lined" will draw lines between the points, like an oscilloscope.
 
 @X020@C001Configuration, Miscellaneous:
