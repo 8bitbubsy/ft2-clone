@@ -642,7 +642,7 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 			memcpy(s->name, songTmp.instrName[1+a], 22);
 
 		if (modFormat == FORMAT_HMNT) // finetune in "His Master's NoiseTracker" is different
-			h_MOD31.instr[a].fine = (uint8_t)((-h_MOD31.instr[a].fine & 0x1F) / 2); // one more bit of precision, + inverted
+			h_MOD31.instr[a].fine = (uint8_t)((-h_MOD31.instr[a].fine & 0x1F) >> 1); // one more bit of precision, + inverted
 
 		if (modFormat != FORMAT_STK)
 			s->fine = 8 * ((2 * ((h_MOD31.instr[a].fine & 0xF) ^ 8)) - 16);
@@ -661,13 +661,13 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 
 		// in The Ultimate SoundTracker, sample loop start is in bytes, not words
 		if (mightBeSTK)
-			s->repS /= 2;
+			s->repS >>= 1;
 
 		// fix for poorly converted STK (< v2.5) -> PT/NT modules (FIXME: Worth keeping or not?)
 		if (!mightBeSTK && s->repL > 2 && s->repS+s->repL > s->len)
 		{
-			if ((s->repS/2) + s->repL <= s->len)
-				s->repS /= 2;
+			if ((s->repS>>1)+s->repL <= s->len)
+				s->repS >>= 1;
 		}
 
 		// fix overflown loop
@@ -702,6 +702,13 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 		{
 			int32_t bytesToClear = s->len - bytesRead;
 			memset(&s->pek[bytesRead], 0, bytesToClear);
+		}
+
+		// clear repL and repS on non-looping samples...
+		if ((s->typ & 3) == 0)
+		{
+			s->repL = 0;
+			s->repS = 0;
 		}
 
 		fixSample(s);
@@ -957,7 +964,7 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
 				if (s->repS+s->repL > s->len)
 					s->repL = s->len - s->repS;
 
-				s->typ = 1;
+				s->typ = 1; // enable loop
 			}
 			else
 			{
@@ -1019,12 +1026,14 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
 						if (len > 0)
 						{
 							tmp8 = ton->eff;
-							if (tmp8 >= len/256)
+
+							int32_t newLen = len >> 8;
+							if (tmp8 >= newLen)
 							{
-								if (len/256 < 1)
+								if (newLen < 1)
 									tmp8 = 0;
 								else
-									tmp8 = (uint8_t)((len/256) - 1);
+									tmp8 = (uint8_t)(newLen - 1);
 							}
 						}
 
@@ -1187,8 +1196,8 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 	memcpy(songTmp.name, h_S3M.name, 20);
 	songTmp.name[20] = '\0';
 
-	ap  = h_S3M.antPatt;
-	ai  = h_S3M.antInstr;
+	ap = h_S3M.antPatt;
+	ai = h_S3M.antInstr;
 	ver = h_S3M.ver;
 
 	k = 31;
@@ -1445,11 +1454,11 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 							}
 							break;
 
-							case 21: // U (fine vibrato, doesn't exist in FT2, convert to normal vibrato)
+							case 21: // U (fine vibrato, doesn't exist in FT2, do a poor conversion to normal vibrato)
 							{
 								if ((ton.eff & 0x0F) != 0)
 								{
-									ton.eff = (ton.eff & 0xF0) | (((ton.eff & 15) + 1) / 4); // divide depth by 4
+									ton.eff = (ton.eff & 0xF0) | (((ton.eff & 15) + 1) >> 2); // divide depth by 4
 									if ((ton.eff & 0x0F) == 0) // depth too low, remove effect
 									{
 										illegalUxx = true;
@@ -2183,7 +2192,6 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 				if ((uint16_t)ins->envPP[j][0] > 32767) ins->envPP[j][0] = 32767;
 				if ((uint16_t)ins->envVP[j][1] > 64) ins->envVP[j][1] = 64;
 				if ((uint16_t)ins->envPP[j][1] > 63) ins->envPP[j][1] = 63;
-				
 			}
 		}
 
@@ -2304,9 +2312,9 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 			{
 				s->typ &= ~32; // remove stereo flag
 
-				s->len /= 2;
-				s->repL /= 2;
-				s->repS /= 2;
+				s->len >>= 1;
+				s->repL >>= 1;
+				s->repS >>= 1;
 
 				newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
 				if (newPtr != NULL)

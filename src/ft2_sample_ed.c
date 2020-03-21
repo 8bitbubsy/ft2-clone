@@ -351,7 +351,7 @@ static void updateViewSize(void)
 	else
 		dPos2ScrMul = (double)SAMPLE_AREA_WIDTH / smpEd_ViewSize;
 
-	dScr2SmpPosMul = smpEd_ViewSize / (double)SAMPLE_AREA_WIDTH;
+	dScr2SmpPosMul = smpEd_ViewSize * (1.0 / SAMPLE_AREA_WIDTH);
 }
 
 static void updateScrPos(void)
@@ -417,18 +417,23 @@ static void fixRepeatGadgets(void)
 {
 	int32_t repS, repE;
 	sampleTyp *s;
+	bool showLoopPins = true;
 
 	s = getCurSample();
-	if (s == NULL || s->len <= 0 || s->pek == NULL || (s->typ & 3) == 0)
+	if (s == NULL || s->len <= 0 || s->pek == NULL || (s->typ & 3) == 0 || !editor.ui.sampleEditorShown)
+		showLoopPins = false;
+
+	if (editor.ui.sampleEditorShown)
+	{
+		// draw Repeat/Replen. numbers
+		hexOutBg(536, 375, PAL_FORGRND, PAL_DESKTOP, curSmpRepS, 8);
+		hexOutBg(536, 387, PAL_FORGRND, PAL_DESKTOP, curSmpRepL, 8);
+	}
+
+	if (!showLoopPins)
 	{
 		hideSprite(SPRITE_LEFT_LOOP_PIN);
 		hideSprite(SPRITE_RIGHT_LOOP_PIN);
-
-		if (editor.ui.sampleEditorShown)
-		{
-			hexOutBg(536, 375, PAL_FORGRND, PAL_DESKTOP, 0, 8);
-			hexOutBg(536, 387, PAL_FORGRND, PAL_DESKTOP, 0, 8);
-		}
 		return;
 	}
 
@@ -454,12 +459,6 @@ static void fixRepeatGadgets(void)
 	else
 	{
 		hideSprite(SPRITE_RIGHT_LOOP_PIN);
-	}
-
-	if (editor.ui.sampleEditorShown)
-	{
-		hexOutBg(536, 375, PAL_FORGRND, PAL_DESKTOP, curSmpRepS, 8);
-		hexOutBg(536, 387, PAL_FORGRND, PAL_DESKTOP, curSmpRepL, 8);
 	}
 }
 
