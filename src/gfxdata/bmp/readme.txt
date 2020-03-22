@@ -1,20 +1,20 @@
-These are not directly used when compiling the binary, but are here for re-use
-or modification. Some files are missing!
+These BMP files are converted to byte tables for use in the FT2 code.
+They are then unpacked on runtime by routines in ft2_bmp.c.
 
-This is how they are converted for binary use:
-- Every 32-bit RGB pixel is converted to an 8-bit palette index value.
-  This is not a fully automated process, as you need to use your eyes
-  (and brain) to find out what RGB values are converted to what value. This is
-  because the palette is not the same for all BMP files, to make it easier on
-  the contrast and stuff like that. Some palette entries share the same color.
-- These palette index bytes are given appropriate constant names
-  (found in ft2_palette.h) and the array is converted to a .h file for
-  inclusion in the code, and is then directly read by GUI functions.
- 
-This makes modification all but a smooth process, and I'm sorry for that.
-I ought to have every single graphics file stored as BMP, then have a custom
-program that is run on compile time to convert every BMPs to .h files
-accordingly. Maybe one day, though this means that the custom program would
-interfere with portability.
-  
-Please read LICENSE.txt if you plan on using these...
+If you plan to modify the graphics, you need to also update the table
+length number in ft2_gfxdata.h for the corresponding graphics!
+If you want to add more graphics, it's a bit more complicated. You need to
+add the entry to the bmp struct list in ft2_bmp.h, then add a new line to
+loadBMPs() and freeBMPs() in ft2_bmp.c.
+
+Changing/adding graphics is not simple because stuff is quite hardcoded,
+so Good Luck :-).
+
+Please read LICENSE.txt (in this directory) if you plan on using these in
+another project...
+
+Note: The BMPs *must* be RLE compressed, at 4-bit or 8-bit only!
+It's important that you don't change the palette colors in any of these
+BMPs (except ft2AboutLogo.bmp which is converted to true-color internally).
+Doing so will mess up the "pixel color -> FT2 palette number" conversion
+when unpacking the graphics on runtime.

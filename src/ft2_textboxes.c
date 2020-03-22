@@ -11,8 +11,8 @@
 #include "ft2_config.h"
 #include "ft2_diskop.h"
 #include "ft2_keyboard.h"
-#include "ft2_gfxdata.h"
 #include "ft2_mouse.h"
+#include "ft2_bmp.h"
 
 textBox_t textBoxes[NUM_TEXTBOXES] =
 {
@@ -498,7 +498,7 @@ static void textOutBuf(uint8_t *dstBuffer, uint32_t dstWidth, uint8_t paletteInd
 
 		if (chr != ' ')
 		{
-			srcPtr = &font1Data[chr * FONT1_CHAR_W];
+			srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
 			dstPtr = &dstBuffer[currX];
 
 			for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
@@ -515,31 +515,6 @@ static void textOutBuf(uint8_t *dstBuffer, uint32_t dstWidth, uint8_t paletteInd
 		}
 
 		currX += charWidth(chr);
-	}
-}
-
-static void blitClipW(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h, uint16_t clipW)
-{
-	uint16_t blitW;
-	uint32_t *dstPtr;
-
-	blitW = w;
-	if (blitW > clipW)
-		blitW = clipW;
-
-	assert(xPos < SCREEN_W && yPos < SCREEN_H && xPos+blitW <= SCREEN_W && yPos+h <= SCREEN_H && srcPtr != NULL);
-
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < h; y++)
-	{
-		for (uint32_t x = 0; x < blitW; x++)
-		{
-			if (srcPtr[x] != PAL_TRANSPR)
-				dstPtr[x] = video.palette[srcPtr[x]];
-		}
-
-		srcPtr += w;
-		dstPtr += SCREEN_W;
 	}
 }
 
@@ -615,7 +590,7 @@ void drawTextBox(uint16_t textBoxID)
 	fillRect(t->x + t->tx, t->y + t->ty, t->renderW, 10, pal); // 10 = tallest possible glyph/char height
 
 	// render visible part of text render buffer to screen
-	blitClipW(t->x + t->tx, t->y + t->ty, &t->renderBuf[t->bufOffset], t->renderBufW, t->renderBufH, t->renderW);
+	blitClipX(t->x + t->tx, t->y + t->ty, &t->renderBuf[t->bufOffset], t->renderBufW, t->renderBufH, t->renderW);
 }
 
 void showTextBox(uint16_t textBoxID)

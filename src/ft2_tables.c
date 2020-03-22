@@ -4,7 +4,7 @@
 #include "ft2_pattern_ed.h" // pattCoord_t/pattCoord2_t/pattCoordsMouse_t/markCoord_t typedef
 #include "ft2_header.h" // MAX_VOICES
 #include "ft2_config.h" // CONFIG_FILE_SIZE
-#include "ft2_gfxdata.h"
+#include "ft2_bmp.h"
 
 /* ----------------------------------------------------------------------- */
 /*                             REPLAYER TABLES                             */
@@ -439,6 +439,30 @@ const uint32_t panningTab[257] = // bit-exact to FT2 table
 /* ----------------------------------------------------------------------- */
 /*                               GUI TABLES                                */
 /* ----------------------------------------------------------------------- */
+
+const uint8_t font1Widths[128] = // normal font
+{
+	8,8,4,6,7,6,7,6,6,6,6,6,6,6,8,8,
+	6,6,6,7,7,7,7,7,7,8,7,8,8,8,8,8,
+	4,3,8,8,8,8,8,4,5,5,8,7,4,7,3,8,
+	7,7,7,7,7,7,7,7,7,7,3,8,8,8,8,8,
+	8,8,8,8,8,8,8,8,8,3,8,8,8,9,9,8,
+	8,8,8,8,9,8,8,9,9,9,8,8,8,8,4,8,
+	8,7,7,7,7,7,5,7,7,3,5,7,3,9,7,7,
+	7,7,5,7,5,7,8,9,8,7,7,8,2,6,7,1
+};
+
+const uint8_t font2Widths[128] = // big font
+{
+	16,16,16,16,14,16,14,16,16,16,16,16,16,16,16,16,
+	16,16,16,16,14,16,16,16,16,16,16,16,16,16,16,16,
+	10, 8,16,16,16,16,16,10,12,12,16,16,10,14, 8,16,
+	16,16,16,16,16,16,16,16,16,16, 8,16,16,16,16,16,
+	16,16,16,16,16,16,16,16,16, 6,14,16,15,16,16,16,
+	16,17,16,16,16,16,16,16,16,16,17,16,16,16,16,16,
+	16,14,14,14,14,14,12,14,14, 6,10,14, 6,17,14,14,
+	14,14,13,14,12,14,14,17,16,14,16,16,16,16,16,16
+};
 
 pal16 palTable[12][16] = // FT2 palettes (18-bit VGA RGB, 16 color palette)
 {
@@ -910,24 +934,24 @@ const SDL_Keycode key2HexTab[16] =
 	SDLK_8, SDLK_9, SDLK_a, SDLK_b, SDLK_c, SDLK_d, SDLK_e, SDLK_f
 };
 
-const uint8_t scopeMuteBMPWidths[16] =
+const uint8_t scopeMuteBMP_Widths[16] =
 {
 	162,111, 76, 56, 42, 35, 28, 24,
 	 21, 21, 17, 17, 12, 12,  9,  9
 };
 
-const uint8_t scopeMuteBMPHeights[16] =
+const uint8_t scopeMuteBMP_Heights[16] =
 {
 	27, 27, 26, 25, 25, 25, 24, 24,
 	24, 24, 24, 24, 24, 24, 24, 24
 };
 
-const uint8_t *scopeMuteBMPPointers[16] =
+const uint16_t scopeMuteBMP_Offs[16] =
 {
-	scopeMuteBMP1, scopeMuteBMP2, scopeMuteBMP3, scopeMuteBMP4,
-	scopeMuteBMP5, scopeMuteBMP6, scopeMuteBMP7, scopeMuteBMP8,
-	scopeMuteBMP9, scopeMuteBMP9, scopeMuteBMP10,scopeMuteBMP10,
-	scopeMuteBMP11,scopeMuteBMP11,scopeMuteBMP12,scopeMuteBMP12
+	 0*(162*27), 1*(162*27), 2*(162*27), 3*(162*27),
+	 4*(162*27), 5*(162*27), 6*(162*27), 7*(162*27),
+	 8*(162*27), 8*(162*27), 9*(162*27), 9*(162*27),
+	10*(162*27),10*(162*27),11*(162*27),11*(162*27)
 };
 
 const uint16_t scopeLenTab[16][32] =

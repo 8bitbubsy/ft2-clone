@@ -15,7 +15,7 @@
 #include "ft2_audio.h"
 #include "ft2_gui.h"
 #include "ft2_midi.h"
-#include "ft2_gfxdata.h"
+#include "ft2_bmp.h"
 #include "ft2_scopes.h"
 #include "ft2_mouse.h"
 #include "ft2_video.h"
@@ -44,6 +44,7 @@ static uint32_t oldVoiceDelta, oldSFrq, scopeTimeLen, scopeTimeLenFrac;
 static uint64_t timeNext64, timeNext64Frac;
 static volatile scope_t scope[MAX_VOICES];
 static SDL_Thread *scopeThread;
+static uint8_t *scopeMuteBMP_Ptrs[16];
 
 lastChInstr_t lastChInstr[MAX_VOICES]; // global
 
@@ -191,10 +192,10 @@ static void redrawScope(int32_t ch)
 	// draw mute graphics if channel is muted
 	if (!editor.chnMode[i])
 	{
-		muteGfxLen = scopeMuteBMPWidths[chanLookup];
+		muteGfxLen = scopeMuteBMP_Widths[chanLookup];
 		muteGfxX = x + ((scopeLen - muteGfxLen) >> 1);
 
-		blitFast(muteGfxX, y + 6, scopeMuteBMPPointers[chanLookup], muteGfxLen, scopeMuteBMPHeights[chanLookup]);
+		blitFastClipX(muteGfxX, y + 6, scopeMuteBMP_Ptrs[chanLookup], 162, scopeMuteBMP_Heights[chanLookup], muteGfxLen);
 
 		if (config.ptnChnNumbers)
 			drawScopeNumber(x + 1, y + 1, (uint8_t)i, true);
@@ -521,7 +522,7 @@ void drawScopes(void)
 
 		// draw rec. symbol (if enabled)
 		if (config.multiRecChn[i])
-			blit(scopeXOffs, scopeYOffs + 31, scopeRecBMP, 13, 4);
+			blit(scopeXOffs, scopeYOffs + 31, bmp.scopeRec, 13, 4);
 
 		scopeXOffs += scopeDrawLen + 3; // align x to next scope
 	}
@@ -646,6 +647,11 @@ bool initScopes(void)
 	// fractional part (scaled to 0..2^32-1)
 	dFrac *= UINT32_MAX;
 	scopeTimeLenFrac = (uint32_t)(dFrac + 0.5);
+
+	// setup scope mute BMP pointers
+	assert(bmp.scopeMute != NULL);
+	for (int32_t i = 0; i < 16; i++)
+		scopeMuteBMP_Ptrs[i] = bmp.scopeMute + scopeMuteBMP_Offs[i];
 
 	scopeThread = SDL_CreateThread(scopeThreadFunc, NULL, NULL);
 	if (scopeThread == NULL)

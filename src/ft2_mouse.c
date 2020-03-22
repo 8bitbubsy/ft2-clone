@@ -16,10 +16,9 @@
 #include "ft2_mouse.h"
 #include "ft2_config.h"
 #include "ft2_diskop.h"
-#include "ft2_gfxdata.h"
 #include "ft2_audioselector.h"
 #include "ft2_midi.h"
-#include "ft2_gfxdata.h"
+#include "ft2_bmp.h"
 
 #define NUM_CURSORS 6
 
@@ -57,7 +56,7 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 {
 	freeMouseCursors();
 
-	const uint8_t *cursorsSrc = mouseCursors;
+	const uint8_t *cursorsSrc = bmp.mouseCursors;
 	switch (config.mouseType)
 	{
 		case MOUSE_IDLE_SHAPE_NICE:   cursorsSrc += 0 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
@@ -87,11 +86,11 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 
 		const uint8_t *srcPixels8;
 		if (i == 3) // text edit cursor
-			srcPixels8 = &mouseCursors[12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)];
+			srcPixels8 = &bmp.mouseCursors[12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)];
 		else if (i == 4) // mouse busy (wall clock)
-			srcPixels8 = &mouseCursorBusyClock[2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]; // pick a good still-frame
+			srcPixels8 = &bmp.mouseCursorBusyClock[2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]; // pick a good still-frame
 		else if (i == 5) // mouse busy (hourglass)
-			srcPixels8 = &mouseCursorBusyGlass[2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]; // pick a good still-frame
+			srcPixels8 = &bmp.mouseCursorBusyGlass[2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]; // pick a good still-frame
 		else // normal idle cursor + disk op. "delete/rename" cursors
 			srcPixels8 = &cursorsSrc[i * (4 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H))];
 
@@ -206,7 +205,7 @@ void animateBusyMouse(void)
 			}
 
 			changeSpriteData(SPRITE_MOUSE_POINTER,
-				&mouseCursorBusyClock[(mouseBusyGfxFrame % MOUSE_CLOCK_ANI_FRAMES) * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]);
+				&bmp.mouseCursorBusyClock[(mouseBusyGfxFrame % MOUSE_CLOCK_ANI_FRAMES) * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]);
 		}
 	}
 	else
@@ -222,7 +221,7 @@ void animateBusyMouse(void)
 			mouseBusyGfxFrame = (mouseBusyGfxFrame + 1) % MOUSE_GLASS_ANI_FRAMES;
 
 			changeSpriteData(SPRITE_MOUSE_POINTER,
-				&mouseCursorBusyGlass[mouseBusyGfxFrame * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]);
+				&bmp.mouseCursorBusyGlass[mouseBusyGfxFrame * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)]);
 		}
 	}
 }
@@ -234,13 +233,13 @@ void setMouseShape(int16_t shape)
 	if (editor.busy)
 	{
 		if (config.mouseAnimType == MOUSE_BUSY_SHAPE_CLOCK)
-			gfxPtr = &mouseCursorBusyClock[(mouseBusyGfxFrame % MOUSE_GLASS_ANI_FRAMES) * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)];
+			gfxPtr = &bmp.mouseCursorBusyClock[(mouseBusyGfxFrame % MOUSE_GLASS_ANI_FRAMES) * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)];
 		else
-			gfxPtr = &mouseCursorBusyGlass[(mouseBusyGfxFrame % MOUSE_CLOCK_ANI_FRAMES) * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)];
+			gfxPtr = &bmp.mouseCursorBusyGlass[(mouseBusyGfxFrame % MOUSE_CLOCK_ANI_FRAMES) * (MOUSE_CURSOR_W * MOUSE_CURSOR_H)];
 	}
 	else
 	{
-		gfxPtr = &mouseCursors[mouseModeGfxOffs];
+		gfxPtr = &bmp.mouseCursors[mouseModeGfxOffs];
 		switch (shape)
 		{
 			case MOUSE_IDLE_SHAPE_NICE:   gfxPtr += 0  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
@@ -361,9 +360,6 @@ void mouseAnimOn(void)
 
 	editor.busy = true;
 	setMouseShape(config.mouseAnimType);
-
-	//if (config.specialFlags2 & HARDWARE_MOUSE && cBusy != NULL)
-	//	SDL_SetCursor(cBusy);
 }
 
 void mouseAnimOff(void)
@@ -373,9 +369,6 @@ void mouseAnimOff(void)
 
 	editor.busy = false;
 	setMouseShape(config.mouseType);
-
-	//if (config.specialFlags2 & HARDWARE_MOUSE && cArrow != NULL)
-	//	SDL_SetCursor(cArrow);
 }
 
 static void mouseWheelDecRow(void)

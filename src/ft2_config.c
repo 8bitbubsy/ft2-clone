@@ -27,10 +27,10 @@
 #include "ft2_sampling.h"
 #include "ft2_audioselector.h"
 #include "ft2_midi.h"
-#include "ft2_gfxdata.h"
 #include "ft2_palette.h"
 #include "ft2_pattern_draw.h"
 #include "ft2_tables.h"
+#include "ft2_bmp.h"
 
 // globals
 config_t config;
@@ -1389,7 +1389,7 @@ void showConfigScreen(void)
 
 			textOutShadow(528, 112, PAL_FORGRND, PAL_DSKTOP2, "Input Devices");
 
-			blitFast(517, 51, midiLogo, 103, 55);
+			blitFast(517, 51, bmp.midiLogo, 103, 55);
 
 #ifdef HAS_MIDI
 			showPushButton(PB_CONFIG_MIDI_INPUT_DOWN);

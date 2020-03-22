@@ -22,6 +22,8 @@ extern const uint32_t logTab[768];
 
 extern const uint32_t panningTab[257];
 
+extern const uint8_t font1Widths[128];
+extern const uint8_t font2Widths[128];
 extern pal16 palTable[12][16];
 extern const uint16_t chanWidths[6];
 extern const pattCoordsMouse_t pattCoordMouseTable[2][2][2];
@@ -39,9 +41,9 @@ extern const char chDecTab2[MAX_VOICES+1];
 extern const SDL_Keycode key2VolTab[16];
 extern const SDL_Keycode key2EfxTab[36];
 extern const SDL_Keycode key2HexTab[16];
-extern const uint8_t scopeMuteBMPWidths[16];
-extern const uint8_t scopeMuteBMPHeights[16];
-extern const uint8_t *scopeMuteBMPPointers[16];
+extern const uint8_t scopeMuteBMP_Widths[16];
+extern const uint8_t scopeMuteBMP_Heights[16];
+extern const uint16_t scopeMuteBMP_Offs[16];
 extern const uint16_t scopeLenTab[16][32];
 
 extern const uint8_t defConfigData[CONFIG_FILE_SIZE];

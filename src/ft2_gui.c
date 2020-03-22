@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <time.h>
 #include "ft2_header.h"
-#include "ft2_gfxdata.h"
 #include "ft2_config.h"
 #include "ft2_about.h"
 #include "ft2_mouse.h"
@@ -22,6 +21,7 @@
 #include "ft2_trim.h"
 #include "ft2_video.h"
 #include "ft2_tables.h"
+#include "ft2_bmp.h"
 
 static void releaseMouseStates(void)
 {
@@ -241,13 +241,13 @@ setupGUI_OOM:
 // returns full pixel width of a char/glyph
 uint8_t charWidth(char ch)
 {
-	return prop8Width[ch & 0x7F];
+	return font1Widths[ch & 0x7F];
 }
 
 // returns full pixel width of a char/glyph (big font)
 uint8_t charWidth16(char ch)
 {
-	return prop16Width[ch & 0x7F];
+	return font2Widths[ch & 0x7F];
 }
 
 // return full pixel width of a text string
@@ -325,7 +325,7 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 		return;
 
 	pixVal = video.palette[paletteIndex];
-	srcPtr = &font1Data[chr * FONT1_CHAR_W];
+	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
@@ -362,7 +362,7 @@ void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalett
 	fg = video.palette[fgPalette];
 	bg = video.palette[bgPalette];
 
-	srcPtr = &font1Data[chr * FONT1_CHAR_W];
+	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
@@ -401,7 +401,7 @@ void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t s
 
 	pixVal1 = video.palette[paletteIndex];
 	pixVal2 = video.palette[shadowPaletteIndex];
-	srcPtr = &font1Data[chr * FONT1_CHAR_W];
+	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
 	dstPtr1 = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	dstPtr2 = dstPtr1 + (SCREEN_W+1);
 
@@ -452,7 +452,7 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 		return;
 
 	pixVal = video.palette[paletteIndex];
-	srcPtr = &font1Data[chr * FONT1_CHAR_W];
+	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	width = FONT1_CHAR_W;
@@ -493,7 +493,7 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	if (chr == ' ')
 		return;
 
-	srcPtr = &font2Data[chr * FONT2_CHAR_W];
+	srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	pixVal = video.palette[paletteIndex];
 
@@ -533,7 +533,7 @@ static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex,
 
 	pixVal1 = video.palette[paletteIndex];
 	pixVal2 = video.palette[shadowPaletteIndex];
-	srcPtr = &font2Data[chr * FONT2_CHAR_W];
+	srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
 	dstPtr1 = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	dstPtr2 = dstPtr1 + (SCREEN_W+1);
 
@@ -708,7 +708,7 @@ void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, ui
 
 	for (int32_t i = numDigits-1; i >= 0; i--)
 	{
-		srcPtr = &font6Data[((val >> (i * 4)) & 15) * FONT6_CHAR_W];
+		srcPtr = &bmp.font6[((val >> (i * 4)) & 15) * FONT6_CHAR_W];
 
 		// render glyph
 		for (uint32_t y = 0; y < FONT6_CHAR_H; y++)
@@ -748,7 +748,7 @@ void hexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette
 	for (int32_t i = numDigits-1; i >= 0; i--)
 	{
 		// extract current nybble and set pointer to glyph
-		srcPtr = &font6Data[((val >> (i * 4)) & 15) * FONT6_CHAR_W];
+		srcPtr = &bmp.font6[((val >> (i * 4)) & 15) * FONT6_CHAR_W];
 
 		// render glyph
 		for (uint32_t y = 0; y < FONT6_CHAR_H; y++)
@@ -846,6 +846,29 @@ void blit(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint1
 	}
 }
 
+void blitClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h, uint16_t clipX)
+{
+	uint32_t *dstPtr;
+
+	if (clipX > w)
+		clipX = w;
+
+	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + clipX) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+
+	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (uint32_t y = 0; y < h; y++)
+	{
+		for (uint32_t x = 0; x < clipX; x++)
+		{
+			if (srcPtr[x] != PAL_TRANSPR)
+				dstPtr[x] = video.palette[srcPtr[x]];
+		}
+
+		srcPtr += w;
+		dstPtr += SCREEN_W;
+	}
+}
+
 void blitFast(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h) // no transparency/colorkey
 {
 	uint32_t *dstPtr;
@@ -856,6 +879,26 @@ void blitFast(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, u
 	for (uint32_t y = 0; y < h; y++)
 	{
 		for (uint32_t x = 0; x < w; x++)
+			dstPtr[x] = video.palette[srcPtr[x]];
+
+		srcPtr += w;
+		dstPtr += SCREEN_W;
+	}
+}
+
+void blitFastClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h, uint16_t clipX) // no transparency/colorkey
+{
+	uint32_t *dstPtr;
+
+	if (clipX > w)
+		clipX = w;
+
+	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + clipX) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+
+	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (uint32_t y = 0; y < h; y++)
+	{
+		for (uint32_t x = 0; x < clipX; x++)
 			dstPtr[x] = video.palette[srcPtr[x]];
 
 		srcPtr += w;

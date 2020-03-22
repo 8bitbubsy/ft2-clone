@@ -31,6 +31,7 @@
 #include "ft2_help.h"
 #include "ft2_midi.h"
 #include "ft2_events.h"
+#include "ft2_bmp.h"
 
 #ifdef HAS_MIDI
 static SDL_Thread *initMidiThread;
@@ -139,6 +140,12 @@ int main(int argc, char *argv[])
 	osxSetDirToProgramDirFromArgs(argv);
 #endif
 	UNICHAR_GETCWD(editor.binaryPathU, PATH_MAX);
+
+	if (!loadBMPs())
+	{
+		cleanUpAndExit();
+		return 1;
+	}
 
 	loadConfigOrSetDefaults();
 	if (!setupWindow() || !setupRenderer())
@@ -327,6 +334,7 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	windUpFTHelp();
 	freeTextBoxes();
 	freeMouseCursors();
+	freeBMPs();
 
 #ifdef HAS_MIDI
 	if (midi.inputDeviceName != NULL)

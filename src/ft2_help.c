@@ -10,7 +10,7 @@
 #include "ft2_help.h"
 #include "ft2_video.h"
 #include "ft2_pattern_ed.h"
-#include "ft2_gfxdata.h"
+#include "ft2_bmp.h"
 #include "helpdata/ft2_help_data.h"
 
 typedef struct
@@ -285,7 +285,7 @@ static void bigTextOutHalf(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, b
 
 		if (chr != ' ')
 		{
-			srcPtr = &font2Data[chr * FONT2_CHAR_W];
+			srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
 			if (!lowerHalf)
 				srcPtr += (FONT2_CHAR_H / 2) * FONT2_WIDTH;
 

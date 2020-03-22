@@ -3,7 +3,7 @@
 #include "ft2_header.h"
 #include "ft2_gui.h"
 #include "ft2_pattern_ed.h"
-#include "ft2_gfxdata.h"
+#include "ft2_bmp.h"
 #include "ft2_video.h"
 #include "ft2_tables.h"
 
@@ -12,8 +12,8 @@
 #define NUM_STARS 512
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
-#define FT2_LOGO_W 449
-#define FT2_LOGO_H 75
+#define ABOUT_LOGO_W 449
+#define ABOUT_LOGO_H 111
 #define ABOUT_TEXT_W 349
 #define ABOUT_TEXT_H 29
 
@@ -229,6 +229,8 @@ void aboutFrame(void)
 	realStars();
 }
 
+extern uint32_t *unpackedData;
+
 void showAboutScreen(void) // called once when About screen is opened
 {
 #define TEXT_BORDER_COL 0x2E2E2E
@@ -247,8 +249,7 @@ void showAboutScreen(void) // called once when About screen is opened
 
 	showPushButton(PB_EXIT_ABOUT);
 
-	blit32(91, 31, ft2Logo, FT2_LOGO_W, FT2_LOGO_H);
-	blit(146, 113, aboutText, ABOUT_TEXT_W, ABOUT_TEXT_H);
+	blit32(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H);
 
 	setCustomPalColor(TEXT_BORDER_COL); // sets PAL_CUSTOM
 

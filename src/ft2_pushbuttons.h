@@ -341,10 +341,6 @@ enum
 	PUSHBUTTON_PRESSED   = 1
 };
 
-#define RADIOBUTTON_W 11
-#define RADIOBUTTON_H 11
-#define RADIOBUTTON_STATES 3
-
 // amount of frames to wait
 #define BUTTON_DOWN_DELAY 16
 

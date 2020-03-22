@@ -17,11 +17,11 @@
 #define FONT2_CHAR_H 20
 #define FONT2_WIDTH 2048
 #define FONT3_CHAR_W 4
-#define FONT3_CHAR_H 8
+#define FONT3_CHAR_H 7
 #define FONT3_WIDTH 172
 #define FONT4_CHAR_W 8
 #define FONT4_CHAR_H 8
-#define FONT4_WIDTH 584
+#define FONT4_WIDTH 624
 #define FONT5_CHAR_W 16
 #define FONT5_CHAR_H 8
 #define FONT5_WIDTH 624
@@ -29,7 +29,7 @@
 #define FONT6_CHAR_H 8
 #define FONT6_WIDTH 112
 #define FONT7_CHAR_W 6
-#define FONT7_CHAR_H 8
+#define FONT7_CHAR_H 7
 #define FONT7_WIDTH 140
 
 enum
@@ -81,7 +81,9 @@ void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t pale
 void drawFramework(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t type);
 void blit32(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h);
 void blit(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h);
-void blitFast(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h); // no colorkey
+void blitClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h, uint16_t clipX);
+void blitFast(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h); // no transparency/colorkey
+void blitFastClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h, uint16_t clipX); // no transparency/colorkey
 void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, uint8_t numDigits);
 void hexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint32_t val, uint8_t numDigits);
 void hexOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, uint32_t val, uint8_t numDigits);

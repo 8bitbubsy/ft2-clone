@@ -8,7 +8,7 @@
 #include "ft2_video.h"
 #include "ft2_gui.h"
 #include "ft2_pattern_ed.h"
-#include "ft2_gfxdata.h"
+#include "ft2_bmp.h"
 
 #define NI_MAXLEVEL 30
 
@@ -147,7 +147,7 @@ static void nibblesGetLevel(int16_t nr)
 	for (x = 0; x < 51; x++)
 	{
 		for (y = 0; y < 23; y++)
-			NI_Screen[x][y] = nibblesStages[((readY + y) * 530) + (readX + x)];
+			NI_Screen[x][y] = bmp.nibblesStages[((readY + y) * 530) + (readX + x)];
 	}
 }
 
@@ -192,8 +192,8 @@ static void nibblesCreateLevel(int16_t nr)
 	x = (51 + 2) * (nr % 10);
 	y = (23 + 2) * (nr / 10);
 
-	NI_P1Dir = nibblesStages[(y * 530) + (x + 1)];
-	NI_P2Dir = nibblesStages[(y * 530) + (x + 0)];
+	NI_P1Dir = bmp.nibblesStages[(y * 530) + (x + 1)];
+	NI_P2Dir = bmp.nibblesStages[(y * 530) + (x + 0)];
 
 	NI_P1Len = 5;
 	NI_P2Len = 5;
@@ -221,7 +221,7 @@ static void nibbleWriteLevelSprite(int16_t xOut, int16_t yOut, int16_t nr)
 	readX = (51 + 2) * (nr % 10);
 	readY = (23 + 2) * (nr / 10);
 
-	src = (uint8_t *)&nibblesStages[(readY * 530) + readX];
+	src = (uint8_t *)&bmp.nibblesStages[(readY * 530) + readX];
 	dst = &video.frameBuffer[(yOut * SCREEN_W) + xOut];
 
 	for (uint16_t y = 0; y < 23+2; y++)
@@ -719,7 +719,7 @@ void showNibblesScreen(void)
 
 	drawScoresLives();
 
-	blitFast(569, 7, nibblesLogo, 59, 91);
+	blitFast(569, 7, bmp.nibblesLogo, 59, 91);
 
 	showPushButton(PB_NIBBLES_PLAY);
 	showPushButton(PB_NIBBLES_HELP);

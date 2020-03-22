@@ -3127,7 +3127,9 @@ void incCurIns(void)
 		pbSwapInstrBank();
 
 	editor.instrBankOffset = ((editor.curInstr - 1) / 8) * 8;
- 
+ 	if (editor.instrBankOffset > MAX_INST-8)
+		editor.instrBankOffset = MAX_INST-8;
+
 	updateTextBoxPointers();
 	updateNewInstrument();
 
@@ -3141,7 +3143,6 @@ void decCurSmp(void)
 		return;
 
 	editor.curSmp--;
-
 	editor.sampleBankOffset = (editor.curSmp / 5) * 5;
 	setScrollBarPos(SB_SAMPLE_LIST, editor.sampleBankOffset, true);
 
@@ -3157,6 +3158,9 @@ void incCurSmp(void)
 	editor.curSmp++;
 
 	editor.sampleBankOffset = (editor.curSmp / 5) * 5;
+	if (editor.sampleBankOffset > MAX_SMP_PER_INST-5)
+		editor.sampleBankOffset = MAX_SMP_PER_INST-5;
+
 	setScrollBarPos(SB_SAMPLE_LIST, editor.sampleBankOffset, true);
 
 	updateTextBoxPointers();

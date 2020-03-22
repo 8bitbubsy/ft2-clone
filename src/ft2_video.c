@@ -16,7 +16,6 @@
 #endif
 #include "ft2_header.h"
 #include "ft2_config.h"
-#include "ft2_gfxdata.h"
 #include "ft2_gui.h"
 #include "ft2_video.h"
 #include "ft2_events.h"
@@ -33,6 +32,7 @@
 #include "ft2_sampling.h"
 #include "ft2_module_loader.h"
 #include "ft2_midi.h"
+#include "ft2_bmp.h"
 
 static const uint8_t textCursorData[12] =
 {
@@ -341,17 +341,17 @@ bool setupSprites(void)
 	memset(sprites, 0, sizeof (sprites));
 
 	s = &sprites[SPRITE_MOUSE_POINTER];
-	s->data = mouseCursors;
+	s->data = bmp.mouseCursors;
 	s->w = MOUSE_CURSOR_W;
 	s->h = MOUSE_CURSOR_H;
 
 	s = &sprites[SPRITE_LEFT_LOOP_PIN];
-	s->data = leftLoopPinUnclicked;
+	s->data = &bmp.loopPins[0*(154*16)];
 	s->w = 16;
 	s->h = SAMPLE_AREA_HEIGHT;
 
 	s = &sprites[SPRITE_RIGHT_LOOP_PIN];
-	s->data = rightLoopPinUnclicked;
+	s->data = &bmp.loopPins[2*(154*16)];
 	s->w = 16;
 	s->h = SAMPLE_AREA_HEIGHT;
 
@@ -396,12 +396,12 @@ void freeSprites(void)
 
 void setLeftLoopPinState(bool clicked)
 {
-	changeSpriteData(SPRITE_LEFT_LOOP_PIN, clicked ? leftLoopPinClicked : leftLoopPinUnclicked);
+	changeSpriteData(SPRITE_LEFT_LOOP_PIN, clicked ? &bmp.loopPins[1*(154*16)] : &bmp.loopPins[0*(154*16)]);
 }
 
 void setRightLoopPinState(bool clicked)
 {
-	changeSpriteData(SPRITE_RIGHT_LOOP_PIN, clicked ? rightLoopPinClicked : rightLoopPinUnclicked);
+	changeSpriteData(SPRITE_RIGHT_LOOP_PIN, clicked ? &bmp.loopPins[3*(154*16)] : &bmp.loopPins[2*(154*16)]);
 }
 
 int32_t getSpritePosX(uint8_t sprite)

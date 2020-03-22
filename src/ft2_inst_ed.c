@@ -14,13 +14,13 @@
 #include "ft2_gui.h"
 #include "ft2_scopes.h"
 #include "ft2_sample_ed.h"
-#include "ft2_gfxdata.h"
 #include "ft2_mouse.h"
 #include "ft2_video.h"
 #include "ft2_sample_loader.h"
 #include "ft2_diskop.h"
 #include "ft2_module_loader.h"
 #include "ft2_tables.h"
+#include "ft2_bmp.h"
 
 #ifdef _MSC_VER
 #pragma pack(push)
@@ -1550,7 +1550,7 @@ void cbPEnvLoop(void)
 	setSongModifiedFlag();
 }
 
-static void smallHexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint8_t val)
+static void pinoaNumberOut(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint8_t val)
 {
 	const uint8_t *srcPtr;
 	uint32_t *dstPtr, fg, bg;
@@ -1560,7 +1560,7 @@ static void smallHexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8
 	fg = video.palette[fgPalette];
 	bg = video.palette[bgPalette];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	srcPtr = &smallHexBitmap[val * 5];
+	srcPtr = &bmp.font8[val * 5];
 
 	for (uint32_t y = 0; y < 7; y++)
 	{
@@ -1584,21 +1584,21 @@ static void writePianoNumber(uint8_t note, uint8_t key, uint8_t octave)
 	x = keyDigitXPos[key] + (octave * 77);
 
 	if (keyIsBlackTab[key])
-		smallHexOutBg(x, 361, PAL_FORGRND, PAL_BCKGRND, number);
+		pinoaNumberOut(x, 361, PAL_FORGRND, PAL_BCKGRND, number);
 	else
-		smallHexOutBg(x, 385, PAL_BCKGRND, PAL_FORGRND, number);
+		pinoaNumberOut(x, 385, PAL_BCKGRND, PAL_FORGRND, number);
 }
 
 static void drawBlackPianoKey(uint8_t key, uint8_t octave, bool keyDown)
 {
 	uint16_t x = keyXPos[key] + (octave * 77);
-	blit(x, 351, &blackPianoKeysBitmap[keyDown * (7*27)], 7, 27);
+	blit(x, 351, &bmp.blackPianoKeys[keyDown * (7*27)], 7, 27);
 }
 
 static void drawWhitePianoKey(uint8_t key, uint8_t octave,  bool keyDown)
 {
 	uint16_t x = keyXPos[key] + (octave * 77);
-	blit(x, 351, &whitePianoKeysBitmap[(keyDown * (11*46*3)) + whiteKeysBmpOrder[key]], 11, 46);
+	blit(x, 351, &bmp.whitePianoKeys[(keyDown * (11*46*3)) + whiteKeysBmpOrder[key]], 11, 46);
 }
 
 void redrawPiano(void)
@@ -1623,8 +1623,7 @@ void redrawPiano(void)
 bool testPianoKeysMouseDown(bool mouseButtonDown)
 {
 	uint8_t key, note, octave;
-	int32_t mx, my;
-	instrTyp *ins;
+	int32_t mx, my, quotient, remainder;
 
 	if (!editor.ui.instEditorShown)
 		return false; // area not clicked
@@ -1648,52 +1647,47 @@ bool testPianoKeysMouseDown(bool mouseButtonDown)
 		mx = CLAMP(mx, 8, 623);
 	}
 
-	ins = instr[editor.curInstr];
-
 	mx -= 8;
+
+	quotient = mx / 77;
+	remainder = mx % 77;
+
 	if (my < 378)
 	{
 		// white keys and black keys (top)
 
-		octave = (uint8_t)(mx / 77);
-		mx %= 77; // width of all keys in one octave
+		octave = (uint8_t)(quotient);
+		mx = remainder; // width of all keys in one octave
 
 		// this is pretty disgusting...
 		     if (mx >= 69) key = 11;
 		else if (mx >= 62) key = 10;
-		else if (mx >= 58) key =  9;
-		else if (mx >= 51) key =  8;
-		else if (mx >= 47) key =  7;
-		else if (mx >= 40) key =  6;
-		else if (mx >= 33) key =  5;
-		else if (mx >= 25) key =  4;
-		else if (mx >= 18) key =  3;
-		else if (mx >= 14) key =  2;
-		else if (mx >=  7) key =  1;
-		else               key =  0;
-
-		note = (octave * 12) + key;
-		if (ins->ta[note] != editor.curSmp)
-		{
-			ins->ta[note] = editor.curSmp;
-			writePianoNumber(note, key, octave);
-			setSongModifiedFlag();
-		}
+		else if (mx >= 58) key = 9;
+		else if (mx >= 51) key = 8;
+		else if (mx >= 47) key = 7;
+		else if (mx >= 40) key = 6;
+		else if (mx >= 33) key = 5;
+		else if (mx >= 25) key = 4;
+		else if (mx >= 18) key = 3;
+		else if (mx >= 14) key = 2;
+		else if (mx >=  7) key = 1;
+		else               key = 0;
 	}
 	else
 	{
 		// white keys only (bottom)
+		const int32_t whiteKeyWidth = 11;
 
-		octave = (uint8_t)(mx / 77);
-		key = (uint8_t)(mx % 77) / 11;
+		octave = (uint8_t)(quotient);
+		key = whiteKeyIndex[remainder / whiteKeyWidth];
+	}
 
-		note = (octave * 12) + whiteKeyIndex[key];
-		if (ins->ta[note] != editor.curSmp)
-		{
-			ins->ta[note] = editor.curSmp;
-			writePianoNumber(note, noteTab2[note], octave);
-			setSongModifiedFlag();
-		}
+	note = (octave * 12) + key;
+	if (instr[editor.curInstr]->ta[note] != editor.curSmp)
+	{
+		instr[editor.curInstr]->ta[note] = editor.curSmp;
+		writePianoNumber(note, key, octave);
+		setSongModifiedFlag();
 	}
 
 	return true;
@@ -2353,10 +2347,10 @@ void showInstEditor(void)
 	showCheckBox(CB_INST_PENV_LOOP);
 
 	// draw auto-vibrato waveforms
-	blitFast(455, 279, &vibWaveformBitmap[(12*10)*0], 12, 10);
-	blitFast(485, 279, &vibWaveformBitmap[(12*10)*1], 12, 10);
-	blitFast(515, 279, &vibWaveformBitmap[(12*10)*2], 12, 10);
-	blitFast(545, 279, &vibWaveformBitmap[(12*10)*3], 12, 10);
+	blitFast(455, 279, &bmp.vibratoWaveforms[0*(12*10)], 12, 10);
+	blitFast(485, 279, &bmp.vibratoWaveforms[1*(12*10)], 12, 10);
+	blitFast(515, 279, &bmp.vibratoWaveforms[2*(12*10)], 12, 10);
+	blitFast(545, 279, &bmp.vibratoWaveforms[3*(12*10)], 12, 10);
 
 	showRadioButtonGroup(RB_GROUP_INST_WAVEFORM);
 

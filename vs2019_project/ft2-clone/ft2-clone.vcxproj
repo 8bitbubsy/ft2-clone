@@ -112,11 +112,11 @@
       <CreateHotpatchableImage>false</CreateHotpatchableImage>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>false</OpenMPSupport>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <DebugInformationFormat>None</DebugInformationFormat>
       <LanguageStandard>stdcpplatest</LanguageStandard>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>
@@ -326,6 +326,7 @@
     <ClCompile Include="..\..\src\ft2_about.c" />
     <ClCompile Include="..\..\src\ft2_audio.c" />
     <ClCompile Include="..\..\src\ft2_audioselector.c" />
+    <ClCompile Include="..\..\src\ft2_bmp.c" />
     <ClCompile Include="..\..\src\ft2_checkboxes.c" />
     <ClCompile Include="..\..\src\ft2_config.c" />
     <ClCompile Include="..\..\src\ft2_diskop.c" />
@@ -364,14 +365,15 @@
     <ClCompile Include="..\..\src\ft2_unicode.c" />
     <ClCompile Include="..\..\src\ft2_video.c" />
     <ClCompile Include="..\..\src\ft2_wav_renderer.c" />
-    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_fonts.c" />
-    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_logo.c" />
-    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_midi.c" />
-    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_mouse.c" />
-    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_nibbles.c" />
-    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_instr.c" />
-    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_sampler.c" />
-    <ClCompile Include="..\..\src\gfxdata\ft2_gfx_scopes.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_fonts.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_gui.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_logo.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_midi.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_mouse.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_nibbles.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_instr.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_looppins.c" />
+    <ClCompile Include="..\..\src\gfxdata\ft2_bmp_scopes.c" />
     <ClCompile Include="..\..\src\rtmidi\RtMidi.cpp">
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Sync</ExceptionHandling>
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Sync</ExceptionHandling>
@@ -393,6 +395,7 @@
     <ClInclude Include="..\..\src\ft2_about.h" />
     <ClInclude Include="..\..\src\ft2_audio.h" />
     <ClInclude Include="..\..\src\ft2_audioselector.h" />
+    <ClInclude Include="..\..\src\ft2_bmp.h" />
     <ClInclude Include="..\..\src\ft2_checkboxes.h" />
     <ClInclude Include="..\..\src\ft2_config.h" />
     <ClInclude Include="..\..\src\ft2_diskop.h" />

@@ -13,6 +13,7 @@
 #include "ft2_trim.h"
 #include "ft2_mouse.h"
 #include "ft2_edit.h"
+#include "ft2_bmp.h"
 
 checkBox_t checkBoxes[NUM_CHECKBOXES] =
 {
@@ -113,88 +114,28 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 113, 141,  78, 12, cbPixelFilter }
 };
 
-// these are defined at the bottom of this file
-extern const uint8_t checkMarkGraphics[CHECKMARK_W * CHECKMARK_H];
-extern const uint8_t accidentalFlat[5 * 6];
-extern const uint8_t accidentalSharp[5 * 6];
-
 void drawCheckBox(uint16_t checkBoxID)
 {
-	uint8_t state;
-	uint16_t x, y, w, h;
 	checkBox_t *checkBox;
-	const uint8_t *srcPtr;
+	const uint8_t *gfxPtr;
 
 	assert(checkBoxID < NUM_CHECKBOXES);
 	checkBox = &checkBoxes[checkBoxID];
 	if (!checkBox->visible)
 		return;
 
-	state = checkBox->state;
-
-	x = checkBox->x;
-	y = checkBox->y;
-	w = CHECKBOX_W;
-	h = CHECKBOX_H;
-
-	// fill button background
-	fillRect(x + 1, y + 1, w - 2, h - 2, PAL_BUTTONS);
-
-	// draw outer border
-	hLine(x,         y,         w, PAL_BCKGRND);
-	hLine(x,         y + h - 1, w, PAL_BCKGRND);
-	vLine(x,         y,         h, PAL_BCKGRND);
-	vLine(x + w - 1, y,         h, PAL_BCKGRND);
-
-	// draw inner borders
-	if (state == CHECKBOX_UNPRESSED)
-	{
-		// top left corner inner border
-		hLine(x + 1, y + 1, w - 3, PAL_BUTTON1);
-		vLine(x + 1, y + 2, h - 4, PAL_BUTTON1);
-
-		// bottom right corner inner border
-		hLine(x + 1 - 0, y + h - 2, w - 2, PAL_BUTTON2);
-		vLine(x + w - 2, y + 1 - 0, h - 3, PAL_BUTTON2);
-	}
+	if (checkBoxID == CB_CONF_ACCIDENTAL)
+		gfxPtr = &bmp.checkboxGfx[4*(CHECKBOX_W*CHECKBOX_H)]; // for the special "Accidental" check button in Config Layout
 	else
-	{
-		// top left corner inner border
-		hLine(x + 1, y + 1, w - 2, PAL_BUTTON2);
-		vLine(x + 1, y + 2, h - 3, PAL_BUTTON2);
-	}
+		gfxPtr = &bmp.checkboxGfx[0*(CHECKBOX_W*CHECKBOX_H)];
 
-	// for the special "Accidental" check button in Config Layout
-	srcPtr = (config.ptnAcc == 1) ? accidentalSharp : accidentalFlat;
-
-	// draw check mark (if checked)
 	if (checkBox->checked)
-	{
-		if (checkBoxID == CB_CONF_ACCIDENTAL)
-		{
-			if (state == CHECKBOX_PRESSED)
-				blitFast(x + 5, y + 4, srcPtr, 5, 6);
-			else
-				blitFast(x + 4, y + 3, srcPtr, 5, 6);
-		}
-		else
-		{
-			if (state == CHECKBOX_PRESSED)
-				blitFast(x + 3, y + 4, checkMarkGraphics, CHECKMARK_W, CHECKMARK_H);
-			else
-				blitFast(x + 2, y + 3, checkMarkGraphics, CHECKMARK_W, CHECKMARK_H);
-		}
-	}
-	else
-	{
-		if (checkBoxID == CB_CONF_ACCIDENTAL)
-		{
-			if (state == CHECKBOX_PRESSED)
-				blitFast(x + 5, y + 4, srcPtr, 5, 6);
-			else
-				blitFast(x + 4, y + 3, srcPtr, 5, 6);
-		}
-	}
+		gfxPtr += 2*(CHECKBOX_W*CHECKBOX_H);
+
+	if (checkBox->state == CHECKBOX_PRESSED)
+		gfxPtr += 1*(CHECKBOX_W*CHECKBOX_H);
+
+	blitFast(checkBox->x, checkBox->y, gfxPtr, CHECKBOX_W, CHECKBOX_H);
 }
 
 void showCheckBox(uint16_t checkBoxID)
@@ -297,40 +238,3 @@ void testCheckBoxMouseRelease(void)
 			checkBox->callbackFunc();
 	}
 }
-
-const uint8_t checkMarkGraphics[CHECKMARK_W * CHECKMARK_H] =
-{
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BCKGRND,
-	PAL_BCKGRND, PAL_BUTTONS, PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS,
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS
-};
-
-const uint8_t accidentalFlat[5 * 6] =
-{
-	PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS,
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND,
-	PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS,
-	PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS,
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND,
-	PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS, PAL_BCKGRND, PAL_BUTTONS
-};
-
-const uint8_t accidentalSharp[5 * 6] =
-{
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS,
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS, PAL_BUTTONS, PAL_BUTTONS,
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS,
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS, PAL_BCKGRND, PAL_BCKGRND,
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS, PAL_BCKGRND, PAL_BCKGRND,
-	PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND, PAL_BCKGRND, PAL_BUTTONS
-};

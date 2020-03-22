@@ -7,11 +7,11 @@
 #include <stdint.h>
 #include "ft2_header.h"
 #include "ft2_pattern_ed.h"
-#include "ft2_gfxdata.h"
 #include "ft2_config.h"
 #include "ft2_gui.h"
 #include "ft2_video.h"
 #include "ft2_tables.h"
+#include "ft2_bmp.h"
 
 static tonTyp emptyPattern[MAX_VOICES * MAX_PATT_LEN];
 
@@ -46,8 +46,8 @@ static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t colo
 void updatePattFontPtrs(void)
 {
 	//config.ptnFont is pre-clamped and safe
-	font4Ptr = &font4Data[config.ptnFont * (FONT4_WIDTH * FONT4_CHAR_H)];
-	font5Ptr = &font5Data[config.ptnFont * (FONT5_WIDTH * FONT5_CHAR_H)];
+	font4Ptr = &bmp.font4[config.ptnFont * (FONT4_WIDTH * FONT4_CHAR_H)];
+	font5Ptr = &bmp.font4[(4 + config.ptnFont) * (FONT4_WIDTH * FONT4_CHAR_H)];
 }
 
 void drawPatternBorders(void)
@@ -818,7 +818,7 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 
 	if (fontType == FONT_TYPE3)
 	{
-		srcPtr = &font3Data[chr * FONT3_CHAR_W];
+		srcPtr = &bmp.font3[chr * FONT3_CHAR_W];
 		for (y = 0; y < FONT3_CHAR_H; y++)
 		{
 			for (x = 0; x < FONT3_CHAR_W; x++)
@@ -884,7 +884,7 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 	}
 	else
 	{
-		srcPtr = &font7Data[chr * FONT7_CHAR_W];
+		srcPtr = &bmp.font7[chr * FONT7_CHAR_W];
 		for (y = 0; y < FONT7_CHAR_H; y++)
 		{
 			for (x = 0; x < FONT7_CHAR_W; x++)
@@ -914,7 +914,7 @@ static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 	uint32_t tmp;
 #endif
 
-	srcPtr = &font7Data[18 * FONT7_CHAR_W];
+	srcPtr = &bmp.font7[18 * FONT7_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	for (uint32_t y = 0; y < FONT7_CHAR_H; y++)
@@ -945,7 +945,7 @@ static void drawKeyOffSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 	uint32_t tmp;
 #endif
 
-	srcPtr = &font7Data[21 * FONT7_CHAR_W];
+	srcPtr = &bmp.font7[21 * FONT7_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + (xPos + 2)];
 
 	for (uint32_t y = 0; y < FONT7_CHAR_H; y++)
@@ -995,9 +995,9 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t co
 		char2 = flatNote2Char_small[note];
 	}
 
-	ch1Ptr = &font7Data[char1];
-	ch2Ptr = &font7Data[char2];
-	ch3Ptr = &font7Data[char3];
+	ch1Ptr = &bmp.font7[char1];
+	ch2Ptr = &bmp.font7[char2];
+	ch3Ptr = &bmp.font7[char3];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	for (uint32_t y = 0; y < FONT7_CHAR_H; y++)
@@ -1192,7 +1192,7 @@ static void drawKeyOffBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 	uint32_t tmp;
 #endif
 
-	srcPtr = &font4Data[61 * FONT4_CHAR_W];
+	srcPtr = &bmp.font4[61 * FONT4_CHAR_W];
 	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	for (uint32_t y = 0; y < FONT4_CHAR_H; y++)

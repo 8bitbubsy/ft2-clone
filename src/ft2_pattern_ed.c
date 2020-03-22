@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_header.h"
-#include "ft2_gfxdata.h"
 #include "ft2_config.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_gui.h"
@@ -21,6 +20,7 @@
 #include "ft2_mouse.h"
 #include "ft2_video.h"
 #include "ft2_tables.h"
+#include "ft2_bmp.h"
 
 // for pattern marking w/ keyboard
 static int8_t lastChMark;
@@ -2301,13 +2301,13 @@ void changeLogoType(uint8_t logoType)
 
 	if (logoType == 0)
 	{
-		pushButtons[PB_LOGO].bitmapUnpressed = &ft2LogoBadges[(154 * 32) * 0];
-		pushButtons[PB_LOGO].bitmapPressed = &ft2LogoBadges[(154 * 32) * 1];
+		pushButtons[PB_LOGO].bitmapUnpressed = &bmp.ft2LogoBadges[(154 * 32) * 0];
+		pushButtons[PB_LOGO].bitmapPressed = &bmp.ft2LogoBadges[(154 * 32) * 1];
 	}
 	else
 	{
-		pushButtons[PB_LOGO].bitmapUnpressed = &ft2LogoBadges[(154 * 32) * 2];
-		pushButtons[PB_LOGO].bitmapPressed = &ft2LogoBadges[(154 * 32) * 3];
+		pushButtons[PB_LOGO].bitmapUnpressed = &bmp.ft2LogoBadges[(154 * 32) * 2];
+		pushButtons[PB_LOGO].bitmapPressed = &bmp.ft2LogoBadges[(154 * 32) * 3];
 	}
 
 	drawPushButton(PB_LOGO);
@@ -2319,13 +2319,13 @@ void changeBadgeType(uint8_t badgeType)
 
 	if (badgeType == 0)
 	{
-		pushButtons[PB_BADGE].bitmapUnpressed = &ft2InfoBadges[(25 * 32) * 0];
-		pushButtons[PB_BADGE].bitmapPressed = &ft2InfoBadges[(25 * 32) * 1];
+		pushButtons[PB_BADGE].bitmapUnpressed = &bmp.ft2ByBadges[(25 * 32) * 0];
+		pushButtons[PB_BADGE].bitmapPressed = &bmp.ft2ByBadges[(25 * 32) * 1];
 	}
 	else
 	{
-		pushButtons[PB_BADGE].bitmapUnpressed = &ft2InfoBadges[(25 * 32) * 2];
-		pushButtons[PB_BADGE].bitmapPressed = &ft2InfoBadges[(25 * 32) * 3];
+		pushButtons[PB_BADGE].bitmapUnpressed = &bmp.ft2ByBadges[(25 * 32) * 2];
+		pushButtons[PB_BADGE].bitmapPressed = &bmp.ft2ByBadges[(25 * 32) * 3];
 	}
 
 	drawPushButton(PB_BADGE);

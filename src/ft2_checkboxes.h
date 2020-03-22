@@ -103,9 +103,6 @@ enum
 
 #define CHECKBOX_W 13
 #define CHECKBOX_H 12
-#define CHECKMARK_W 9
-#define CHECKMARK_H 7
-#define CHECKBOX_STATES 3
 
 typedef struct checkBox_t // DO NOT TOUCH!
 {
