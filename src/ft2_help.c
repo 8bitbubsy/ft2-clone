@@ -417,13 +417,13 @@ void showHelpScreen(void)
 
 	showScrollBar(SB_HELP_SCROLL);
 
-	textOutShadow(4,   3, PAL_FORGRND, PAL_DSKTOP2, "Subjects:");
-	textOutShadow(20, 17, PAL_FORGRND, PAL_DSKTOP2, "Features");
-	textOutShadow(20, 32, PAL_FORGRND, PAL_DSKTOP2, "Effects");
-	textOutShadow(20, 47, PAL_FORGRND, PAL_DSKTOP2, "Keyboard");
-	textOutShadow(20, 62, PAL_FORGRND, PAL_DSKTOP2, "How to use FT2");
-	textOutShadow(20, 77, PAL_FORGRND, PAL_DSKTOP2, "Problems/FAQ");
-	textOutShadow(20, 92, PAL_FORGRND, PAL_DSKTOP2, "Known bugs");
+	textOutShadow(4,   4, PAL_FORGRND, PAL_DSKTOP2, "Subjects:");
+	textOutShadow(21, 19, PAL_FORGRND, PAL_DSKTOP2, "Features");
+	textOutShadow(21, 35, PAL_FORGRND, PAL_DSKTOP2, "Effects");
+	textOutShadow(21, 51, PAL_FORGRND, PAL_DSKTOP2, "Keyboard");
+	textOutShadow(21, 67, PAL_FORGRND, PAL_DSKTOP2, "How to use FT2");
+	textOutShadow(21, 83, PAL_FORGRND, PAL_DSKTOP2, "Problems/FAQ");
+	textOutShadow(21, 99, PAL_FORGRND, PAL_DSKTOP2, "Known bugs");
 
 	writeHelp();
 }

@@ -1106,14 +1106,14 @@ void showConfigScreen(void)
 	showPushButton(PB_CONFIG_SAVE);
 	showPushButton(PB_CONFIG_EXIT);
 
-	textOutShadow(5,    4, PAL_FORGRND, PAL_DSKTOP2, "Configuration:");
-	textOutShadow(22,  20, PAL_FORGRND, PAL_DSKTOP2, "I/O devices");
-	textOutShadow(22,  36, PAL_FORGRND, PAL_DSKTOP2, "Layout");
-	textOutShadow(22,  52, PAL_FORGRND, PAL_DSKTOP2, "Miscellaneous");
+	textOutShadow(4,   4, PAL_FORGRND, PAL_DSKTOP2, "Configuration:");
+	textOutShadow(21, 19, PAL_FORGRND, PAL_DSKTOP2, "I/O devices");
+	textOutShadow(21, 35, PAL_FORGRND, PAL_DSKTOP2, "Layout");
+	textOutShadow(21, 51, PAL_FORGRND, PAL_DSKTOP2, "Miscellaneous");
 #ifdef HAS_MIDI
-	textOutShadow(22,  68, PAL_FORGRND, PAL_DSKTOP2, "MIDI input");
+	textOutShadow(21, 67, PAL_FORGRND, PAL_DSKTOP2, "MIDI input");
 #endif
-	textOutShadow(19,  92, PAL_FORGRND, PAL_DSKTOP2, "Auto save");
+	textOutShadow(20, 93, PAL_FORGRND, PAL_DSKTOP2, "Auto save");
 
 	switch (editor.currConfigScreen)
 	{

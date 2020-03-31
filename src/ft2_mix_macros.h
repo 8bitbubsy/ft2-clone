@@ -14,21 +14,24 @@
 	v->SLVol2 = CDA_LVol; \
 	v->SRVol2 = CDA_RVol; \
 
-#define GET_DELTA delta = v->SFrq;
+#define GET_DELTA \
+	const uint32_t delta = v->SFrq;
 
 #define GET_MIXER_VARS \
+	const int32_t SFrqRev = v->SFrqRev; \
 	audioMixL = audio.mixBufferL; \
 	audioMixR = audio.mixBufferR; \
-	mixInMono = (CDA_LVol == CDA_RVol); \
+	const bool mixInMono = (CDA_LVol == CDA_RVol); \
 	realPos = v->SPos; \
 	pos = v->SPosDec; \
 
 #define GET_MIXER_VARS_RAMP \
+	const int32_t SFrqRev = v->SFrqRev; \
 	audioMixL = audio.mixBufferL; \
 	audioMixR = audio.mixBufferR; \
 	CDA_LVolIP = v->SLVolIP; \
 	CDA_RVolIP = v->SRVolIP; \
-	mixInMono = (v->SLVol2 == v->SRVol2) && (CDA_LVolIP == CDA_RVolIP); \
+	const bool mixInMono = (v->SLVol2 == v->SRVol2) && (CDA_LVolIP == CDA_RVolIP); \
 	realPos = v->SPos; \
 	pos = v->SPosDec; \
 
@@ -240,12 +243,15 @@
 /* ----------------------------------------------------------------------- */
 
 #define LIMIT_MIX_NUM \
-	i = (v->SLen - 1) - realPos; \
-	if (i > 65535) \
-		i = 65535; \
+	samplesToMix = (v->SLen - 1) - realPos; \
+	if (samplesToMix > 65535) \
+		samplesToMix = 65535; \
 	\
-	samplesToMix = (((((uint64_t)i << 16) | (pos ^ 0xFFFF)) * v->SFrqRev) >> 32) + 1; \
-	if (samplesToMix > (uint32_t)CDA_BytesLeft) \
+	samplesToMix = (samplesToMix << 16) | (pos ^ 0xFFFF); \
+	samplesToMix = ((int64_t)samplesToMix * SFrqRev) >> 32; \
+	samplesToMix++; \
+	\
+	if (samplesToMix > CDA_BytesLeft) \
 		samplesToMix = CDA_BytesLeft; \
 
 #define LIMIT_MIX_NUM_RAMP \
@@ -262,7 +268,7 @@
 	} \
 	else \
 	{ \
-		if (samplesToMix > (uint32_t)v->SVolIPLen) \
+		if (samplesToMix > v->SVolIPLen) \
 			samplesToMix = v->SVolIPLen; \
 		\
 		v->SVolIPLen -= samplesToMix; \
@@ -272,7 +278,6 @@
 	if (v->backwards) \
 	{ \
 		delta = 0 - v->SFrq; \
-		CDA_IPValH = (int32_t)delta >> 16; \
 		assert(realPos >= v->SRepS && realPos < v->SLen); \
 		realPos = ~realPos; \
 		smpPtr = CDA_LinAdrRev + realPos; \
@@ -281,19 +286,18 @@
 	else \
 	{ \
 		delta = v->SFrq; \
-		CDA_IPValH = delta >> 16; \
 		assert(realPos >= 0 && realPos < v->SLen); \
 		smpPtr = CDA_LinearAdr + realPos; \
 	} \
 	\
-	CDA_IPValL = delta & 0xFFFF; \
+	const int32_t CDA_IPValH = (int32_t)delta >> 16; \
+	const int32_t CDA_IPValL = delta & 0xFFFF; \
 
 #define END_BIDI \
 	if (v->backwards) \
 	{ \
 		pos ^= 0xFFFF; \
-		realPos = (int32_t)(smpPtr - CDA_LinAdrRev); \
-		realPos = ~realPos; \
+		realPos = ~(int32_t)(smpPtr - CDA_LinAdrRev); \
 	} \
 	else \
 	{ \

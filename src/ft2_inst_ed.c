@@ -397,7 +397,7 @@ static void drawVolEnvRepS(void)
 	instrTyp *ins = getCurDispInstr();
 
 	sprintf(str, "%02d", ins->envVRepS);
-	textOutFixed(382, 234, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(382, 233, PAL_FORGRND, PAL_DESKTOP, str);
 }
 
 static void drawVolEnvRepE(void)
@@ -415,7 +415,7 @@ static void drawPanEnvSus(void)
 	instrTyp *ins = getCurDispInstr();
 
 	sprintf(str, "%02d", ins->envPSust);
-	textOutFixed(382, 294, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(382, 293, PAL_FORGRND, PAL_DESKTOP, str);
 }
 
 static void drawPanEnvRepS(void)
@@ -424,7 +424,7 @@ static void drawPanEnvRepS(void)
 	instrTyp *ins = getCurDispInstr();
 
 	sprintf(str, "%02d", ins->envPRepS);
-	textOutFixed(382, 321, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(382, 320, PAL_FORGRND, PAL_DESKTOP, str);
 }
 
 static void drawPanEnvRepE(void)
@@ -433,7 +433,7 @@ static void drawPanEnvRepE(void)
 	instrTyp *ins = getCurDispInstr();
 
 	sprintf(str, "%02d", ins->envPRepE);
-	textOutFixed(382, 335, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(382, 334, PAL_FORGRND, PAL_DESKTOP, str);
 }
 
 static void drawVolume(void)
@@ -445,7 +445,7 @@ static void drawVolume(void)
 	else
 		s = &instr[editor.curInstr]->samp[editor.curSmp];
 
-	hexOutBg(505, 178, PAL_FORGRND, PAL_DESKTOP, s->vol, 2);
+	hexOutBg(505, 177, PAL_FORGRND, PAL_DESKTOP, s->vol, 2);
 }
 
 static void drawPanning(void)
@@ -457,7 +457,7 @@ static void drawPanning(void)
 	else
 		s = &instr[editor.curInstr]->samp[editor.curSmp];
 
-	hexOutBg(505, 192, PAL_FORGRND, PAL_DESKTOP, s->pan, 2);
+	hexOutBg(505, 191, PAL_FORGRND, PAL_DESKTOP, s->pan, 2);
 }
 
 static void drawFineTune(void)
@@ -2262,17 +2262,17 @@ void showInstEditor(void)
 
 	textOutShadow(20,  176, PAL_FORGRND, PAL_DSKTOP2, "Volume envelope:");
 	textOutShadow(153, 176, PAL_FORGRND, PAL_DSKTOP2, "Predef.");
-	textOutShadow(358, 193, PAL_FORGRND, PAL_DSKTOP2, "Sustain:");
+	textOutShadow(358, 194, PAL_FORGRND, PAL_DSKTOP2, "Sustain:");
 	textOutShadow(342, 206, PAL_FORGRND, PAL_DSKTOP2, "Point");
 	textOutShadow(358, 219, PAL_FORGRND, PAL_DSKTOP2, "Env.loop:");
-	textOutShadow(342, 234, PAL_FORGRND, PAL_DSKTOP2, "Start");
+	textOutShadow(342, 233, PAL_FORGRND, PAL_DSKTOP2, "Start");
 	textOutShadow(342, 247, PAL_FORGRND, PAL_DSKTOP2, "End");
 	textOutShadow(20,  263, PAL_FORGRND, PAL_DSKTOP2, "Panning envelope:");
 	textOutShadow(152, 263, PAL_FORGRND, PAL_DSKTOP2, "Predef.");
-	textOutShadow(358, 280, PAL_FORGRND, PAL_DSKTOP2, "Sustain:");
+	textOutShadow(358, 281, PAL_FORGRND, PAL_DSKTOP2, "Sustain:");
 	textOutShadow(342, 293, PAL_FORGRND, PAL_DSKTOP2, "Point");
 	textOutShadow(358, 306, PAL_FORGRND, PAL_DSKTOP2, "Env.loop:");
-	textOutShadow(342, 321, PAL_FORGRND, PAL_DSKTOP2, "Start");
+	textOutShadow(342, 320, PAL_FORGRND, PAL_DSKTOP2, "Start");
 	textOutShadow(342, 334, PAL_FORGRND, PAL_DSKTOP2, "End");
 	textOutShadow(443, 177, PAL_FORGRND, PAL_DSKTOP2, "Volume");
 	textOutShadow(443, 191, PAL_FORGRND, PAL_DSKTOP2, "Panning");
@@ -2609,8 +2609,8 @@ void drawInstEditorExt(void)
 	textOutShadow(4,   96,  PAL_FORGRND, PAL_DSKTOP2, "Instrument Editor Extension:");
 	textOutShadow(20,  114, PAL_FORGRND, PAL_DSKTOP2, "Instrument MIDI enable");
 	textOutShadow(189, 114, PAL_FORGRND, PAL_DSKTOP2, "Mute computer");
-	textOutShadow(4,   133, PAL_FORGRND, PAL_DSKTOP2, "MIDI transmit channel");
-	textOutShadow(4,   147, PAL_FORGRND, PAL_DSKTOP2, "MIDI program");
+	textOutShadow(4,   132, PAL_FORGRND, PAL_DSKTOP2, "MIDI transmit channel");
+	textOutShadow(4,   146, PAL_FORGRND, PAL_DSKTOP2, "MIDI program");
 	textOutShadow(4,   160, PAL_FORGRND, PAL_DSKTOP2, "Bender range (halftones)");
 
 	if (ins == NULL)
@@ -3268,9 +3268,9 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 				{
 					s->typ &= ~32;
 
-					s->len /= 2;
-					s->repL /= 2;
-					s->repS /= 2;
+					s->len >>= 1;
+					s->repL >>= 1;
+					s->repS >>= 1;
 
 					newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
 					if (newPtr != NULL)
@@ -3348,11 +3348,11 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 				{
 					ins->vibSweep = ih_PATWave.vibSweep;
 
-					ins->vibRate = (ih_PATWave.vibRate + 2) / 4;
+					ins->vibRate = (ih_PATWave.vibRate + 2) >> 2;
 					if (ins->vibRate > 0x3F)
 						ins->vibRate = 0x3F;
 
-					ins->vibDepth = (ih_PATWave.vibDepth + 1) / 2;
+					ins->vibDepth = (ih_PATWave.vibDepth + 1) >> 1;
 					if (ins->vibDepth > 0x0F)
 						ins->vibDepth = 0x0F;
 				}

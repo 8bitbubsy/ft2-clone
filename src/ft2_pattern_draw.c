@@ -307,7 +307,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 
 static void drawChannelNumbering(uint16_t yPos)
 {
-#define CH_NUM_XPOS 29
+#define CH_NUM_XPOS 30
 
 	uint16_t xPos = CH_NUM_XPOS;
 	int32_t ch = editor.ui.channelOffset + 1;

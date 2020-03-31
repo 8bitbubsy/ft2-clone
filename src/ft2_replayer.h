@@ -241,7 +241,7 @@ void fixSongName(void); // removes spaces from right side of song name
 void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
 
 void calcReplayRate(int32_t rate);
-void resetOldRates(void);
+void resetCachedFrequencyVars(void);
 void tuneSample(sampleTyp *s, int32_t midCFreq);
 uint32_t getFrequenceValue(uint16_t period);
 

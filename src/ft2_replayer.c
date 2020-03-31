@@ -26,8 +26,7 @@
 */
 
 static bool bxxOverflow;
-static uint16_t oldPeriod;
-static uint32_t oldRate, frequenceDivFactor, frequenceMulFactor;
+static int32_t oldPeriod, oldRate, frequenceDivFactor, frequenceMulFactor;
 static tonTyp nilPatternLine;
 
 // globally accessed
@@ -230,6 +229,8 @@ void setFrqTab(bool linear)
 		note2Period = amigaPeriods;
 	}
 
+	resetCachedFrequencyVars();
+
 	// update "frequency table" radiobutton, if it's shown
 	if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
 		setConfigIORadioButtonStates();
@@ -367,7 +368,7 @@ uint32_t getFrequenceValue(uint16_t period)
 		indexQuotient = index / 768;
 		indexRemainder = index % 768;
 
-		rate = ((uint64_t)logTab[indexRemainder] * frequenceMulFactor) >> LOG_TABLE_BITS;
+		rate = ((int64_t)logTab[indexRemainder] * frequenceMulFactor) >> LOG_TABLE_BITS;
 
 		shift = (14 - indexQuotient) & 0x1F;
 		if (shift != 0)
@@ -384,13 +385,13 @@ uint32_t getFrequenceValue(uint16_t period)
 	return rate;
 }
 
-void resetOldRates(void)
+void resetCachedFrequencyVars(void)
 {
-	oldPeriod = 0;
+	oldPeriod = -1;
 	oldRate = 0;
 
-	resetOldScopeRates();
-	resetOldRevFreqs();
+	resetCachedScopeVars();
+	resetCachedMixerVars();
 }
 
 static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
@@ -1320,17 +1321,17 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 			** Also, vol envelope range is now 0..16384 instead of being shifted to 0..64
 			*/
 
-			uint32_t vol1 = song.globVol * ch->outVol * ch->fadeOutAmp; // 0..64 * 0..64 * 0..32768 = 0..134217728
-			uint32_t vol2 = envVal << 7; // 0..16384 * 2^7 = 0..2097152
+			int32_t vol1 = song.globVol * ch->outVol * ch->fadeOutAmp; // 0..64 * 0..64 * 0..32768 = 0..134217728
+			int32_t vol2 = envVal << 7; // 0..16384 * 2^7 = 0..2097152
 
-			vol = ((uint64_t)vol1 * vol2) >> 32; // 0..65536
+			vol = ((int64_t)vol1 * vol2) >> 32; // 0..65536
 
 			ch->status |= IS_Vol;
 		}
 		else
 		{
 			// calculate with four times more precision (finalVol = 0..65535)
-			vol = (song.globVol * ch->outVol * ch->fadeOutAmp) >> 11; // 0..64 * 0..64 * 0..32768 = 0..65536
+			vol = ((song.globVol * ch->outVol * ch->fadeOutAmp) + (1 << 10)) >> 11; // 0..64 * 0..64 * 0..32768 -> 0..65536 (rounded)
 		}
 
 		if (vol > 65535)
@@ -3058,7 +3059,7 @@ void stopVoices(void)
 
 	stopAllScopes();
 	resetAudioDither();
-	resetOldRates();
+	resetCachedFrequencyVars();
 
 	// wait for scope thread to finish, so that we know pointers aren't deprecated
 	while (editor.scopeThreadMutex);

@@ -45,8 +45,10 @@ typedef struct
 	bool backwards, isFadeOutVoice;
 	uint8_t SPan;
 	uint16_t SVol;
-	int32_t SLVol1, SRVol1, SLVol2, SRVol2, SLVolIP, SRVolIP, SVolIPLen, SPos, SLen, SRepS, SRepL;
-	uint32_t SPosDec, SFrq, SFrqRev;
+	int32_t SLVol1, SRVol1, SLVol2, SRVol2, SLVolIP, SRVolIP, SVolIPLen;
+	int32_t SPos, SLen, SRepS, SRepL, SFrq, SFrqRev;
+	uint32_t SPosDec;
+
 	void (*mixRoutine)(void *, int32_t); // function pointer to mix routine
 } voice_t;
 
@@ -79,7 +81,7 @@ extern chSyncData_t *chSyncEntry;
 
 extern volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
 
-void resetOldRevFreqs(void);
+void resetCachedMixerVars(void);
 int32_t pattQueueReadSize(void);
 int32_t pattQueueWriteSize(void);
 bool pattQueuePush(pattSyncData_t t);

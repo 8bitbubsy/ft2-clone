@@ -20,8 +20,8 @@
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
 static int32_t masterVol, oldAudioFreq, speedVal, pmpLeft, randSeed = INITIAL_DITHER_SEED;
-static int32_t prngStateL, prngStateR;
-static uint32_t tickTimeLen, tickTimeLenFrac, oldSFrq, oldSFrqRev = 0xFFFFFFFF;
+static int32_t prngStateL, prngStateR, oldPeriod, oldSFrq, oldSFrqRev;
+static uint32_t tickTimeLen, tickTimeLenFrac;
 static float fAudioAmpMul;
 static voice_t voice[MAX_VOICES * 2];
 static void (*sendAudSamplesFunc)(uint8_t *, uint32_t, uint8_t); // "send mixed samples" routines
@@ -31,8 +31,9 @@ chSyncData_t *chSyncEntry;
 
 volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
 
-void resetOldRevFreqs(void)
+void resetCachedMixerVars(void)
 {
+	oldPeriod = -1;
 	oldSFrq = 0;
 	oldSFrqRev = 0xFFFFFFFF;
 }
@@ -369,17 +370,16 @@ void mix_UpdateChannelVolPanFrq(void)
 		// frequency change
 		if (status & IS_Period)
 		{
-			v->SFrq = getFrequenceValue(ch->finalPeriod);
-
-			if (v->SFrq != oldSFrq) // this value will very often be the same as before
+			if (ch->finalPeriod != oldPeriod) // this value will very often be the same as before
 			{
-				oldSFrq = v->SFrq;
+				oldSFrq = getFrequenceValue(ch->finalPeriod);
 
 				oldSFrqRev = 0xFFFFFFFF;
 				if (oldSFrq != 0)
 					oldSFrqRev /= oldSFrq;
 			}
 
+			v->SFrq = oldSFrq;
 			v->SFrqRev = oldSFrqRev;
 		}
 

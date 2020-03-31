@@ -183,10 +183,10 @@ void drawAdvEdit(void)
 	textOutShadow(  4, 126, PAL_FORGRND, PAL_DSKTOP2, "New number");
 	textOutShadow(129,  96, PAL_FORGRND, PAL_DSKTOP2, "Masking enable");
 	textOutShadow(114, 109, PAL_FORGRND, PAL_DSKTOP2, "Note");
-	textOutShadow(114, 121, PAL_FORGRND, PAL_DSKTOP2, "Instrument number");
-	textOutShadow(114, 134, PAL_FORGRND, PAL_DSKTOP2, "Volume column");
-	textOutShadow(114, 147, PAL_FORGRND, PAL_DSKTOP2, "Effect digit 1");
-	textOutShadow(114, 160, PAL_FORGRND, PAL_DSKTOP2, "Effect digit 2,3");
+	textOutShadow(114, 122, PAL_FORGRND, PAL_DSKTOP2, "Instrument number");
+	textOutShadow(114, 135, PAL_FORGRND, PAL_DSKTOP2, "Volume column");
+	textOutShadow(114, 148, PAL_FORGRND, PAL_DSKTOP2, "Effect digit 1");
+	textOutShadow(114, 161, PAL_FORGRND, PAL_DSKTOP2, "Effect digit 2,3");
 
 	charOutShadow(239, 95, PAL_FORGRND, PAL_DSKTOP2, 'C');
 	charOutShadow(258, 95, PAL_FORGRND, PAL_DSKTOP2, 'P');
@@ -680,8 +680,8 @@ void patternEditorExtended(void)
 
 	textOutShadow(116,  5, PAL_FORGRND, PAL_DSKTOP2, "Sng.len.");
 	textOutShadow(116, 19, PAL_FORGRND, PAL_DSKTOP2, "Repst.");
-	textOutShadow(222, 40, PAL_FORGRND, PAL_DSKTOP2, "Ptn.");
-	textOutShadow(305, 40, PAL_FORGRND, PAL_DSKTOP2, "Ln.");
+	textOutShadow(222, 39, PAL_FORGRND, PAL_DSKTOP2, "Ptn.");
+	textOutShadow(305, 39, PAL_FORGRND, PAL_DSKTOP2, "Ln.");
 
 	editor.ui.instrSwitcherShown = true;
 	showInstrumentSwitcher();
@@ -2150,12 +2150,12 @@ void drawSongLength(void)
 	if (editor.ui.extended)
 	{
 		x = 165;
-		y = 6;
+		y = 5;
 	}
 	else
 	{
 		x = 59;
-		y = 53;
+		y = 52;
 	}
 
 	hexOutBg(x, y, PAL_FORGRND, PAL_DESKTOP, (uint8_t)song.len, 2);
@@ -2168,12 +2168,12 @@ void drawSongRepS(void)
 	if (editor.ui.extended)
 	{
 		x = 165;
-		y = 20;
+		y = 19;
 	}
 	else
 	{
 		x = 59;
-		y = 65;
+		y = 64;
 	}
 
 	hexOutBg(x, y, PAL_FORGRND, PAL_DESKTOP, (uint8_t)song.repS, 2);
@@ -2207,8 +2207,8 @@ void drawEditPattern(uint16_t editPattern)
 
 	if (editor.ui.extended)
 	{
-		x = 251;
-		y = 40;
+		x = 252;
+		y = 39;
 	}
 	else
 	{
@@ -2226,7 +2226,7 @@ void drawPatternLength(uint16_t editPattern)
 	if (editor.ui.extended)
 	{
 		x = 326;
-		y = 40;
+		y = 39;
 	}
 	else
 	{

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include "ft2_header.h"
 
-void resetOldScopeRates(void);
+void resetCachedScopeVars(void);
 int32_t getSamplePosition(uint8_t ch);
 void stopAllScopes(void);
 void refreshScopes(void);

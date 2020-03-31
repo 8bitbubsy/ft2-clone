@@ -342,7 +342,7 @@ enum
 };
 
 // amount of frames to wait
-#define BUTTON_DOWN_DELAY 16
+#define BUTTON_DOWN_DELAY 25
 
 // font #1/#2 special characters (used for buttons)
 #define ARROW_UP_STRING "\x05"

@@ -1013,7 +1013,7 @@ static void writeWaveform(void)
 
 	viewSizeSamples = smpEd_ViewSize;
 	if (s->typ & 16)
-		viewSizeSamples /= 2;
+		viewSizeSamples >>= 1;
 
 	if (viewSizeSamples <= SAMPLE_AREA_WIDTH)
 	{
@@ -1319,17 +1319,12 @@ void scrollSampleDataLeft(void)
 		return;
 
 	if (mouse.rightButtonPressed)
-	{
 		scrollAmount = smpEd_ViewSize / 14; // rounded from 16 (70Hz)
-		if (scrollAmount < 1)
-			scrollAmount = 1;
-	}
 	else
-	{
 		scrollAmount = smpEd_ViewSize / 27; // rounded from 32 (70Hz)
-		if (scrollAmount < 1)
-			scrollAmount = 1;
-	}
+
+	if (scrollAmount < 1)
+		scrollAmount = 1;
 
 	smpEd_ScrPos -= scrollAmount;
 	if (smpEd_ScrPos < 0)
@@ -1351,17 +1346,12 @@ void scrollSampleDataRight(void)
 		return;
 
 	if (mouse.rightButtonPressed)
-	{
 		scrollAmount = smpEd_ViewSize / 14; // was 16 (70Hz->60Hz)
-		if (scrollAmount < 1)
-			scrollAmount = 1;
-	}
 	else
-	{
 		scrollAmount = smpEd_ViewSize / 27; // was 32 (70Hz->60Hz)
-		if (scrollAmount < 1)
-			scrollAmount = 1;
-	}
+
+	if (scrollAmount < 1)
+		scrollAmount = 1;
 
 	smpEd_ScrPos += scrollAmount;
 	if (smpEd_ScrPos+smpEd_ViewSize > sampleLen)
@@ -2694,18 +2684,15 @@ void sampMin(void)
 	if (s == NULL || s->pek == NULL || s->len <= 0)
 		return;
 
-	bool hasLoop = s->typ & 3;
-	int32_t loopEnd = s->repS + s->repL;
+	if (okBox(1, "System request", "Minimize sample?") != 1)
+		return;
 
-	if (!hasLoop || (loopEnd >= s->len || loopEnd == 0))
-	{
-		okBox(0, "System message", "Sample is already minimized.");
-	}
-	else
+	bool hasLoop = s->typ & 3;
+	if (hasLoop && s->len > s->repS+s->repL && s->repL < s->len)
 	{
 		lockMixerCallback();
 
-		s->len = loopEnd;
+		s->len = s->repS + s->repL;
 
 		newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
 		if (newPtr != NULL)
@@ -2713,6 +2700,8 @@ void sampMin(void)
 			s->origPek = newPtr;
 			s->pek = s->origPek + SMP_DAT_OFFSET;
 		}
+
+		// Note: we don't need to make a call to fixSample()
 
 		unlockMixerCallback();
 
@@ -2897,9 +2886,9 @@ void showSampleEditor(void)
 	textOutShadow(371, 369, PAL_FORGRND, PAL_DSKTOP2, "Forward");
 	textOutShadow(371, 386, PAL_FORGRND, PAL_DSKTOP2, "Pingpong");
 	textOutShadow(446, 369, PAL_FORGRND, PAL_DSKTOP2, "8-bit");
-	textOutShadow(445, 385, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
-	textOutShadow(488, 349, PAL_FORGRND, PAL_DSKTOP2, "Display");
-	textOutShadow(488, 361, PAL_FORGRND, PAL_DSKTOP2, "Length");
+	textOutShadow(445, 384, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
+	textOutShadow(488, 350, PAL_FORGRND, PAL_DSKTOP2, "Display");
+	textOutShadow(488, 362, PAL_FORGRND, PAL_DSKTOP2, "Length");
 	textOutShadow(488, 375, PAL_FORGRND, PAL_DSKTOP2, "Repeat");
 	textOutShadow(488, 387, PAL_FORGRND, PAL_DSKTOP2, "Replen.");
 
@@ -3233,7 +3222,7 @@ static void editSampleData(bool mouseButtonHeld)
 			int32_t y = lastDrawY - vl;
 			uint32_t x = lastDrawX - p;
 
-			uint32_t xMul = 0xFFFFFFFF;
+			int32_t xMul = 0xFFFFFFFF;
 			if (x != 0)
 				xMul /= x;
 
@@ -3276,7 +3265,7 @@ static void editSampleData(bool mouseButtonHeld)
 			int32_t y = lastDrawY - vl;
 			uint32_t x = lastDrawX - p;
 
-			uint32_t xMul = 0xFFFFFFFF;
+			int32_t xMul = 0xFFFFFFFF;
 			if (x != 0)
 				xMul /= x;
 
@@ -3430,10 +3419,10 @@ void drawSampleEditorExt(void)
 
 	textOutShadow( 4,  96, PAL_FORGRND, PAL_DSKTOP2, "Rng.:");
 	charOutShadow(91,  95, PAL_FORGRND, PAL_DSKTOP2, '-');
-	textOutShadow( 4, 109, PAL_FORGRND, PAL_DSKTOP2, "Range size");
-	textOutShadow( 4, 123, PAL_FORGRND, PAL_DSKTOP2, "Copy buf. size");
+	textOutShadow( 4, 110, PAL_FORGRND, PAL_DSKTOP2, "Range size");
+	textOutShadow( 4, 124, PAL_FORGRND, PAL_DSKTOP2, "Copy buf. size");
 
-	textOutShadow(162,  95, PAL_FORGRND, PAL_DSKTOP2, "Src.instr.");
+	textOutShadow(162,  96, PAL_FORGRND, PAL_DSKTOP2, "Src.instr.");
 	textOutShadow(245,  96, PAL_FORGRND, PAL_DSKTOP2, "smp.");
 	textOutShadow(162, 109, PAL_FORGRND, PAL_DSKTOP2, "Dest.instr.");
 	textOutShadow(245, 109, PAL_FORGRND, PAL_DSKTOP2, "smp.");

@@ -121,7 +121,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	p1 = s->pek;
 
 	// don't use the potentially clamped newLen value here
-	delta64 = ((uint64_t)s->len << 32) / (uint64_t)(s->len * dLenMul); // 32.32 fixed point delta
+	delta64 = ((int64_t)s->len << 32) / (int64_t)(s->len * dLenMul); // 32.32 fixed point delta
 
 	posFrac64 = 0; // 32.32 fixed point position.fraction
 
@@ -660,8 +660,8 @@ static void drawEchoBox(void)
 	hLine(x + 2,     y + h - 3, w - 4, PAL_BUTTON1);
 
 	textOutShadow(177, 226, PAL_FORGRND, PAL_BUTTON2, "Number of echoes");
-	textOutShadow(177, 239, PAL_FORGRND, PAL_BUTTON2, "Echo distance");
-	textOutShadow(177, 253, PAL_FORGRND, PAL_BUTTON2, "Fade out");
+	textOutShadow(177, 240, PAL_FORGRND, PAL_BUTTON2, "Echo distance");
+	textOutShadow(177, 254, PAL_FORGRND, PAL_BUTTON2, "Fade out");
 	textOutShadow(192, 270, PAL_FORGRND, PAL_BUTTON2, "Add memory to sample");
 
 	assert(echo_nEcho <= 1024);
@@ -1510,7 +1510,7 @@ static void drawSampleVolumeBox(void)
 	hLine(x + 2,     y + h - 3, w - 4, PAL_BUTTON1);
 
 	textOutShadow(172, 236, PAL_FORGRND, PAL_BUTTON2, "Start volume");
-	textOutShadow(172, 249, PAL_FORGRND, PAL_BUTTON2, "End volume");
+	textOutShadow(172, 250, PAL_FORGRND, PAL_BUTTON2, "End volume");
 	charOutShadow(282, 236, PAL_FORGRND, PAL_BUTTON2, '%');
 	charOutShadow(282, 250, PAL_FORGRND, PAL_BUTTON2, '%');
 

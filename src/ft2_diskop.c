@@ -104,7 +104,7 @@ int32_t getFileSize(UNICHAR *fileNameU) // returning -1 = filesize over 2GB
 	if (stat(fileNameU, &st) != 0)
 		return 0;
 
-	fSize = (int64_t)(st.st_size);
+	fSize = (int64_t)st.st_size;
 #endif
 	if (fSize < 0)
 		fSize = 0;

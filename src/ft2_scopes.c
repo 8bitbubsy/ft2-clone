@@ -48,9 +48,9 @@ static uint8_t *scopeMuteBMP_Ptrs[16];
 
 lastChInstr_t lastChInstr[MAX_VOICES]; // global
 
-void resetOldScopeRates(void)
+void resetCachedScopeVars(void)
 {
-	oldVoiceDelta = 0;
+	oldVoiceDelta = 0xFFFFFFFF;
 	oldSFrq = 0;
 }
 
@@ -126,6 +126,7 @@ static void setChannel(int32_t nr, bool on)
 
 static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t channel, bool outline)
 {
+	scopeXOffs++;
 	scopeYOffs++;
 	channel++;
 
@@ -313,7 +314,7 @@ bool testScopesMouseDown(void)
 	return false;
 }
 
-static void scopeTrigger(uint8_t ch, sampleTyp *s, int32_t playOffset)
+static void scopeTrigger(int32_t ch, sampleTyp *s, int32_t playOffset)
 {
 	bool sampleIs16Bit;
 	uint8_t loopType;
@@ -522,7 +523,7 @@ void drawScopes(void)
 
 		// draw rec. symbol (if enabled)
 		if (config.multiRecChn[i])
-			blit(scopeXOffs, scopeYOffs + 31, bmp.scopeRec, 13, 4);
+			blit(scopeXOffs + 1, scopeYOffs + 31, bmp.scopeRec, 13, 4);
 
 		scopeXOffs += scopeDrawLen + 3; // align x to next scope
 	}
@@ -572,7 +573,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 			if (instr[ch->instrNr] != NULL)
 			{
 				smpPtr = &instr[ch->instrNr]->samp[ch->sampleNr];
-				scopeTrigger((uint8_t)i, smpPtr, ch->smpStartPos);
+				scopeTrigger(i, smpPtr, ch->smpStartPos);
 
 				// set stuff used by Smp. Ed. for sampling position line
 

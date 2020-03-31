@@ -146,13 +146,13 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	  
 	// ------ ABOUT SCREEN PUSHBUTTONS ------
 	//x, y,   w,  h,  p, d, text #1, text #2, funcOnDown, funcOnUp
-	{ 5, 153, 59, 16, 0, 0, "Exit",  NULL,    NULL,       exitAboutScreen },
+	{ 4, 153, 59, 16, 0, 0, "Exit",  NULL,    NULL,       exitAboutScreen },
 
 	// ------ HELP SCREEN PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,     funcOnUp
 	{   3, 155, 59, 16, 0, 0, "Exit",            NULL,    NULL,           exitHelpScreen },
-	{ 611,   2, 18, 13, 1, 2, ARROW_UP_STRING,   NULL,    helpScrollUp,   NULL },
-	{ 611, 158, 18, 13, 1, 2, ARROW_DOWN_STRING, NULL,    helpScrollDown, NULL },
+	{ 611,   2, 18, 13, 1, 3, ARROW_UP_STRING,   NULL,    helpScrollUp,   NULL },
+	{ 611, 158, 18, 13, 1, 3, ARROW_DOWN_STRING, NULL,    helpScrollDown, NULL },
 
 	// ------ PATTERN EDITOR PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,            text #2, funcOnDown,         funcOnUp
@@ -196,8 +196,8 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 
 	// ------ SAMPLE EDITOR PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,            text #2, funcOnDown,            funcOnUp
-	{   3, 331, 23, 13, 0, 0, ARROW_LEFT_STRING,  NULL,    scrollSampleDataLeft,  NULL },
-	{ 606, 331, 23, 13, 0, 0, ARROW_RIGHT_STRING, NULL,    scrollSampleDataRight, NULL },
+	{   3, 331, 23, 13, 1, 3, ARROW_LEFT_STRING,  NULL,    scrollSampleDataLeft,  NULL },
+	{ 606, 331, 23, 13, 1, 3, ARROW_RIGHT_STRING, NULL,    scrollSampleDataRight, NULL },
 	{  38, 356, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    sampPlayNoteUp,        NULL },
 	{  38, 368, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    sampPlayNoteDown,      NULL },
 	{   3, 382, 53, 16, 0, 0, "Stop",             NULL,    NULL,                  smpEdStop},
@@ -338,10 +338,10 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 113, 155, 93, 16, 0, 0, editor.ui.fullscreenButtonText, NULL,    NULL,                toggleFullScreen },
 	{ 370, 121, 18, 13, 1, 4, ARROW_UP_STRING,                NULL,    configQuantizeUp,    NULL },
 	{ 387, 121, 18, 13, 1, 4, ARROW_DOWN_STRING,              NULL,    configQuantizeDown,  NULL },
-	{ 594, 107, 18, 13, 1, 4, ARROW_UP_STRING,                NULL,    configMIDIChnUp,     NULL },
-	{ 611, 107, 18, 13, 1, 4, ARROW_DOWN_STRING,              NULL,    configMIDIChnDown,   NULL },
-	{ 594, 121, 18, 13, 1, 4, ARROW_UP_STRING,                NULL,    configMIDITransUp,   NULL },
-	{ 611, 121, 18, 13, 1, 4, ARROW_DOWN_STRING,              NULL,    configMIDITransDown, NULL },
+	{ 594, 106, 18, 13, 1, 4, ARROW_UP_STRING,                NULL,    configMIDIChnUp,     NULL },
+	{ 611, 106, 18, 13, 1, 4, ARROW_DOWN_STRING,              NULL,    configMIDIChnDown,   NULL },
+	{ 594, 120, 18, 13, 1, 4, ARROW_UP_STRING,                NULL,    configMIDITransUp,   NULL },
+	{ 611, 120, 18, 13, 1, 4, ARROW_DOWN_STRING,              NULL,    configMIDITransDown, NULL },
 	{ 556, 158, 22, 13, 1, 4, ARROW_LEFT_STRING,              NULL,    configMIDISensDown,  NULL },
 	{ 607, 158, 22, 13, 1, 4, ARROW_RIGHT_STRING,             NULL,    configMIDISensUp,    NULL },
 
@@ -377,8 +377,8 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 134,   2, 31, 13, 0, 0, "../",             NULL,    NULL,             pbDiskOpParent },
 	{ 134,  16, 31, 12, 0, 0, "/",               NULL,    NULL,             pbDiskOpRoot },
 #endif
-	{ 335,   2, 18, 13, 0, 0, ARROW_UP_STRING,   NULL,    pbDiskOpListUp,   NULL },
-	{ 335, 158, 18, 13, 0, 0, ARROW_DOWN_STRING, NULL,    pbDiskOpListDown, NULL },
+	{ 335,   2, 18, 13, 1, 3, ARROW_UP_STRING,   NULL,    pbDiskOpListUp,   NULL },
+	{ 335, 158, 18, 13, 1, 3, ARROW_DOWN_STRING, NULL,    pbDiskOpListDown, NULL },
 
 	// ------ WAV RENDERER PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,         funcOnUp
@@ -539,10 +539,10 @@ void handlePushButtonsWhileMouseDown(void)
 	{
 		// button delay stuff
 		if (mouse.rightButtonPressed)
-			buttonDelay = pushButton->delayFrames / 2;
-		else if (pushButton->preDelay == 2 && (!mouse.firstTimePressingButton && ++tmpCounter >= 20)) // special mode
+			buttonDelay = pushButton->delayFrames >> 1;
+		else if (pushButton->preDelay == 2 && (!mouse.firstTimePressingButton && ++tmpCounter >= 50)) // special mode
 			buttonDelay = 0;
-		else 
+		else
 			buttonDelay = pushButton->delayFrames;
 
 		// main repeat delay

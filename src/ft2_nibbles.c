@@ -265,7 +265,7 @@ void nibblesHighScore(void)
 {
 	if (editor.NI_Play)
 	{
-		okBox(0, "System message", "The highscore table is not available during play.");
+		okBox(0, "Nibbles message", "The highscore table is not available during play.");
 		return;
 	}
 
@@ -781,7 +781,7 @@ void nibblesPlay(void)
 {
 	if (editor.NI_Play)
 	{
-		if (okBox(2, "Nibbles request", "Restart the current game of Nibbles?") != 1)
+		if (okBox(2, "Nibbles request", "Restart current game of Nibbles?") != 1)
 			return;
 	}
 

@@ -79,7 +79,7 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 
 	// ------ CONFIG CHECKBOXES ------
 	//x,   y,   w,   h,  funcOnUp
-	{   3,  91,  76, 12, cbToggleAutoSaveConfig },
+	{   3,  91,  77, 12, cbToggleAutoSaveConfig },
 	{ 389, 132,  90, 12, cbConfigInterpolation },
 	{ 389, 145, 107, 12, cbConfigVolRamp },
 	{ 389, 158 , 84, 12, cbConfigDither },

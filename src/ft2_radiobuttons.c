@@ -30,12 +30,12 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 
 	// ------ HELP SCREEN RADIOBUTTONS ------
 	//x, y,   w,  group,         funcOnUp
-	{ 5, 16,  68, RB_GROUP_HELP, rbHelpFeatures },
-	{ 5, 31,  59, RB_GROUP_HELP, rbHelpEffects },
-	{ 5, 46,  70, RB_GROUP_HELP, rbHelpKeyboard },
-	{ 5, 61, 108, RB_GROUP_HELP, rbHelpHowToUseFT2 },
-	{ 5, 76, 100, RB_GROUP_HELP, rbHelpFAQ },
-	{ 5, 91,  85, RB_GROUP_HELP, rbHelpKnownBugs },
+	{ 5, 18,  69, RB_GROUP_HELP, rbHelpFeatures },
+	{ 5, 34,  60, RB_GROUP_HELP, rbHelpEffects },
+	{ 5, 50,  71, RB_GROUP_HELP, rbHelpKeyboard },
+	{ 5, 66, 109, RB_GROUP_HELP, rbHelpHowToUseFT2 },
+	{ 5, 82, 101, RB_GROUP_HELP, rbHelpFAQ },
+	{ 5, 98,  86, RB_GROUP_HELP, rbHelpKnownBugs },
 
 	// ------ NIBBLES SCREEN RADIOBUTTONS ------
 	//x, y,   w,   group,                       funcOnUp
@@ -63,12 +63,11 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 
 	// ------ CONFIG SCREEN LEFT RADIOBUTTONS ------
 	//x, y,  w,  group,                  funcOnUp
-	{ 4, 19, 87, RB_GROUP_CONFIG_SELECT, rbConfigIODevices },
-	{ 4, 35, 59, RB_GROUP_CONFIG_SELECT, rbConfigLayout },
-	{ 4, 51, 99, RB_GROUP_CONFIG_SELECT, rbConfigMiscellaneous },
-
+	{ 5, 18, 85, RB_GROUP_CONFIG_SELECT, rbConfigIODevices },
+	{ 5, 34, 57, RB_GROUP_CONFIG_SELECT, rbConfigLayout },
+	{ 5, 50, 97, RB_GROUP_CONFIG_SELECT, rbConfigMiscellaneous },
 #ifdef HAS_MIDI
-	{ 4, 67, 74, RB_GROUP_CONFIG_SELECT, rbConfigMidiInput },
+	{ 5, 66, 72, RB_GROUP_CONFIG_SELECT, rbConfigMidiInput },
 #endif
 
 	// ------ CONFIG AUDIO ------

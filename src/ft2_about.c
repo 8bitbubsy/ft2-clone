@@ -9,7 +9,7 @@
 
 // ported from original FT2 code
 
-#define NUM_STARS 512
+#define NUM_STARS 1000
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
 #define ABOUT_LOGO_W 449
@@ -53,7 +53,7 @@ static inline int32_t random32(int32_t l) // Turbo Pascal Random() implementatio
 	randSeed *= 134775813;
 	randSeed += 1;
 
-	r = (int32_t)(((int64_t)randSeed * l) >> 32);
+	r = ((int64_t)randSeed * l) >> 32;
 	return r;
 }
 
@@ -68,13 +68,13 @@ static void fixaMatris(rotate_t a, matrix_t *mat)
 	sc = sin32767[a.z >> 6];
 	cc = cos32767[a.z >> 6];
 
-	mat->x.x = ((ca * cc) >> 16) + (((sc * ((sa * sb) >> 16)) >> 16) << 1);
+	mat->x.x = ((ca * cc) >> 16) + ((sc * ((sa * sb) >> 16)) >> (16-1));
 	mat->y.x = (sa * cb) >> 16;
-	mat->z.x = (((cc * ((sa * sb) >> 16)) >> 16) << 1) - ((ca * sc) >> 16);
+	mat->z.x = ((cc * ((sa * sb) >> 16)) >> (16-1)) - ((ca * sc) >> 16);
 
-	mat->x.y = (((sc * ((ca * sb) >> 16)) >> 16) << 1) - ((sa * cc) >> 16);
+	mat->x.y = ((sc * ((ca * sb) >> 16)) >> (16-1)) - ((sa * cc) >> 16);
 	mat->y.y = (ca * cb) >> 16;
-	mat->z.y = ((sa * sc) >> 16) + (((cc * ((ca * sb) >> 16)) >> 16) << 1);
+	mat->z.y = ((sa * sc) >> 16) + ((cc * ((ca * sb) >> 16)) >> (16-1));
 
 	mat->x.z = (cb * sc) >> 16;
 	mat->y.z = 0 - (sb >> 1);
@@ -167,8 +167,8 @@ static void aboutInit(void)
 static void realStars(void)
 {
 	uint8_t col;
-	int16_t x, y, z, xx, xy, xz, yx, yy, yz, zx, zy, zz;
-	int32_t screenBufferPos;
+	int16_t z, xx, xy, xz, yx, yy, yz, zx, zy, zz;
+	int32_t x, y, zMul, screenBufferPos;
 	vector_t *star;
 
 	xx = starmat.x.x; xy = starmat.x.y; xz = starmat.x.z;
@@ -190,26 +190,27 @@ static void realStars(void)
 		star = &starcrd[i];
 		star->z += hastighet;
 
-		z = ((xz * star->x) >> 16) + ((yz * star->y) >> 16) + ((zz * star->z) >> 16);
+		z = ((xz * star->x) + (yz * star->y) + (zz * star->z)) >> 16;
 		z += 9000;
-		if (z <= 100)
-			continue;
+		if (z <= 100) continue;
+		zMul = 0xFFFFFFFF / z; // 8bitbubsy: optimization
+		
+		y = ((xy * star->x) + (yy * star->y) + (zy * star->z)) >> (16-7);
+		y = ((int64_t)y * zMul) >> 32;
+		y += (2+ABOUT_SCREEN_H)/2;
+		if ((uint32_t)y > 2+ABOUT_SCREEN_H) continue;
 
-		y = ((xy * star->x) >> 16) + ((yy * star->y) >> 16) + ((zy * star->z) >> 16);
-		y = (int16_t)((y << 7) / z) + 84;
-		if ((uint16_t)y >= 173-6)
-			continue;
-
-		x = ((xx * star->x) >> 16) + ((yx * star->y) >> 16) + ((zx * star->z) >> 16);
-		x = (int16_t)((((x >> 2) + x) << 7) / z) + (320-8);
-		if ((uint16_t)x >= 640-16)
-			continue;
+		x = ((xx * star->x) + (yx * star->y) + (zx * star->z)) >> (16-7);
+		x += x >> 2; // x *= 1.25
+		x = ((int64_t)x * zMul) >> 32;
+		x += (2+ABOUT_SCREEN_W)/2;
+		if ((uint32_t)x > 2+ABOUT_SCREEN_W) continue;
 
 		// render star pixel if the pixel under it is the background
-		screenBufferPos = ((y + 4) * SCREEN_W) + (x + 4);
+		screenBufferPos = ((uint32_t)y * SCREEN_W) + (uint32_t)x;
 		if ((video.frameBuffer[screenBufferPos] >> 24) == PAL_BCKGRND)
 		{
-			col = ((uint8_t)~(z >> 8) >> 3) - (22 - 8);
+			col = ((uint8_t)~(z >> 8) >> 3) - 14;
 			if (col < 24)
 			{
 				video.frameBuffer[screenBufferPos] = video.palette[starColConv[col]] & 0x00FFFFFF;
