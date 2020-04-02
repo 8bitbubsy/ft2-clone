@@ -906,18 +906,7 @@ see the individual sample points, it will look like normal.
 >@X010
 >@C001Mouse / keyboard:
 >
->@C002- When you hold down a key (f.ex. playing a sample), the mouse movement
->@X021can be choppy. This is related to the input queue being spammed with
-"key down" events, delaying the mouse position events.
-I only poll input once per frame (60Hz), so the frequency is a tad low. It has
-to be like this for several reasons, though...
->@X010
->@C002- macOS / OS X: "Hardware mode" mouse looks blurry on retina Macs
->@X010
->- macOS / OS X: Holding down a mouse button won't trap the mouse cursor
->@X021inside the window. This is related to a kludge that simply doesn't work
-very well in macOS. The mouse movement would freeze for some time after a mouse
-button was held down.
+>@C002- Linux: The mouse cursor graphics can be glitchy at times...
 >@X010
 >@C002- The "clear sample" shortcut (shift + num-pad Del/',') only works if
 >@X021num lock is off. There's no way I can fix this...
