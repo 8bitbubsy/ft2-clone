@@ -63,7 +63,8 @@ textBox_t textBoxes[NUM_TEXTBOXES] =
 };
 
 static int16_t markX1, markX2;
-static uint16_t oldCursorPos, oldMouseX;
+static uint16_t oldCursorPos;
+static int32_t oldMouseX;
 
 static void moveTextCursorLeft(int16_t i, bool updateTextBox);
 static void moveTextCursorRight(int16_t i, bool updateTextBox);

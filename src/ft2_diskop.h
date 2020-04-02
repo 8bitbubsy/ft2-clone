@@ -40,7 +40,7 @@ void pbDiskOpRoot(void);
 int32_t getExtOffset(char *s, int32_t stringLen); // get byte offset of file extension (last '.')
 bool testDiskOpMouseDown(bool mouseHeldDown);
 void testDiskOpMouseRelease(void);
-void startDiskOpFillThread(void);
+void diskOp_StartDirReadThread(void);
 void diskOp_DrawDirectory(void);
 void showDiskOpScreen(void);
 void hideDiskOpScreen(void);

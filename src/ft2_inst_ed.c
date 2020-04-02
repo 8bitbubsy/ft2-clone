@@ -3146,7 +3146,7 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 			ins->vibDepth = ih.vibDepth;
 			ins->vibRate = ih.vibRate;
 			ins->fadeOut = ih.fadeOut;
-			ins->midiOn = (ih.midiOn > 0) ? true : false;
+			ins->midiOn = (ih.midiOn == 1) ? true : false;
 			ins->midiChannel = ih.midiChannel;
 			ins->midiProgram = ih.midiProgram;
 			ins->midiBend = ih.midiBend;

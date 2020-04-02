@@ -622,16 +622,6 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 		s = &instrTmp[1+a]->samp[0];
 
 		s->len = 2 * SWAP16(h_MOD31.instr[a].len);
-		
-		s->pek = NULL;
-		s->origPek = (int8_t *)malloc(s->len + LOOP_FIX_LEN);
-		if (s->origPek == NULL)
-		{
-			showMsg(0, "System message", "Not enough memory!");
-			goto modLoadError;
-		}
-
-		s->pek = s->origPek + SMP_DAT_OFFSET;
 
 		if (modFormat != FORMAT_HMNT) // most of "His Master's Noisetracker" songs have junk sample names, so let's not load them
 			memcpy(s->name, songTmp.instrName[1+a], 22);
@@ -655,11 +645,11 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 			s->repL = 2;
 
 		// in The Ultimate SoundTracker, sample loop start is in bytes, not words
-		if (mightBeSTK)
+		if (modFormat == FORMAT_STK)
 			s->repS >>= 1;
 
 		// fix for poorly converted STK (< v2.5) -> PT/NT modules (FIXME: Worth keeping or not?)
-		if (!mightBeSTK && s->repL > 2 && s->repS+s->repL > s->len)
+		if (modFormat != FORMAT_STK && s->repL > 2 && s->repS+s->repL > s->len)
 		{
 			if ((s->repS>>1)+s->repL <= s->len)
 				s->repS >>= 1;
@@ -691,6 +681,16 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 			fseek(f, s->repS, SEEK_CUR);
 			s->repS = 0;
 		}
+
+		s->pek = NULL;
+		s->origPek = (int8_t *)malloc(s->len + LOOP_FIX_LEN);
+		if (s->origPek == NULL)
+		{
+			showMsg(0, "System message", "Not enough memory!");
+			goto modLoadError;
+		}
+
+		s->pek = s->origPek + SMP_DAT_OFFSET;
 
 		int32_t bytesRead = (int32_t)fread(s->pek, 1, s->len, f);
 		if (bytesRead < s->len)
@@ -737,7 +737,7 @@ static uint8_t stmTempoToBPM(uint8_t tempo) // ported from original ST2.3 replay
 static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
 {
 	uint8_t typ, tempo;
-	int16_t i, j, k, ai, ap, tmp;
+	int16_t i, j, k, ap, tmp;
 	uint16_t a;
 	tonTyp *ton;
 	sampleTyp *s;
@@ -899,7 +899,6 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
 		}
 	}
 
-	ai = 31;
 	for (i = 0; i < 31; i++)
 	{
 		// trim off spaces at end of name
@@ -1010,7 +1009,6 @@ static int8_t countS3MChannels(uint16_t antPtn)
 static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 {
 	int8_t *tmpSmp;
-	bool illegalUxx;
 	uint8_t ha[2048];
 	uint8_t alastnfo[32], alastefx[32], alastvibnfo[32], s3mLastGInstr[32];
 	uint8_t typ;
@@ -1128,8 +1126,6 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 	}
 
 	// *** PATTERNS ***
-
-	illegalUxx = false;
 
 	k = 0;
 	for (i = 0; i < ap; i++)
@@ -2012,7 +2008,7 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 			ins->vibDepth = ih.vibDepth;
 			ins->vibRate = ih.vibRate;
 			ins->fadeOut = ih.fadeOut;
-			ins->midiOn = (ih.midiOn > 0) ? true : false;
+			ins->midiOn = (ih.midiOn == 1) ? true : false;
 			ins->midiChannel = ih.midiChannel;
 			ins->midiProgram = ih.midiProgram;
 			ins->midiBend = ih.midiBend;

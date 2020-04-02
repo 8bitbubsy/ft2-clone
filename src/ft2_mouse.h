@@ -19,9 +19,10 @@ struct mouse_t
 	bool leftButtonPressed, rightButtonPressed, leftButtonReleased, rightButtonReleased;
 	bool firstTimePressingButton, mouseOverTextBox;
 	int8_t buttonCounter, mode;
-	int16_t lastUsedObjectID, lastUsedObjectType, lastEditBox, x, y, lastX, lastY, xBias, yBias;
-	int16_t lastScrollX, lastScrollXTmp, lastScrollY, saveMouseX, saveMouseY;
-	int32_t setPosX, setPosY;
+	int16_t lastUsedObjectID, lastUsedObjectType, lastEditBox;
+	int32_t x, y, lastX, lastY, xBias, yBias, setPosX, setPosY;
+	int32_t lastScrollX, lastScrollXTmp, lastScrollY, saveMouseX, saveMouseY;
+	uint32_t buttonState;
 } mouse;
 
 // do not change these!
@@ -30,6 +31,7 @@ struct mouse_t
 #define MOUSE_GLASS_ANI_FRAMES 22
 #define MOUSE_CLOCK_ANI_FRAMES 5
 
+void sendMouseButtonUpEvent(uint8_t button);
 void freeMouseCursors(void);
 bool createMouseCursors(void);
 void setMousePosToCenter(void);

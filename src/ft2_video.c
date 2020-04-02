@@ -376,7 +376,7 @@ bool setupSprites(void)
 	return true;
 }
 
-void changeSpriteData(uint8_t sprite, const uint8_t *data)
+void changeSpriteData(int32_t sprite, const uint8_t *data)
 {
 	sprites[sprite].data = data;
 	memset(sprites[sprite].refreshBuffer, 0, sprites[sprite].w * sprites[sprite].h * sizeof (int32_t));
@@ -384,7 +384,7 @@ void changeSpriteData(uint8_t sprite, const uint8_t *data)
 
 void freeSprites(void)
 {
-	for (uint32_t i = 0; i < SPRITE_NUM; i++)
+	for (int32_t i = 0; i < SPRITE_NUM; i++)
 	{
 		if (sprites[i].refreshBuffer != NULL)
 		{
@@ -404,18 +404,18 @@ void setRightLoopPinState(bool clicked)
 	changeSpriteData(SPRITE_RIGHT_LOOP_PIN, clicked ? &bmp.loopPins[3*(154*16)] : &bmp.loopPins[2*(154*16)]);
 }
 
-int32_t getSpritePosX(uint8_t sprite)
+int32_t getSpritePosX(int32_t sprite)
 {
 	return sprites[sprite].x;
 }
 
-void setSpritePos(uint8_t sprite, int16_t x, int16_t y)
+void setSpritePos(int32_t sprite, int32_t x, int32_t y)
 {
-	sprites[sprite].newX = x;
-	sprites[sprite].newY = y;
+	sprites[sprite].newX = (int16_t)x;
+	sprites[sprite].newY = (int16_t)y;
 }
 
-void hideSprite(uint8_t sprite)
+void hideSprite(int32_t sprite)
 {
 	sprites[sprite].newX = SCREEN_W;
 }
@@ -423,7 +423,7 @@ void hideSprite(uint8_t sprite)
 void eraseSprites(void)
 {
 	int8_t i;
-	register int32_t x, y, sw, sh, srcPitch, dstPitch;
+	int32_t sx, sy, x, y, sw, sh, srcPitch, dstPitch;
 	const uint32_t *src32;
 	uint32_t *dst32;
 	sprite_t *s;
@@ -431,28 +431,36 @@ void eraseSprites(void)
 	for (i = SPRITE_NUM-1; i >= 0; i--) // erasing must be done in reverse order
 	{
 		s = &sprites[i];
-		if (s->x >= SCREEN_W) // sprite is hidden, don't erase
+		if (s->x >= SCREEN_W || s->y >= SCREEN_H) // sprite is hidden, don't draw nor fill clear buffer
 			continue;
 
-		assert(s->y >= 0 && s->refreshBuffer != NULL);
+		assert(s->refreshBuffer != NULL);
 
 		sw = s->w;
 		sh = s->h;
-		x  = s->x;
-		y  = s->y;
+		sx = s->x;
+		sy = s->y;
 
-		// if x is negative, adjust variables (can only happen on loop pins in smp. ed.)
-		if (x < 0)
+		// if x is negative, adjust variables
+		if (sx < 0)
 		{
-			sw += x; // subtraction
-			x = 0;
+			sw += sx; // subtraction
+			sx = 0;
+		}
+
+		// if y is negative, adjust variables
+		if (sy < 0)
+		{
+			sh += sy; // subtraction
+			sy = 0;
 		}
 
 		src32 = s->refreshBuffer;
-		dst32 = &video.frameBuffer[(y * SCREEN_W) + x];
+		dst32 = &video.frameBuffer[(sy * SCREEN_W) + sx];
 
-		if (y+sh >= SCREEN_H) sh = SCREEN_H - y;
-		if (x+sw >= SCREEN_W) sw = SCREEN_W - x;
+		// handle x/y clipping
+		if (sx+sw >= SCREEN_W) sw = SCREEN_W - sx;
+		if (sy+sh >= SCREEN_H) sh = SCREEN_H - sy;
 
 		srcPitch = s->w - sw;
 		dstPitch = SCREEN_W - sw;
@@ -471,7 +479,7 @@ void eraseSprites(void)
 void renderSprites(void)
 {
 	const uint8_t *src8;
-	register int32_t x, y, sw, sh, srcPitch, dstPitch;
+	int32_t sx, sy, x, y, sw, sh, srcPitch, dstPitch;
 	uint32_t i, *clr32, *dst32, windowFlags;
 	sprite_t *s;
 
@@ -495,20 +503,42 @@ void renderSprites(void)
 		s->x = s->newX;
 		s->y = s->newY;
 
-		if (s->x >= SCREEN_W) // sprite is hidden, don't draw nor fill clear buffer
+		if (s->x >= SCREEN_W || s->y >= SCREEN_H) // sprite is hidden, don't draw nor fill clear buffer
 			continue;
 
-		assert(s->x >= 0 && s->y >= 0 && s->data != NULL && s->refreshBuffer != NULL);
+		assert(s->data != NULL && s->refreshBuffer != NULL);
 
 		sw = s->w;
 		sh = s->h;
+		sx = s->x;
+		sy = s->y;
 		src8 = s->data;
-		dst32 = &video.frameBuffer[(s->y * SCREEN_W) + s->x];
+
+		// if x is negative, adjust variables
+		if (sx < 0)
+		{
+			sw += sx; // subtraction
+			src8 -= sx; // addition
+			sx = 0;
+		}
+
+		// if y is negative, adjust variables
+		if (sy < 0)
+		{
+			sh += sy; // subtraction
+			src8 += (-sy * s->w); // addition
+			sy = 0;
+		}
+
+		if (sw <= 0 || sh <= 0) // sprite is hidden, don't draw nor fill clear buffer
+			continue;
+
+		dst32 = &video.frameBuffer[(sy * SCREEN_W) + sx];
 		clr32 = s->refreshBuffer;
 
-		// handle xy clipping
-		if (s->y+sh >= SCREEN_H) sh = SCREEN_H - s->y;
-		if (s->x+sw >= SCREEN_W) sw = SCREEN_W - s->x;
+		// handle x/y clipping
+		if (sx+sw >= SCREEN_W) sw = SCREEN_W - sx;
+		if (sy+sh >= SCREEN_H) sh = SCREEN_H - sy;
 
 		srcPitch = s->w - sw;
 		dstPitch = SCREEN_W - sw;
@@ -570,8 +600,7 @@ void renderLoopPins(void)
 {
 	uint8_t pal;
 	const uint8_t *src8;
-	int32_t sx;
-	register int32_t x, y, sw, sh, srcPitch, dstPitch;
+	int32_t sx, x, y, sw, sh, srcPitch, dstPitch;
 	uint32_t *clr32, *dst32;
 	sprite_t *s;
 
@@ -604,7 +633,7 @@ void renderLoopPins(void)
 		dst32 = &video.frameBuffer[(s->y * SCREEN_W) + sx];
 
 		// handle x clipping
-		if (s->x+sw >= SCREEN_W) sw = SCREEN_W - s->x;
+		if (sx+sw >= SCREEN_W) sw = SCREEN_W - sx;
 
 		srcPitch = s->w - sw;
 		dstPitch = SCREEN_W - sw;
@@ -663,7 +692,7 @@ void renderLoopPins(void)
 		dst32 = &video.frameBuffer[(s->y * SCREEN_W) + sx];
 
 		// handle x clipping
-		if (s->x+sw >= SCREEN_W) sw = SCREEN_W - s->x;
+		if (sx+sw >= SCREEN_W) sw = SCREEN_W - sx;
 
 		srcPitch = s->w - sw;
 		dstPitch = SCREEN_W - sw;

@@ -75,7 +75,7 @@ static char FReq_SysReqText[196], *FReq_FileName, *FReq_NameTemp;
 static char *modTmpFName, *insTmpFName, *smpTmpFName, *patTmpFName, *trkTmpFName;
 static char *modTmpFNameUTF8; // for window title
 static uint8_t FReq_Item;
-static bool FReq_ShowAllFiles;
+static bool FReq_ShowAllFiles, modPathSet, insPathSet, smpPathSet, patPathSet, trkPathSet;
 static int32_t FReq_EntrySelected = -1, FReq_FileCount, FReq_DirPos, lastMouseY;
 static UNICHAR *FReq_CurPathU, *FReq_ModCurPathU, *FReq_InsCurPathU, *FReq_SmpCurPathU, *FReq_PatCurPathU, *FReq_TrkCurPathU;
 static DirRec *FReq_Buffer;
@@ -176,20 +176,70 @@ static void setupInitialPaths(void)
 	UNICHAR pathU[PATH_MAX + 2];
 #endif
 
+	UNICHAR_GETCWD(FReq_ModCurPathU, PATH_MAX);
+
 	// the UNICHAR paths are already zeroed out
 
 #ifdef _WIN32
-	if (config.modulesPath[0]  != '\0') MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.modulesPath, -1, FReq_ModCurPathU, 80);
-	if (config.instrPath[0]    != '\0') MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.instrPath, -1, FReq_InsCurPathU, 80);
-	if (config.samplesPath[0]  != '\0') MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.samplesPath, -1, FReq_SmpCurPathU, 80);
-	if (config.patternsPath[0] != '\0') MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.patternsPath, -1, FReq_PatCurPathU, 80);
-	if (config.tracksPath[0]   != '\0') MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.tracksPath, -1, FReq_TrkCurPathU, 80);
+	if (config.modulesPath[0] != '\0')
+	{
+		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.modulesPath, -1, FReq_ModCurPathU, 80);
+		modPathSet = true;
+	}
+
+	if (config.instrPath[0] != '\0')
+	{
+		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.instrPath, -1, FReq_InsCurPathU, 80);
+		insPathSet = true;
+	}
+
+	if (config.samplesPath[0] != '\0')
+	{
+		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.samplesPath, -1, FReq_SmpCurPathU, 80);
+		smpPathSet = true;
+	}
+
+	if (config.patternsPath[0] != '\0')
+	{
+		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.patternsPath, -1, FReq_PatCurPathU, 80);
+		patPathSet = true;
+	}
+
+	if (config.tracksPath[0] != '\0')
+	{
+		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.tracksPath, -1, FReq_TrkCurPathU, 80);
+		trkPathSet = true;
+	}
 #else
-	if (config.modulesPath[0]  != '\0') strncpy(FReq_ModCurPathU, config.modulesPath, 80);
-	if (config.instrPath[0]    != '\0') strncpy(FReq_InsCurPathU, config.instrPath, 80);
-	if (config.samplesPath[0]  != '\0') strncpy(FReq_SmpCurPathU, config.samplesPath, 80);
-	if (config.patternsPath[0] != '\0') strncpy(FReq_PatCurPathU, config.patternsPath, 80);
-	if (config.tracksPath[0]   != '\0') strncpy(FReq_TrkCurPathU, config.tracksPath, 80);
+	if (config.modulesPath[0] != '\0')
+	{
+		strncpy(FReq_ModCurPathU, config.modulesPath, 80);
+		modPathSet = true;
+	}
+
+	if (config.instrPath[0] != '\0')
+	{
+		strncpy(FReq_InsCurPathU, config.instrPath, 80);
+		insPathSet = true;
+	}
+
+	if (config.samplesPath[0] != '\0')
+	{
+		strncpy(FReq_SmpCurPathU, config.samplesPath, 80);
+		smpPathSet = true;
+	}
+
+	if (config.patternsPath[0] != '\0')
+	{
+		strncpy(FReq_PatCurPathU, config.patternsPath, 80);
+		patPathSet = true;
+	}
+
+	if (config.tracksPath[0] != '\0')
+	{
+		strncpy(FReq_TrkCurPathU, config.tracksPath, 80);
+		trkPathSet = true;
+	}
 #endif
 
 	// set initial path to user directory
@@ -200,16 +250,12 @@ static void setupInitialPaths(void)
 	UNICHAR_CHDIR(getenv("HOME"));
 #endif
 
-	// if present in config, set custom "modules" path
-	if (UNICHAR_CHDIR(FReq_ModCurPathU) != 0)
+	// if we couldn't set present in config, set custom "modules" path
+	if (modPathSet && UNICHAR_CHDIR(FReq_ModCurPathU) != 0)
+	{
 		UNICHAR_GETCWD(FReq_ModCurPathU, PATH_MAX);
-
-	if (UNICHAR_CHDIR(FReq_InsCurPathU) != 0) UNICHAR_STRCPY(FReq_InsCurPathU, FReq_ModCurPathU);
-	if (UNICHAR_CHDIR(FReq_SmpCurPathU) != 0) UNICHAR_STRCPY(FReq_SmpCurPathU, FReq_ModCurPathU);
-	if (UNICHAR_CHDIR(FReq_PatCurPathU) != 0) UNICHAR_STRCPY(FReq_PatCurPathU, FReq_ModCurPathU);
-	if (UNICHAR_CHDIR(FReq_TrkCurPathU) != 0) UNICHAR_STRCPY(FReq_TrkCurPathU, FReq_ModCurPathU);
-
-	UNICHAR_CHDIR(FReq_ModCurPathU); // set back after testing
+		modPathSet = true;
+	}
 }
 
 static void freeDirRecBuffer(void)
@@ -1969,7 +2015,7 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 	return true;
 }
 
-void startDiskOpFillThread(void)
+void diskOp_StartDirReadThread(void)
 {
 	editor.diskOpReadDone = false;
 
@@ -2076,11 +2122,69 @@ static void setDiskOpItem(uint8_t item)
 	FReq_Item = item;
 	switch (FReq_Item)
 	{
-		default: case DISKOP_ITEM_MODULE:  FReq_FileName = modTmpFName; FReq_CurPathU = FReq_ModCurPathU; break;
-		         case DISKOP_ITEM_INSTR:   FReq_FileName = insTmpFName; FReq_CurPathU = FReq_InsCurPathU; break;
-		         case DISKOP_ITEM_SAMPLE:  FReq_FileName = smpTmpFName; FReq_CurPathU = FReq_SmpCurPathU; break;
-		         case DISKOP_ITEM_PATTERN: FReq_FileName = patTmpFName; FReq_CurPathU = FReq_PatCurPathU; break;
-		         case DISKOP_ITEM_TRACK:   FReq_FileName = trkTmpFName; FReq_CurPathU = FReq_TrkCurPathU; break;
+		default:
+		case DISKOP_ITEM_MODULE:
+		{
+			FReq_FileName = modTmpFName;
+			FReq_CurPathU = FReq_ModCurPathU;
+		}
+		break;
+
+		case DISKOP_ITEM_INSTR:
+		{
+			FReq_FileName = insTmpFName;
+
+			if (!insPathSet)
+			{
+				UNICHAR_STRCPY(FReq_InsCurPathU, FReq_CurPathU);
+				insPathSet = true;
+			}
+
+			FReq_CurPathU = FReq_InsCurPathU;
+		}
+		break;
+
+		case DISKOP_ITEM_SAMPLE:
+		{
+			FReq_FileName = smpTmpFName;
+
+			if (!smpPathSet)
+			{
+				UNICHAR_STRCPY(FReq_SmpCurPathU, FReq_CurPathU);
+				smpPathSet = true;
+			}
+
+			FReq_CurPathU = FReq_SmpCurPathU;
+		}
+		break;
+
+		case DISKOP_ITEM_PATTERN:
+		{
+			FReq_FileName = patTmpFName;
+
+			if (!patPathSet)
+			{
+				UNICHAR_STRCPY(FReq_SmpCurPathU, FReq_CurPathU);
+				patPathSet = true;
+			}
+
+			FReq_CurPathU = FReq_PatCurPathU;
+		}
+		break;
+
+		case DISKOP_ITEM_TRACK:
+		{
+			FReq_FileName = trkTmpFName;
+
+			if (!trkPathSet)
+			{
+				UNICHAR_STRCPY(FReq_TrkCurPathU, FReq_CurPathU);
+				trkPathSet = true;
+			}
+
+			FReq_CurPathU = FReq_TrkCurPathU;
+		}
+		break;
 	}
 
 	pathLen = (int32_t)UNICHAR_STRLEN(FReq_CurPathU);
@@ -2189,7 +2293,7 @@ void showDiskOpScreen(void)
 	if (editor.diskOpReadOnOpen)
 	{
 		editor.diskOpReadOnOpen = false;
-		startDiskOpFillThread();
+		diskOp_StartDirReadThread();
 	}
 }
 

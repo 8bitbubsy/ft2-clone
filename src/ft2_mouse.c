@@ -59,16 +59,18 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 	const uint8_t *cursorsSrc = bmp.mouseCursors;
 	switch (config.mouseType)
 	{
-		case MOUSE_IDLE_SHAPE_NICE:   cursorsSrc += 0 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-		case MOUSE_IDLE_SHAPE_UGLY:   cursorsSrc += 1 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-		case MOUSE_IDLE_SHAPE_AWFUL:  cursorsSrc += 2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+		case MOUSE_IDLE_SHAPE_NICE: cursorsSrc += 0 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+		case MOUSE_IDLE_SHAPE_UGLY: cursorsSrc += 1 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+		case MOUSE_IDLE_SHAPE_AWFUL: cursorsSrc += 2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
 		case MOUSE_IDLE_SHAPE_USABLE: cursorsSrc += 3 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
 		default: break;
 	}
 
 	for (uint32_t i = 0; i < NUM_CURSORS; i++)
 	{
-		SDL_Surface *surface = SDL_CreateRGBSurface(0, MOUSE_CURSOR_W*video.yScale, MOUSE_CURSOR_H*video.yScale, 32, 0, 0, 0, 0);
+		int32_t scaleFactor = video.yScale;
+
+		SDL_Surface *surface = SDL_CreateRGBSurface(0, MOUSE_CURSOR_W*scaleFactor, MOUSE_CURSOR_H*scaleFactor, 32, 0, 0, 0, 0);
 		if (surface == NULL)
 		{
 			freeMouseCursors();
@@ -104,10 +106,10 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 		// blit upscaled cursor to surface
 		for (uint32_t y = 0; y < MOUSE_CURSOR_H; y++)
 		{
-			uint32_t *outX = &dstPixels32[(y * video.yScale) * surface->w];
-			for (uint32_t yScale = 0; yScale < video.yScale; yScale++)
+			uint32_t *outX = &dstPixels32[(y * scaleFactor) * surface->w];
+			for (int32_t yScale = 0; yScale < scaleFactor; yScale++)
 			{
-				for (uint32_t x = 0; x < MOUSE_CURSOR_W; x++)
+				for (int32_t x = 0; x < MOUSE_CURSOR_W; x++)
 				{
 					uint8_t srcPix = srcPixels8[(y * MOUSE_CURSOR_W) + x];
 					if (srcPix != PAL_TRANSPR)
@@ -118,7 +120,7 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 						else if (srcPix == PAL_BCKGRND)
 							pixel = border;
 
-						for (uint32_t xScale = 0; xScale < video.yScale; xScale++)
+						for (int32_t xScale = 0; xScale < scaleFactor; xScale++)
 							outX[xScale] = pixel;
 					}
 
@@ -163,13 +165,13 @@ void setMousePosToCenter(void)
 {
 	if (video.fullscreen)
 	{
-		mouse.setPosX = video.displayW / 2;
-		mouse.setPosY = video.displayH / 2;
+		mouse.setPosX = video.displayW >> 1;
+		mouse.setPosY = video.displayH >> 1;
 	}
 	else
 	{
-		mouse.setPosX = video.renderW / 2;
-		mouse.setPosY = video.renderH / 2;
+		mouse.setPosX = video.renderW >> 1;
+		mouse.setPosY = video.renderH >> 1;
 	}
 
 	mouse.setPosFlag = true;
@@ -242,11 +244,11 @@ void setMouseShape(int16_t shape)
 		gfxPtr = &bmp.mouseCursors[mouseModeGfxOffs];
 		switch (shape)
 		{
-			case MOUSE_IDLE_SHAPE_NICE:   gfxPtr += 0  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_UGLY:   gfxPtr += 1  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_AWFUL:  gfxPtr += 2  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_USABLE: gfxPtr += 3  * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_TEXT_EDIT:    gfxPtr += 12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_NICE: gfxPtr += 0 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_UGLY: gfxPtr += 1 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_AWFUL: gfxPtr += 2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_USABLE: gfxPtr += 3 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_TEXT_EDIT: gfxPtr += 12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
 			default: return;
 		}
 	}
@@ -284,7 +286,7 @@ static void clearTextEditMouse(void)
 
 static void changeCursorIfOverTextBoxes(void)
 {
-	int16_t i, mx, my;
+	int32_t i, mx, my;
 	textBox_t *t;
 
 	mouse.mouseOverTextBox = false;
@@ -542,11 +544,6 @@ static bool testPatternDataMouseDown(void)
 
 void mouseButtonUpHandler(uint8_t mouseButton)
 {
-#ifndef __APPLE__
-	if (!video.fullscreen) // release mouse button trap
-		SDL_SetWindowGrab(video.window, SDL_FALSE);
-#endif
-
 	if (mouseButton == SDL_BUTTON_LEFT)
 	{
 		mouse.leftButtonPressed = false;
@@ -569,7 +566,6 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 		mouse.rightButtonPressed = false;
 		mouse.rightButtonReleased = true;
 
-		
 		if (editor.editSampleFlag)
 		{
 			// right mouse button released after hand-editing sample data
@@ -582,9 +578,9 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 				writeSample(true);
 
 			setSongModifiedFlag();
+
 			editor.editSampleFlag = false;
 		}
-
 	}
 
 	mouse.firstTimePressingButton = false;
@@ -611,9 +607,9 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 	testRadioButtonMouseRelease();
 
 	// revert "delete/rename" mouse modes (disk op.)
-	if (mouse.lastUsedObjectID != PB_DISKOP_DELETE && mouse.lastUsedObjectID != PB_DISKOP_RENAME)
+	if (mouse.mode != MOUSE_MODE_NORMAL)
 	{
-		if (mouse.mode != MOUSE_MODE_NORMAL)
+		if (mouse.lastUsedObjectID != PB_DISKOP_DELETE && mouse.lastUsedObjectID != PB_DISKOP_RENAME)
 			setMouseMode(MOUSE_MODE_NORMAL);
 	}
 
@@ -623,11 +619,6 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 
 void mouseButtonDownHandler(uint8_t mouseButton)
 {
-#ifndef __APPLE__
-	if (!video.fullscreen) // trap mouse pointer while holding down left and/or right button
-		SDL_SetWindowGrab(video.window, SDL_TRUE);
-#endif
-
 	// if already holding left button and clicking right, don't do mouse down handling
 	if (mouseButton == SDL_BUTTON_RIGHT && mouse.leftButtonPressed)
 	{
@@ -691,34 +682,35 @@ void mouseButtonDownHandler(uint8_t mouseButton)
 	if (mouse.lastUsedObjectType != OBJECT_PUSHBUTTON && mouse.lastUsedObjectID != OBJECT_ID_NONE)
 		return;
 
-	// kludge #3
+	// kludge #3 :(
 	if (!mouse.rightButtonPressed)
 		mouse.lastUsedObjectID = OBJECT_ID_NONE;
 
 	// check if we pressed a GUI object
 
 	/* test objects like this - clickable things *never* overlap, so no need to test all
-	** other objects if we clicked on one already */
+	** other objects if we clicked on one already
+	*/
 
 	testInstrSwitcherMouseDown(); // kludge: allow right click to both change ins. and edit text
 
-	if (testTextBoxMouseDown())     return;
-	if (testPushButtonMouseDown())  return;
-	if (testCheckBoxMouseDown())    return;
-	if (testScrollBarMouseDown())   return;
+	if (testTextBoxMouseDown()) return;
+	if (testPushButtonMouseDown()) return;
+	if (testCheckBoxMouseDown()) return;
+	if (testScrollBarMouseDown()) return;
 	if (testRadioButtonMouseDown()) return;
 
-	// from this point, we don't need to test more widgets if a system request box is shown
+	// at this point, we don't need to test more widgets if a system request is shown
 	if (editor.ui.sysReqShown)
 		return;
 
 	if (testInstrVolEnvMouseDown(false)) return;
 	if (testInstrPanEnvMouseDown(false)) return;
-	if (testDiskOpMouseDown(false))      return;
-	if (testPianoKeysMouseDown(false))   return;
-	if (testSamplerDataMouseDown())      return;
-	if (testPatternDataMouseDown())      return;
-	if (testScopesMouseDown())           return;
+	if (testDiskOpMouseDown(false)) return;
+	if (testPianoKeysMouseDown(false)) return;
+	if (testSamplerDataMouseDown()) return;
+	if (testPatternDataMouseDown()) return;
+	if (testScopesMouseDown()) return;
 	if (testAudioDeviceListsMouseDown()) return;
 
 #ifdef HAS_MIDI
@@ -737,11 +729,11 @@ void handleLastGUIObjectDown(void)
 		{
 			switch (mouse.lastUsedObjectType)
 			{
-				case OBJECT_PUSHBUTTON:  handlePushButtonsWhileMouseDown();  break;
+				case OBJECT_PUSHBUTTON: handlePushButtonsWhileMouseDown(); break;
 				case OBJECT_RADIOBUTTON: handleRadioButtonsWhileMouseDown(); break;
-				case OBJECT_CHECKBOX:    handleCheckBoxesWhileMouseDown();   break;
-				case OBJECT_SCROLLBAR:   handleScrollBarsWhileMouseDown();   break;
-				case OBJECT_TEXTBOX:     handleTextBoxWhileMouseDown();      break;
+				case OBJECT_CHECKBOX: handleCheckBoxesWhileMouseDown(); break;
+				case OBJECT_SCROLLBAR: handleScrollBarsWhileMouseDown(); break;
+				case OBJECT_TEXTBOX: handleTextBoxWhileMouseDown(); break;
 				default: break;
 			}
 		}
@@ -750,15 +742,27 @@ void handleLastGUIObjectDown(void)
 			// test non-standard GUI elements
 			switch (mouse.lastUsedObjectType)
 			{
-				case OBJECT_INSTRSWITCH: testInstrSwitcherMouseDown();       break;
-				case OBJECT_PATTERNMARK: handlePatternDataMouseDown(true);   break;
-				case OBJECT_DISKOPLIST:  testDiskOpMouseDown(true);          break;
-				case OBJECT_SMPDATA:     handleSampleDataMouseDown(true);    break;
-				case OBJECT_PIANO:       testPianoKeysMouseDown(true);       break;
-				case OBJECT_INSVOLENV:   testInstrVolEnvMouseDown(true);     break;
-				case OBJECT_INSPANENV:   testInstrPanEnvMouseDown(true);     break;
+				case OBJECT_INSTRSWITCH: testInstrSwitcherMouseDown(); break;
+				case OBJECT_PATTERNMARK: handlePatternDataMouseDown(true); break;
+				case OBJECT_DISKOPLIST: testDiskOpMouseDown(true); break;
+				case OBJECT_SMPDATA: handleSampleDataMouseDown(true); break;
+				case OBJECT_PIANO: testPianoKeysMouseDown(true); break;
+				case OBJECT_INSVOLENV: testInstrVolEnvMouseDown(true); break;
+				case OBJECT_INSPANENV: testInstrPanEnvMouseDown(true); break;
 				default: break;
 			}
+		}
+
+		/* Hack to send "mouse button up" events if we released the mouse button(s)
+		** outside of the window...
+		*/
+		if (mouse.x < 0 || mouse.x >= SCREEN_W || mouse.y < 0 || mouse.y >= SCREEN_H)
+		{
+			if (mouse.leftButtonPressed && !(mouse.buttonState & SDL_BUTTON_LMASK))
+				sendMouseButtonUpEvent(SDL_BUTTON_LEFT);
+
+			if (mouse.rightButtonPressed && !(mouse.buttonState & SDL_BUTTON_RMASK))
+				sendMouseButtonUpEvent(SDL_BUTTON_RIGHT);
 		}
 	}
 }
@@ -769,88 +773,102 @@ void updateMouseScaling(void)
 	if (video.renderH > 0.0) video.dMouseYMul = (double)SCREEN_H / video.renderH;
 }
 
+void sendMouseButtonUpEvent(uint8_t button)
+{
+	SDL_Event event;
+
+	memset(&event, 0, sizeof (event));
+
+	event.type = SDL_MOUSEBUTTONUP;
+	event.button.button = button;
+
+	SDL_PushEvent(&event);
+}
+
 void readMouseXY(void)
 {
-	int16_t x, y;
-	int32_t mx, my;
+	int32_t mx, my, windowX, windowY;
 
 	if (mouse.setPosFlag)
 	{
-		mouse.setPosFlag = false;
-
-		if (SDL_GetWindowFlags(video.window) & SDL_WINDOW_SHOWN)
+		if (!video.windowHidden)
 			SDL_WarpMouseInWindow(video.window, mouse.setPosX, mouse.setPosY);
 
+		mouse.setPosFlag = false;
 		return;
 	}
 
-	SDL_PumpEvents(); // gathers all pending input from devices into the event queue (less mouse lag)
-	SDL_GetMouseState(&mx, &my);
+	mouse.buttonState = SDL_GetGlobalMouseState(&mx, &my);
 
-	/* in centered fullscreen mode, trap the mouse inside the framed image
-	** and subtract the coords to match the OS mouse position (fixes touch from touchscreens) */
-	if (video.fullscreen && !(config.windowFlags & FILTERING))
+	if (video.fullscreen)
 	{
-		if (mx < video.renderX)
-		{
-			mx = video.renderX;
-			SDL_WarpMouseInWindow(video.window, mx, my);
-		}
-		else if (mx >= video.renderX+video.renderW)
-		{
-			mx = (video.renderX + video.renderW) - 1;
-			SDL_WarpMouseInWindow(video.window, mx, my);
-		}
+		/* If fullscreen without filtering mode, translate coords and warp mouse
+		** inside the render space.
+		** Fullscreen + filtering mode takes up 100% of the screen area used, so no
+		** need to translate coords in that mode.
+		*/
 
-		if (my < video.renderY)
+		if (!(config.windowFlags & FILTERING))
 		{
-			my = video.renderY;
-			SDL_WarpMouseInWindow(video.window, mx, my);
-		}
-		else if (my >= video.renderY+video.renderH)
-		{
-			my = (video.renderY + video.renderH) - 1;
-			SDL_WarpMouseInWindow(video.window, mx, my);
-		}
+			if (!(config.specialFlags2 & HARDWARE_MOUSE))
+			{
+				bool warpMouse = false;
 
-		mx -= video.renderX;
-		my -= video.renderY;
+				if (mx < video.renderX)
+				{
+					mx = video.renderX;
+					warpMouse = true;
+				}
+				else if (mx >= video.renderX+video.renderW)
+				{
+					mx = (video.renderX + video.renderW) - 1;
+					warpMouse = true;
+				}
+
+				if (my < video.renderY)
+				{
+					my = video.renderY;
+					warpMouse = true;
+				}
+				else if (my >= video.renderY+video.renderH)
+				{
+					my = (video.renderY + video.renderH) - 1;
+					warpMouse = true;
+				}
+
+				if (warpMouse)
+					SDL_WarpMouseInWindow(video.window, mx, my);
+			}
+
+			// convert fullscreen coords to window (centered image) coords
+			mx -= video.renderX;
+			my -= video.renderY;
+		}
+	}
+	else
+	{
+		// convert desktop coords to window coords
+
+		// (a call to this function is really fast in windowed mode)
+		SDL_GetWindowPosition(video.window, &windowX, &windowY);
+
+		mx -= windowX;
+		my -= windowY;
 	}
 
-	if (mx < 0) mx = 0;
-	if (my < 0) mx = 0;
-
 	// multiply coords by video upscaling factors (don't round)
-	mx = (int32_t)(mx * video.dMouseXMul);
-	my = (int32_t)(my * video.dMouseYMul);
-
-	if (mx >= SCREEN_W) mx = SCREEN_W - 1;
-	if (my >= SCREEN_H) my = SCREEN_H - 1;
+	mouse.x = (int32_t)(mx * video.dMouseXMul);
+	mouse.y = (int32_t)(my * video.dMouseYMul);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 	{
-		// hardware mouse (OS)
-		mouse.x = (int16_t)mx;
-		mouse.y = (int16_t)my;
+		// hardware mouse mode (OS)
 		hideSprite(SPRITE_MOUSE_POINTER);
 	}
 	else
 	{
-		// software mouse (FT2 mouse)
-		x = (int16_t)mx;
-		y = (int16_t)my;
-
-		mouse.x = x;
-		mouse.y = y;
-
-		// for text editing cursor (do this after clamp)
-		x += mouse.xBias;
-		y += mouse.yBias;
-
-		if (x < 0) x = 0;
-		if (y < 0) y = 0;
-
-		setSpritePos(SPRITE_MOUSE_POINTER, x, y);
+		// software mouse mode (FT2 mouse)
+		setSpritePos(SPRITE_MOUSE_POINTER, mouse.x + mouse.xBias, mouse.y + mouse.yBias);
 	}
 
 	changeCursorIfOverTextBoxes();

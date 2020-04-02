@@ -1440,7 +1440,7 @@ void rangeAll(void)
 	smpEd_Rx2 = smpEd_ScrPos + smpEd_ViewSize;
 }
 
-static void zoomSampleDataIn(int32_t step, int16_t x)
+static void zoomSampleDataIn(int32_t step, int32_t x)
 {
 	int32_t tmp32, minViewSize;
 	int64_t newScrPos64;
@@ -1482,7 +1482,7 @@ static void zoomSampleDataIn(int32_t step, int16_t x)
 	updateScrPos();
 }
 
-static void zoomSampleDataOut(int32_t step, int16_t x)
+static void zoomSampleDataOut(int32_t step, int32_t x)
 {
 	int32_t tmp32;
 	int64_t newViewSize64;

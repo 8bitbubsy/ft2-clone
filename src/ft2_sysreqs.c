@@ -161,11 +161,6 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	pushButton_t *p;
 	checkBox_t *c;
 
-#ifndef __APPLE__
-	if (!video.fullscreen) // release mouse button trap
-		SDL_SetWindowGrab(video.window, SDL_FALSE);
-#endif
-
 	if (editor.editTextFlag)
 		exitTextEditing();
 
@@ -410,11 +405,6 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 		okBox(0, "System message", "Not enough memory!");
 		return 0;
 	}
-
-#ifndef __APPLE__
-	if (!video.fullscreen) // release mouse button trap
-		SDL_SetWindowGrab(video.window, SDL_FALSE);
-#endif
 
 	SDL_EventState(SDL_DROPFILE, SDL_DISABLE);
 

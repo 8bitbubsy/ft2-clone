@@ -43,11 +43,6 @@ static void windowOpen(void)
 	editor.ui.sysReqShown = true;
 	editor.ui.sysReqEnterPressed = false;
 
-#ifndef __APPLE__
-	if (!video.fullscreen) // release mouse button trap
-		SDL_SetWindowGrab(video.window, SDL_FALSE);
-#endif
-
 	unstuckLastUsedGUIElement();
 	SDL_EventState(SDL_DROPFILE, SDL_DISABLE);
 }

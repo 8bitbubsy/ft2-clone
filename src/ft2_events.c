@@ -152,7 +152,7 @@ void handleEvents(void)
 	if (editor.diskOpReadDir)
 	{
 		editor.diskOpReadDir = false;
-		startDiskOpFillThread();
+		diskOp_StartDirReadThread();
 	}
 
 	if (editor.diskOpReadDone)
@@ -407,14 +407,23 @@ static void handleInput(void)
 
 	while (SDL_PollEvent(&event))
 	{
-		if (video.vsync60HzPresent)
+		if (event.type == SDL_WINDOWEVENT)
 		{
-			/* if we minimize the window and vsync is present, vsync is temporarily turned off.
-			** recalc waitVBL() vars so that it can sleep properly in said mode. */
-			if (event.type == SDL_WINDOWEVENT &&
-				(event.window.event == SDL_WINDOWEVENT_MINIMIZED || event.window.event == SDL_WINDOWEVENT_FOCUS_LOST))
+			if (event.window.event == SDL_WINDOWEVENT_HIDDEN)
+				video.windowHidden = true;
+			else if (event.window.event == SDL_WINDOWEVENT_SHOWN)
+				video.windowHidden = false;
+
+			if (video.vsync60HzPresent)
 			{
-				setupWaitVBL();
+				/* if we minimize the window and vsync is present, vsync is temporarily turned off.
+				** recalc waitVBL() vars so that it can sleep properly in said mode.
+				*/
+				if (event.window.event == SDL_WINDOWEVENT_MINIMIZED ||
+					event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+				{
+					setupWaitVBL();
+				}
 			}
 		}
 
