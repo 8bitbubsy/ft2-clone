@@ -334,7 +334,7 @@ void calcReplayRate(int32_t rate) // 100% FT2-accurate routine, do not touch!
 	dVal = dMul * (256.0 * 65536.0 * 8363.0);
 	frequenceMulFactor = (int32_t)(dVal + 0.5);
 
-	audio.dScopeFreqMul = rate * (1.0 / SCOPE_HZ);
+	audio.dScopeFreqMul = rate / SCOPE_HZ;
 
 	// for volume ramping (FT2 doesn't round here)
 	audio.quickVolSizeVal = rate / 200;

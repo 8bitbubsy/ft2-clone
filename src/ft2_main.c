@@ -420,7 +420,7 @@ static void setupPerfFreq(void)
 	dFrac = modf(editor.dPerfFreq / VBLANK_HZ, &dInt);
 
 	// integer part
-	video.vblankTimeLen = (uint32_t)dInt;
+	video.vblankTimeLen = (int32_t)dInt;
 
 	// fractional part scaled to 0..2^32-1
 	dFrac *= UINT32_MAX;

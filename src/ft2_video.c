@@ -260,8 +260,8 @@ static void updateRenderSizeVars(void)
 			if (dXUpscale != 0.0) video.renderW = (int32_t)(video.renderW / dXUpscale);
 			if (dYUpscale != 0.0) video.renderH = (int32_t)(video.renderH / dYUpscale);
 #endif
-			video.renderX = (video.displayW - video.renderW) / 2;
-			video.renderY = (video.displayH - video.renderH) / 2;
+			video.renderX = (video.displayW - video.renderW) >> 1;
+			video.renderY = (video.displayH - video.renderH) >> 1;
 		}
 	}
 	else
@@ -273,8 +273,8 @@ static void updateRenderSizeVars(void)
 	}
 
 	// for mouse cursor creation
-	video.xScale = (uint32_t)round(video.renderW / (double)SCREEN_W);
-	video.yScale = (uint32_t)round(video.renderH / (double)SCREEN_H);
+	video.xScale = (uint32_t)round(video.renderW * (1.0 / SCREEN_W));
+	video.yScale = (uint32_t)round(video.renderH * (1.0 / SCREEN_H));
 	createMouseCursors();
 }
 

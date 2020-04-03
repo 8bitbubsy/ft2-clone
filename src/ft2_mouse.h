@@ -31,7 +31,6 @@ struct mouse_t
 #define MOUSE_GLASS_ANI_FRAMES 22
 #define MOUSE_CLOCK_ANI_FRAMES 5
 
-void sendMouseButtonUpEvent(uint8_t button);
 void freeMouseCursors(void);
 bool createMouseCursors(void);
 void setMousePosToCenter(void);

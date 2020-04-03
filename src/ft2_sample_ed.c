@@ -1180,16 +1180,6 @@ static void setSampleRange(int32_t start, int32_t end)
 	if (end < 0)
 		end = 0;
 
-	// kludge so that you can mark the last sample of what we see
-	// XXX: This doesn't seem to work properly!
-	if (end == SCREEN_W-1)
-	{
-		if (smpEd_ViewSize < SAMPLE_AREA_WIDTH) // zoomed in
-			end += 2;
-		else if (smpEd_ScrPos+smpEd_ViewSize >= s->len)
-			end++;
-	}
-
 	smpEd_Rx1 = scr2SmpPos(start);
 	smpEd_Rx2 = scr2SmpPos(end);
 
@@ -3095,12 +3085,30 @@ static void setRightLoopPinPos(int32_t x)
 	updateLoopsOnMouseUp = true;
 }
 
+static int32_t mouseYToSampleY(int32_t my)
+{
+	int32_t tmp32;
+
+	if (my == 250) // center
+	{
+		return 128;
+	}
+	else
+	{
+		tmp32 = my - 174;
+		tmp32 = ((tmp32 << 8) + (SAMPLE_AREA_HEIGHT/2)) / SAMPLE_AREA_HEIGHT;
+		tmp32 = CLAMP(tmp32, 0, 255);
+		tmp32 ^= 0xFF;
+	}
+
+	return tmp32;
+}
+
 static void editSampleData(bool mouseButtonHeld)
 {
 	int8_t *ptr8;
 	int16_t *ptr16;
 	int32_t mx, my, tmp32, p, vl, tvl, r, rl, rvl, start, end;
-	double dVal;
 	sampleTyp *s = getCurSample();
 
 	if (s == NULL || s->pek == NULL || s->len <= 0)
@@ -3109,6 +3117,9 @@ static void editSampleData(bool mouseButtonHeld)
 	// ported directly from FT2 and slightly modified
 
 	mx = mouse.x;
+	if (mx > SCREEN_W)
+		mx = SCREEN_W;
+
 	my = mouse.y;
 
 	if (!mouseButtonHeld)
@@ -3121,17 +3132,7 @@ static void editSampleData(bool mouseButtonHeld)
 		if (s->typ & 16)
 			lastDrawX >>= 1;
 
-		if (my == 250) // center
-		{
-			lastDrawY = 128;
-		}
-		else
-		{
-			dVal = (my - 174) * (256.0 / SAMPLE_AREA_HEIGHT);
-			lastDrawY = (int32_t)(dVal + 0.5);
-			lastDrawY = CLAMP(lastDrawY, 0, 255);
-			lastDrawY ^= 0xFF;
-		}
+		lastDrawY = mouseYToSampleY(my);
 
 		lastMouseX = mx;
 		lastMouseY = my;
@@ -3140,10 +3141,6 @@ static void editSampleData(bool mouseButtonHeld)
 	{
 		return; // don't continue if we didn't move the mouse
 	}
-
-	// kludge so that you can edit the very end of the sample
-	if (mx == SCREEN_W-1 && smpEd_ScrPos+smpEd_ViewSize >= s->len)
-		mx++;
 
 	if (mx != lastMouseX)
 	{
@@ -3157,23 +3154,9 @@ static void editSampleData(bool mouseButtonHeld)
 	}
 
 	if (!keyb.leftShiftPressed && my != lastMouseY)
-	{
-		if (my == 250) // center
-		{
-			vl = 128;
-		}
-		else
-		{
-			dVal = (my - 174) * (256.0 / SAMPLE_AREA_HEIGHT);
-			vl = (int32_t)(dVal + 0.5);
-			vl = CLAMP(vl, 0, 255);
-			vl ^= 0xFF;
-		}
-	}
+		vl = mouseYToSampleY(my);
 	else
-	{
 		vl = lastDrawY;
-	}
 
 	lastMouseX = mx;
 	lastMouseY = my;
@@ -3213,30 +3196,31 @@ static void editSampleData(bool mouseButtonHeld)
 
 		if (p == lastDrawX)
 		{
-			int16_t smpVal = (int16_t)((vl << 8) ^ 0x8000);
+			const int16_t smpVal = (int16_t)((vl << 8) ^ 0x8000);
 			for (rl = start; rl < end; rl++)
 				ptr16[rl] = smpVal;
 		}
 		else
 		{
 			int32_t y = lastDrawY - vl;
-			uint32_t x = lastDrawX - p;
+			int32_t x = lastDrawX - p;
 
-			int32_t xMul = 0xFFFFFFFF;
 			if (x != 0)
-				xMul /= x;
-
-			int32_t i = 0;
-			for (rl = start; rl < end; rl++)
 			{
-				tvl = y * i;
-				tvl = ((int64_t)tvl * xMul) >> 32; // tvl /= x;
-				tvl += vl;
-				tvl <<= 8;
-				tvl ^= 0x8000;
+				double dMul = 1.0 / x;
+				int32_t i = 0;
 
-				ptr16[rl] = (int16_t)tvl;
-				i++;
+				for (rl = start; rl < end; rl++)
+				{
+					tvl = y * i;
+					tvl = (int32_t)(tvl * dMul); // tvl /= x
+					tvl += vl;
+					tvl <<= 8;
+					tvl ^= 0x8000;
+
+					ptr16[rl] = (int16_t)tvl;
+					i++;
+				}
 			}
 		}
 	}
@@ -3256,29 +3240,30 @@ static void editSampleData(bool mouseButtonHeld)
 
 		if (p == lastDrawX)
 		{
-			int8_t smpVal = (int8_t)(vl ^ 0x80);
+			const int8_t smpVal = (int8_t)(vl ^ 0x80);
 			for (rl = start; rl < end; rl++)
 				ptr8[rl] = smpVal;
 		}
 		else
 		{
 			int32_t y = lastDrawY - vl;
-			uint32_t x = lastDrawX - p;
+			int32_t x = lastDrawX - p;
 
-			int32_t xMul = 0xFFFFFFFF;
 			if (x != 0)
-				xMul /= x;
-
-			int32_t i = 0;
-			for (rl = start; rl < end; rl++)
 			{
-				tvl = y * i;
-				tvl = ((int64_t)tvl * xMul) >> 32; // tvl /= x;
-				tvl += vl;
-				tvl ^= 0x80;
+				double dMul = 1.0 / x;
+				int32_t i = 0;
 
-				ptr8[rl] = (int8_t)tvl;
-				i++;
+				for (rl = start; rl < end; rl++)
+				{
+					tvl = y * i;
+					tvl = (int32_t)(tvl * dMul); // tvl /= x
+					tvl += vl;
+					tvl ^= 0x80;
+
+					ptr8[rl] = (int8_t)tvl;
+					i++;
+				}
 			}
 		}
 	}
@@ -3291,10 +3276,13 @@ static void editSampleData(bool mouseButtonHeld)
 
 void handleSampleDataMouseDown(bool mouseButtonHeld)
 {
-	int32_t tmp, leftLoopPinPos, rightLoopPinPos;
+	int32_t mx, my, leftLoopPinPos, rightLoopPinPos;
 
 	if (editor.curInstr == 0)
 		return;
+
+	mx = CLAMP(mouse.x, 0, SCREEN_W+8); // allow some pixels outside of the screen
+	my = CLAMP(mouse.y, 0, SCREEN_H-1);
 
 	if (!mouseButtonHeld)
 	{
@@ -3303,41 +3291,41 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 		editor.ui.sampleDataOrLoopDrag = -1;
 
 		mouseXOffs = 0;
-		lastMouseX = mouse.x;
-		lastMouseY = mouse.y;
+		lastMouseX = mx;
+		lastMouseY = my;
 
 		mouse.lastUsedObjectType = OBJECT_SMPDATA;
 
 		if (mouse.leftButtonPressed)
 		{
 			// move loop pins
-			if (mouse.y < 183)
+			if (my < 183)
 			{
 				leftLoopPinPos = getSpritePosX(SPRITE_LEFT_LOOP_PIN);
-				if (mouse.x >= leftLoopPinPos && mouse.x <= leftLoopPinPos+16)
+				if (mx >= leftLoopPinPos && mx <= leftLoopPinPos+16)
 				{
-					mouseXOffs = (leftLoopPinPos + 8) - mouse.x;
+					mouseXOffs = (leftLoopPinPos + 8) - mx;
 
 					editor.ui.sampleDataOrLoopDrag = true;
 
 					setLeftLoopPinState(true);
-					lastMouseX = mouse.x;
+					lastMouseX = mx;
 
 					editor.ui.leftLoopPinMoving = true;
 					return;
 				}
 			}
-			else if (mouse.y > 318)
+			else if (my > 318)
 			{
 				rightLoopPinPos = getSpritePosX(SPRITE_RIGHT_LOOP_PIN);
-				if (mouse.x >= rightLoopPinPos && mouse.x <= rightLoopPinPos+16)
+				if (mx >= rightLoopPinPos && mx <= rightLoopPinPos+16)
 				{
-					mouseXOffs = (rightLoopPinPos + 8) - mouse.x;
+					mouseXOffs = (rightLoopPinPos + 8) - mx;
 
 					editor.ui.sampleDataOrLoopDrag = true;
 
 					setRightLoopPinState(true);
-					lastMouseX = mouse.x;
+					lastMouseX = mx;
 
 					editor.ui.rightLoopPinMoving = true;
 					return;
@@ -3345,9 +3333,10 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 			}
 
 			// mark data
-			editor.ui.sampleDataOrLoopDrag = mouse.x;
-			lastMouseX = editor.ui.sampleDataOrLoopDrag;
-			setSampleRange(editor.ui.sampleDataOrLoopDrag, editor.ui.sampleDataOrLoopDrag);
+			lastMouseX = mx;
+			editor.ui.sampleDataOrLoopDrag = mx;
+
+			setSampleRange(mx, mx);
 		}
 		else if (mouse.rightButtonPressed)
 		{
@@ -3365,33 +3354,31 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 		return;
 	}
 
-	if (mouse.x != lastMouseX)
+	if (mx != lastMouseX)
 	{
 		if (mouse.leftButtonPressed)
 		{
 			if (editor.ui.leftLoopPinMoving)
 			{
-				lastMouseX = mouse.x;
-				setLeftLoopPinPos(mouseXOffs + lastMouseX);
+				lastMouseX = mx;
+				setLeftLoopPinPos(mouseXOffs + mx);
 			}
 			else if (editor.ui.rightLoopPinMoving)
 			{
-				lastMouseX = mouse.x;
-				setRightLoopPinPos(mouseXOffs + lastMouseX);
+				lastMouseX = mx;
+				setRightLoopPinPos(mouseXOffs + mx);
 			}
 			else if (editor.ui.sampleDataOrLoopDrag >= 0)
 			{
 				// mark data
+				lastMouseX = mx;
 
-				lastMouseX = mouse.x;
-				tmp = lastMouseX;
-
-				if (lastMouseX  > editor.ui.sampleDataOrLoopDrag)
-					setSampleRange(editor.ui.sampleDataOrLoopDrag, tmp);
+				if (lastMouseX > editor.ui.sampleDataOrLoopDrag)
+					setSampleRange(editor.ui.sampleDataOrLoopDrag, mx);
 				else if (lastMouseX == editor.ui.sampleDataOrLoopDrag)
 					setSampleRange(editor.ui.sampleDataOrLoopDrag, editor.ui.sampleDataOrLoopDrag);
-				else if (lastMouseX  < editor.ui.sampleDataOrLoopDrag)
-					setSampleRange(tmp, editor.ui.sampleDataOrLoopDrag);
+				else if (lastMouseX < editor.ui.sampleDataOrLoopDrag)
+					setSampleRange(mx, editor.ui.sampleDataOrLoopDrag);
 			}
 		}
 	}

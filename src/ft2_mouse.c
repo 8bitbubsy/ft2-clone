@@ -718,6 +718,18 @@ void mouseButtonDownHandler(uint8_t mouseButton)
 #endif
 }
 
+static void sendMouseButtonUpEvent(uint8_t button)
+{
+	SDL_Event event;
+
+	memset(&event, 0, sizeof (event));
+
+	event.type = SDL_MOUSEBUTTONUP;
+	event.button.button = button;
+
+	SDL_PushEvent(&event);
+}
+
 void handleLastGUIObjectDown(void)
 {
 	if (mouse.lastUsedObjectType == OBJECT_NONE)
@@ -771,18 +783,6 @@ void updateMouseScaling(void)
 {
 	if (video.renderW > 0.0) video.dMouseXMul = (double)SCREEN_W / video.renderW;
 	if (video.renderH > 0.0) video.dMouseYMul = (double)SCREEN_H / video.renderH;
-}
-
-void sendMouseButtonUpEvent(uint8_t button)
-{
-	SDL_Event event;
-
-	memset(&event, 0, sizeof (event));
-
-	event.type = SDL_MOUSEBUTTONUP;
-	event.button.button = button;
-
-	SDL_PushEvent(&event);
 }
 
 void readMouseXY(void)
