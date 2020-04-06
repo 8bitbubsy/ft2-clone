@@ -60,12 +60,12 @@
 	} \
 
 #define SCOPE_UPDATE_DRAWPOS \
-	scopeDrawFrac += s->SFrq >> 6; \
+	scopeDrawFrac += (uint32_t)(s->SFrq >> (SCOPE_FRAC_BITS - 10)); \
 	scopeDrawPos += scopeDrawFrac >> 16; \
 	scopeDrawFrac &= 0xFFFF; \
 
 #define SCOPE_UPDATE_DRAWPOS_PINGPONG \
-	scopeDrawFrac += s->SFrq >> 6; \
+	scopeDrawFrac += (uint32_t)(s->SFrq >> (SCOPE_FRAC_BITS - 10)); \
 	scopeDrawPos += (scopeDrawFrac >> 16) * drawPosDir; \
 	scopeDrawFrac &= 0xFFFF; \
 

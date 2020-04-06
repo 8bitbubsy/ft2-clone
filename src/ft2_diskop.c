@@ -1478,6 +1478,9 @@ static int8_t findFirst(DirRec *searchRec)
 	}
 #endif
 
+	if (searchRec->filesize < -1)
+		searchRec->filesize = -1;
+
 	if (handleEntrySkip(searchRec->nameU, searchRec->isDir))
 	{
 		// skip file
@@ -1557,6 +1560,9 @@ static int8_t findNext(DirRec *searchRec)
 		}
 	}
 #endif
+
+	if (searchRec->filesize < -1)
+		searchRec->filesize = -1;
 
 	if (handleEntrySkip(searchRec->nameU, searchRec->isDir))
 	{

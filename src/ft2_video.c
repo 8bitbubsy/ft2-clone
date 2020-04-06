@@ -162,8 +162,6 @@ void endFPSCounter(void)
 
 void flipFrame(void)
 {
-	uint32_t windowFlags = SDL_GetWindowFlags(video.window);
-
 	renderSprites();
 
 	if (video.showFPSCounter)
@@ -181,6 +179,8 @@ void flipFrame(void)
 	}
 	else
 	{
+		uint32_t windowFlags = SDL_GetWindowFlags(video.window);
+
 		/* We have VSync, but it can unexpectedly get inactive in certain scenarios.
 		** We have to force thread sleeping (to ~60Hz) if so.
 		*/

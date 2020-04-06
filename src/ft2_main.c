@@ -119,7 +119,8 @@ int main(int argc, char *argv[])
 	/* SDL 2.0.9 for Windows has a serious bug where you need to initialize the joystick subsystem
 	** (even if you don't use it) or else weird things happen like random stutters, keyboard (rarely) being
 	** reinitialized in Windows and what not.
-	** Ref.: https://bugzilla.libsdl.org/show_bug.cgi?id=4391 */
+	** Ref.: https://bugzilla.libsdl.org/show_bug.cgi?id=4391
+	*/
 #if defined _WIN32 && SDL_PATCHLEVEL == 9
 	if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0)
 #else
@@ -133,7 +134,8 @@ int main(int argc, char *argv[])
 
 	/* Text input is started by default in SDL2, turn it off to remove ~2ms spikes per key press.
 	** We manuallay start it again when a text edit box is activated, and stop it when done.
-	** Ref.: https://bugzilla.libsdl.org/show_bug.cgi?id=4166 */
+	** Ref.: https://bugzilla.libsdl.org/show_bug.cgi?id=4166
+	*/
 	SDL_StopTextInput();
 
 #ifdef __APPLE__

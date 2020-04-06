@@ -26,7 +26,8 @@
 */
 
 static bool bxxOverflow;
-static int32_t oldPeriod, oldRate, frequenceDivFactor, frequenceMulFactor;
+static int32_t oldPeriod, oldRate;
+static uint32_t frequenceDivFactor, frequenceMulFactor;
 static tonTyp nilPatternLine;
 
 // globally accessed
@@ -324,27 +325,16 @@ void calcReplayRate(int32_t rate) // 100% FT2-accurate routine, do not touch!
 	if (rate == 0)
 		return;
 
-	// for voice delta calculation
-
-	double dVal, dMul = 1.0 / rate;
-
-	dVal = dMul * (65536.0 * 1712.0 * 8363.0);
-	frequenceDivFactor = (int32_t)(dVal + 0.5);
-
-	dVal = dMul * (256.0 * 65536.0 * 8363.0);
-	frequenceMulFactor = (int32_t)(dVal + 0.5);
-
-	audio.dScopeFreqMul = rate / SCOPE_HZ;
-
-	// for volume ramping (FT2 doesn't round here)
+	// the following calculations are 100% accurate to FT2, do not touch!
+	frequenceDivFactor = (int32_t)round(65536.0 * 1712.0 / rate * 8363.0);
+	frequenceMulFactor = (int32_t)round(256.0 * 65536.0 / rate * 8363.0);
 	audio.quickVolSizeVal = rate / 200;
 
+	// the following are non-FT2 calculations
 	audio.rampQuickVolMul = (int32_t)round((UINT32_MAX + 1.0) / audio.quickVolSizeVal);
+	audio.dSpeedValMul = editor.dPerfFreq / rate; // for audio/video sync
 
-	// for audio/video sync
-	audio.dSpeedValMul = (1.0 / rate) * editor.dPerfFreq;
-
-	uint32_t deltaBase = frequenceDivFactor / (1712 * 16); // exact 16.16 delta base for this audio rate
+	const uint32_t deltaBase = frequenceDivFactor / (1712 * 16); // exact 16.16 delta base
 	audio.dPianoDeltaMul = 1.0 / deltaBase; // for piano in Instr. Ed.
 }
 

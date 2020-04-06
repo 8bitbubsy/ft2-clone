@@ -4,6 +4,12 @@
 #include <stdbool.h>
 #include "ft2_header.h"
 
+// log2(65536 / SCOPE_HZ) where SCOPE_HZ is 2^n
+#define SCOPE_FRAC_BITS 22
+
+#define SCOPE_FRAC_SCALE (1UL << SCOPE_FRAC_BITS)
+#define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
+
 void resetCachedScopeVars(void);
 int32_t getSamplePosition(uint8_t ch);
 void stopAllScopes(void);
@@ -23,7 +29,7 @@ typedef struct scope_t
 	bool wasCleared, sample16Bit;
 	uint8_t loopType;
 	int32_t SPosDir, SRepS, SRepL, SLen, SPos;
-	uint32_t SFrq, SPosDec;
+	uint64_t SFrq, SPosDec;
 } scope_t;
 
 typedef struct lastChInstr_t

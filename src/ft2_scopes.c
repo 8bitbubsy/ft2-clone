@@ -22,6 +22,10 @@
 #include "ft2_scopedraw.h"
 #include "ft2_tables.h"
 
+#if SCOPE_HZ != 64
+#error The SCOPE_HZ definition in ft2_header.h must be 2^n!
+#endif
+
 enum
 {
 	LOOP_NONE = 0,
@@ -40,8 +44,9 @@ typedef struct scopeState_t
 } scopeState_t;
 
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
-static uint32_t oldVoiceDelta, oldSFrq, scopeTimeLen, scopeTimeLenFrac;
-static uint64_t timeNext64, timeNext64Frac;
+static int32_t oldPeriod;
+static uint32_t scopeTimeLen, scopeTimeLenFrac;
+static uint64_t timeNext64, timeNext64Frac, oldSFrq;
 static volatile scope_t scope[MAX_VOICES];
 static SDL_Thread *scopeThread;
 static uint8_t *scopeMuteBMP_Ptrs[16];
@@ -50,7 +55,7 @@ lastChInstr_t lastChInstr[MAX_VOICES]; // global
 
 void resetCachedScopeVars(void)
 {
-	oldVoiceDelta = 0xFFFFFFFF;
+	oldPeriod = -1;
 	oldSFrq = 0;
 }
 
@@ -405,8 +410,8 @@ static void updateScopes(void)
 		// scope position update
 
 		tempState.SPosDec += tempState.SFrq;
-		tempState.SPos += ((tempState.SPosDec >> 16) * tempState.SPosDir);
-		tempState.SPosDec &= 0xFFFF;
+		tempState.SPos += ((int32_t)(tempState.SPosDec >> SCOPE_FRAC_BITS) * tempState.SPosDir);
+		tempState.SPosDec &= SCOPE_FRAC_MASK;
 
 		// handle loop wrapping or sample end
 
@@ -558,10 +563,10 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 		// set scope frequency
 		if (status & IS_Period)
 		{
-			if (ch->voiceDelta != oldVoiceDelta)
+			if (ch->finalPeriod != oldPeriod)
 			{
-				oldVoiceDelta = ch->voiceDelta;
-				oldSFrq = (int32_t)(((int32_t)oldVoiceDelta * audio.dScopeFreqMul) + 0.5); // rounded
+				oldPeriod = ch->finalPeriod;
+				oldSFrq = (uint64_t)ch->voiceDelta * audio.freq; // this can very well be higher than 2^32
 			}
 
 			sc->SFrq = oldSFrq;

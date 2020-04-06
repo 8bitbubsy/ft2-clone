@@ -33,7 +33,7 @@ struct audio_t
 	uint32_t freq;
 	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac;
 	uint64_t tickTime64, tickTime64Frac;
-	double dAudioLatencyMs, dSpeedValMul, dScopeFreqMul, dPianoDeltaMul;
+	double dAudioLatencyMs, dSpeedValMul, dPianoDeltaMul;
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
 } audio;
@@ -45,10 +45,9 @@ typedef struct
 	bool backwards, isFadeOutVoice;
 	uint8_t SPan;
 	uint16_t SVol;
-	int32_t SLVol1, SRVol1, SLVol2, SRVol2, SLVolIP, SRVolIP, SVolIPLen;
-	int32_t SPos, SLen, SRepS, SRepL, SFrq, SFrqRev;
-	uint32_t SPosDec;
-
+	int32_t SLVol1, SRVol1, SLVol2, SRVol2, SLVolIP, SRVolIP;
+	int32_t SPos, SLen, SRepS, SRepL;
+	uint32_t SVolIPLen, SPosDec, SFrq, SFrqRev;
 	void (*mixRoutine)(void *, int32_t); // function pointer to mix routine
 } voice_t;
 

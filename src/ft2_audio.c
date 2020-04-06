@@ -20,8 +20,8 @@
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
 static int32_t masterVol, oldAudioFreq, speedVal, pmpLeft, randSeed = INITIAL_DITHER_SEED;
-static int32_t prngStateL, prngStateR, oldPeriod, oldSFrq, oldSFrqRev;
-static uint32_t tickTimeLen, tickTimeLenFrac;
+static int32_t prngStateL, prngStateR, oldPeriod;
+static uint32_t tickTimeLen, tickTimeLenFrac, oldSFrq, oldSFrqRev;
 static float fAudioAmpMul;
 static voice_t voice[MAX_VOICES * 2];
 static void (*sendAudSamplesFunc)(uint8_t *, uint32_t, uint8_t); // "send mixed samples" routines
@@ -372,6 +372,8 @@ void mix_UpdateChannelVolPanFrq(void)
 		{
 			if (ch->finalPeriod != oldPeriod) // this value will very often be the same as before
 			{
+				oldPeriod = ch->finalPeriod;
+
 				oldSFrq = getFrequenceValue(ch->finalPeriod);
 
 				oldSFrqRev = 0xFFFFFFFF;

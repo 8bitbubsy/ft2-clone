@@ -24,7 +24,7 @@
 ** it's difficult to use them. In units of pixels.
 ** Shouldn't be higher than 9!
 */
-#define MIN_THUMB_LENGTH 9
+#define MIN_THUMB_LENGTH 5
 
 scrollBar_t scrollBars[NUM_SCROLLBARS] =
 {
@@ -271,7 +271,7 @@ static void setScrollBarThumbCoords(uint16_t scrollBarID)
 		{
 			dTmp = (scrollBar->h / (double)scrollBar->end) * scrollBar->page;
 			tmp32 = (int32_t)(dTmp + 0.5);
-			realThumbLength = (int16_t)CLAMP(tmp32, MIN_THUMB_LENGTH, scrollBar->h);
+			realThumbLength = (int16_t)CLAMP(tmp32, 1, scrollBar->h);
 		}
 		else
 		{
@@ -279,8 +279,8 @@ static void setScrollBarThumbCoords(uint16_t scrollBarID)
 		}
 
 		thumbH = realThumbLength;
-		if (thumbW < MIN_THUMB_LENGTH)
-			thumbW = MIN_THUMB_LENGTH;
+		if (thumbH < MIN_THUMB_LENGTH)
+			thumbH = MIN_THUMB_LENGTH;
 
 		if (scrollBar->end > scrollBar->page)
 		{
@@ -578,7 +578,7 @@ bool testScrollBarMouseDown(void)
 					assert(scrollBar->h > 0);
 					scrollPos = CLAMP(scrollPos, 0, scrollBar->h);
 
-					length = scrollBar->h + (scrollBar->realThumbLength - scrollBar->thumbW);
+					length = scrollBar->h + (scrollBar->realThumbLength - scrollBar->thumbH);
 					if (length < 1)
 						length = 1;
 
@@ -669,6 +669,8 @@ void handleScrollBarsWhileMouseDown(void)
 			mouse.lastScrollY = mouse.y;
 
 			scrollY = mouse.lastScrollY - mouse.saveMouseY - scrollBar->y;
+
+			assert(scrollBar->h > 0);
 			scrollY = CLAMP(scrollY, 0, scrollBar->h);
 
 			length = scrollBar->h + (scrollBar->realThumbLength - scrollBar->thumbH);
