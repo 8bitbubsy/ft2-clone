@@ -3,11 +3,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_header.h"
+#include "ft2_audio.h"
 
-// log2(65536 / SCOPE_HZ) where SCOPE_HZ is 2^n
-#define SCOPE_FRAC_BITS 22
+// 6 = log2(SCOPE_HZ) where SCOPE_HZ is 2^n
+#define SCOPE_FRAC_BITS (MIXER_FRAC_BITS+6)
 
-#define SCOPE_FRAC_SCALE (1UL << SCOPE_FRAC_BITS)
+#define SCOPE_FRAC_SCALE (1L << SCOPE_FRAC_BITS)
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
 
 void resetCachedScopeVars(void);

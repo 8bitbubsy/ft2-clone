@@ -20,23 +20,30 @@
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
 static int32_t masterVol, oldAudioFreq, speedVal, pmpLeft, randSeed = INITIAL_DITHER_SEED;
-static int32_t prngStateL, prngStateR, oldPeriod;
-static uint32_t tickTimeLen, tickTimeLenFrac, oldSFrq, oldSFrqRev;
+static int32_t prngStateL, prngStateR;
+static uint32_t tickTimeLen, tickTimeLenFrac;
 static float fAudioAmpMul;
 static voice_t voice[MAX_VOICES * 2];
 static void (*sendAudSamplesFunc)(uint8_t *, uint32_t, uint8_t); // "send mixed samples" routines
+
+#if !defined __amd64__ && !defined _WIN64
+static int32_t oldPeriod;
+static uint32_t oldSFrq, oldSFrqRev;
+#endif
 
 pattSyncData_t *pattSyncEntry;
 chSyncData_t *chSyncEntry;
 
 volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
 
+#if !defined __amd64__ && !defined _WIN64
 void resetCachedMixerVars(void)
 {
 	oldPeriod = -1;
 	oldSFrq = 0;
 	oldSFrqRev = 0xFFFFFFFF;
 }
+#endif
 
 void stopVoice(uint8_t i)
 {
@@ -367,10 +374,14 @@ void mix_UpdateChannelVolPanFrq(void)
 		if (status & (IS_Vol + IS_Pan))
 			voiceUpdateVolumes(i, status);
 
-		// frequency change
+		// frequency change (received even if the period didn't change!)
 		if (status & IS_Period)
 		{
-			if (ch->finalPeriod != oldPeriod) // this value will very often be the same as before
+#if defined __amd64__ || defined _WIN64
+			v->SFrq = getFrequenceValue(ch->finalPeriod);
+#else
+			// use cached values to prevent a 32-bit divsion all the time
+			if (ch->finalPeriod != oldPeriod)
 			{
 				oldPeriod = ch->finalPeriod;
 
@@ -383,6 +394,7 @@ void mix_UpdateChannelVolPanFrq(void)
 
 			v->SFrq = oldSFrq;
 			v->SFrqRev = oldSFrqRev;
+#endif
 		}
 
 		// sample trigger (note)
@@ -1098,11 +1110,7 @@ bool setupAudio(bool showErrorMsg)
 	if (config.audioFreq < MIN_AUDIO_FREQ || config.audioFreq > MAX_AUDIO_FREQ)
 	{
 		// set default rate
-#ifdef __APPLE__
-		config.audioFreq = 44100;
-#else
 		config.audioFreq = 48000;
-#endif
 	}
 
 	// get audio buffer size from config special flags

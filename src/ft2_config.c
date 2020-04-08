@@ -71,20 +71,13 @@ static int32_t calcChecksum(uint8_t *p, uint16_t len) // for nibbles highscore d
 	return checksum;
 }
 
-static void loadConfigFromBuffer(uint8_t defaults)
+static void loadConfigFromBuffer(void)
 {
 	int32_t i, checksum;
 
 	lockMixerCallback();
 
 	memcpy(&config, configBuffer, CONFIG_FILE_SIZE);
-
-#ifdef __APPLE__
-	if (defaults)
-		config.audioFreq = 44100;
-#else
-	(void)defaults; // prevent warning
-#endif
 
 	// if Nibbles highscore table checksum is incorrect, load default highscore table instead
 	checksum = calcChecksum((uint8_t *)&config.NI_HighScore, sizeof (config.NI_HighScore));
@@ -143,23 +136,10 @@ static void loadConfigFromBuffer(uint8_t defaults)
 	}
 
 	if (config.audioFreq != 44100 && config.audioFreq != 48000 && config.audioFreq != 96000)
-	{
-		// set default
-#ifdef __APPLE__
-		config.audioFreq = 44100;
-#else
 		config.audioFreq = 48000;
-#endif
-	}
 
 	if (config.audioInputFreq <= 1) // default value from FT2 (this was cdr_Sync) - set defaults
-	{
-#ifdef __APPLE__
-		config.audioInputFreq = INPUT_FREQ_44KHZ;
-#else
 		config.audioInputFreq = INPUT_FREQ_48KHZ;
-#endif
-	}
 
 	if (config.specialFlags == 64) // default value from FT2 (this was ptnDefaultLen byte #1) - set defaults
 		config.specialFlags = BUFFSIZE_1024 | BITDEPTH_16;
@@ -204,7 +184,7 @@ static void configDrawAmp(void)
 static void setDefaultConfigSettings(void)
 {
 	memcpy(configBuffer, defConfigData, CONFIG_FILE_SIZE);
-	loadConfigFromBuffer(true);
+	loadConfigFromBuffer();
 }
 
 void resetConfig(void)
@@ -344,7 +324,7 @@ bool loadConfig(bool showErrorFlag)
 		return false;
 	}
 
-	loadConfigFromBuffer(false);
+	loadConfigFromBuffer();
 	return true;
 }
 
@@ -736,7 +716,7 @@ void loadConfigOrSetDefaults(void)
 		return;
 	}
 
-	loadConfigFromBuffer(false);
+	loadConfigFromBuffer();
 }
 
 static void drawQuantValue(void)
@@ -833,13 +813,8 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	switch (config.audioFreq)
 	{
-#ifdef __APPLE__
-		default: case 44100: tmpID = RB_CONFIG_AUDIO_44KHZ; break;
-		         case 48000: tmpID = RB_CONFIG_AUDIO_48KHZ; break;
-#else
 		         case 44100: tmpID = RB_CONFIG_AUDIO_44KHZ; break;
 		default: case 48000: tmpID = RB_CONFIG_AUDIO_48KHZ; break;
-#endif
 		         case 96000: tmpID = RB_CONFIG_AUDIO_96KHZ; break;
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
@@ -848,13 +823,8 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INPUT_FREQ);
 	switch (config.audioInputFreq)
 	{
-#ifdef __APPLE__
-		default: case INPUT_FREQ_44KHZ: tmpID = RB_CONFIG_AUDIO_INPUT_44KHZ; break;
-		         case INPUT_FREQ_48KHZ: tmpID = RB_CONFIG_AUDIO_INPUT_48KHZ; break;
-#else
 		         case INPUT_FREQ_44KHZ: tmpID = RB_CONFIG_AUDIO_INPUT_44KHZ; break;
 		default: case INPUT_FREQ_48KHZ: tmpID = RB_CONFIG_AUDIO_INPUT_48KHZ; break;
-#endif
 		         case INPUT_FREQ_96KHZ: tmpID = RB_CONFIG_AUDIO_INPUT_96KHZ; break;
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
@@ -1172,13 +1142,8 @@ void showConfigScreen(void)
 			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "1-bit dither");
 
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Mixing frequency:");
-#ifdef __APPLE__
-			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz (default)");
-			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz");
-#else
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
 			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz (default)");
-#endif
 			textOutShadow(525,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
 
 			textOutShadow(509,  76, PAL_FORGRND, PAL_DSKTOP2, "Frequency table:");

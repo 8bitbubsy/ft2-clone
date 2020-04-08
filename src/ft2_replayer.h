@@ -166,10 +166,7 @@ typedef struct sampleTyp_t
 	bool fixed;
 	int8_t fine, relTon, *pek, *origPek;
 	uint8_t vol, typ, pan;
-	int16_t fixedSmp1;
-#ifndef LERPMIX
-	int16_t fixedSmp2;
-#endif
+	int16_t fixedSmp1, fixedSmp2;
 	int32_t fixedPos, len, repS, repL;
 } sampleTyp;
 

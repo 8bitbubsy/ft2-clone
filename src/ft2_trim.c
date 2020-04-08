@@ -31,7 +31,7 @@ void pbTrimCalc(void);
 
 static void freeTmpInstruments(void)
 {
-	for (int16_t i = 0; i <= MAX_INST; i++)
+	for (int32_t i = 0; i <= MAX_INST; i++)
 	{
 		if (tmpInstr[i] != NULL)
 		{
@@ -47,7 +47,7 @@ static bool setTmpInstruments(void)
 {
 	freeTmpInstruments();
 
-	for (int16_t i = 0; i <= MAX_INST; i++)
+	for (int32_t i = 0; i <= MAX_INST; i++)
 	{
 		if (instr[i] != NULL)
 		{
@@ -58,7 +58,7 @@ static bool setTmpInstruments(void)
 				return false;
 			}
 
-			tmpInstr[i] = instr[i];
+			*tmpInstr[i] = *instr[i];
 		}
 	}
 

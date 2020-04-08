@@ -72,13 +72,11 @@ static bool fileRestoreSampleData(UNICHAR *filenameU, int32_t sampleDataOffset, 
 			fwrite(&smp->fixedSmp1, sizeof (int16_t), 1, f);
 		}
 
-#ifndef LERPMIX
 		if (smp->fixedPos+2 < smp->len/2)
 		{
 			fseek(f, sampleDataOffset + ((smp->fixedPos + 2) * 2), SEEK_SET);
 			fwrite(&smp->fixedSmp2, sizeof (int16_t), 1, f);
 		}
-#endif
 	}
 	else
 	{
@@ -94,7 +92,6 @@ static bool fileRestoreSampleData(UNICHAR *filenameU, int32_t sampleDataOffset, 
 			fwrite(&fixSpar8, sizeof (int8_t), 1, f);
 		}
 
-#ifndef LERPMIX
 		if (smp->fixedPos+1 < smp->len)
 		{
 			fseek(f, sampleDataOffset + (smp->fixedPos + 1), SEEK_SET);
@@ -105,7 +102,6 @@ static bool fileRestoreSampleData(UNICHAR *filenameU, int32_t sampleDataOffset, 
 
 			fwrite(&fixSpar8, sizeof (int8_t), 1, f);
 		}
-#endif
 	}
 
 	fclose(f);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ft2_header.h"
+#include "ft2_audio.h"
 
 /* ----------------------------------------------------------------------- */
 /*                          GENERAL MIXER MACROS                           */
@@ -14,9 +15,10 @@
 	v->SLVol2 = CDA_LVol; \
 	v->SRVol2 = CDA_RVol; \
 
+#if defined __amd64__ || defined _WIN64
+
 #define GET_MIXER_VARS \
 	const uint32_t SFrq = v->SFrq; \
-	const uint32_t SFrqRev = v->SFrqRev; \
 	audioMixL = audio.mixBufferL; \
 	audioMixR = audio.mixBufferR; \
 	const bool mixInMono = (CDA_LVol == CDA_RVol); \
@@ -25,7 +27,6 @@
 
 #define GET_MIXER_VARS_RAMP \
 	const uint32_t SFrq = v->SFrq; \
-	const uint32_t SFrqRev = v->SFrqRev; \
 	audioMixL = audio.mixBufferL; \
 	audioMixR = audio.mixBufferR; \
 	CDA_LVolIP = v->SLVolIP; \
@@ -33,6 +34,28 @@
 	const bool mixInMono = (v->SLVol2 == v->SRVol2) && (CDA_LVolIP == CDA_RVolIP); \
 	realPos = v->SPos; \
 	pos = v->SPosDec; \
+
+#else
+
+#define GET_MIXER_VARS \
+	const uint32_t SFrq = v->SFrq; \
+	audioMixL = audio.mixBufferL; \
+	audioMixR = audio.mixBufferR; \
+	const bool mixInMono = (CDA_LVol == CDA_RVol); \
+	realPos = v->SPos; \
+	pos = v->SPosDec; \
+
+#define GET_MIXER_VARS_RAMP \
+	const uint32_t SFrq = v->SFrq; \
+	audioMixL = audio.mixBufferL; \
+	audioMixR = audio.mixBufferR; \
+	CDA_LVolIP = v->SLVolIP; \
+	CDA_RVolIP = v->SRVolIP; \
+	const bool mixInMono = (v->SLVol2 == v->SRVol2) && (CDA_LVolIP == CDA_RVolIP); \
+	realPos = v->SPos; \
+	pos = v->SPosDec; \
+
+#endif
 
 #define SET_BASE8 \
 	CDA_LinearAdr = v->SBase8; \
@@ -52,14 +75,14 @@
 
 #define INC_POS \
 	pos += SFrq; \
-	smpPtr += pos >> 16; \
-	pos &= 0xFFFF; \
+	smpPtr += pos >> MIXER_FRAC_BITS; \
+	pos &= MIXER_FRAC_MASK; \
 
 #define INC_POS_BIDI \
 	pos += CDA_IPValL; \
-	smpPtr += pos >> 16; \
+	smpPtr += pos >> MIXER_FRAC_BITS; \
 	smpPtr += CDA_IPValH; \
-	pos &= 0xFFFF; \
+	pos &= MIXER_FRAC_MASK; \
 
 #define SET_BACK_MIXER_POS \
 	v->SPosDec = pos; \
@@ -100,8 +123,6 @@
 	sample = ((int64_t)sample * CDA_LVol) >> 32; \
 	*audioMixL++ += sample; \
 	*audioMixR++ += sample; \
-
-#ifndef LERPMIX
 
 // 4-tap cubic spline interpolation (default - slower than linear, but better quality)
 
@@ -175,84 +196,41 @@
 	*audioMixL++ += sample; \
 	*audioMixR++ += sample; \
 
-#else
-
-// 2-tap linear interpolation (like FT2 - faster, but bad quality)
-
-// in: int32_t s1,s2 = -128..127 | f = 0..65535 (frac) | out: s1 = -32768..32767
-#define INTERPOLATE8(s1, s2, f) \
-	s2 -= s1; \
-	s2 = (s2 * (int32_t)f) >> (16 - 8); \
-	s1 <<= 8; \
-	s1 += s2; \
-
-// in: int32_t s1,s2 = -32768..32767 | f = 0..65535 (frac) | out: s1 = -32768..32767
-#define INTERPOLATE16(s1, s2, f) \
-	s2 = (s2 - s1) >> 1; \
-	s2 = (s2 * (int32_t)f) >> (16 - 1); \
-	s1 += s2; \
-
-/* 8bitbubsy: It may look like we are potentially going out of bounds by looking up sample point
-** 1, but the sample data is actually padded on the right side, where a correct sample is stored
-** according to loop mode (or no loop). This is how original FT2 (MS-DOS) does it as well.
-*/
-
-#define RENDER_8BIT_SMP_INTRP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[0]; \
-	sample2 = smpPtr[1]; \
-	INTERPOLATE8(sample, sample2, pos) \
-	sample <<= 12; \
-	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
-
-#define RENDER_8BIT_SMP_MONO_INTRP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[0]; \
-	sample2 = smpPtr[1]; \
-	INTERPOLATE8(sample, sample2, pos) \
-	sample <<= 12; \
-	sample = ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixL++ += sample; \
-	*audioMixR++ += sample; \
-
-#define RENDER_16BIT_SMP_INTRP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[0]; \
-	sample2 = smpPtr[1]; \
-	INTERPOLATE16(sample, sample2, pos) \
-	sample <<= 12; \
-	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
-
-#define RENDER_16BIT_SMP_MONO_INTRP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[0]; \
-	sample2 = smpPtr[1]; \
-	INTERPOLATE16(sample, sample2, pos) \
-	sample <<= 12; \
-	sample = ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixL++ += sample; \
-	*audioMixR++ += sample; \
-
-#endif
-
 /* ----------------------------------------------------------------------- */
 /*                      SAMPLES-TO-MIX LIMITING MACROS                     */
 /* ----------------------------------------------------------------------- */
 
+#if defined __amd64__ || defined _WIN64
+
+#define LIMIT_MIX_NUM \
+	samplesToMix = UINT32_MAX; \
+	i = (v->SLen - 1) - realPos; \
+	\
+	if (SFrq > i>>MIXER_FRAC_BITS) \
+	{ \
+		const uint64_t tmp64 = ((uint64_t)i << MIXER_FRAC_BITS) | (pos ^ MIXER_FRAC_MASK); \
+		samplesToMix = (uint32_t)(tmp64 / SFrq); \
+		samplesToMix++; \
+	} \
+	\
+	if (samplesToMix > CDA_BytesLeft) \
+		samplesToMix = CDA_BytesLeft; \
+
+#else
+
 #define LIMIT_MIX_NUM \
 	i = (v->SLen - 1) - realPos; \
-	if (i > 65535) \
-		i = 65535; \
+	if (i > (1UL << (32-MIXER_FRAC_BITS))) \
+		i = 1UL << (32-MIXER_FRAC_BITS); \
 	\
-	i = (i << 16) | (pos ^ 0xFFFF); \
-	samplesToMix = ((int64_t)i * SFrqRev) >> 32; \
+	i = (i << MIXER_FRAC_BITS) | (pos ^ MIXER_FRAC_MASK); \
+	samplesToMix = ((int64_t)i * v->SFrqRev) >> 32; \
 	samplesToMix++; \
 	\
 	if (samplesToMix > CDA_BytesLeft) \
 		samplesToMix = CDA_BytesLeft; \
 
+#endif
 
 #define LIMIT_MIX_NUM_RAMP \
 	if (v->SVolIPLen == 0) \
@@ -302,7 +280,7 @@
 		assert(realPos >= v->SRepS && realPos < v->SLen); \
 		realPos = ~realPos; \
 		smpPtr = CDA_LinAdrRev + realPos; \
-		pos ^= 0xFFFF; \
+		pos ^= MIXER_FRAC_MASK; \
 	} \
 	else \
 	{ \
@@ -311,13 +289,13 @@
 		smpPtr = CDA_LinearAdr + realPos; \
 	} \
 	\
-	const int32_t CDA_IPValH = (int32_t)delta >> 16; \
-	const int32_t CDA_IPValL = delta & 0xFFFF; \
+	const int32_t CDA_IPValH = (int32_t)delta >> MIXER_FRAC_BITS; \
+	const int32_t CDA_IPValL = delta & MIXER_FRAC_MASK; \
 
 #define END_BIDI \
 	if (v->backwards) \
 	{ \
-		pos ^= 0xFFFF; \
+		pos ^= MIXER_FRAC_MASK; \
 		realPos = ~(int32_t)(smpPtr - CDA_LinAdrRev); \
 	} \
 	else \
@@ -330,44 +308,38 @@
 /*                       VOLUME=0 OPTIMIZATION MACROS                      */
 /* ----------------------------------------------------------------------- */
 
+#define	VOL0_INC_POS \
+	const uint64_t newPos = (uint64_t)v->SFrq * numSamples; \
+	const uint32_t addPos = (uint32_t)(newPos >> MIXER_FRAC_BITS); \
+	uint32_t addFrac = (uint32_t)(newPos & MIXER_FRAC_MASK); \
+	\
+	addFrac += v->SPosDec; \
+	realPos = v->SPos + addPos + (addFrac >> MIXER_FRAC_BITS); \
+	pos = addFrac & MIXER_FRAC_MASK; \
+
 #define VOL0_OPTIMIZATION_NO_LOOP \
-	assert(numSamples <= 65536); \
-	\
-	pos = v->SPosDec + ((v->SFrq & 0xFFFF) * numSamples); \
-	realPos = v->SPos + ((v->SFrq >> 16) * numSamples) + (pos >> 16); \
-	\
+	VOL0_INC_POS \
 	if (realPos >= v->SLen) \
 	{ \
 		v->mixRoutine = NULL; /* shut down voice */ \
 		return; \
 	} \
 	\
-	pos &= 0xFFFF; \
 	SET_BACK_MIXER_POS
 
 #define VOL0_OPTIMIZATION_LOOP \
-	assert(numSamples <= 65536); \
-	\
-	pos = v->SPosDec + ((v->SFrq & 0xFFFF) * numSamples); \
-	realPos = v->SPos + ((v->SFrq >> 16) * numSamples) + (pos >> 16); \
-	\
+	VOL0_INC_POS \
 	while (realPos >= v->SLen) \
 		realPos -= v->SRepL; \
 	\
-	pos &= 0xFFFF; \
 	SET_BACK_MIXER_POS
 
 #define VOL0_OPTIMIZATION_BIDI_LOOP \
-	assert(numSamples <= 65536); \
-	\
-	pos = v->SPosDec + ((v->SFrq & 0xFFFF) * numSamples); \
-	realPos = v->SPos + ((v->SFrq >> 16) * numSamples) + (pos >> 16); \
-	\
+	VOL0_INC_POS \
 	while (realPos >= v->SLen) \
 	{ \
 		realPos -= v->SRepL; \
 		v->backwards ^= 1; \
 	} \
 	\
-	pos &= 0xFFFF; \
 	SET_BACK_MIXER_POS

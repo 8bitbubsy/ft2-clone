@@ -370,14 +370,8 @@ void startSampling(void)
 	switch (config.audioInputFreq)
 	{
 		case INPUT_FREQ_96KHZ: samplingRate = 96000; break;
-
-#ifdef __APPLE__
-		case INPUT_FREQ_48KHZ: samplingRate = 48000; break;
-		default: samplingRate = 44100; break;
-#else
 		case INPUT_FREQ_44KHZ: samplingRate = 44100; break;
 		default: samplingRate = 48000; break;
-#endif
 	}
 
 	memset(&want, 0, sizeof (SDL_AudioSpec));

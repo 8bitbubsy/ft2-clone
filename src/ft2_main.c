@@ -179,11 +179,8 @@ int main(int argc, char *argv[])
 	if (!setupAudio(CONFIG_HIDE_ERRORS))
 	{
 		// one LAST attempt (with default audio device and settings)
-#ifdef __APPLE__
-		config.audioFreq = 44100;
-#else
 		config.audioFreq = 48000;
-#endif
+
 		// try 16-bit audio at 1024 samples (44.1kHz/48kHz)
 		config.specialFlags &= ~(BITDEPTH_24 + BUFFSIZE_512 + BUFFSIZE_2048);
 		config.specialFlags |=  (BITDEPTH_16 + BUFFSIZE_1024);

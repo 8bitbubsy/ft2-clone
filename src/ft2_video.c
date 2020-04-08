@@ -953,7 +953,7 @@ bool setupWindow(void)
 		return false;
 	}
 
-#ifdef __APPLE__ // for macOS we need to do this here for reasons I can't be bothered to explain
+#ifdef __APPLE__ // for macOS we need to do this here for reasons I have forgotten
 	SDL_PumpEvents();
 	SDL_ShowWindow(video.window);
 #endif

@@ -26,8 +26,9 @@
 */
 
 static bool bxxOverflow;
-static int32_t oldPeriod, oldRate;
-static uint32_t frequenceDivFactor, frequenceMulFactor;
+static int32_t oldPeriod;
+static uint32_t period2DeltaTab[768][32], oldDelta;
+static double dAmigaPeriodDiv;
 static tonTyp nilPatternLine;
 
 // globally accessed
@@ -320,68 +321,78 @@ void keyOff(stmTyp *ch)
 	}
 }
 
-void calcReplayRate(int32_t rate) // 100% FT2-accurate routine, do not touch!
+void calcReplayRate(int32_t rate)
 {
 	if (rate == 0)
 		return;
 
-	// the following calculations are 100% accurate to FT2, do not touch!
-	frequenceDivFactor = (int32_t)round(65536.0 * 1712.0 / rate * 8363.0);
-	frequenceMulFactor = (int32_t)round(256.0 * 65536.0 / rate * 8363.0);
-	audio.quickVolSizeVal = rate / 200;
+	const double dRateFactor = (double)MIXER_FRAC_SCALE / rate;
 
-	// the following are non-FT2 calculations
+	// generate period-to-delta table
+	const double dMul = dRateFactor * (8363.0 * 256.0);
+	for (int32_t i = 0; i < 768; i++)
+	{
+		const double dHz = exp2(i * (1.0 / 768.0)) * dMul;
+		for (int32_t j = 0; j < 32; j++)
+		{
+			const double dOut = dHz * exp2(-j);
+			period2DeltaTab[i][j] = (int32_t)(dOut + 0.5);
+		}
+	}
+
+	dAmigaPeriodDiv = dRateFactor * (8363.0 * 1712.0);
+
+	audio.quickVolSizeVal = rate / 200; // FT2 truncates here
 	audio.rampQuickVolMul = (int32_t)round((UINT32_MAX + 1.0) / audio.quickVolSizeVal);
 	audio.dSpeedValMul = editor.dPerfFreq / rate; // for audio/video sync
 
-	const uint32_t deltaBase = frequenceDivFactor / (1712 * 16); // exact 16.16 delta base
-	audio.dPianoDeltaMul = 1.0 / deltaBase; // for piano in Instr. Ed.
+	// exact integer fixed-point delta base for piano in Instr. Ed.
+	int32_t deltaBase = (int32_t)round(dAmigaPeriodDiv / (1712 * 16));
+	audio.dPianoDeltaMul = 1.0 / deltaBase;
 }
 
-// 100% FT2-accurate routine, do not touch!
 uint32_t getFrequenceValue(uint16_t period)
 {
-	uint8_t shift;
-	uint16_t index;
-	int32_t indexQuotient, indexRemainder;
-	uint32_t rate;
+	uint32_t delta;
 
 	if (period == 0)
 		return 0;
 
 	if (period == oldPeriod)
-		return oldRate; // added check: prevent this calculation if it would yield the same
+		return oldDelta; // we have already calculated this delta
 
 	if (linearFrqTab)
 	{
-		index = (12 * 192 * 4) - period;
-		indexQuotient = index / 768;
-		indexRemainder = index % 768;
+		const uint16_t invPeriod = (12 * 192 * 4) - period; // this intentionally overflows uint16_t to be accurate to FT2
 
-		rate = ((int64_t)logTab[indexRemainder] * frequenceMulFactor) >> LOG_TABLE_BITS;
+		const int32_t quotient = invPeriod / 768;
+		const int32_t remainder = invPeriod % 768;
+		
+		const int32_t octave = (14 - quotient) & 0x1F; // this is accurate to FT2 (it can go crazy on very high periods)
 
-		shift = (14 - indexQuotient) & 0x1F;
-		if (shift != 0)
-			rate >>= shift;
+		delta = period2DeltaTab[remainder][octave];
 	}
 	else
 	{
-		rate = frequenceDivFactor / period;
+		const double dHz = dAmigaPeriodDiv / period;
+		delta = (int32_t)(dHz + 0.5); // rounded (don't cast to uint32_t as it will avoid SSE2 usage, and delta is <= 2^31 anyway)
 	}
 
 	oldPeriod = period;
-	oldRate = rate;
+	oldDelta = delta;
 
-	return rate;
+	return delta;
 }
 
 void resetCachedFrequencyVars(void)
 {
 	oldPeriod = -1;
-	oldRate = 0;
+	oldDelta = 0;
 
 	resetCachedScopeVars();
+#if !defined __amd64__ && !defined _WIN64
 	resetCachedMixerVars();
+#endif
 }
 
 static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)

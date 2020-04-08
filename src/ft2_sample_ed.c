@@ -81,9 +81,7 @@ void fixSample(sampleTyp *s)
 			// write new values
 			ptr16[-1] = 0;
 			ptr16[len+0] = 0;
-#ifndef LERPMIX
 			ptr16[len+1] = 0;
-#endif
 		}
 		else
 		{
@@ -93,9 +91,7 @@ void fixSample(sampleTyp *s)
 			// write new values
 			s->pek[-1] = 0;
 			s->pek[len+0] = 0;
-#ifndef LERPMIX
 			s->pek[len+1] = 0;
-#endif
 		}
 
 		return;
@@ -123,17 +119,14 @@ void fixSample(sampleTyp *s)
 			// store old fix position and old values
 			s->fixedPos = s->repS + s->repL;
 			s->fixedSmp1 = ptr16[loopEnd+0];
-#ifndef LERPMIX
 			s->fixedSmp2 = ptr16[loopEnd+1];
-#endif
+
 			// write new values
 			ptr16[loopEnd+0] = ptr16[loopStart+0];
-#ifndef LERPMIX
 			if (loopStart == 0 && loopEnd > 0)
 				ptr16[-1] = ptr16[loopEnd-1];
 
 			ptr16[loopEnd+1] = ptr16[loopStart+1];
-#endif
 		}
 		else
 		{
@@ -148,17 +141,14 @@ void fixSample(sampleTyp *s)
 			// store old fix position and old values
 			s->fixedPos = loopEnd;
 			s->fixedSmp1 = s->pek[loopEnd+0];
-#ifndef LERPMIX
 			s->fixedSmp2 = s->pek[loopEnd+1];
-#endif
+
 			// write new values
 			s->pek[loopEnd+0] = s->pek[loopStart+0];
-#ifndef LERPMIX
 			if (loopStart == 0 && loopEnd > 0)
 				s->pek[-1] = s->pek[loopEnd-1];
 
 			s->pek[loopEnd+1] = s->pek[loopStart+1];
-#endif
 		}
 	}
 	else
@@ -181,12 +171,10 @@ void fixSample(sampleTyp *s)
 			// store old fix position and old values
 			s->fixedPos = s->repS + s->repL;
 			s->fixedSmp1 = ptr16[loopEnd+0];
-#ifndef LERPMIX
 			s->fixedSmp2 = ptr16[loopEnd+1];
-#endif
+
 			// write new values
 			ptr16[loopEnd+0] = ptr16[loopEnd-1];
-#ifndef LERPMIX
 			if (loopStart == 0)
 				ptr16[-1] = ptr16[0];
 
@@ -194,7 +182,6 @@ void fixSample(sampleTyp *s)
 				ptr16[loopEnd+1] = ptr16[loopEnd-2];
 			else
 				ptr16[loopEnd+1] = ptr16[loopStart+0];
-#endif
 		}
 		else
 		{
@@ -211,12 +198,10 @@ void fixSample(sampleTyp *s)
 			// store old fix position and old values
 			s->fixedPos = loopEnd;
 			s->fixedSmp1 = s->pek[loopEnd+0];
-#ifndef LERPMIX
 			s->fixedSmp2 = s->pek[loopEnd+1];
-#endif
+
 			// write new values
 			s->pek[loopEnd+0] = s->pek[loopEnd-1];
-#ifndef LERPMIX
 			if (loopStart == 0)
 				s->pek[-1] = s->pek[0];
 
@@ -224,7 +209,6 @@ void fixSample(sampleTyp *s)
 				s->pek[loopEnd+1] = s->pek[loopEnd-2];
 			else
 				s->pek[loopEnd+1] = s->pek[loopStart+0];
-#endif
 		}
 	}
 
@@ -258,18 +242,14 @@ void restoreSample(sampleTyp *s)
 		fixedPos16 = s->fixedPos >> 1;
 
 		ptr16[fixedPos16+0] = s->fixedSmp1;
-#ifndef LERPMIX
 		ptr16[fixedPos16+1] = s->fixedSmp2;
-#endif
 	}
 	else
 	{
 		// 8-bit sample
 
 		s->pek[s->fixedPos+0] = (int8_t)s->fixedSmp1;
-#ifndef LERPMIX
 		s->pek[s->fixedPos+1] = (int8_t)s->fixedSmp2;
-#endif
 	}
 }
 
@@ -646,10 +626,8 @@ static int8_t getScaledSample(sampleTyp *s, int32_t index)
 		{
 			if (index == s->fixedPos)
 				tmp32 = s->fixedSmp1;
-#ifndef LERPMIX
 			else if (index == s->fixedPos+2)
 				tmp32 = s->fixedSmp2;
-#endif
 			else
 				tmp32 = ptr16[index >> 1];
 		}
@@ -669,10 +647,8 @@ static int8_t getScaledSample(sampleTyp *s, int32_t index)
 		{
 			if (index == s->fixedPos)
 				tmp32 = s->fixedSmp1;
-#ifndef LERPMIX
 			else if (index == s->fixedPos+1)
 				tmp32 = s->fixedSmp2;
-#endif
 			else
 				tmp32 = ptr8[index];
 		}

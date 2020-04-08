@@ -85,13 +85,8 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 
 	// audio output frequency
 	//x,   y,   w,  group,                      funcOnUp
-#ifdef __APPLE__
-	{ 509, 16, 121, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
-	{ 509, 30,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
-#else
 	{ 509, 16,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
 	{ 509, 30, 121, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
-#endif
 	{ 509, 44,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio96kHz },
 
 	// audio input frequency

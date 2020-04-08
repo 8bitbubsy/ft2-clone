@@ -6,8 +6,6 @@
 #include "ft2_header.h" // MAX_VOICES
 #include "ft2_config.h" // CONFIG_FILE_SIZE
 
-#define LOG_TABLE_BITS 24
-
 #define KEY2VOL_ENTRIES (signed)(sizeof (key2VolTab) / sizeof (SDL_Keycode))
 #define KEY2EFX_ENTRIES (signed)(sizeof (key2EfxTab) / sizeof (SDL_Keycode))
 #define KEY2HEX_ENTRIES (signed)(sizeof (key2HexTab) / sizeof (SDL_Keycode))
@@ -18,7 +16,6 @@ extern const uint16_t amigaPeriod[12 * 8];
 extern const uint16_t amigaFinePeriod[12 * 8];
 extern const int16_t linearPeriods[1936];
 extern const int16_t amigaPeriods[1936];
-extern const uint32_t logTab[768];
 
 extern const uint32_t panningTab[257];
 
