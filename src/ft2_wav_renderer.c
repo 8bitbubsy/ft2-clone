@@ -450,13 +450,8 @@ void pbWavFreqDown(void)
 	if (WDFrequency > MIN_WAV_RENDER_FREQ)
 	{
 		     if (WDFrequency == 192000) WDFrequency = 96000;
-		else if (WDFrequency == 96000)  WDFrequency = 48000;
-		else if (WDFrequency == 48000)  WDFrequency = 44100;
-		else if (WDFrequency == 44100)  WDFrequency = 32000;
-		else if (WDFrequency == 32000)  WDFrequency = 22050;
-		else if (WDFrequency == 22050)  WDFrequency = 16000;
-		else if (WDFrequency == 16000)  WDFrequency = 11025;
-		else if (WDFrequency == 11025)  WDFrequency = 8000;
+		else if (WDFrequency == 96000) WDFrequency = 48000;
+		else if (WDFrequency == 48000) WDFrequency = 44100;
 
 		updateWavRenderer();
 	}

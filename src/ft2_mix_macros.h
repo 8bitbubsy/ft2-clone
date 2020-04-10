@@ -15,8 +15,6 @@
 	v->SLVol2 = CDA_LVol; \
 	v->SRVol2 = CDA_RVol; \
 
-#if defined __amd64__ || defined _WIN64
-
 #define GET_MIXER_VARS \
 	const uint32_t SFrq = v->SFrq; \
 	audioMixL = audio.mixBufferL; \
@@ -34,28 +32,6 @@
 	const bool mixInMono = (v->SLVol2 == v->SRVol2) && (CDA_LVolIP == CDA_RVolIP); \
 	realPos = v->SPos; \
 	pos = v->SPosDec; \
-
-#else
-
-#define GET_MIXER_VARS \
-	const uint32_t SFrq = v->SFrq; \
-	audioMixL = audio.mixBufferL; \
-	audioMixR = audio.mixBufferR; \
-	const bool mixInMono = (CDA_LVol == CDA_RVol); \
-	realPos = v->SPos; \
-	pos = v->SPosDec; \
-
-#define GET_MIXER_VARS_RAMP \
-	const uint32_t SFrq = v->SFrq; \
-	audioMixL = audio.mixBufferL; \
-	audioMixR = audio.mixBufferR; \
-	CDA_LVolIP = v->SLVolIP; \
-	CDA_RVolIP = v->SRVolIP; \
-	const bool mixInMono = (v->SLVol2 == v->SRVol2) && (CDA_LVolIP == CDA_RVolIP); \
-	realPos = v->SPos; \
-	pos = v->SPosDec; \
-
-#endif
 
 #define SET_BASE8 \
 	CDA_LinearAdr = v->SBase8; \

@@ -332,10 +332,10 @@ void calcReplayRate(int32_t rate)
 	const double dMul = dRateFactor * (8363.0 * 256.0);
 	for (int32_t i = 0; i < 768; i++)
 	{
-		const double dHz = exp2(i * (1.0 / 768.0)) * dMul;
+		const double dDelta = exp2(i * (1.0 / 768.0)) * dMul;
 		for (int32_t j = 0; j < 32; j++)
 		{
-			const double dOut = dHz * exp2(-j);
+			const double dOut = dDelta * exp2(-j);
 			period2DeltaTab[i][j] = (int32_t)(dOut + 0.5);
 		}
 	}
@@ -586,13 +586,10 @@ static void checkMoreEffects(stmTyp *ch) // called even if channel is muted
 						song.pBreakPos = ch->pattPos;
 						song.pBreakFlag = true;
 					}
-					else
+					else if (--ch->loopCnt > 0)
 					{
-						if (--ch->loopCnt > 0)
-						{
-							song.pBreakPos = ch->pattPos;
-							song.pBreakFlag = true;
-						}
+						song.pBreakPos = ch->pattPos;
+						song.pBreakFlag = true;
 					}
 				}
 			}
