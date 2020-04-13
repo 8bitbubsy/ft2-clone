@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 		config.audioFreq = 48000;
 
 		// try 16-bit audio at 1024 samples (44.1kHz/48kHz)
-		config.specialFlags &= ~(BITDEPTH_24 + BUFFSIZE_512 + BUFFSIZE_2048);
+		config.specialFlags &= ~(BITDEPTH_32 + BUFFSIZE_512 + BUFFSIZE_2048);
 		config.specialFlags |=  (BITDEPTH_16 + BUFFSIZE_1024);
 
 		setToDefaultAudioOutputDevice();
@@ -308,6 +308,8 @@ static void initializeVars(void)
 
 	editor.diskOpReadOnOpen = true;
 	editor.programRunning = true;
+
+	audio.linearFreqTable = true;
 }
 
 static void cleanUpAndExit(void) // never call this inside the main loop!
@@ -410,7 +412,8 @@ static void setupPerfFreq(void)
 	uint64_t perfFreq64;
 	double dInt, dFrac;
 
-	perfFreq64 = SDL_GetPerformanceFrequency(); assert(perfFreq64 != 0);
+	perfFreq64 = SDL_GetPerformanceFrequency();
+	assert(perfFreq64 != 0);
 	editor.dPerfFreq = (double)perfFreq64;
 	editor.dPerfFreqMulMicro = 1000000.0 / editor.dPerfFreq;
 	editor.dPerfFreqMulMs = 1.0 / (editor.dPerfFreq / 1000.0);
@@ -423,7 +426,11 @@ static void setupPerfFreq(void)
 
 	// fractional part scaled to 0..2^32-1
 	dFrac *= UINT32_MAX;
-	video.vblankTimeLenFrac = (uint32_t)(dFrac + 0.5);
+	dFrac += 0.5;
+	if (dFrac > UINT32_MAX)
+		dFrac = UINT32_MAX;
+
+	video.vblankTimeLenFrac = (uint32_t)dFrac;
 }
 
 #ifdef _WIN32

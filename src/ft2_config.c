@@ -135,8 +135,13 @@ static void loadConfigFromBuffer(void)
 		config.recQuantRes = 16;
 	}
 
-	if (config.audioFreq != 44100 && config.audioFreq != 48000 && config.audioFreq != 96000)
+#if defined __amd64__ || defined _WIN64
+	if (config.audioFreq != 44100 && config.audioFreq != 48000 && config.audioFreq != 96000 && config.audioFreq != 192000)
 		config.audioFreq = 48000;
+#else
+	if (config.audioFreq != 44100 && config.audioFreq != 48000)
+		config.audioFreq = 48000;
+#endif
 
 	if (config.audioInputFreq <= 1) // default value from FT2 (this was cdr_Sync) - set defaults
 		config.audioInputFreq = INPUT_FREQ_48KHZ;
@@ -154,16 +159,16 @@ static void loadConfigFromBuffer(void)
 	if (config.windowFlags == 0) // default value from FT2 (this was ptnDefaultLen byte #2) - set defaults
 		config.windowFlags = WINSIZE_AUTO;
 
-	// audio bit depth - remove 24-bit flag if both are enabled
-	if ((config.specialFlags & BITDEPTH_16) && (config.specialFlags & BITDEPTH_24))
-		config.specialFlags &= ~BITDEPTH_24;
+	// audio bit depth - remove 32-bit flag if both are enabled
+	if ((config.specialFlags & BITDEPTH_16) && (config.specialFlags & BITDEPTH_32))
+		config.specialFlags &= ~BITDEPTH_32;
 
 	if (audio.dev != 0)
 		setNewAudioSettings();
 
 	audioSetInterpolation(config.interpolation ? true : false);
 	audioSetVolRamp((config.specialFlags & NO_VOLRAMP_FLAG) ? false : true);
-	setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_24);
+	setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
 	setMouseShape(config.mouseType);
 	changeLogoType(config.id_FastLogo);
 	changeBadgeType(config.id_TritonProd);
@@ -804,7 +809,7 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_BIT_DEPTH);
 
 	tmpID = RB_CONFIG_AUDIO_16BIT;
-	if (config.specialFlags & BITDEPTH_24)
+	if (config.specialFlags & BITDEPTH_32)
 		tmpID = RB_CONFIG_AUDIO_24BIT;
 
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
@@ -813,9 +818,12 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	switch (config.audioFreq)
 	{
-		         case 44100: tmpID = RB_CONFIG_AUDIO_44KHZ; break;
-		default: case 48000: tmpID = RB_CONFIG_AUDIO_48KHZ; break;
-		         case 96000: tmpID = RB_CONFIG_AUDIO_96KHZ; break;
+		         case 44100:  tmpID = RB_CONFIG_AUDIO_44KHZ;  break;
+		default: case 48000:  tmpID = RB_CONFIG_AUDIO_48KHZ;  break;
+#if defined __amd64__ || defined _WIN64
+		         case 96000:  tmpID = RB_CONFIG_AUDIO_96KHZ;  break;
+		         case 192000: tmpID = RB_CONFIG_AUDIO_192KHZ; break;
+#endif
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -847,7 +855,7 @@ static void setConfigIOCheckButtonStates(void)
 {
 	checkBoxes[CB_CONF_INTERPOLATION].checked = config.interpolation;
 	checkBoxes[CB_CONF_VOL_RAMP].checked = (config.specialFlags & NO_VOLRAMP_FLAG) ? false : true;
-	checkBoxes[CB_CONF_DITHER].checked = (config.specialFlags & BITDEPTH_24) ? false : config.specialFlags2 & DITHERED_AUDIO;
+	checkBoxes[CB_CONF_DITHER].checked = (config.specialFlags & BITDEPTH_32) ? false : config.specialFlags2 & DITHERED_AUDIO;
 
 	showCheckBox(CB_CONF_INTERPOLATION);
 	showCheckBox(CB_CONF_VOL_RAMP);
@@ -1134,7 +1142,7 @@ void showConfigScreen(void)
 
 			textOutShadow(390,  76, PAL_FORGRND, PAL_DSKTOP2, "Audio bit depth:");
 			textOutShadow(406,  90, PAL_FORGRND, PAL_DSKTOP2, "16-bit (default)");
-			textOutShadow(406, 104, PAL_FORGRND, PAL_DSKTOP2, "24-bit float");
+			textOutShadow(406, 104, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
 
 			textOutShadow(390, 120, PAL_FORGRND, PAL_DSKTOP2, "Mixing device ctrl.:");
 			textOutShadow(406, 134, PAL_FORGRND, PAL_DSKTOP2, "Interpolation");
@@ -1144,8 +1152,10 @@ void showConfigScreen(void)
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Mixing frequency:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
 			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz (default)");
+#if defined __amd64__ || defined _WIN64
 			textOutShadow(525,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
-
+			textOutShadow(525,  59, PAL_FORGRND, PAL_DSKTOP2, "192000Hz");
+#endif
 			textOutShadow(509,  76, PAL_FORGRND, PAL_DSKTOP2, "Frequency table:");
 			textOutShadow(525,  90, PAL_FORGRND, PAL_DSKTOP2, "Amiga freq. table");
 			textOutShadow(525, 104, PAL_FORGRND, PAL_DSKTOP2, "Linear freq. table");
@@ -1561,7 +1571,7 @@ void rbConfigSbs2048(void)
 
 void rbConfigAudio16bit(void)
 {
-	config.specialFlags &= ~BITDEPTH_24;
+	config.specialFlags &= ~BITDEPTH_32;
 	config.specialFlags |=  BITDEPTH_16;
 
 	setNewAudioSettings();
@@ -1570,9 +1580,9 @@ void rbConfigAudio16bit(void)
 void rbConfigAudio24bit(void)
 {
 	config.specialFlags &= ~BITDEPTH_16;
-	config.specialFlags |=  BITDEPTH_24;
+	config.specialFlags |=  BITDEPTH_32;
 
-	config.specialFlags2 &= ~DITHERED_AUDIO; // no dither in "24-bit float" mode
+	config.specialFlags2 &= ~DITHERED_AUDIO; // no dither in "32-bit float" mode
 
 	checkBoxes[CB_CONF_DITHER].checked = false;
 	if (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
@@ -1596,6 +1606,12 @@ void rbConfigAudio48kHz(void)
 void rbConfigAudio96kHz(void)
 {
 	config.audioFreq = 96000;
+	setNewAudioSettings();
+}
+
+void rbConfigAudio192kHz(void)
+{
+	config.audioFreq = 192000;
 	setNewAudioSettings();
 }
 
@@ -1650,7 +1666,7 @@ void cbConfigVolRamp(void)
 
 void cbConfigDither(void)
 {
-	if (config.specialFlags & BITDEPTH_24) // no dither in float mode, force off
+	if (config.specialFlags & BITDEPTH_32) // no dither in float mode, force off
 	{
 		config.specialFlags2 &= ~DITHERED_AUDIO;
 
@@ -2151,7 +2167,7 @@ void sbAmp(uint32_t pos)
 	if (config.boostLevel != (int8_t)pos + 1)
 	{
 		config.boostLevel = (int8_t)pos + 1;
-		setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_24);
+		setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
 		configDrawAmp();
 		updateWavRendererSettings();
 	}
@@ -2172,7 +2188,7 @@ void sbMasterVol(uint32_t pos)
 	if (config.masterVol != (int16_t)pos)
 	{
 		config.masterVol = (int16_t)pos;
-		setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_24);
+		setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
 	}
 }
 

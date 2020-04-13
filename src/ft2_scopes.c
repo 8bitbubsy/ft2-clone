@@ -22,10 +22,6 @@
 #include "ft2_scopedraw.h"
 #include "ft2_tables.h"
 
-#if SCOPE_HZ != 64
-#error The SCOPE_HZ definition in ft2_header.h must be 2^n!
-#endif
-
 enum
 {
 	LOOP_NONE = 0,
@@ -44,20 +40,13 @@ typedef struct scopeState_t
 } scopeState_t;
 
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
-static int32_t oldPeriod;
 static uint32_t scopeTimeLen, scopeTimeLenFrac;
-static uint64_t timeNext64, timeNext64Frac, oldSFrq;
+static uint64_t timeNext64, timeNext64Frac;
 static volatile scope_t scope[MAX_VOICES];
 static SDL_Thread *scopeThread;
 static uint8_t *scopeMuteBMP_Ptrs[16];
 
 lastChInstr_t lastChInstr[MAX_VOICES]; // global
-
-void resetCachedScopeVars(void)
-{
-	oldPeriod = -1;
-	oldSFrq = 0;
-}
 
 int32_t getSamplePosition(uint8_t ch)
 {
@@ -363,7 +352,7 @@ static void scopeTrigger(int32_t ch, sampleTyp *s, int32_t playOffset)
 	tempState.sample16Bit = sampleIs16Bit;
 	tempState.loopType = loopType;
 
-	tempState.SPosDir = 1; // forwards
+	tempState.backwards = false;
 	tempState.SLen = (loopType > 0) ? (loopBegin + loopLength) : length;
 	tempState.SRepS = loopBegin;
 	tempState.SRepL = loopLength;
@@ -381,6 +370,7 @@ static void scopeTrigger(int32_t ch, sampleTyp *s, int32_t playOffset)
 	tempState.active = true;
 	tempState.wasCleared = sc->wasCleared;
 	tempState.SFrq = sc->SFrq;
+	tempState.DFrq = sc->DFrq;
 	tempState.SVol = sc->SVol;
 
 	/* Update live scope now.
@@ -410,28 +400,34 @@ static void updateScopes(void)
 		// scope position update
 
 		tempState.SPosDec += tempState.SFrq;
-		tempState.SPos += ((int32_t)(tempState.SPosDec >> SCOPE_FRAC_BITS) * tempState.SPosDir);
+
+		const uint32_t posAdd = tempState.SPosDec >> SCOPE_FRAC_BITS;
+		if (tempState.backwards)
+			tempState.SPos -= posAdd;
+		else
+			tempState.SPos += posAdd;
+
 		tempState.SPosDec &= SCOPE_FRAC_MASK;
 
 		// handle loop wrapping or sample end
 
-		if (tempState.SPosDir == -1 && tempState.SPos < tempState.SRepS) // sampling backwards (definitely pingpong loop)
+		if (tempState.backwards && tempState.SPos < tempState.SRepS) // sampling backwards (definitely pingpong loop)
 		{
-			tempState.SPosDir = 1; // change direction to forwards
+			tempState.backwards = false; // change direction to forwards
 
-			if (tempState.SRepL < 2)
-				tempState.SPos = tempState.SRepS;
-			else
+			if (tempState.SRepL >= 2)
 				tempState.SPos = tempState.SRepS + ((tempState.SRepS - tempState.SPos - 1) % tempState.SRepL);
+			else
+				tempState.SPos = tempState.SRepS;
 
 			assert(tempState.SPos >= tempState.SRepS && tempState.SPos < tempState.SLen);
 		}
 		else if (tempState.SPos >= tempState.SLen)
 		{
-			if (tempState.SRepL < 2)
-				loopOverflowVal = 0;
-			else
+			if (tempState.SRepL >= 2)
 				loopOverflowVal = (tempState.SPos - tempState.SLen) % tempState.SRepL;
+			else
+				loopOverflowVal = 0;
 
 			if (tempState.loopType == LOOP_NONE)
 			{
@@ -444,7 +440,7 @@ static void updateScopes(void)
 			}
 			else // pingpong loop
 			{
-				tempState.SPosDir = -1; // change direction to backwards
+				tempState.backwards = true; // change direction to backwards
 				tempState.SPos = (tempState.SLen - 1) - loopOverflowVal;
 				assert(tempState.SPos >= tempState.SRepS && tempState.SPos < tempState.SLen);
 			}
@@ -548,7 +544,6 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 	uint8_t status;
 	syncedChannel_t *ch;
 	volatile scope_t *sc;
-	sampleTyp *smpPtr;
 
 	sc = scope;
 	ch = chSyncData->channels;
@@ -556,31 +551,22 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 	{
 		status = scopeUpdateStatus[i];
 
-		// set scope volume
 		if (status & IS_Vol)
 			sc->SVol = (int8_t)(((ch->finalVol * SCOPE_HEIGHT) + (1 << 15)) >> 16); // rounded
 
-		// set scope frequency
 		if (status & IS_Period)
 		{
-			if (ch->finalPeriod != oldPeriod)
-			{
-				oldPeriod = ch->finalPeriod;
-				oldSFrq = (uint64_t)ch->voiceDelta * audio.freq; // this can very well be higher than 2^32
-			}
-
-			sc->SFrq = oldSFrq;
+			sc->SFrq = getScopeFrequenceValue(ch->finalPeriod);
+			sc->DFrq = (uint32_t)(sc->SFrq >> (SCOPE_FRAC_BITS - 10)); // amount of samples to skip after drawing a pixel
 		}
 
-		// start scope sample
 		if (status & IS_NyTon)
 		{
 			if (instr[ch->instrNr] != NULL)
 			{
-				smpPtr = &instr[ch->instrNr]->samp[ch->sampleNr];
-				scopeTrigger(i, smpPtr, ch->smpStartPos);
+				scopeTrigger(i, &instr[ch->instrNr]->samp[ch->sampleNr], ch->smpStartPos);
 
-				// set stuff used by Smp. Ed. for sampling position line
+				// set some stuff used by Smp. Ed. for sampling position line
 
 				if (ch->instrNr == 130 || (ch->instrNr == editor.curInstr && ch->sampleNr == editor.curSmp))
 					editor.curSmpChannel = (uint8_t)i;
@@ -597,8 +583,6 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 	int32_t time32;
 	uint32_t diff32;
 	uint64_t time64;
-
-	(void)ptr;
 
 	// this is needed for scope stability (confirmed)
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
@@ -637,6 +621,7 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 		}
 	}
 
+	(void)ptr;
 	return true;
 }
 
@@ -648,11 +633,15 @@ bool initScopes(void)
 	dFrac = modf(editor.dPerfFreq / SCOPE_HZ, &dInt);
 
 	// integer part
-	scopeTimeLen = (uint32_t)dInt;
+	scopeTimeLen = (int32_t)dInt;
 
 	// fractional part (scaled to 0..2^32-1)
 	dFrac *= UINT32_MAX;
-	scopeTimeLenFrac = (uint32_t)(dFrac + 0.5);
+	dFrac += 0.5;
+	if (dFrac > UINT32_MAX)
+		dFrac = UINT32_MAX;
+
+	scopeTimeLenFrac = (uint32_t)dFrac;
 
 	// setup scope mute BMP pointers
 	assert(bmp.scopeMute != NULL);

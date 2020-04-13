@@ -11,31 +11,36 @@ enum
 	FREQ_TABLE_AMIGA = 1,
 };
 
-/* Warning: MIXER_FRAC_BITS must NOT be higher than 22!
-** This can create an overflow in certain calculations.
-**
-** Use 16 on non-x86_64 platforms so that we can avoid a
+/*  Use 16 on non-x86_64 platforms so that we can avoid a
 ** 64-bit division in the outside mixer loop. x86_64 users
-** are lucky and will get higher fractional delta precision.
-** This is beneficial in 96kHz mode, where deltas are lower
-** in value.
+** are lucky and will get double the fractional delta precision.
+** This is beneficial in 96kHz/192kHz mode, where deltas are
+** lower in value.
 */
-#if defined __amd64__ || defined _WIN64
-#define MIXER_FRAC_BITS 22
-#else
-#define MIXER_FRAC_BITS 16
-#endif
+#if defined _WIN64 || defined __amd64__
 
-#define MIXER_FRAC_SCALE (1L << MIXER_FRAC_BITS)
+#define MIN_AUDIO_FREQ 44100
+#define MAX_AUDIO_FREQ 192000
+
+#define MIXER_FRAC_BITS 32
+#define MIXER_FRAC_SCALE (1ULL << MIXER_FRAC_BITS)
 #define MIXER_FRAC_MASK (MIXER_FRAC_SCALE-1)
 
-// for audio/video sync queue. (2^n-1 - don't change this! Queue buffer is already ~2.7MB in size)
-#define SYNC_QUEUE_LEN 4095
+#else
+
+#define MIN_AUDIO_FREQ 44100
+#define MAX_AUDIO_FREQ 48000
+
+#define MIXER_FRAC_BITS 16
+#define MIXER_FRAC_SCALE (1UL << MIXER_FRAC_BITS)
+#define MIXER_FRAC_MASK (MIXER_FRAC_SCALE-1)
+
+#endif
 
 #define MAX_AUDIO_DEVICES 99
 
-#define MIN_AUDIO_FREQ 44100
-#define MAX_AUDIO_FREQ 96000
+// for audio/video sync queue. (2^n-1 - don't change this! Queue buffer is already ~2.7MB in size)
+#define SYNC_QUEUE_LEN 4095
 
 struct audio_t
 {
@@ -47,7 +52,7 @@ struct audio_t
 	int32_t quickVolSizeVal, *mixBufferL, *mixBufferR, *mixBufferLUnaligned, *mixBufferRUnaligned;
 	int32_t rampQuickVolMul, rampSpeedValMul;
 	uint32_t freq;
-	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac;
+	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac, speedVal, musicTimeSpeedVal;
 	uint64_t tickTime64, tickTime64Frac;
 	double dAudioLatencyMs, dSpeedValMul, dPianoDeltaMul;
 	SDL_AudioDeviceID dev;
@@ -63,10 +68,12 @@ typedef struct
 	uint16_t SVol;
 	int32_t SLVol1, SRVol1, SLVol2, SRVol2, SLVolIP, SRVolIP;
 	int32_t SPos, SLen, SRepS, SRepL;
-	uint32_t SVolIPLen, SPosDec, SFrq;
-	
-#if !defined __amd64__ && !defined _WIN64
-	uint32_t SFrqRev;
+	uint32_t SVolIPLen;
+
+#if defined _WIN64 || defined __amd64__
+	uint64_t SPosDec, SFrq;
+#else
+	uint32_t SPosDec, SFrq, SFrqRev;
 #endif
 
 	void (*mixRoutine)(void *, int32_t); // function pointer to mix routine
@@ -109,6 +116,7 @@ int32_t pattQueueReadSize(void);
 int32_t pattQueueWriteSize(void);
 bool pattQueuePush(pattSyncData_t t);
 bool pattQueuePop(void);
+bool pattQueuePop(void);
 pattSyncData_t *pattQueuePeek(void);
 uint64_t getPattQueueTimestamp(void);
 int32_t chQueueReadSize(void);
@@ -123,7 +131,7 @@ void setBackOldAudioFreq(void);
 void setSpeed(uint16_t bpm);
 void audioSetVolRamp(bool volRamp);
 void audioSetInterpolation(bool interpolation);
-void stopVoice(uint8_t i);
+void stopVoice(int32_t i);
 bool setupAudio(bool showErrorMsg);
 void closeAudio(void);
 void pauseAudio(void);

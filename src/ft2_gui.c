@@ -1162,6 +1162,7 @@ void showTopLeftMainScreen(bool restoreScreens)
 		textOutShadow(204, 80, PAL_FORGRND, PAL_DSKTOP2, "Time");
 		charOutShadow(250, 80, PAL_FORGRND, PAL_DSKTOP2, ':');
 		charOutShadow(270, 80, PAL_FORGRND, PAL_DSKTOP2, ':');
+
 		drawPlaybackTime();
 
 		     if (editor.ui.sampleEditorExtShown) drawSampleEditorExt();

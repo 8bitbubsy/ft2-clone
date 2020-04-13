@@ -785,8 +785,7 @@ clone only.
 >@X060@C002
 Works for 16-bit audio mode only.
 Applies random scaled values to the mixed samples before truncating to 16-bit.
-This should in theory lower the quantization noise. 16-bit already has
-a pretty low noise floor, so don't expect any audible difference here.
+This should in theory lower the quantization noise.
 Also applies for WAV rendering.
 
 >@X040@C001Amplification:
@@ -913,6 +912,8 @@ see the individual sample points, it will look like normal.
 >@X010
 >@C001Video:
 >@C002
+>@X010- Fullscreen mode can be unbearably slow on a Raspberry Pi (even an RPi 4)
+>
 >@X010- The scopes can mildly flicker depending on the waveform and pitch.
 >@X021This is because their frequency is not clocked to exactly the same rate
 >at which the scopes are rendered. It's close, which causes a flicker effect.

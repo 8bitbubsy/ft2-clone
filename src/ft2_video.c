@@ -49,7 +49,7 @@ static sprite_t sprites[SPRITE_NUM];
 
 // for FPS counter
 #define FPS_SCAN_FRAMES 60
-#define FPS_RENDER_W 280
+#define FPS_RENDER_W 285
 #define FPS_RENDER_H (((FONT1_CHAR_H + 1) * 8) + 1)
 #define FPS_RENDER_X 2
 #define FPS_RENDER_Y 2
@@ -1134,11 +1134,8 @@ static void drawReplayerData(void)
 		if (editor.ui.drawReplayerPianoFlag)
 		{
 			editor.ui.drawReplayerPianoFlag = false;
-			if (editor.ui.instEditorShown)
-			{
-				if (chSyncEntry != NULL)
-					drawPiano(chSyncEntry);
-			}
+			if (editor.ui.instEditorShown && chSyncEntry != NULL)
+				drawPiano(chSyncEntry);
 		}
 
 		drawPosText = true;

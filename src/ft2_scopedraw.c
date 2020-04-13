@@ -7,65 +7,105 @@
 /*                          SCOPE DRAWING MACROS                           */
 /* ----------------------------------------------------------------------- */
 
-#define SCOPE_REGS \
+#define SCOPE_REGS_NO_LOOP \
+	const int8_t vol = s->SVol; \
+	const int32_t SLen = s->SLen; \
+	const uint32_t scopeDrawDelta = s->DFrq; \
+	const uint32_t scopePixelColor = video.palette[PAL_PATTEXT]; \
+	const uint32_t drawLen = x + w; \
 	int32_t sample; \
 	int32_t scopeDrawPos = s->SPos; \
 	int32_t scopeDrawFrac = 0; \
-	uint32_t scopePixelColor = video.palette[PAL_PATTEXT]; \
-	uint32_t len = x + w; \
+
+#define SCOPE_REGS_LOOP \
+	const int8_t vol = s->SVol; \
+	const int32_t SLen = s->SLen; \
+	const int32_t SRepS = s->SRepS; \
+	const int32_t SRepL = s->SRepL; \
+	const uint32_t scopeDrawDelta = s->DFrq; \
+	const uint32_t scopePixelColor = video.palette[PAL_PATTEXT]; \
+	const uint32_t drawLen = x + w; \
+	int32_t sample; \
+	int32_t scopeDrawPos = s->SPos; \
+	int32_t scopeDrawFrac = 0; \
 
 #define SCOPE_REGS_PINGPONG \
+	const int8_t vol = s->SVol; \
+	const int32_t SLen = s->SLen; \
+	const int32_t SRepS = s->SRepS; \
+	const int32_t SRepL = s->SRepL; \
+	const uint32_t scopeDrawDelta = s->DFrq; \
+	const uint32_t scopePixelColor = video.palette[PAL_PATTEXT]; \
+	const uint32_t drawLen = x + w; \
 	int32_t sample; \
 	int32_t scopeDrawPos = s->SPos; \
 	int32_t scopeDrawFrac = 0; \
-	int32_t drawPosDir = s->SPosDir; \
-	uint32_t scopePixelColor = video.palette[PAL_PATTEXT]; \
-	uint32_t len = x + w; \
+	int32_t drawPosDir = s->backwards ? -1 : 1; \
 
-#define LINED_SCOPE_REGS \
+#define LINED_SCOPE_REGS_NO_LOOP \
+	const int8_t vol = s->SVol; \
+	const int32_t SLen = s->SLen; \
+	const uint32_t scopeDrawDelta = s->DFrq; \
+	const uint32_t drawLen = (x + w) - 1; \
 	int32_t sample; \
 	int32_t y1, y2; \
 	int32_t scopeDrawPos = s->SPos; \
 	int32_t scopeDrawFrac = 0; \
-	uint32_t len = (x + w) - 1; \
+
+#define LINED_SCOPE_REGS_LOOP \
+	const int8_t vol = s->SVol; \
+	const int32_t SLen = s->SLen; \
+	const int32_t SRepS = s->SRepS; \
+	const int32_t SRepL = s->SRepL; \
+	const uint32_t scopeDrawDelta = s->DFrq; \
+	const uint32_t drawLen = (x + w) - 1; \
+	int32_t sample; \
+	int32_t y1, y2; \
+	int32_t scopeDrawPos = s->SPos; \
+	int32_t scopeDrawFrac = 0; \
 
 #define LINED_SCOPE_REGS_PINGPONG \
+	const int8_t vol = s->SVol; \
+	const int32_t SLen = s->SLen; \
+	const int32_t SRepS = s->SRepS; \
+	const int32_t SRepL = s->SRepL; \
+	const uint32_t scopeDrawDelta = s->DFrq; \
+	const uint32_t drawLen = (x + w) - 1; \
 	int32_t sample; \
 	int32_t y1, y2; \
 	int32_t scopeDrawPos = s->SPos; \
 	int32_t scopeDrawFrac = 0; \
-	int32_t drawPosDir = s->SPosDir; \
-	uint32_t len = (x + w) - 1; \
+	int32_t drawPosDir = s->backwards ? -1 : 1; \
 
 #define SCOPE_GET_SMP8 \
-	if (!s->active) \
+	if (s->active) \
 	{ \
-		sample = 0; \
+		assert(scopeDrawPos >= 0 && scopeDrawPos < SLen); \
+		sample = (s->sampleData8[scopeDrawPos] * vol) >> 8; \
 	} \
 	else \
 	{ \
-		assert(scopeDrawPos >= 0 && scopeDrawPos < s->SLen); \
-		sample = (s->sampleData8[scopeDrawPos] * s->SVol) >> 8; \
+		sample = 0; \
 	} \
 
 #define SCOPE_GET_SMP16 \
-	if (!s->active) \
+	if (s->active) \
 	{ \
-		sample = 0; \
+		assert(scopeDrawPos >= 0 && scopeDrawPos < SLen); \
+		sample = (int8_t)((s->sampleData16[scopeDrawPos] * vol) >> 16); \
 	} \
 	else \
 	{ \
-		assert(scopeDrawPos >= 0 && scopeDrawPos < s->SLen); \
-		sample = (int8_t)((s->sampleData16[scopeDrawPos] * s->SVol) >> 16); \
+		sample = 0; \
 	} \
 
 #define SCOPE_UPDATE_DRAWPOS \
-	scopeDrawFrac += (uint32_t)(s->SFrq >> (SCOPE_FRAC_BITS - 10)); \
+	scopeDrawFrac += scopeDrawDelta; \
 	scopeDrawPos += scopeDrawFrac >> 16; \
 	scopeDrawFrac &= 0xFFFF; \
 
 #define SCOPE_UPDATE_DRAWPOS_PINGPONG \
-	scopeDrawFrac += (uint32_t)(s->SFrq >> (SCOPE_FRAC_BITS - 10)); \
+	scopeDrawFrac += scopeDrawDelta; \
 	scopeDrawPos += (scopeDrawFrac >> 16) * drawPosDir; \
 	scopeDrawFrac &= 0xFFFF; \
 
@@ -88,72 +128,69 @@
 	y1 = y2; \
 
 #define SCOPE_HANDLE_POS_NO_LOOP \
-	if (scopeDrawPos >= s->SLen) \
+	if (scopeDrawPos >= SLen) \
 		s->active = false; \
 
 #define SCOPE_HANDLE_POS_LOOP \
-	if (scopeDrawPos >= s->SLen) \
+	if (scopeDrawPos >= SLen) \
 	{ \
-		if (s->SRepL < 2) \
-			scopeDrawPos = s->SRepS; \
+		if (SRepL >= 2) \
+			scopeDrawPos = SRepS + ((scopeDrawPos - SLen) % SRepL); \
 		else \
-			scopeDrawPos = s->SRepS + ((scopeDrawPos - s->SLen) % s->SRepL); \
+			scopeDrawPos = SRepS; \
 		\
-		assert(scopeDrawPos >= s->SRepS && scopeDrawPos < s->SLen); \
+		assert(scopeDrawPos >= SRepS && scopeDrawPos < SLen); \
 	} \
 
 #define SCOPE_HANDLE_POS_PINGPONG \
-	if (drawPosDir == -1 && scopeDrawPos < s->SRepS) \
+	if (drawPosDir == -1 && scopeDrawPos < SRepS) \
 	{ \
 		drawPosDir = 1; /* change direction to forwards */ \
 		\
-		if (s->SRepL < 2) \
-			scopeDrawPos = s->SRepS; \
+		if (SRepL >= 2) \
+			scopeDrawPos = SRepS + ((SRepS - scopeDrawPos - 1) % SRepL); \
 		else \
-			scopeDrawPos = s->SRepS + ((s->SRepS - scopeDrawPos - 1) % s->SRepL); \
+			scopeDrawPos = SRepS; \
 		\
-		assert(scopeDrawPos >= s->SRepS && scopeDrawPos < s->SLen); \
+		assert(scopeDrawPos >= SRepS && scopeDrawPos < SLen); \
 	} \
-	else if (scopeDrawPos >= s->SLen) \
+	else if (scopeDrawPos >= SLen) \
 	{ \
 		drawPosDir = -1; /* change direction to backwards */ \
 		\
-		if (s->SRepL < 2) \
-			scopeDrawPos = s->SLen - 1; \
+		if (SRepL >= 2) \
+			scopeDrawPos = (SLen - 1) - ((scopeDrawPos - SLen) % SRepL); \
 		else \
-			scopeDrawPos = (s->SLen - 1) - ((scopeDrawPos - s->SLen) % s->SRepL); \
+			scopeDrawPos = SLen - 1; \
 		\
-		assert(scopeDrawPos >= s->SRepS && scopeDrawPos < s->SLen); \
+		assert(scopeDrawPos >= SRepS && scopeDrawPos < SLen); \
 	} \
 	assert(scopeDrawPos >= 0); \
 
 static void scopeLine(int32_t x1, int32_t y1, int32_t y2)
 {
-	int32_t pitch, d, sy, dy;
-	uint32_t ay, pixVal, *dst32;
+	const int32_t dy = y2 - y1;
+	const int32_t sy = SGN(dy);
+	const uint32_t color = video.palette[PAL_PATTEXT];
+	const int32_t pitch = sy * SCREEN_W;
 
-	dy = y2 - y1;
-	ay = ABS(dy);
-	sy = SGN(dy);
+	uint32_t *dst32 = &video.frameBuffer[(y1 * SCREEN_W) + x1];
 
-	pixVal = video.palette[PAL_PATTEXT];
-	pitch = sy * SCREEN_W;
+	*dst32 = color; // set first pixel
 
-	dst32 = &video.frameBuffer[(y1 * SCREEN_W) + x1];
-	*dst32 = pixVal;
-
+	int32_t ay = ABS(dy);
 	if (ay <= 1)
 	{
 		if (ay != 0)
 			dst32 += pitch;
 
-		*++dst32 = pixVal;
+		*++dst32 = color;
 		return;
 	}
 
-	d = 2 - ay;
+	int32_t d = 1 - ay;
 
-	ay *= 2;
+	ay <<= 1;
 	while (y1 != y2)
 	{
 		if (d >= 0)
@@ -166,7 +203,7 @@ static void scopeLine(int32_t x1, int32_t y1, int32_t y2)
 		d += 2;
 
 		dst32 += pitch;
-		*dst32 = pixVal;
+		*dst32 = color;
 	}
 }
 
@@ -176,9 +213,9 @@ static void scopeLine(int32_t x1, int32_t y1, int32_t y2)
 
 static void scopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS
+	SCOPE_REGS_NO_LOOP
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP8
 		SCOPE_DRAW_SMP
@@ -189,9 +226,9 @@ static void scopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_
 
 static void scopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS
+	SCOPE_REGS_LOOP
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP8
 		SCOPE_DRAW_SMP
@@ -204,7 +241,7 @@ static void scopeDrawPingPong_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint3
 {
 	SCOPE_REGS_PINGPONG
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP8
 		SCOPE_DRAW_SMP
@@ -215,9 +252,9 @@ static void scopeDrawPingPong_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint3
 
 static void scopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS
+	SCOPE_REGS_NO_LOOP
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP16
 		SCOPE_DRAW_SMP
@@ -228,9 +265,9 @@ static void scopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32
 
 static void scopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS
+	SCOPE_REGS_LOOP
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP16
 		SCOPE_DRAW_SMP
@@ -243,7 +280,7 @@ static void scopeDrawPingPong_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint
 {
 	SCOPE_REGS_PINGPONG
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP16
 		SCOPE_DRAW_SMP
@@ -258,11 +295,11 @@ static void scopeDrawPingPong_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint
 
 static void linedScopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS
+	LINED_SCOPE_REGS_NO_LOOP
 	LINED_SCOPE_PREPARE_SMP8
 	SCOPE_HANDLE_POS_NO_LOOP
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP8
 		LINED_SCOPE_DRAW_SMP
@@ -273,11 +310,11 @@ static void linedScopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, ui
 
 static void linedScopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS
+	LINED_SCOPE_REGS_LOOP
 	LINED_SCOPE_PREPARE_SMP8
 	SCOPE_HANDLE_POS_LOOP
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP8
 		LINED_SCOPE_DRAW_SMP
@@ -292,7 +329,7 @@ static void linedScopeDrawPingPong_8bit(scope_t *s, uint32_t x, uint32_t lineY, 
 	LINED_SCOPE_PREPARE_SMP8
 	SCOPE_HANDLE_POS_PINGPONG
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP8
 		LINED_SCOPE_DRAW_SMP
@@ -303,11 +340,11 @@ static void linedScopeDrawPingPong_8bit(scope_t *s, uint32_t x, uint32_t lineY, 
 
 static void linedScopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS
+	LINED_SCOPE_REGS_NO_LOOP
 	LINED_SCOPE_PREPARE_SMP16
 	SCOPE_HANDLE_POS_NO_LOOP
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP16
 		LINED_SCOPE_DRAW_SMP
@@ -318,11 +355,11 @@ static void linedScopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, u
 
 static void linedScopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS
+	LINED_SCOPE_REGS_LOOP
 	LINED_SCOPE_PREPARE_SMP16
 	SCOPE_HANDLE_POS_LOOP
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP16
 		LINED_SCOPE_DRAW_SMP
@@ -337,7 +374,7 @@ static void linedScopeDrawPingPong_16bit(scope_t *s, uint32_t x, uint32_t lineY,
 	LINED_SCOPE_PREPARE_SMP16
 	SCOPE_HANDLE_POS_PINGPONG
 
-	for (; x < len; x++)
+	for (; x < drawLen; x++)
 	{
 		SCOPE_GET_SMP16
 		LINED_SCOPE_DRAW_SMP

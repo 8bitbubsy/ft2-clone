@@ -109,7 +109,7 @@ static int32_t lastMouseX, lastMouseY, saveMouseX, saveMouseY;
 static uint16_t saveInstrNr;
 static SDL_Thread *thread;
 
-extern const int16_t *note2Period; // ft2_replayer.c
+extern const uint16_t *note2Period; // ft2_replayer.c
 
 void updateInstEditor(void);
 void updateNewInstrument(void);
@@ -227,33 +227,24 @@ void xchgInstr(void) // dstInstr <-> srcInstr
 
 static void drawMIDICh(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
 	assert(ins->midiChannel <= 15);
-	uint8_t disp = ins->midiChannel + 1;
-	sprintf(str, "%02d", disp);
-	textOutFixed(156, 132, PAL_FORGRND, PAL_DESKTOP, str);
+	const uint8_t val = ins->midiChannel + 1;
+	textOutFixed(156, 132, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[val]);
 }
 
 static void drawMIDIPrg(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
 	assert(ins->midiProgram <= 127);
-	sprintf(str, "%03d", ins->midiProgram);
-	textOutFixed(149, 146, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(149, 146, PAL_FORGRND, PAL_DESKTOP, dec3StrTab[ins->midiProgram]);
 }
 
 static void drawMIDIBend(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
 	assert(ins->midiBend <= 36);
-	sprintf(str, "%02d", ins->midiBend);
-	textOutFixed(156, 160, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(156, 160, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->midiBend]);
 }
 
 void midiChDown(void)
@@ -384,56 +375,44 @@ void updateNewInstrument(void)
 
 static void drawVolEnvSus(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
-	sprintf(str, "%02d", ins->envVSust);
-	textOutFixed(382, 206, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(ins->envVSust < 100);
+	textOutFixed(382, 206, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->envVSust]);
 }
 
 static void drawVolEnvRepS(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
-	sprintf(str, "%02d", ins->envVRepS);
-	textOutFixed(382, 233, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(ins->envVRepS < 100);
+	textOutFixed(382, 233, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->envVRepS]);
 }
 
 static void drawVolEnvRepE(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
-	sprintf(str, "%02d", ins->envVRepE);
-	textOutFixed(382, 247, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(ins->envVRepE < 100);
+	textOutFixed(382, 247, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->envVRepE]);
 }
 
 static void drawPanEnvSus(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
-	sprintf(str, "%02d", ins->envPSust);
-	textOutFixed(382, 293, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(ins->envPSust < 100);
+	textOutFixed(382, 293, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->envPSust]);
 }
 
 static void drawPanEnvRepS(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
-	sprintf(str, "%02d", ins->envPRepS);
-	textOutFixed(382, 320, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(ins->envPRepS < 100);
+	textOutFixed(382, 320, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->envPRepS]);
 }
 
 static void drawPanEnvRepE(void)
 {
-	char str[8];
 	instrTyp *ins = getCurDispInstr();
-
-	sprintf(str, "%02d", ins->envPRepE);
-	textOutFixed(382, 334, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(ins->envPRepE < 100);
+	textOutFixed(382, 334, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->envPRepE]);
 }
 
 static void drawVolume(void)
@@ -1693,33 +1672,10 @@ bool testPianoKeysMouseDown(bool mouseButtonDown)
 	return true;
 }
 
-/* 8bitbubsy: This is my new version of FT2's buggy getNote().
-** It's used to convert a channel's period into a piano key number.
-** Or in this case, a voice's frequency into a piano key number.
-**
-** It's probably slower than the original version, but this one is
-** 100% accurate in all (quirky) situations.
-**
-** Warning: This function intentionally doesn't clamp the output value!
-*/
-static int32_t getPianoKey(int32_t voiceDelta, int32_t finetune, int32_t relativeNote)
-{
-	finetune >>= 3; // FT2 does this in the replayer internally (-128..127 -> -16..15)
-
-	double dTmp = voiceDelta * audio.dPianoDeltaMul;
-	dTmp = (log2(dTmp) * 12.0) - (finetune * (1.0 / 16.0));
-	int32_t note = (int32_t)(dTmp + 0.5); // rounded
-
-	note -= relativeNote;
-	// "note" is now the raw piano key number, unaffected by finetune/relativeNote
-
-	return note;
-}
-
 void drawPiano(chSyncData_t *chSyncData)
 {
 	bool newStatus[96];
-	int32_t note;
+	int32_t i, note;
 
 	memset(newStatus, 0, sizeof (newStatus));
 
@@ -1729,11 +1685,11 @@ void drawPiano(chSyncData_t *chSyncData)
 		if (chSyncData != NULL) // song is playing, use replayer channel state
 		{
 			syncedChannel_t *c = chSyncData->channels;
-			for (int32_t i = 0; i < song.antChn; i++, c++)
+			for (i = 0; i < song.antChn; i++, c++)
 			{
 				if (c->instrNr == editor.curInstr && c->envSustainActive)
 				{
-					note = getPianoKey(c->voiceDelta, c->fineTune, c->relTonNr);
+					note = getPianoKey(c->finalPeriod, c->fineTune, c->relTonNr);
 					if (note >= 0 && note <= 95)
 						newStatus[note] = true;
 				}
@@ -1742,12 +1698,11 @@ void drawPiano(chSyncData_t *chSyncData)
 		else // song is not playing (jamming from keyboard/MIDI)
 		{
 			stmTyp *c = stm;
-			for (int32_t i = 0; i < song.antChn; i++, c++)
+			for (i = 0; i < song.antChn; i++, c++)
 			{
 				if (c->instrNr == editor.curInstr && c->envSustainActive)
 				{
-					int32_t voiceDelta = getFrequenceValue(c->finalPeriod);
-					note = getPianoKey(voiceDelta, c->fineTune, c->relTonNr);
+					note = getPianoKey(c->finalPeriod, c->fineTune, c->relTonNr);
 					if (note >= 0 && note <= 95)
 						newStatus[note] = true;
 				}
@@ -1756,9 +1711,9 @@ void drawPiano(chSyncData_t *chSyncData)
 	}
 
 	// draw keys
-	for (int32_t i = 0; i < 96; i++)
+	for (i = 0; i < 96; i++)
 	{
-		bool keyDown = newStatus[i];
+		const bool keyDown = newStatus[i];
 		if (pianoKeyStatus[i] ^ keyDown)
 		{
 			uint8_t key = noteTab1[i];

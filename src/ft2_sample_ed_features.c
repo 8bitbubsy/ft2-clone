@@ -23,6 +23,7 @@
 #include "ft2_inst_ed.h"
 #include "ft2_sample_ed.h"
 #include "ft2_keyboard.h"
+#include "ft2_tables.h"
 
 static volatile bool stopThread;
 
@@ -661,20 +662,17 @@ static void drawEchoBox(void)
 
 	assert(echo_nEcho <= 1024);
 
-	charOut(315 + (0 * 7), 226, PAL_FORGRND, '0' + (echo_nEcho / 1000) % 10);
+	charOut(315 + (0 * 7), 226, PAL_FORGRND, '0' + (char)(echo_nEcho / 1000));
 	charOut(315 + (1 * 7), 226, PAL_FORGRND, '0' + (echo_nEcho / 100) % 10);
 	charOut(315 + (2 * 7), 226, PAL_FORGRND, '0' + (echo_nEcho / 10) % 10);
 	charOut(315 + (3 * 7), 226, PAL_FORGRND, '0' + (echo_nEcho % 10));
 
-	assert((echo_Distance * 16) <= 262144);
-
-	hexOut(308, 240, PAL_FORGRND, echo_Distance * 16, 5);
+	assert(echo_Distance <= 0x4000);
+	hexOut(308, 240, PAL_FORGRND, (uint32_t)echo_Distance << 4, 5);
 
 	assert(echo_VolChange <= 100);
+	textOutFixed(312, 254, PAL_FORGRND, PAL_BUTTONS, dec3StrTab[echo_VolChange]);
 
-	charOut(312 + (0 * 7), 254, PAL_FORGRND, '0' + (echo_VolChange / 100) % 10);
-	charOut(312 + (1 * 7), 254, PAL_FORGRND, '0' + (echo_VolChange / 10) % 10);
-	charOut(312 + (2 * 7), 254, PAL_FORGRND, '0' + (echo_VolChange % 10));
 	charOutShadow(313 + (3 * 7), 254, PAL_FORGRND, PAL_BUTTON2, '%');
 }
 
@@ -1085,10 +1083,7 @@ static void drawMixSampleBox(void)
 	textOutShadow(198, 246, PAL_FORGRND, PAL_BUTTON2, "Mixing balance");
 
 	assert((mix_Balance >= 0) && (mix_Balance <= 100));
-
-	charOut(299 + (0 * 7), 246, PAL_FORGRND, '0' + ((mix_Balance / 100) % 10));
-	charOut(299 + (1 * 7), 246, PAL_FORGRND, '0' + ((mix_Balance / 10) % 10));
-	charOut(299 + (2 * 7), 246, PAL_FORGRND, '0' + (mix_Balance % 10));
+	textOutFixed(299, 246, PAL_FORGRND, PAL_BUTTONS, dec3StrTab[mix_Balance]);
 }
 
 static void setupMixBoxWidgets(void)
@@ -1260,17 +1255,16 @@ static void pbSampEndVolUp(void)
 
 static int32_t SDLCALL applyVolumeThread(void *ptr)
 {
+#define AMP_BITS 15
 	int8_t *ptr8;
 	int16_t *ptr16;
-	int32_t vol1, vol2, tmp32, x1, x2, len, i;
+	int32_t amp32, x1, x2, len, i;
 	sampleTyp *s;
 
 	if (instr[editor.curInstr] == NULL)
 		goto applyVolumeExit;
 
 	s = &instr[editor.curInstr]->samp[editor.curSmp];
-
-	(void)ptr;
 
 	if (smpEd_Rx1 < smpEd_Rx2)
 	{
@@ -1300,30 +1294,36 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 
 	if (s->typ & 16)
 	{
-		x1 /= 2;
-		x2 /= 2;
+		x1 >>= 1;
+		x2 >>= 1;
 	}
 
 	len = x2 - x1;
 	if (len <= 0)
 		goto applyVolumeExit;
 
+	const double dVol1 = vol_StartVol * ((1 << AMP_BITS) / 100.0);
+	const double dVol2 = vol_EndVol * ((1 << AMP_BITS) / 100.0);
+
+	/* 8bitbubsy: Rewritten to use 64-bit deltas instead, to
+	** prevent having to do a 64-bit mul for every output sample.
+	*/
+	const int64_t delta64 = (int64_t)round(((dVol2 - dVol1) * (UINT32_MAX+1.0)) / len);
+	int64_t pos64 = (int64_t)dVol1 << 32;
+
 	pauseAudio();
 	restoreSample(s);
-
-	// scale values for faster math and suitable rounding for PCM waveforms (DIV -> arithmetic bitshift right)
-	vol1 = (int32_t)round((vol_StartVol * 256) / 100.0);
-	vol2 = (int32_t)round((vol_EndVol * 256) / 100.0) - vol1;
-
 	if (s->typ & 16)
 	{
 		ptr16 = (int16_t *)s->pek;
 		for (i = x1; i < x2; i++)
 		{
-			tmp32 = vol1 + (int32_t)(((int64_t)(i - x1) * vol2) / len);
-			tmp32 = (ptr16[i] * tmp32) >> 8;
-			CLAMP16(tmp32);
-			ptr16[i] = (int16_t)tmp32;
+			amp32 = (int32_t)(pos64 >> 32);
+			pos64 += delta64;
+
+			amp32 = (ptr16[i] * amp32) >> AMP_BITS;
+			CLAMP16(amp32);
+			ptr16[i] = (int16_t)amp32;
 		}
 	}
 	else
@@ -1331,20 +1331,24 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 		ptr8 = s->pek;
 		for (i = x1; i < x2; i++)
 		{
-			tmp32 = vol1 + (int32_t)(((int64_t)(i - x1) * vol2) / len);
-			tmp32 = (ptr8[i] * tmp32) >> 8;
-			CLAMP8(tmp32);
-			ptr8[i] = (int8_t)tmp32;
+			amp32 = (int32_t)(pos64 >> 32);
+			pos64 += delta64;
+
+			amp32 = (ptr8[i] * amp32) >> AMP_BITS;
+			CLAMP8(amp32);
+			ptr8[i] = (int8_t)amp32;
 		}
 	}
 	fixSample(s);
-
 	resumeAudio();
+
 	setSongModifiedFlag();
 
 applyVolumeExit:
 	setMouseBusy(false);
 	editor.ui.sysReqShown = false;
+
+	(void)ptr;
 	return true;
 }
 
@@ -1517,20 +1521,20 @@ static void drawSampleVolumeBox(void)
 	if (val > 99)
 	{
 		charOut(253, 236, PAL_FORGRND, sign);
-		charOut(260, 236, PAL_FORGRND, '0' + ((val / 100) % 10));
+		charOut(260, 236, PAL_FORGRND, '0' + (char)(val / 100));
 		charOut(267, 236, PAL_FORGRND, '0' + ((val / 10) % 10));
 		charOut(274, 236, PAL_FORGRND, '0' + (val % 10));
 	}
 	else if (val > 9)
 	{
 		charOut(260, 236, PAL_FORGRND, sign);
-		charOut(267, 236, PAL_FORGRND, '0' + ((val / 10) % 10));
+		charOut(267, 236, PAL_FORGRND, '0' + (char)(val / 10));
 		charOut(274, 236, PAL_FORGRND, '0' + (val % 10));
 	}
 	else
 	{
 		charOut(267, 236, PAL_FORGRND, sign);
-		charOut(274, 236, PAL_FORGRND, '0' + (val % 10));
+		charOut(274, 236, PAL_FORGRND, '0' + (char)val);
 	}
 
 	     if (vol_EndVol == 0) sign = ' ';
@@ -1541,20 +1545,20 @@ static void drawSampleVolumeBox(void)
 	if (val > 99)
 	{
 		charOut(253, 250, PAL_FORGRND, sign);
-		charOut(260, 250, PAL_FORGRND, '0' + ((val / 100) % 10));
+		charOut(260, 250, PAL_FORGRND, '0' + (char)(val / 100));
 		charOut(267, 250, PAL_FORGRND, '0' + ((val / 10) % 10));
 		charOut(274, 250, PAL_FORGRND, '0' + (val % 10));
 	}
 	else if (val > 9)
 	{
 		charOut(260, 250, PAL_FORGRND, sign);
-		charOut(267, 250, PAL_FORGRND, '0' + ((val / 10) % 10));
+		charOut(267, 250, PAL_FORGRND, '0' + (char)(val / 10));
 		charOut(274, 250, PAL_FORGRND, '0' + (val % 10));
 	}
 	else
 	{
 		charOut(267, 250, PAL_FORGRND, sign);
-		charOut(274, 250, PAL_FORGRND, '0' + (val % 10));
+		charOut(274, 250, PAL_FORGRND, '0' + (char)val);
 	}
 }
 

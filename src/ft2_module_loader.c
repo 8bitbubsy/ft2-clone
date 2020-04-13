@@ -1747,14 +1747,13 @@ bool doLoadMusic(bool fromExternalThread)
 	songTmp.len = h.len;
 	songTmp.repS = h.repS;
 	songTmp.antChn = (uint8_t)h.antChn;
-	songTmp.speed = h.defSpeed ? h.defSpeed : 125;
-	songTmp.tempo = h.defTempo ? h.defTempo : 6;
+	songTmp.speed = h.defSpeed;
+	songTmp.tempo = h.defTempo;
 	songTmp.ver = h.ver;
 	linearFreqTable = h.flags & 1;
 
 	songTmp.speed = CLAMP(songTmp.speed, 32, 255);
-	if (songTmp.tempo > 31)
-		songTmp.tempo = 31;
+	songTmp.tempo = CLAMP(songTmp.tempo, 1, 31);
 
 	songTmp.initialTempo = songTmp.tempo;
 
@@ -2463,8 +2462,7 @@ static void setupLoadedModule(void)
 	resetWavRenderer();
 	clearPattMark();
 	resetTrimSizes();
-
-	song.musicTime = 0;
+	resetPlaybackTime();
 
 	diskOpSetFilename(DISKOP_ITEM_MODULE, editor.tmpFilenameU);
 

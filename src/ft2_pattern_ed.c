@@ -37,6 +37,7 @@ static const uint8_t iSwitchY[8] = { 2, 19, 36, 53, 73, 90, 107, 124 };
 static const uint16_t iSwitchExtX[4] = { 221, 262, 303, 344 };
 
 static int32_t lastMouseX, lastMouseY;
+static int32_t last_TimeH, last_TimeM, last_TimeS;
 
 bool allocatePattern(uint16_t nr) // for tracker use only, not in loader!
 {
@@ -1679,7 +1680,7 @@ void pbPosEdLenDown(void)
 {
 	bool audioWasntLocked;
 
-	if (song.len == 0)
+	if (song.len <= 1)
 		return;
 
 	audioWasntLocked = !audio.locked;
@@ -2181,24 +2182,20 @@ void drawSongRepS(void)
 
 void drawSongBPM(uint16_t val)
 {
-	char str[8];
-
 	if (editor.ui.extended)
 		return;
 
-	sprintf(str, "%03d", val);
-	textOutFixed(145, 36, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(val < 256);
+	textOutFixed(145, 36, PAL_FORGRND, PAL_DESKTOP, dec3StrTab[val]);
 }
 
 void drawSongSpeed(uint16_t val)
 {
-	char str[8];
-
 	if (editor.ui.extended)
 		return;
 
-	sprintf(str, "%02d", val);
-	textOutFixed(152, 50, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(val < 32);
+	textOutFixed(152, 50, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[val]);
 }
 
 void drawEditPattern(uint16_t editPattern)
@@ -2237,55 +2234,43 @@ void drawPatternLength(uint16_t editPattern)
 	hexOutBg(x, y, PAL_FORGRND, PAL_DESKTOP, pattLens[editPattern], 3);
 }
 
-void drawGlobalVol(int16_t globalVol)
+void drawGlobalVol(uint16_t val)
 {
-	char str[8];
-
 	if (editor.ui.extended)
 		return;
 
-	assert(globalVol >= 0 && globalVol <= 64);
-	sprintf(str, "%02d", globalVol);
-	textOutFixed(87, 80, PAL_FORGRND, PAL_DESKTOP, str);
+	assert(val <= 64);
+	textOutFixed(87, 80, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[val]);
 }
 
 void drawIDAdd(void)
 {
-	char str[8];
-
 	assert(editor.ID_Add <= 16);
-	sprintf(str, "%02d", editor.ID_Add);
-	textOutFixed(152, 64, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(152, 64, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[editor.ID_Add]);
+}
+
+void resetPlaybackTime(void)
+{
+	song.musicTime64 = 0;
+	last_TimeH = 0;
+	last_TimeM = 0;
+	last_TimeS = 0;
 }
 
 void drawPlaybackTime(void)
 {
-	char str[2 + 1];
-	uint32_t a, MI_TimeH, MI_TimeM, MI_TimeS;
+	if (songPlaying)
+	{
+		uint32_t seconds = song.musicTime64 >> 32;
 
-	a = ((song.musicTime >> 8) * 5) >> 9;
-	MI_TimeH = a / 3600;
-	a -= (MI_TimeH * 3600);
-	MI_TimeM = a / 60;
-	MI_TimeS = a - (MI_TimeM * 60);
+		last_TimeH = seconds / 3600; seconds -= last_TimeH * 3600;
+		last_TimeM = seconds / 60;   seconds -= last_TimeM * 60;
+		last_TimeS = seconds;
+	}
 
-	// hours
-	str[0] = '0' + (char)(MI_TimeH / 10);
-	str[1] = '0' + (char)(MI_TimeH % 10);
-	str[2] = '\0';
-	textOutFixed(235, 80, PAL_FORGRND, PAL_DESKTOP, str);
-
-	// minutes
-	str[0] = '0' + (char)(MI_TimeM / 10);
-	str[1] = '0' + (char)(MI_TimeM % 10);
-	str[2] = '\0';
-	textOutFixed(255, 80, PAL_FORGRND, PAL_DESKTOP, str);
-
-	// seconds
-	str[0] = '0' + (char)(MI_TimeS / 10);
-	str[1] = '0' + (char)(MI_TimeS % 10);
-	str[2] = '\0';
-	textOutFixed(275, 80, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(235, 80, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeH]);
+	textOutFixed(255, 80, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeM]);
+	textOutFixed(275, 80, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeS]);
 }
 
 void drawSongName(void)
@@ -2716,10 +2701,10 @@ static void zapSong(void)
 	editor.globalVol = song.globVol;
 	editor.timer = 1;
 
-	if (songPlaying)
-		song.musicTime = 0;
+	resetPlaybackTime();
 
-	setFrqTab(true);
+	if (!audio.linearFreqTable)
+		setFrqTab(true);
 
 	clearPattMark();
 	resetWavRenderer();

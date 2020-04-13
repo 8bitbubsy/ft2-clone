@@ -5,13 +5,10 @@
 #include "ft2_header.h"
 #include "ft2_audio.h"
 
-// 6 = log2(SCOPE_HZ) where SCOPE_HZ is 2^n
-#define SCOPE_FRAC_BITS (MIXER_FRAC_BITS+6)
-
-#define SCOPE_FRAC_SCALE (1L << SCOPE_FRAC_BITS)
+#define SCOPE_FRAC_BITS 32
+#define SCOPE_FRAC_SCALE (1ULL << SCOPE_FRAC_BITS)
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
 
-void resetCachedScopeVars(void);
 int32_t getSamplePosition(uint8_t ch);
 void stopAllScopes(void);
 void refreshScopes(void);
@@ -27,9 +24,10 @@ typedef struct scope_t
 	const int8_t *sampleData8;
 	const int16_t *sampleData16;
 	int8_t SVol;
-	bool wasCleared, sample16Bit;
+	bool wasCleared, sample16Bit, backwards;
 	uint8_t loopType;
-	int32_t SPosDir, SRepS, SRepL, SLen, SPos;
+	int32_t SRepS, SRepL, SLen, SPos;
+	uint32_t DFrq;
 	uint64_t SFrq, SPosDec;
 } scope_t;
 

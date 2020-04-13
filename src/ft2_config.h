@@ -67,7 +67,7 @@ enum
 	// specialFlags
 	NO_VOLRAMP_FLAG = 1,
 	BITDEPTH_16 = 2,
-	BITDEPTH_24 = 4,
+	BITDEPTH_32 = 4,
 	BUFFSIZE_512 = 8,
 	BUFFSIZE_1024 = 16,
 	BUFFSIZE_2048 = 32,
@@ -208,6 +208,7 @@ void rbConfigAudio24bit(void);
 void rbConfigAudio44kHz(void);
 void rbConfigAudio48kHz(void);
 void rbConfigAudio96kHz(void);
+void rbConfigAudio192kHz(void);
 void rbConfigAudioInput44kHz(void);
 void rbConfigAudioInput48kHz(void);
 void rbConfigAudioInput96kHz(void);

@@ -57,6 +57,8 @@ struct pattMark_t
 	int16_t markX1, markX2, markY1, markY2;
 } pattMark;
 
+void resetPlaybackTime(void);
+
 bool allocatePattern(uint16_t nr);
 void killPatternIfUnused(uint16_t nr);
 uint8_t getMaxVisibleChannels(void);
@@ -133,7 +135,7 @@ void drawSongBPM(uint16_t val);
 void drawSongSpeed(uint16_t val);
 void drawEditPattern(uint16_t editPattern);
 void drawPatternLength(uint16_t editPattern);
-void drawGlobalVol(int16_t globalVol);
+void drawGlobalVol(uint16_t val);
 void drawIDAdd(void);
 void drawPlaybackTime(void);
 void drawSongName(void);

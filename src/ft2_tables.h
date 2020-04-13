@@ -10,14 +10,18 @@
 #define KEY2EFX_ENTRIES (signed)(sizeof (key2EfxTab) / sizeof (SDL_Keycode))
 #define KEY2HEX_ENTRIES (signed)(sizeof (key2HexTab) / sizeof (SDL_Keycode))
 
+extern const uint8_t arpTab[32];
 extern const int8_t vibSineTab[256]; // for auto-vibrato
 extern const uint8_t vibTab[32];
 extern const uint16_t amigaPeriod[12 * 8];
 extern const uint16_t amigaFinePeriod[12 * 8];
-extern const int16_t linearPeriods[1936];
-extern const int16_t amigaPeriods[1936];
+extern const uint16_t linearPeriods[1936];
+extern const uint16_t amigaPeriods[1936];
 
 extern const uint32_t panningTab[257];
+
+extern const char *dec2StrTab[100];
+extern const char *dec3StrTab[256];
 
 extern const uint8_t font1Widths[128];
 extern const uint8_t font2Widths[128];

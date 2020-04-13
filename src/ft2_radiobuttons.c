@@ -87,8 +87,10 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	//x,   y,   w,  group,                      funcOnUp
 	{ 509, 16,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
 	{ 509, 30, 121, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
+#if defined __amd64__ || defined _WIN64
 	{ 509, 44,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio96kHz },
-
+	{ 509, 58,  73, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio192kHz },
+#endif
 	// audio input frequency
 	//x,   y,  w,   group,                            funcOnUp
 	{ 180, 156, 60, RB_GROUP_CONFIG_AUDIO_INPUT_FREQ, rbConfigAudioInput44kHz },

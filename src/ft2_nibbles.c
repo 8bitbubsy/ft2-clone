@@ -9,6 +9,7 @@
 #include "ft2_gui.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_bmp.h"
+#include "ft2_tables.h"
 
 #define NI_MAXLEVEL 30
 
@@ -366,21 +367,15 @@ static bool nibblesInvalid(int16_t x, int16_t y, int16_t d)
 
 static void drawScoresLives(void)
 {
-	char str[8];
-
 	// player 1
-	hexOutBg(89, 27, PAL_FORGRND, PAL_DESKTOP, NI_P1Score, 8);
-
 	assert(NI_P1Lives < 100);
-	sprintf(str, "%02d", NI_P1Lives);
-	textOutFixed(131, 39, PAL_FORGRND, PAL_DESKTOP, str);
+	hexOutBg(89, 27, PAL_FORGRND, PAL_DESKTOP, NI_P1Score, 8);
+	textOutFixed(131, 39, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[NI_P1Lives]);
 
 	// player 2
-	hexOutBg(89, 75, PAL_FORGRND, PAL_DESKTOP, NI_P2Score, 8);
-
 	assert(NI_P2Lives < 100);
-	sprintf(str, "%02d", NI_P2Lives);
-	textOutFixed(131, 87, PAL_FORGRND, PAL_DESKTOP, str);
+	hexOutBg(89, 75, PAL_FORGRND, PAL_DESKTOP, NI_P2Score, 8);
+	textOutFixed(131, 87, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[NI_P2Lives]);
 }
 
 static void nibblesDecLives(int16_t l1, int16_t l2)

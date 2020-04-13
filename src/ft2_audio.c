@@ -19,7 +19,7 @@
 
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
-static int32_t masterVol, oldAudioFreq, speedVal, pmpLeft, randSeed = INITIAL_DITHER_SEED;
+static int32_t masterVol, oldAudioFreq, pmpLeft, randSeed = INITIAL_DITHER_SEED;
 static int32_t prngStateL, prngStateR;
 static uint32_t tickTimeLen, tickTimeLenFrac;
 static float fAudioAmpMul;
@@ -45,7 +45,7 @@ void resetCachedMixerVars(void)
 }
 #endif
 
-void stopVoice(uint8_t i)
+void stopVoice(int32_t i)
 {
 	voice_t *v;
 
@@ -71,7 +71,7 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 		// set back old known working settings
 
 		config.audioFreq = audio.lastWorkingAudioFreq;
-		config.specialFlags &= ~(BITDEPTH_16 + BITDEPTH_24 + BUFFSIZE_512 + BUFFSIZE_1024 + BUFFSIZE_2048);
+		config.specialFlags &= ~(BITDEPTH_16 + BITDEPTH_32 + BUFFSIZE_512 + BUFFSIZE_1024 + BUFFSIZE_2048);
 		config.specialFlags |= audio.lastWorkingAudioBits;
 
 		if (audio.lastWorkingAudioDeviceName != NULL)
@@ -119,7 +119,7 @@ void setAudioAmp(int16_t ampFactor, int16_t master, bool bitDepth32Flag)
 
 	if (bitDepth32Flag)
 	{
-		// 32-bit floating point (24-bit)
+		// 32-bit floating point
 		fAudioAmpMul = fAudioNorm * (master / 256.0f) * (ampFactor / 32.0f);
 	}
 	else
@@ -153,11 +153,11 @@ void setSpeed(uint16_t bpm)
 	if (bpm == 0)
 		return;
 
-	speedVal = ((audio.freq + audio.freq) + (audio.freq >> 1)) / bpm; // (audio.freq * 2.5) / BPM
-	if (speedVal > 0) // calculate tick time length for audio/video sync timestamp
+	audio.speedVal = ((audio.freq + audio.freq) + (audio.freq >> 1)) / bpm; // (audio.freq * 2.5) / BPM
+	if (audio.speedVal > 0) // calculate tick time length for audio/video sync timestamp
 	{
 		// number of samples per tick -> tick length for performance counter
-		dFrac = modf(speedVal * audio.dSpeedValMul, &dInt);
+		dFrac = modf(audio.speedVal * audio.dSpeedValMul, &dInt);
 
 		/* - integer part -
 		** Cast to int32_t so that the compiler will use fast SSE2 float->int instructions.
@@ -167,9 +167,13 @@ void setSpeed(uint16_t bpm)
 
 		// - fractional part (scaled to 0..2^32-1) -
 		dFrac *= UINT32_MAX;
-		tickTimeLenFrac = (uint32_t)(dFrac + 0.5);
+		dFrac += 0.5;
+		if (dFrac > UINT32_MAX)
+			dFrac = UINT32_MAX;
 
-		audio.rampSpeedValMul = 0xFFFFFFFF / speedVal;
+		tickTimeLenFrac = (uint32_t)dFrac;
+
+		audio.rampSpeedValMul = 0xFFFFFFFF / audio.speedVal;
 	}
 }
 
@@ -262,7 +266,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 			}
 			else
 			{
-				v->SVolIPLen = speedVal;
+				v->SVolIPLen = audio.speedVal;
 				v->SLVolIP = ((int64_t)destVolL * audio.rampSpeedValMul) >> 32;
 				v->SRVolIP = ((int64_t)destVolR * audio.rampSpeedValMul) >> 32;
 			}
@@ -337,7 +341,7 @@ static void voiceTrigger(int32_t i, sampleTyp *s, int32_t position)
 void mix_SaveIPVolumes(void) // for volume ramping
 {
 	voice_t *v = voice;
-	for (uint32_t i = 0; i < MAX_VOICES; i++, v++)
+	for (int32_t i = 0; i < song.antChn; i++, v++)
 	{
 		v->SLVol2 = v->SLVol1;
 		v->SRVol2 = v->SRVol1;
@@ -357,24 +361,18 @@ void mix_UpdateChannelVolPanFrq(void)
 	for (int32_t i = 0; i < song.antChn; i++, ch++, v++)
 	{
 		status = ch->tmpStatus = ch->status; // ch->tmpStatus is used for audio/video sync queue
-		if (status == 0)
-			continue;
-
+		if (status == 0) continue;
 		ch->status = 0;
 
-		// volume change
 		if (status & IS_Vol)
 			v->SVol = ch->finalVol;
 
-		// panning change
 		if (status & IS_Pan)
 			v->SPan = ch->finalPan;
 
-		// update mixing volumes if vol/pan change
 		if (status & (IS_Vol + IS_Pan))
 			voiceUpdateVolumes(i, status);
 
-		// frequency change (received even if the period didn't change!)
 		if (status & IS_Period)
 		{
 #if defined __amd64__ || defined _WIN64
@@ -397,7 +395,6 @@ void mix_UpdateChannelVolPanFrq(void)
 #endif
 		}
 
-		// sample trigger (note)
 		if (status & IS_NyTon)
 			voiceTrigger(i, ch->smpPtr, ch->smpStartPos);
 	}
@@ -590,9 +587,9 @@ uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth)
 {
 	voice_t *v, *r;
 
-	assert(speedVal <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
-	memset(audio.mixBufferL, 0, speedVal * sizeof (int32_t));
-	memset(audio.mixBufferR, 0, speedVal * sizeof (int32_t));
+	assert(audio.speedVal <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
+	memset(audio.mixBufferL, 0, audio.speedVal * sizeof (int32_t));
+	memset(audio.mixBufferR, 0, audio.speedVal * sizeof (int32_t));
 
 	// mix channels
 	v = voice; // normal voices
@@ -601,24 +598,24 @@ uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth)
 	for (int32_t i = 0; i < song.antChn; i++, v++, r++)
 	{
 		// call the mixing routine currently set for the voice
-		if (v->mixRoutine != NULL) v->mixRoutine(v, speedVal); // mix normal voice
-		if (r->mixRoutine != NULL) r->mixRoutine(r, speedVal); // mix volume ramp voice
+		if (v->mixRoutine != NULL) v->mixRoutine(v, audio.speedVal); // mix normal voice
+		if (r->mixRoutine != NULL) r->mixRoutine(r, audio.speedVal); // mix volume ramp voice
 	}
 
 	// normalize mix buffer and send to audio stream
 	if (bitDepth == 16)
 	{
 		if (config.specialFlags2 & DITHERED_AUDIO)
-			sendSamples16BitDitherStereo(stream, speedVal, 2);
+			sendSamples16BitDitherStereo(stream, audio.speedVal, 2);
 		else
-			sendSamples16BitStereo(stream, speedVal, 2);
+			sendSamples16BitStereo(stream, audio.speedVal, 2);
 	}
 	else
 	{
-		sendSamples24BitStereo(stream, speedVal, 2);
+		sendSamples24BitStereo(stream, audio.speedVal, 2);
 	}
 
-	return speedVal;
+	return audio.speedVal;
 }
 
 int32_t pattQueueReadSize(void)
@@ -932,12 +929,12 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 			}
 
 			// push channel variables to sync queue
-			for (int32_t i = 0; i < song.antChn; i++)
-			{
-				c = &chSyncData.channels[i];
-				s = &stm[i];
 
-				c->voiceDelta = voice[i].SFrq;
+			c = chSyncData.channels;
+			s = stm;
+
+			for (int32_t i = 0; i < song.antChn; i++, c++, s++)
+			{
 				c->finalPeriod = s->finalPeriod;
 				c->fineTune = s->fineTune;
 				c->relTonNr = s->relTonNr;
@@ -960,7 +957,7 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 				audio.tickTime64++;
 			}
 
-			pmpLeft = speedVal;
+			pmpLeft = audio.speedVal;
 			replayerBusy = false;
 		}
 
@@ -1016,8 +1013,8 @@ void updateSendAudSamplesRoutine(bool lockMixer)
 	if (lockMixer)
 		lockMixerCallback();
 
-	// force dither off if somehow set with 24-bit float (illegal)
-	if ((config.specialFlags2 & DITHERED_AUDIO) && (config.specialFlags & BITDEPTH_24))
+	// force dither off if somehow set with 32-bit float (illegal)
+	if ((config.specialFlags2 & DITHERED_AUDIO) && (config.specialFlags & BITDEPTH_32))
 		config.specialFlags2 &= ~DITHERED_AUDIO;
 
 	if (config.specialFlags2 & DITHERED_AUDIO)
@@ -1062,15 +1059,17 @@ static void calcAudioLatencyVars(uint16_t haveSamples, int32_t haveFreq)
 
 	dAudioLatencySecs = haveSamples / dHaveFreq;
 
-	// XXX: haveSamples and haveFreq better not be bogus values...
 	dFrac = modf(dAudioLatencySecs * editor.dPerfFreq, &dInt);
 
 	// integer part
-	audio.audLatencyPerfValInt = (uint32_t)dInt;
+	audio.audLatencyPerfValInt = (int32_t)dInt;
 
 	// fractional part (scaled to 0..2^32-1)
 	dFrac *= UINT32_MAX;
-	audio.audLatencyPerfValFrac = (uint32_t)(dFrac + 0.5);
+	dFrac += 0.5;
+	if (dFrac > UINT32_MAX)
+		dFrac = UINT32_MAX;
+	audio.audLatencyPerfValFrac = (uint32_t)dFrac;
 
 	audio.dAudioLatencyMs = dAudioLatencySecs * 1000.0;
 }
@@ -1108,10 +1107,7 @@ bool setupAudio(bool showErrorMsg)
 	closeAudio();
 
 	if (config.audioFreq < MIN_AUDIO_FREQ || config.audioFreq > MAX_AUDIO_FREQ)
-	{
-		// set default rate
-		config.audioFreq = 48000;
-	}
+		config.audioFreq = 48000; // set default rate
 
 	// get audio buffer size from config special flags
 
@@ -1130,7 +1126,7 @@ bool setupAudio(bool showErrorMsg)
 
 	// these three may change after opening a device, but our mixer is dealing with it
 	want.freq = config.audioFreq;
-	want.format = (config.specialFlags & BITDEPTH_24) ? AUDIO_F32 : AUDIO_S16;
+	want.format = (config.specialFlags & BITDEPTH_32) ? AUDIO_F32 : AUDIO_S16;
 	want.channels = 2;
 	// -------------------------------------------------------------------------------
 	want.callback = mixCallback;
@@ -1149,7 +1145,7 @@ bool setupAudio(bool showErrorMsg)
 	if (have.format != AUDIO_S16 && have.format != AUDIO_F32)
 	{
 		if (showErrorMsg)
-			showErrorMsgBox("Couldn't open audio device:\nThe program doesn't support an SDL_AudioFormat of '%d' (not 16-bit or 24-bit float).",
+			showErrorMsgBox("Couldn't open audio device:\nThe program doesn't support an SDL_AudioFormat of '%d' (not 16-bit or 32-bit float).",
 				(uint32_t)have.format);
 
 		closeAudio();
@@ -1157,7 +1153,12 @@ bool setupAudio(bool showErrorMsg)
 	}
 
 	// test if the received audio rate is compatible
-	if (have.freq != 44100 && have.freq != 48000 && have.freq != 96000)
+
+#if defined _WIN64 || defined __amd64__
+	if (have.freq != 44100 && have.freq != 48000 && have.freq != 96000 && have.freq != 192000)
+#else
+	if (have.freq != 44100 && have.freq != 48000)
+#endif
 	{
 		if (showErrorMsg)
 			showErrorMsgBox("Couldn't open audio device:\nThe program doesn't support an audio output rate of %dHz. Sorry!", have.freq);
@@ -1178,14 +1179,14 @@ bool setupAudio(bool showErrorMsg)
 	// set new bit depth flag
 
 	newBitDepth = 16;
-	config.specialFlags &= ~BITDEPTH_24;
+	config.specialFlags &= ~BITDEPTH_32;
 	config.specialFlags |=  BITDEPTH_16;
 
 	if (have.format == AUDIO_F32)
 	{
 		newBitDepth = 24;
 		config.specialFlags &= ~BITDEPTH_16;
-		config.specialFlags |=  BITDEPTH_24;
+		config.specialFlags |=  BITDEPTH_32;
 	}
 
 	audio.haveFreq = have.freq;
@@ -1209,7 +1210,7 @@ bool setupAudio(bool showErrorMsg)
 	// make a copy of the new known working audio settings
 
 	audio.lastWorkingAudioFreq = config.audioFreq;
-	audio.lastWorkingAudioBits = config.specialFlags & (BITDEPTH_16 + BITDEPTH_24 + BUFFSIZE_512 + BUFFSIZE_1024 + BUFFSIZE_2048);
+	audio.lastWorkingAudioBits = config.specialFlags & (BITDEPTH_16 + BITDEPTH_32 + BUFFSIZE_512 + BUFFSIZE_1024 + BUFFSIZE_2048);
 	setLastWorkingAudioDevName();
 
 	// update config audio radio buttons if we're on that screen at the moment
@@ -1217,10 +1218,10 @@ bool setupAudio(bool showErrorMsg)
 		showConfigScreen();
 
 	updateWavRendererSettings();
-	setAudioAmp(config.boostLevel, config.masterVol, (config.specialFlags & BITDEPTH_24) ? true : false);
+	setAudioAmp(config.boostLevel, config.masterVol, (config.specialFlags & BITDEPTH_32) ? true : false);
 
 	// don't call stopVoices() in this routine
-	for (uint8_t i = 0; i < MAX_VOICES; i++)
+	for (int32_t i = 0; i < MAX_VOICES; i++)
 		stopVoice(i);
 
 	stopAllScopes();

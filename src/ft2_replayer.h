@@ -49,7 +49,8 @@ enum
 #define PROG_NAME_STR "Fasttracker II clone"
 
 /* Some of the following structs must be packed (e.g. not padded) since they
-** are loaded directly into with fread and stuff. */
+** are loaded directly into with fread and stuff.
+*/
 
 #ifdef _MSC_VER
 #pragma pack(push)
@@ -198,8 +199,8 @@ typedef struct stmTyp_t
 	uint8_t portaUpSpeed, portaDownSpeed, retrigSpeed, retrigCnt, retrigVol;
 	uint8_t volKolVol, tonNr, envPPos, eVibPos, envVPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
-	int16_t midiPitch, realPeriod, envVIPValue, envPIPValue;
-	uint16_t finalVol, outPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
+	int16_t midiPitch, envVIPValue, envPIPValue;
+	uint16_t finalVol, outPeriod, realPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
 	uint16_t envVCnt, envVAmp, envPCnt, envPAmp, eVibAmp, eVibSweep;
 	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;
 	int32_t smpStartPos;
@@ -216,7 +217,7 @@ typedef struct songTyp_t
 	int16_t songPos, pattNr, pattPos, pattLen;
 	int32_t antChn;
 	uint16_t len, repS, speed, tempo, globVol, timer, ver, initialTempo;
-	uint32_t musicTime;
+	uint64_t musicTime64;
 } songTyp;
 
 typedef struct tonTyp_t
@@ -231,16 +232,23 @@ typedef struct syncedChannel_t // used for audio/video sync queue
 	uint8_t status, sampleNr, instrNr;
 	uint16_t finalPeriod, finalVol;
 	int32_t smpStartPos;
-	uint32_t voiceDelta;
 } syncedChannel_t;
 
 void fixSongName(void); // removes spaces from right side of song name
 void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
 
 void calcReplayRate(int32_t rate);
-void resetCachedFrequencyVars(void);
 void tuneSample(sampleTyp *s, int32_t midCFreq);
+
+
+#if defined _WIN64 || defined __amd64__
+uint64_t getFrequenceValue(uint16_t period);
+#else
 uint32_t getFrequenceValue(uint16_t period);
+#endif
+
+uint64_t getScopeFrequenceValue(uint16_t period);
+int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote); // for piano in Instr. Ed.
 
 bool allocateInstr(int16_t nr);
 void freeInstr(int32_t nr);
@@ -291,9 +299,9 @@ void pbRecPtn(void);
 
 // ft2_replayer.c
 extern int8_t playMode;
-extern bool linearFrqTab, songPlaying, audioPaused, musicPaused;
+extern bool songPlaying, audioPaused, musicPaused;
 extern volatile bool replayerBusy;
-extern const int16_t *note2Period;
+extern const uint16_t *note2Period;
 extern int16_t pattLens[MAX_PATTERNS];
 extern stmTyp stm[MAX_VOICES];
 extern songTyp song;

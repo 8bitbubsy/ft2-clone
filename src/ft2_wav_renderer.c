@@ -38,7 +38,11 @@ typedef struct wavHeader_t
 static char WAV_SysReqText[192];
 static uint8_t WDBitDepth = 16, WDStartPos, WDStopPos, *wavRenderBuffer;
 static int16_t WDAmp;
+#if defined __amd64__ || defined _WIN64
+static uint32_t WDFrequency = 96000;
+#else
 static uint32_t WDFrequency = 48000;
+#endif
 static SDL_Thread *thread;
 
 static void updateWavRenderer(void)
@@ -47,8 +51,13 @@ static void updateWavRenderer(void)
 
 	fillRect(209, 116, 41, 51, PAL_DESKTOP);
 
+#if defined __amd64__ || defined _WIN64
 	sprintf(str, "%06d", WDFrequency);
 	textOut(209, 116, PAL_FORGRND, str);
+#else
+	sprintf(str, "%05d", WDFrequency);
+	textOut(216, 116, PAL_FORGRND, str);
+#endif
 
 	sprintf(str, "%02d", WDAmp);
 	textOut(237, 130, PAL_FORGRND, str);
@@ -70,7 +79,7 @@ void drawWavRenderer(void)
 
 	textOutShadow(4,   96, PAL_FORGRND, PAL_DSKTOP2, "Harddisk recording:");
 	textOutShadow(156, 96, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
-	textOutShadow(221, 96, PAL_FORGRND, PAL_DSKTOP2, "24-bit float");
+	textOutShadow(221, 96, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
 
 	textOutShadow(85, 116, PAL_FORGRND, PAL_DSKTOP2, "Frequency");
 	textOutShadow(85, 130, PAL_FORGRND, PAL_DSKTOP2, "Amplification");
@@ -180,7 +189,7 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 	song.globVol = 64;
 	setSpeed(song.speed);
 
-	song.musicTime = 0;
+	resetPlaybackTime();
 	return true;
 }
 
@@ -239,7 +248,7 @@ static void dump_Close(FILE *f, uint32_t totalSamples)
 
 	setBackOldAudioFreq();
 	setSpeed(song.speed);
-	setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_24);
+	setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
 	editor.wavIsRendering = false;
 
 	setMouseBusy(false);
@@ -280,12 +289,14 @@ static void updateVisuals(void)
 	editor.globalVol = song.globVol;
 
 	editor.ui.drawPosEdFlag = true;
-	editor.ui.drawPattNumLenFlag = true; 
+	editor.ui.drawPattNumLenFlag = true;
 	editor.ui.drawReplayerPianoFlag = true;
 	editor.ui.drawBPMFlag = true;
 	editor.ui.drawSpeedFlag = true;
 	editor.ui.drawGlobVolFlag = true;
 	editor.ui.updatePatternEditor = true;
+
+	drawPlaybackTime();
 }
 
 static int32_t SDLCALL renderWavThread(void *ptr)
@@ -358,7 +369,6 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 
 	updateVisuals();
 	dump_Close(f, sampleCounter);
-
 	resumeAudio();
 
 	editor.diskOpReadOnOpen = true;
@@ -432,15 +442,15 @@ void pbWavFreqUp(void)
 {
 	if (WDFrequency < MAX_WAV_RENDER_FREQ)
 	{
-		     if (WDFrequency == 8000)  WDFrequency = 11025;
-		else if (WDFrequency == 11025) WDFrequency = 16000;
-		else if (WDFrequency == 16000) WDFrequency = 22050;
-		else if (WDFrequency == 22050) WDFrequency = 32000;
-		else if (WDFrequency == 32000) WDFrequency = 44100;
-		else if (WDFrequency == 44100) WDFrequency = 48000;
+		
+#if defined __amd64__ || defined _WIN64
+		     if (WDFrequency == 44100) WDFrequency = 48000;
 		else if (WDFrequency == 48000) WDFrequency = 96000;
 		else if (WDFrequency == 96000) WDFrequency = 192000;
-
+#else
+		     if (WDFrequency == 44100) WDFrequency = 48000;
+		else if (WDFrequency == 48000) WDFrequency = 96000;
+#endif
 		updateWavRenderer();
 	}
 }
@@ -449,9 +459,13 @@ void pbWavFreqDown(void)
 {
 	if (WDFrequency > MIN_WAV_RENDER_FREQ)
 	{
+#if defined __amd64__ || defined _WIN64
 		     if (WDFrequency == 192000) WDFrequency = 96000;
 		else if (WDFrequency == 96000) WDFrequency = 48000;
 		else if (WDFrequency == 48000) WDFrequency = 44100;
+#else
+		if (WDFrequency == 48000) WDFrequency = 44100;
+#endif
 
 		updateWavRenderer();
 	}
