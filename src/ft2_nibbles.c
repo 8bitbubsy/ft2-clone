@@ -852,7 +852,7 @@ void nibblesPlay(void)
 	NI_P2Score = 0;
 	NI_P1Lives = 5;
 	NI_P2Lives = 5;
-	NI_Level = 1;
+	NI_Level = 0;
 
 	newNibblesGame();
 }
