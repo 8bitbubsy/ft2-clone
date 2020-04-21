@@ -54,6 +54,53 @@ static int32_t NI_P1Score, NI_P2Score;
 static nibbleCrd NI_P1[256], NI_P2[256];
 static nibbleBufferTyp nibblesBuffer[2];
 
+/* Non-FT2 feature: Check if either the Desktop or Buttons palette color
+** is so close to black that the player would have troubles seeing the walls
+** when playing Nibbles.
+*/
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+static uint8_t rgb24ToLuminosity(uint32_t rgb24)
+{
+	const uint8_t R = RGB32_R(rgb24);
+	const uint8_t G = RGB32_G(rgb24);
+	const uint8_t B = RGB32_B(rgb24);
+
+	// get highest channel value
+	uint8_t hi = 0;
+	if (hi < R) hi = R;
+	if (hi < G) hi = G;
+	if (hi < B) hi = B;
+
+	// get lowest channel value
+	uint8_t lo = 255;
+	if (lo > R) lo = R;
+	if (lo > G) lo = G;
+	if (lo > B) lo = B;
+
+	return (hi + lo) >> 1; // 0..255
+}
+
+static bool wallColorsAreCloseToBlack(void)
+{
+#define LUMINOSITY_THRESHOLD 4
+
+	uint8_t wallColor1L = rgb24ToLuminosity(video.palette[PAL_DESKTOP]);
+	uint8_t wallColor2L = rgb24ToLuminosity(video.palette[PAL_BUTTONS]);
+
+	/* Since the rest of the wall colors are based on lower and higher
+	** contrast values from these two primary colors, we don't really
+	** need to check them all.
+	*/
+
+	if (wallColor1L <= LUMINOSITY_THRESHOLD || wallColor2L <= LUMINOSITY_THRESHOLD)
+		return true;
+
+	return false;
+}
+// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+
 static void redrawNibblesScreen(void)
 {
 	uint8_t x, y, c;
@@ -408,6 +455,10 @@ static void nibblesDecLives(int16_t l1, int16_t l2)
 	{
 		editor.NI_Play = false;
 		okBox(0, "Nibbles message", "GAME OVER");
+
+		// prevent highscore table from showing overflowing level graphics
+		if (NI_Level >= NI_MAXLEVEL)
+			NI_Level = NI_MAXLEVEL - 1;
 
 		if (NI_P1Score > config.NI_HighScore[9].score)
 		{
@@ -786,6 +837,9 @@ void nibblesPlay(void)
 		return;
 	}
 
+	if (wallColorsAreCloseToBlack())
+		okBox(0, "Nibbles warning", "The Desktop/Button colors are set to values that make the walls hard to see!");
+
 	assert(config.NI_Speed < 4);
 	NI_CurSpeed = NI_Speeds[config.NI_Speed];
 
@@ -798,7 +852,7 @@ void nibblesPlay(void)
 	NI_P2Score = 0;
 	NI_P1Lives = 5;
 	NI_P2Lives = 5;
-	NI_Level = 0;
+	NI_Level = 1;
 
 	newNibblesGame();
 }

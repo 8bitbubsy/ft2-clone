@@ -111,6 +111,23 @@ static void loadConfigFromBuffer(void)
 	config.patternsPath[80-1] = '\0';
 	config.tracksPath[80-1] = '\0';
 
+	// clear data after the actual Pascal string length. FT2 can save garbage in that area.
+
+	if (config.modulesPathLen < 80)
+		memset(&config.modulesPath[config.modulesPathLen], 0, 80-config.modulesPathLen);
+
+	if (config.instrPathLen < 80)
+		memset(&config.instrPath[config.instrPathLen], 0, 80-config.instrPathLen);
+
+	if (config.samplesPathLen < 80)
+		memset(&config.samplesPath[config.samplesPathLen], 0, 80-config.samplesPathLen);
+
+	if (config.patternsPathLen < 80)
+		memset(&config.patternsPath[config.patternsPathLen], 0, 80-config.patternsPathLen);
+
+	if (config.tracksPathLen < 80)
+		memset(&config.tracksPath[config.tracksPathLen], 0, 80-config.tracksPathLen);
+
 	config.boostLevel = CLAMP(config.boostLevel, 1, 32);
 	config.masterVol = CLAMP(config.masterVol, 0, 256);
 	config.ptnMaxChannels = CLAMP(config.ptnMaxChannels, 0, 3);
