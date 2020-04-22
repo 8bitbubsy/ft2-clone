@@ -199,9 +199,9 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	if (wlen > 600)
 		wlen = 600;
 
-	headlineX = (SCREEN_W - hlen) / 2;
-	textX = (SCREEN_W - tlen) / 2;
-	x = (SCREEN_W - wlen) / 2;
+	headlineX = (SCREEN_W - hlen) >> 1;
+	textX = (SCREEN_W - tlen) >> 1;
+	x = (SCREEN_W - wlen) >> 1;
 
 	// the box y position differs in extended pattern editor mode
 	y = editor.ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
@@ -211,7 +211,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	{
 		p = &pushButtons[i];
 
-		p->x = ((SCREEN_W - tx) / 2) + (i * 100);
+		p->x = ((SCREEN_W - tx) >> 1) + (i * 100);
 		p->y = y + 42;
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
@@ -326,13 +326,13 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 
 		// draw OK box
 		drawWindow(wlen);
-		textOutShadow(headlineX, y +  4, PAL_BUTTON1, PAL_BUTTON2, headline);
-		textOutShadow(textX,     y + 24, PAL_BUTTON1, PAL_BUTTON2, text);
+		textOutShadow(headlineX, y +  4, PAL_FORGRND, PAL_BUTTON2, headline);
+		textOutShadow(textX,     y + 24, PAL_FORGRND, PAL_BUTTON2, text);
 		for (i = 0; i < knp; i++) drawPushButton(i);
 		if (typ >= 6 && typ <= 7)
 		{
 			drawCheckBox(0);
-			textOutShadow(x + 21, y + 52, PAL_BUTTON1, PAL_BUTTON2, "Don't show again");
+			textOutShadow(x + 21, y + 52, PAL_FORGRND, PAL_BUTTON2, "Don't show again");
 		}
 
 		flipFrame();
@@ -397,7 +397,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	t->changeMouseCursor = true;
 	t->renderBufW = (9 + 1) * t->maxChars; // 9 = max character/glyph width possible
 	t->renderBufH = 10; // 10 = max character height possible
-	t->renderW = t->w - (t->tx * 2);
+	t->renderW = t->w - (t->tx << 1);
 
 	t->renderBuf = (uint8_t *)malloc(t->renderBufW * t->renderBufH * sizeof (int8_t));
 	if (t->renderBuf == NULL)
@@ -412,7 +412,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	mouseAnimOff();
 
 	wlen = textWidth(headline);
-	headlineX = (SCREEN_W - wlen) / 2;
+	headlineX = (SCREEN_W - wlen) >> 1;
 
 	// count number of buttons
 	knp = 0;
@@ -435,7 +435,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	y = editor.ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set further text box settings
-	t->x = (SCREEN_W - TEXTBOX_W) / 2;
+	t->x = (SCREEN_W - TEXTBOX_W) >> 1;
 	t->y = y + 24;
 	t->visible = true;
 
@@ -446,7 +446,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
-		p->x = ((SCREEN_W - tx) / 2) + (i * 100);
+		p->x = ((SCREEN_W - tx) >> 1) + (i * 100);
 		p->y = y + 42;
 		p->caption = buttonText[typ][i];
 		p->visible = true;
@@ -567,7 +567,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 
 		// draw input box
 		drawWindow(wlen);
-		textOutShadow(headlineX, y + 4, PAL_BUTTON1, PAL_BUTTON2, headline);
+		textOutShadow(headlineX, y + 4, PAL_FORGRND, PAL_BUTTON2, headline);
 		clearRect(t->x, t->y, t->w, t->h);
 		hLine(t->x - 1,    t->y - 1,    t->w + 2, PAL_BUTTON2);
 		vLine(t->x - 1,    t->y,        t->h + 1, PAL_BUTTON2);

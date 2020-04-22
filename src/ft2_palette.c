@@ -17,7 +17,7 @@ static const uint8_t scaleOrder[3] = { 8, 4, 9 };
 static uint8_t palContrast[12][2] = // palette desktop/button contrasts
 {
 	{59, 55}, {59, 53}, {56, 59}, {68, 55}, {57, 59}, {48, 55},
-	{66, 62}, {68, 57}, {46, 57}, {57, 55}, {62, 57}, {52, 57}
+	{66, 62}, {68, 57}, {58, 42}, {57, 55}, {62, 57}, {52, 57}
 };
 
 void setCustomPalColor(uint32_t color)
@@ -27,7 +27,7 @@ void setCustomPalColor(uint32_t color)
 
 void setPal16(pal16 *p, bool redrawScreen)
 {
-#define LOOP_PIN_COL_SUB 118
+#define LOOP_PIN_COL_SUB 75
 #define TEXT_MARK_COLOR 0x0078D7
 #define BOX_SELECT_COLOR 0x7F7F7F
 
@@ -69,6 +69,11 @@ void setPal16(pal16 *p, bool redrawScreen)
 static void showColorErrorMsg(void)
 {
 	okBox(0, "System message", "Default colors cannot be modified.");
+}
+
+static void showMouseColorErrorMsg(void)
+{
+	okBox(0, "System message", "Mouse color can only be changed when \"Software mouse\" is enabled.");
 }
 
 static double palPow(double dX, double dY)
@@ -139,7 +144,7 @@ static void paletteDragMoved(void)
 	if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
 	{
 		updatePaletteEditor(); // resets colors/contrast vars
-		okBox(0, "System message", "Mouse color can only be changed when \"Software mouse\" is enabled.");
+		showMouseColorErrorMsg();
 		return;
 	}
 
@@ -230,6 +235,8 @@ void configPalRDown(void)
 {
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 		showColorErrorMsg();
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+		showMouseColorErrorMsg();
 	else
 		scrollBarScrollLeft(SB_PAL_R, 1);
 }
@@ -238,6 +245,8 @@ void configPalRUp(void)
 {
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 		showColorErrorMsg();
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+		showMouseColorErrorMsg();
 	else
 		scrollBarScrollRight(SB_PAL_R, 1);
 }
@@ -246,6 +255,8 @@ void configPalGDown(void)
 {
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 		showColorErrorMsg();
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+		showMouseColorErrorMsg();
 	else
 		scrollBarScrollLeft(SB_PAL_G, 1);
 }
@@ -254,6 +265,8 @@ void configPalGUp(void)
 {
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 		showColorErrorMsg();
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+		showMouseColorErrorMsg();
 	else
 		scrollBarScrollRight(SB_PAL_G, 1);
 }
@@ -262,6 +275,8 @@ void configPalBDown(void)
 {
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 		showColorErrorMsg();
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+		showMouseColorErrorMsg();
 	else
 		scrollBarScrollLeft(SB_PAL_B, 1);
 }
@@ -270,6 +285,8 @@ void configPalBUp(void)
 {
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 		showColorErrorMsg();
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+		showMouseColorErrorMsg();
 	else
 		scrollBarScrollRight(SB_PAL_B, 1);
 }
@@ -278,6 +295,8 @@ void configPalContDown(void)
 {
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 		showColorErrorMsg();
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+		showMouseColorErrorMsg();
 	else
 		scrollBarScrollLeft(SB_PAL_CONTRAST, 1);
 }
@@ -286,6 +305,8 @@ void configPalContUp(void)
 {
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 		showColorErrorMsg();
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+		showMouseColorErrorMsg();
 	else
 		scrollBarScrollRight(SB_PAL_CONTRAST, 1);
 }
@@ -398,12 +419,12 @@ void rbConfigPalBlues(void)
 	checkRadioButton(RB_CONFIG_PAL_BLUES);
 }
 
-void rbConfigPalSpacePigs(void)
+void rbConfigPalDarkMode(void)
 {
-	config.cfg_StdPalNr = PAL_SPACE_PIGS;
+	config.cfg_StdPalNr = PAL_DARK_MODE;
 	updatePaletteEditor();
 	setPal16(palTable[config.cfg_StdPalNr], true);
-	checkRadioButton(RB_CONFIG_PAL_SPACE_PIGS);
+	checkRadioButton(RB_CONFIG_PAL_DARK_MODE);
 }
 
 void rbConfigPalGold(void)

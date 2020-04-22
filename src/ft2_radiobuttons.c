@@ -151,7 +151,7 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	{ 399, 103, 105, RB_GROUP_CONFIG_PAL_PRESET, rbConfigPalAuroraBorealis },
 	{ 512, 103,  45, RB_GROUP_CONFIG_PAL_PRESET, rbConfigPalRose },
 	{ 399, 117,  47, RB_GROUP_CONFIG_PAL_PRESET, rbConfigPalBlues },
-	{ 512, 117,  81, RB_GROUP_CONFIG_PAL_PRESET, rbConfigPalSpacePigs },
+	{ 512, 117,  77, RB_GROUP_CONFIG_PAL_PRESET, rbConfigPalDarkMode },
 	{ 399, 131,  40, RB_GROUP_CONFIG_PAL_PRESET, rbConfigPalGold },
 	{ 512, 131,  56, RB_GROUP_CONFIG_PAL_PRESET, rbConfigPalViolent },
 	{ 399, 145,  87, RB_GROUP_CONFIG_PAL_PRESET, rbConfigPalHeavyMetal },

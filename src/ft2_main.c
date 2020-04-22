@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 		// one LAST attempt (with default audio device and settings)
 		config.audioFreq = 48000;
 
-		// try 16-bit audio at 1024 samples (44.1kHz/48kHz)
+		// try 48kHz 16-bit audio at 1024 samples
 		config.specialFlags &= ~(BITDEPTH_32 + BUFFSIZE_512 + BUFFSIZE_2048);
 		config.specialFlags |=  (BITDEPTH_16 + BUFFSIZE_1024);
 
@@ -227,9 +227,10 @@ int main(int argc, char *argv[])
 
 	setupWaitVBL(); // this is needed for potential okBox() calls in handleModuleLoadFromArg()
 	handleModuleLoadFromArg(argc, argv);
-	setupWaitVBL(); // yes, this is needed again for main loop
 
 	editor.mainLoopOngoing = true;
+	setupWaitVBL(); // this must be the very last thing done before entering the main loop
+
 	while (editor.programRunning)
 	{
 		beginFPSCounter();
@@ -310,6 +311,8 @@ static void initializeVars(void)
 	editor.programRunning = true;
 
 	audio.linearFreqTable = true;
+
+	calcAudioTables();
 }
 
 static void cleanUpAndExit(void) // never call this inside the main loop!

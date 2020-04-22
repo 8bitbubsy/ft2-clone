@@ -81,7 +81,7 @@ void rbConfigPalLitheDark(void);
 void rbConfigPalAuroraBorealis(void);
 void rbConfigPalRose(void);
 void rbConfigPalBlues(void);
-void rbConfigPalSpacePigs(void);
+void rbConfigPalDarkMode(void);
 void rbConfigPalGold(void);
 void rbConfigPalViolent(void);
 void rbConfigPalHeavyMetal(void);

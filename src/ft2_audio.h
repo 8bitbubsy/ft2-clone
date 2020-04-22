@@ -112,6 +112,8 @@ extern volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueu
 void resetCachedMixerVars(void);
 #endif
 
+void calcAudioTables(void);
+
 int32_t pattQueueReadSize(void);
 int32_t pattQueueWriteSize(void);
 bool pattQueuePush(pattSyncData_t t);

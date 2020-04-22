@@ -75,7 +75,7 @@ static char FReq_SysReqText[196], *FReq_FileName, *FReq_NameTemp;
 static char *modTmpFName, *insTmpFName, *smpTmpFName, *patTmpFName, *trkTmpFName;
 static char *modTmpFNameUTF8; // for window title
 static uint8_t FReq_Item;
-static bool FReq_ShowAllFiles, modPathSet, insPathSet, smpPathSet, patPathSet, trkPathSet;
+static bool FReq_ShowAllFiles, insPathSet, smpPathSet, patPathSet, trkPathSet, firstTimeOpeningDiskOp = true;
 static int32_t FReq_EntrySelected = -1, FReq_FileCount, FReq_DirPos, lastMouseY;
 static UNICHAR *FReq_CurPathU, *FReq_ModCurPathU, *FReq_InsCurPathU, *FReq_SmpCurPathU, *FReq_PatCurPathU, *FReq_TrkCurPathU;
 static DirRec *FReq_Buffer;
@@ -172,20 +172,11 @@ const UNICHAR *getDiskOpSmpPath(void)
 
 static void setupInitialPaths(void)
 {
-#ifdef _WIN32
-	UNICHAR pathU[PATH_MAX + 2];
-#endif
-
-	UNICHAR_GETCWD(FReq_ModCurPathU, PATH_MAX);
-
 	// the UNICHAR paths are already zeroed out
 
 #ifdef _WIN32
 	if (config.modulesPath[0] != '\0')
-	{
 		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.modulesPath, -1, FReq_ModCurPathU, 80);
-		modPathSet = true;
-	}
 
 	if (config.instrPath[0] != '\0')
 	{
@@ -212,10 +203,7 @@ static void setupInitialPaths(void)
 	}
 #else
 	if (config.modulesPath[0] != '\0')
-	{
 		strncpy(FReq_ModCurPathU, config.modulesPath, 80);
-		modPathSet = true;
-	}
 
 	if (config.instrPath[0] != '\0')
 	{
@@ -241,21 +229,6 @@ static void setupInitialPaths(void)
 		trkPathSet = true;
 	}
 #endif
-
-	// set initial path to user directory
-#ifdef _WIN32
-	if (SHGetFolderPathW(NULL, CSIDL_PROFILE, NULL, 0, pathU) >= 0)
-		UNICHAR_CHDIR(pathU);
-#else
-	UNICHAR_CHDIR(getenv("HOME"));
-#endif
-
-	// if we couldn't set present in config, set custom "modules" path
-	if (modPathSet && UNICHAR_CHDIR(FReq_ModCurPathU) != 0)
-	{
-		UNICHAR_GETCWD(FReq_ModCurPathU, PATH_MAX);
-		modPathSet = true;
-	}
 }
 
 static void freeDirRecBuffer(void)
@@ -1943,8 +1916,6 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 	uint8_t lastFindFileFlag;
 	DirRec tmpBuffer, *newPtr;
 
-	(void)ptr;
-
 	FReq_DirPos = 0;
 
 	// free old buffer
@@ -2018,6 +1989,7 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 
 	setMouseBusy(false);
 
+	(void)ptr;
 	return true;
 }
 
@@ -2199,10 +2171,6 @@ static void setDiskOpItem(uint8_t item)
 		memset(FReq_CurPathU, 0, (PATH_MAX + 2) * sizeof (UNICHAR));
 		UNICHAR_STRCPY(FReq_CurPathU, FReq_ModCurPathU);
 	}
-	else
-	{
-		UNICHAR_CHDIR(FReq_CurPathU);
-	}
 
 	textBoxes[TB_DISKOP_FILENAME].textPtr = FReq_FileName;
 
@@ -2285,6 +2253,28 @@ static void drawDiskOpScreen(void)
 
 void showDiskOpScreen(void)
 {
+	// if first time opening Disk Op., set initial directory
+	if (firstTimeOpeningDiskOp)
+	{
+		assert(FReq_ModCurPathU != NULL);
+
+		// first test if we can change the dir to the one stored in the config (if present)
+		if (UNICHAR_STRLEN(FReq_ModCurPathU) == 0 || UNICHAR_CHDIR(FReq_ModCurPathU) != 0)
+		{
+			// nope, couldn't do that, set Disk Op. path to user/home directory
+#ifdef _WIN32
+			SHGetFolderPathW(NULL, CSIDL_PROFILE, NULL, 0, FReq_ModCurPathU);
+#else
+			if (getenv("HOME") != NULL)
+				UNICHAR_STRCPY(FReq_ModCurPathU, getenv("HOME"));
+#endif
+			UNICHAR_CHDIR(FReq_ModCurPathU);
+		}
+
+		UNICHAR_GETCWD(FReq_ModCurPathU, PATH_MAX);
+		firstTimeOpeningDiskOp = false;
+	}
+
 	if (editor.ui.extended)
 		exitPatternEditorExtended();
 

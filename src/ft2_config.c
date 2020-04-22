@@ -986,7 +986,7 @@ static void setConfigLayoutRadioButtonStates(void)
 		case PAL_JUNGLE:          tmpID = RB_CONFIG_PAL_JUNGLE;          break;
 		case PAL_LITHE_DARK:      tmpID = RB_CONFIG_PAL_LITHE_DARK;      break;
 		case PAL_ROSE:            tmpID = RB_CONFIG_PAL_ROSE;            break;
-		case PAL_SPACE_PIGS:      tmpID = RB_CONFIG_PAL_SPACE_PIGS;      break;
+		case PAL_DARK_MODE:       tmpID = RB_CONFIG_PAL_DARK_MODE;       break;
 		case PAL_VIOLENT:         tmpID = RB_CONFIG_PAL_VIOLENT;         break;
 		case PAL_WHY_COLORS:      tmpID = RB_CONFIG_PAL_WHY_COLORS;      break;
 		case PAL_USER_DEFINED:    tmpID = RB_CONFIG_PAL_USER_DEFINED;    break;
@@ -1257,7 +1257,7 @@ void showConfigScreen(void)
 			textOutShadow(414, 104, PAL_FORGRND, PAL_DSKTOP2, "Aurora Borealis");
 			textOutShadow(528, 104, PAL_FORGRND, PAL_DSKTOP2, "Rose");
 			textOutShadow(414, 118, PAL_FORGRND, PAL_DSKTOP2, "Blues");
-			textOutShadow(528, 118, PAL_FORGRND, PAL_DSKTOP2, "Space Pigs");
+			textOutShadow(528, 118, PAL_FORGRND, PAL_DSKTOP2, "Dark mode");
 			textOutShadow(414, 132, PAL_FORGRND, PAL_DSKTOP2, "Gold");
 			textOutShadow(528, 132, PAL_FORGRND, PAL_DSKTOP2, "Violent");
 			textOutShadow(414, 146, PAL_FORGRND, PAL_DSKTOP2, "Heavy Metal");

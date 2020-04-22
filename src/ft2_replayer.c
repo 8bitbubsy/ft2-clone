@@ -30,11 +30,13 @@
 */
 
 static uint32_t musicTimeTab[256-32];
-static uint64_t period2ScopeDeltaTab[65536], scopeLogTab[768], scopeAmigaPeriodDiv;
+static uint64_t period2ScopeDeltaTab[65536];
+static double dLogTab[768], dLogTabMul[32], dAudioRateFactor;
+
 #if defined _WIN64 || defined __amd64__
-static uint64_t period2DeltaTab[65536], logTab[768], amigaPeriodDiv;
+static uint64_t period2DeltaTab[65536];
 #else
-static uint32_t period2DeltaTab[65536], logTab[768], amigaPeriodDiv;
+static uint32_t period2DeltaTab[65536];
 #endif
 
 static bool bxxOverflow;
@@ -224,46 +226,48 @@ int16_t getRealUsedSamples(int16_t nr)
 }
 
 // called every time you change linear/amiga mode and mixing frequency
-static void calcDelta2PeriodTabs(void)
+static void calcPeriod2DeltaTables(void)
 {
 	int32_t baseDelta;
 	uint32_t i;
 
-	period2DeltaTab[0] = 0; // FT2 converts period 0 to a delta of 0
+	period2DeltaTab[0] = 0; // in FT2, a period of 0 is converted to a delta of 0
+
+	const double dScopeRateFactor = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
 
 	if (audio.linearFreqTable)
 	{
+		// linear periods
 		for (i = 1; i < 65536; i++)
 		{
 			const uint16_t invPeriod = (12 * 192 * 4) - (uint16_t)i; // this intentionally overflows uint16_t to be accurate to FT2
 			const int32_t octave = invPeriod / 768;
 			const int32_t period = invPeriod % 768;
-			const int32_t shift = (14 - octave) & 0x1F; // this is exactly how FT2 does it
+			const int32_t shift = (14 - octave) & 0x1F; // 100% accurate to FT2!
+
+			const double dHz = dLogTab[period] * dLogTabMul[shift];
 
 #if defined _WIN64 || defined __amd64__
-			uint64_t delta = logTab[period];
+			period2DeltaTab[i] = (uint64_t)((dHz * dAudioRateFactor) + 0.5);
 #else
-			uint32_t delta = logTab[period];
+			period2DeltaTab[i] = (uint32_t)((dHz * dAudioRateFactor) + 0.5);
 #endif
-			uint64_t scopeDelta = scopeLogTab[period];
-
-			if (shift > 0)
-			{
-				delta >>= shift;
-				scopeDelta >>= shift;
-			}
-
-			period2DeltaTab[i] = delta;
-			period2ScopeDeltaTab[i] = scopeDelta;
+			period2ScopeDeltaTab[i] = (uint64_t)((dHz * dScopeRateFactor) + 0.5);
 		}
 	}
 	else
 	{
-		// Note: these calculations should remain truncated and not rounded!
+		// Amiga periods
 		for (i = 1; i < 65536; i++)
 		{
-			period2DeltaTab[i] = amigaPeriodDiv / i;
-			period2ScopeDeltaTab[i] = scopeAmigaPeriodDiv / i;
+			double dHz = (8363.0 * 1712.0) / i;
+
+#if defined _WIN64 || defined __amd64__
+			period2DeltaTab[i] = (uint64_t)((dHz * dAudioRateFactor) + 0.5);
+#else
+			period2DeltaTab[i] = (uint32_t)((dHz * dAudioRateFactor) + 0.5);
+#endif
+			period2ScopeDeltaTab[i] = (uint64_t)((dHz * dScopeRateFactor) + 0.5);
 		}
 	}
 
@@ -289,7 +293,7 @@ void setFrqTab(bool linear)
 	else
 		note2Period = amigaPeriods;
 
-	calcDelta2PeriodTabs();
+	calcPeriod2DeltaTables();
 
 	resumeAudio();
 
@@ -381,35 +385,26 @@ void keyOff(stmTyp *ch)
 	}
 }
 
+void calcAudioTables(void)
+{
+	int32_t i;
+
+	for (i = 0; i < 768; i++)
+		dLogTab[i] = exp2(i / 768.0) * (8363.0 * 256.0);
+
+	dLogTabMul[0] = 1.0;
+	for (i = 1; i < 32; i++)
+		dLogTabMul[i] = exp2(-i);
+}
+
 void calcReplayRate(int32_t rate)
 {
 	int32_t i;
 
 	if (rate == 0)
 		return;
-
-	const double dScopeRateFactor = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-	const double dAudioRateFactor = MIXER_FRAC_SCALE / (double)rate;
-
-	scopeAmigaPeriodDiv = (uint64_t)(((8363.0 * 1712.0) * dScopeRateFactor) + 0.5);
-
-#if defined _WIN64 || defined __amd64__
-	amigaPeriodDiv = (uint64_t)(((8363.0 * 1712.0) * dAudioRateFactor) + 0.5);
-	for (i = 0; i < 768; i++)
-	{
-		double dHz = exp2(i * (1.0 / 768.0)) * (8363.0 * 256.0);
-		logTab[i] = (uint64_t)((dHz * dAudioRateFactor) + 0.5);
-		scopeLogTab[i] = (uint64_t)((dHz * dScopeRateFactor) + 0.5);
-	}
-#else
-	amigaPeriodDiv = (uint32_t)(((8363 * 1712) * dAudioRateFactor) + 0.5);
-	for (i = 0; i < 768; i++)
-	{
-		double dHz = exp2(i * (1.0 / 768.0)) * (8363.0 * 256.0);
-		logTab[i] = (uint32_t)((dHz * dAudioRateFactor) + 0.5);
-		scopeLogTab[i] = (uint64_t)((dHz * dScopeRateFactor) + 0.5);
-	}
-#endif
+	
+	dAudioRateFactor = (double)MIXER_FRAC_SCALE / rate;
 
 	audio.quickVolSizeVal = rate / 200; // FT2 truncates here
 	audio.rampQuickVolMul = (int32_t)(((UINT32_MAX + 1.0) / audio.quickVolSizeVal) + 0.5);
@@ -424,7 +419,7 @@ void calcReplayRate(int32_t rate)
 		musicTimeTab[i-32] = (int32_t)(dVal + 0.5);
 	}
 
-	calcDelta2PeriodTabs();
+	calcPeriod2DeltaTables();
 }
 
 #if defined _WIN64 || defined __amd64__
@@ -2144,7 +2139,7 @@ void mainPlayer(void) // periodically called from audio callback
 		return;
 	}
 
-	assert(song.speed >= 32 && song.speed <= 2);
+	assert(song.speed >= 32 && song.speed <= 255);
 	song.musicTime64 += musicTimeTab[song.speed-32]; // for playback counter
 
 	readNewNote = false;

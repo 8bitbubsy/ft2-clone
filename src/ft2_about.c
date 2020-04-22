@@ -234,7 +234,6 @@ extern uint32_t *unpackedData;
 
 void showAboutScreen(void) // called once when About screen is opened
 {
-#define TEXT_BORDER_COL 0x2E2E2E
 
 	const char *infoString = "Clone by Olav \"8bitbubsy\" S\025rensen - https://16-bits.org";
 	char verText[32];
