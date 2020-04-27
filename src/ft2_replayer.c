@@ -29,7 +29,7 @@
 ** FT2 obviously didn't have such big tables.
 */
 
-static uint32_t musicTimeTab[256-32];
+static uint32_t musicTimeTab[1000];
 static uint64_t period2ScopeDeltaTab[65536];
 static double dLogTab[768], dLogTabMul[32], dAudioRateFactor;
 
@@ -412,11 +412,12 @@ void calcReplayRate(int32_t rate)
 
 	// calculate table used to count replayer time (displayed as hours/minutes/seconds)
 	const double dMul = (UINT32_MAX + 1.0) / rate;
-	for (i = 32; i < 256; i++)
+	musicTimeTab[0] = UINT32_MAX;
+	for (i = 1; i < 1000; i++)
 	{
 		uint32_t samplesPerTick = ((rate + rate) + (rate >> 1)) / i; // exactly how setSpeed() calculates it
 		const double dVal = samplesPerTick * dMul;
-		musicTimeTab[i-32] = (int32_t)(dVal + 0.5);
+		musicTimeTab[i] = (uint32_t)(dVal + 0.5);
 	}
 
 	calcPeriod2DeltaTables();
@@ -2139,8 +2140,8 @@ void mainPlayer(void) // periodically called from audio callback
 		return;
 	}
 
-	assert(song.speed >= 32 && song.speed <= 255);
-	song.musicTime64 += musicTimeTab[song.speed-32]; // for playback counter
+	assert(song.speed >= 1 && song.speed <= 999);
+	song.musicTime64 += musicTimeTab[song.speed]; // for playback counter
 
 	readNewNote = false;
 	if (--song.timer == 0)

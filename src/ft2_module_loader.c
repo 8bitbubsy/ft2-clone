@@ -129,7 +129,7 @@ songS3MHeaderTyp;
 
 static volatile uint8_t loadedFormat;
 static volatile bool linearFreqTable, musicIsLoading, moduleLoaded, moduleFailedToLoad;
-static uint8_t oldPlayMode, pattBuff[12288];
+static uint8_t oldPlayMode, pattBuff[12288], packedPattData[65536];
 static const uint8_t stmEff[16] = { 0, 0, 11, 0, 10, 2, 1, 3, 4, 7, 0, 5 ,6, 0, 0, 0 };
 static SDL_Thread *thread;
 
@@ -143,7 +143,7 @@ static void setupLoadedModule(void);
 static void freeTmpModule(void);
 static bool loadInstrHeader(FILE *f, uint16_t i);
 static bool loadInstrSample(FILE *f, uint16_t i);
-void unpackPatt(uint8_t *dst, uint16_t inn, uint16_t len, int32_t antChn);
+void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn);
 static bool tmpPatternEmpty(uint16_t nr);
 static bool loadPatterns(FILE *f, uint16_t antPtn);
 
@@ -1752,8 +1752,8 @@ bool doLoadMusic(bool fromExternalThread)
 	songTmp.ver = h.ver;
 	linearFreqTable = h.flags & 1;
 
-	songTmp.speed = CLAMP(songTmp.speed, 32, 255);
-	songTmp.tempo = CLAMP(songTmp.tempo, 1, 31);
+	songTmp.speed = CLAMP(songTmp.speed, 1, 999);
+	songTmp.tempo = CLAMP(songTmp.tempo, 1, 99);
 
 	songTmp.initialTempo = songTmp.tempo;
 
@@ -2192,15 +2192,14 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 	return true;
 }
 
-void unpackPatt(uint8_t *dst, uint16_t inn, uint16_t len, int32_t antChn)
+void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 {
-	uint8_t note, data, *src;
+	uint8_t note, data;
 	int32_t srcEnd, srcIdx;
 
 	if (dst == NULL)
 		return;
 
-	src = dst + inn;
 	srcEnd = len * TRACK_WIDTH;
 	srcIdx = 0;
 
@@ -2280,8 +2279,8 @@ void clearUnusedChannels(tonTyp *p, int16_t pattLen, int32_t antChn)
 static bool loadPatterns(FILE *f, uint16_t antPtn)
 {
 	bool pattLenWarn;
-	uint8_t tmpLen, *pattPtr;
-	uint16_t i, a;
+	uint8_t tmpLen;
+	uint16_t i;
 	patternHeaderTyp ph;
 
 	pattLenWarn = false;
@@ -2324,6 +2323,11 @@ static bool loadPatterns(FILE *f, uint16_t antPtn)
 			goto pattCorrupt;
 
 		pattLensTmp[i] = ph.pattLen;
+		if (pattLensTmp[i] > MAX_PATT_LEN)
+		{
+			pattLensTmp[i] = MAX_PATT_LEN;
+			pattLenWarn = true;
+		}
 
 		if (ph.dataLen > 0)
 		{
@@ -2334,15 +2338,11 @@ static bool loadPatterns(FILE *f, uint16_t antPtn)
 				return false;
 			}
 
-			a = ph.pattLen * TRACK_WIDTH;
-
-			pattPtr = (uint8_t *)pattTmp[i];
-			memset(pattPtr, 0, a);
-
-			if (fread(&pattPtr[a - ph.dataLen], 1, ph.dataLen, f) != ph.dataLen)
+			if (fread(packedPattData, 1, ph.dataLen, f) != ph.dataLen)
 				goto pattCorrupt;
 
-			unpackPatt(pattPtr, a - ph.dataLen, ph.pattLen, songTmp.antChn);
+			unpackPatt((uint8_t *)pattTmp[i], packedPattData, pattLensTmp[i], songTmp.antChn);
+
 			clearUnusedChannels(pattTmp[i], pattLensTmp[i], songTmp.antChn);
 		}
 
@@ -2356,16 +2356,10 @@ static bool loadPatterns(FILE *f, uint16_t antPtn)
 
 			pattLensTmp[i] = 64;
 		}
-
-		if (pattLensTmp[i] > 256)
-		{
-			pattLensTmp[i] = 64;
-			pattLenWarn = true;
-		}
 	}
 
 	if (pattLenWarn)
-		okBoxThreadSafe(0, "System message", "The module contains pattern lengths above 256! They will be set to 64.");
+		okBoxThreadSafe(0, "System message", "This module contains pattern(s) with a length above 256! They will be truncated.");
 
 	return true;
 

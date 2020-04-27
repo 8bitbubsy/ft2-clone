@@ -215,7 +215,7 @@ static void dump_Close(FILE *f, uint32_t totalSamples)
 	tmpLen = ftell(f) - 8;
 
 	// go back and fill in WAV header
-	fseek(f, 0, SEEK_SET);
+	rewind(f);
 
 	wavHeader.chunkID = 0x46464952; // "RIFF"
 	wavHeader.chunkSize = tmpLen;
@@ -322,10 +322,10 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 
 	sampleCounter = 0;
 	renderDone = false;
-	loopCounter = 0;
+	loopCounter = 8;
 
 	editor.wavReachedEndFlag = false;
-	while (!renderDone && editor.wavIsRendering)
+	while (!renderDone)
 	{
 		samplesInChunk = 0;
 
@@ -339,7 +339,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 				break;
 			}
 
-			tickSamples = dump_RenderTick(ptr8) * 2; // *2 for stereo
+			tickSamples = dump_RenderTick(ptr8) << 1; // *2 for stereo
 
 			samplesInChunk += tickSamples;
 			sampleCounter  += tickSamples;
@@ -350,7 +350,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 			else
 				ptr8 += (tickSamples * sizeof (float));
 
-			if (++loopCounter > 16)
+			if (++loopCounter >= 8)
 			{
 				loopCounter = 0;
 				updateVisuals();

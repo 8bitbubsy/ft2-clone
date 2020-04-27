@@ -921,7 +921,7 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 				pattSyncData.patternPos = song.curReplayerPattPos;
 				pattSyncData.pattern = song.curReplayerPattNr;
 				pattSyncData.songPos = song.curReplayerSongPos;
-				pattSyncData.speed = (uint8_t)song.speed;
+				pattSyncData.speed = song.speed;
 				pattSyncData.tempo = (uint8_t)song.tempo;
 				pattSyncData.globalVol = (uint8_t)song.globVol;
 				pattSyncData.timestamp = audio.tickTime64;

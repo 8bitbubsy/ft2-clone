@@ -14,7 +14,6 @@ extern const uint8_t arpTab[32];
 extern const int8_t vibSineTab[256]; // for auto-vibrato
 extern const uint8_t vibTab[32];
 extern const uint16_t amigaPeriod[12 * 8];
-extern const uint16_t amigaFinePeriod[12 * 8];
 extern const uint16_t linearPeriods[1936];
 extern const uint16_t amigaPeriods[1936];
 

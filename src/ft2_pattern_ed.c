@@ -2182,11 +2182,30 @@ void drawSongRepS(void)
 
 void drawSongBPM(uint16_t val)
 {
+	char str[4];
+	const char *strOut;
+	
 	if (editor.ui.extended)
 		return;
 
-	assert(val < 256);
-	textOutFixed(145, 36, PAL_FORGRND, PAL_DESKTOP, dec3StrTab[val]);
+	if (val <= 255)
+	{
+		strOut = dec3StrTab[val];
+	}
+	else
+	{
+		if (val > 999)
+			val = 999;
+
+		str[0] = '0' + (char)(val / 100);
+		str[1] = '0' + ((val / 10) % 10);
+		str[2] = '0' + (val % 10);
+		str[3] = 0;
+
+		strOut = str;
+	}
+
+	textOutFixed(145, 36, PAL_FORGRND, PAL_DESKTOP, strOut);
 }
 
 void drawSongSpeed(uint16_t val)
@@ -2194,7 +2213,9 @@ void drawSongSpeed(uint16_t val)
 	if (editor.ui.extended)
 		return;
 
-	assert(val < 32);
+	if (val > 99)
+		val = 99;
+
 	textOutFixed(152, 50, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[val]);
 }
 

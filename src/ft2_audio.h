@@ -81,7 +81,8 @@ typedef struct
 
 typedef struct pattSyncData_t
 {
-	uint8_t pattern, globalVol, songPos, timer, speed, tempo, patternPos;
+	uint8_t pattern, globalVol, songPos, timer, tempo, patternPos;
+	uint16_t speed;
 	uint64_t timestamp;
 } pattSyncData_t;
 
