@@ -19,7 +19,8 @@
 
 static SDL_Thread *thread;
 
-static uint16_t packPatt(uint8_t *pattPtr, uint16_t numRows);
+static uint8_t packedPattData[65536];
+static uint16_t packPatt(uint8_t *writePtr, uint8_t *pattPtr, uint16_t numRows);
 
 static const char modSig[32][5] =
 {
@@ -29,14 +30,9 @@ static const char modSig[32][5] =
 	"25CH", "26CH", "27CH", "28CH", "29CH", "30CH", "31CH", "32CH"
 };
 
-// ft2_replayer.c
-extern const uint16_t amigaPeriod[12*8];
-
 bool saveXM(UNICHAR *filenameU)
 {
-	uint8_t *pattPtr;
 	int16_t ap, ai, i, j, k, a;
-	uint16_t b, c;
 	size_t result;
 	songHeaderTyp h;
 	patternHeaderTyp ph;
@@ -123,18 +119,10 @@ bool saveXM(UNICHAR *filenameU)
 		}
 		else
 		{
-			c = packPatt((uint8_t *)patt[i], pattLens[i]);
-			b = pattLens[i] * TRACK_WIDTH;
-			ph.dataLen = c;
+			ph.dataLen = packPatt(packedPattData, (uint8_t *)patt[i], pattLens[i]);
 
 			result = fwrite(&ph, ph.patternHeaderSize, 1, f);
-			result += fwrite(patt[i], ph.dataLen, 1, f);
-
-			pattPtr = (uint8_t *)patt[i];
-
-			memcpy(&pattPtr[b-c], patt[i], c);
-			unpackPatt(pattPtr, b - c, pattLens[i], song.antChn);
-			clearUnusedChannels(patt[i], pattLens[i], song.antChn);
+			result += fwrite(packedPattData, ph.dataLen, 1, f);
 
 			if (result != 2) // write was not OK
 			{
@@ -399,15 +387,15 @@ static bool saveMOD(UNICHAR *filenameU)
 		{
 			smp = &instr[i]->samp[0];
 
-			l1 = smp->len / 2;
-			l2 = smp->repS / 2;
-			l3 = smp->repL / 2;
+			l1 = smp->len >> 1;
+			l2 = smp->repS >> 1;
+			l3 = smp->repL >> 1;
 
 			if (smp->typ & 16)
 			{
-				l1 /= 2;
-				l2 /= 2;
-				l3 /= 2;
+				l1 >>= 1;
+				l2 >>= 1;
+				l3 >>= 1;
 			}
 
 			if (l1 > 32767)
@@ -543,7 +531,7 @@ static bool saveMOD(UNICHAR *filenameU)
 
 		restoreSample(smp);
 
-		l1 = smp->len / 2;
+		l1 = smp->len >> 1;
 		if (smp->typ & 16) // 16-bit sample (convert to 8-bit)
 		{
 			if (l1 > 65534)
@@ -580,7 +568,8 @@ static bool saveMOD(UNICHAR *filenameU)
 
 			if (l1 > 32767)
 				l1 = 32767;
-			l1 *= 2;
+
+			l1 <<= 1;
 
 			if (fwrite(smp->pek, 1, l1, f) != (size_t)l1)
 			{
@@ -640,9 +629,9 @@ void saveMusic(UNICHAR *filenameU)
 	SDL_DetachThread(thread);
 }
 
-static uint16_t packPatt(uint8_t *pattPtr, uint16_t numRows)
+static uint16_t packPatt(uint8_t *writePtr, uint8_t *pattPtr, uint16_t numRows)
 {
-	uint8_t bytes[5], packBits, *writePtr, *firstBytePtr;
+	uint8_t bytes[5], packBits, *firstBytePtr;
 	uint16_t totalPackLen;
 
 	totalPackLen = 0;
@@ -650,7 +639,6 @@ static uint16_t packPatt(uint8_t *pattPtr, uint16_t numRows)
 	if (pattPtr == NULL)
 		return 0;
 
-	writePtr = pattPtr;
 	for (uint16_t row = 0; row < numRows; row++)
 	{
 		for (uint16_t chn = 0; chn < song.antChn; chn++)
@@ -692,7 +680,7 @@ static uint16_t packPatt(uint8_t *pattPtr, uint16_t numRows)
 			totalPackLen += (uint16_t)(writePtr - firstBytePtr); // bytes writen
 		}
 
-		// skip unused channels
+		// skip unused channels (unpacked patterns always have 32 channels)
 		pattPtr += sizeof (tonTyp) * (MAX_VOICES - song.antChn);
 	}
 
