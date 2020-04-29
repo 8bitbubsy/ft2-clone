@@ -15,6 +15,7 @@
 #include "ft2_audio.h"
 #include "ft2_mouse.h"
 #include "ft2_pattern_ed.h"
+#include "ft2_structs.h"
 #include "rtmidi/rtmidi_c.h"
 
 // hide POSIX warnings
@@ -22,7 +23,9 @@
 #pragma warning(disable: 4996)
 #endif
 
-// MIDI INPUT ONLY!
+// This implements MIDI input only!
+
+midi_t midi; // globalized
 
 static volatile bool midiDeviceOpened;
 static bool recMIDIValidChn = true;
@@ -251,7 +254,7 @@ void recordMIDIEffect(uint8_t effTyp, uint8_t effData)
 		if (!allocatePattern(nr))
 			return;
 
-		note = &patt[nr][(editor.pattPos * MAX_VOICES) + editor.cursor.ch];
+		note = &patt[nr][(editor.pattPos * MAX_VOICES) + cursor.ch];
 		if (note->effTyp != effTyp || note->eff != effData)
 			setSongModifiedFlag();
 
@@ -460,7 +463,7 @@ void sbMidiInputSetPos(uint32_t pos)
 {
 	(void)pos;
 
-	if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
 		drawMidiInputList();
 }
 
@@ -468,7 +471,7 @@ bool testMidiInputDeviceListMouseDown(void)
 {
 	int32_t mx, my, deviceNum;
 
-	if (!editor.ui.configScreenShown || editor.currConfigScreen != CONFIG_SCREEN_MIDI_INPUT)
+	if (!ui.configScreenShown || editor.currConfigScreen != CONFIG_SCREEN_MIDI_INPUT)
 		return false; // we didn't click the area
 
 	if (!midi.initThreadDone)

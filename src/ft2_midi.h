@@ -9,7 +9,7 @@
 #define MIDI_INPUT_SELECTOR_BOX_WIDTH 247
 #define MAX_MIDI_DEVICES 99
 
-struct midi_t
+typedef struct midi_t
 {
 	char *inputDeviceName, *inputDeviceNames[MAX_MIDI_DEVICES];
 	volatile bool closeMidiOnExit, initThreadDone;
@@ -17,7 +17,9 @@ struct midi_t
 	bool enable, rescanDevicesFlag;
 	int16_t currMIDIVibDepth, currMIDIPitch;
 	int32_t numInputDevices;
-} midi;
+} midi_t;
+
+extern midi_t midi; // ft2_midi.c
 
 void closeMidiInDevice(void);
 void freeMidiIn(void);

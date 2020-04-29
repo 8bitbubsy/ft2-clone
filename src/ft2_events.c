@@ -31,10 +31,11 @@
 #include "ft2_keyboard.h"
 #include "ft2_sample_ed.h"
 #include "ft2_sample_ed_features.h"
+#include "ft2_structs.h"
 
 #define CRASH_TEXT "Oh no!\nThe Fasttracker II clone has crashed...\n\nA backup .xm was hopefully " \
-                   "saved to the current module directory.\n\nPlease report this to 8bitbubsy " \
-                   "(IRC or olav.sorensen@live.no).\nTry to mention what you did before the crash happened."
+                   "saved to the current module directory.\n\nPlease report this bug if you can.\n" \
+                   "Try to mention what you did before the crash happened."
 
 static bool backupMadeAfterCrash;
 
@@ -112,7 +113,7 @@ void handleEvents(void)
 		midi.rescanDevicesFlag = false;
 
 		rescanMidiInputDevices();
-		if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
+		if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
 			drawMidiInputList();
 	}
 #endif
@@ -158,15 +159,15 @@ void handleEvents(void)
 	if (editor.diskOpReadDone)
 	{
 		editor.diskOpReadDone = false;
-		if (editor.ui.diskOpShown)
+		if (ui.diskOpShown)
 			diskOp_DrawDirectory();
 	}
 
 	handleLoadMusicEvents();
 
 	if (editor.samplingAudioFlag) handleSamplingUpdates();
-	if (editor.ui.setMouseBusy) mouseAnimOn();
-	if (editor.ui.setMouseIdle) mouseAnimOff();
+	if (ui.setMouseBusy) mouseAnimOn();
+	if (ui.setMouseIdle) mouseAnimOff();
 
 	if (editor.updateWindowTitle)
 	{
@@ -495,7 +496,7 @@ static void handleInput(void)
 		}
 		else if (event.type == SDL_QUIT)
 		{
-			if (editor.ui.sysReqShown)
+			if (ui.sysReqShown)
 				continue;
 
 			if (editor.editTextFlag)

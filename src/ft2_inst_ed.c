@@ -21,6 +21,7 @@
 #include "ft2_module_loader.h"
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 #ifdef _MSC_VER
 #pragma pack(push)
@@ -339,15 +340,15 @@ void sbMidiBendPos(uint32_t pos)
 
 void updateNewSample(void)
 {
-	if (editor.ui.instrSwitcherShown)
+	if (ui.instrSwitcherShown)
 		updateInstrumentSwitcher();
 
 	updateSampleEditorSample();
 
-	if (editor.ui.sampleEditorShown)
+	if (ui.sampleEditorShown)
 		updateSampleEditor();
 
-	if (editor.ui.instEditorShown || editor.ui.instEditorExtShown)
+	if (ui.instEditorShown || ui.instEditorExtShown)
 		updateInstEditor();
 }
 
@@ -355,7 +356,7 @@ void updateNewInstrument(void)
 {
 	updateTextBoxPointers();
 
-	if (editor.ui.instrSwitcherShown)
+	if (ui.instrSwitcherShown)
 		updateInstrumentSwitcher();
 
 	editor.currVolEnvPoint = 0;
@@ -363,13 +364,13 @@ void updateNewInstrument(void)
 
 	updateSampleEditorSample();
 
-	if (editor.ui.sampleEditorShown)
+	if (ui.sampleEditorShown)
 		updateSampleEditor();
 
-	if (editor.ui.instEditorShown || editor.ui.instEditorExtShown)
+	if (ui.instEditorShown || ui.instEditorExtShown)
 		updateInstEditor();
 
-	if (editor.ui.advEditShown)
+	if (ui.advEditShown)
 		updateAdvEdit();
 }
 
@@ -1604,7 +1605,7 @@ bool testPianoKeysMouseDown(bool mouseButtonDown)
 	uint8_t key, note, octave;
 	int32_t mx, my, quotient, remainder;
 
-	if (!editor.ui.instEditorShown)
+	if (!ui.instEditorShown)
 		return false; // area not clicked
 
 	if (editor.curInstr == 0 || instr[editor.curInstr] == NULL)
@@ -2024,7 +2025,7 @@ void handleInstEditorRedrawing(void)
 
 void hideInstEditor(void)
 {
-	editor.ui.instEditorShown = false;
+	ui.instEditorShown = false;
 
 	hideScrollBar(SB_INST_VOL);
 	hideScrollBar(SB_INST_PAN);
@@ -2110,7 +2111,7 @@ void updateInstEditor(void)
 		s = &ins->samp[editor.curSmp];
 
 	// update instrument editor extension
-	if (editor.ui.instEditorExtShown)
+	if (ui.instEditorExtShown)
 	{
 		checkBoxes[CB_INST_EXT_MIDI].checked = ins->midiOn ? true : false;
 		checkBoxes[CB_INST_EXT_MUTE].checked = ins->mute ? true : false;
@@ -2127,7 +2128,7 @@ void updateInstEditor(void)
 		drawMIDIBend();
 	}
 
-	if (!editor.ui.instEditorShown)
+	if (!ui.instEditorShown)
 		return;
 
 	drawVolEnvSus();
@@ -2197,12 +2198,12 @@ void updateInstEditor(void)
 
 void showInstEditor(void)
 {
-	if (editor.ui.extended) exitPatternEditorExtended();
-	if (editor.ui.sampleEditorShown) hideSampleEditor();
-	if (editor.ui.sampleEditorExtShown) hideSampleEditorExt();
+	if (ui.extended) exitPatternEditorExtended();
+	if (ui.sampleEditorShown) hideSampleEditor();
+	if (ui.sampleEditorExtShown) hideSampleEditorExt();
 
 	hidePatternEditor();
-	editor.ui.instEditorShown = true;
+	ui.instEditorShown = true;
 
 	drawFramework(0,   173, 438,  87, FRAMEWORK_TYPE1);
 	drawFramework(0,   260, 438,  87, FRAMEWORK_TYPE1);
@@ -2315,10 +2316,10 @@ void showInstEditor(void)
 
 void toggleInstEditor(void)
 {
-	if (editor.ui.sampleEditorShown)
+	if (ui.sampleEditorShown)
 		hideSampleEditor();
 
-	if (editor.ui.instEditorShown)
+	if (ui.instEditorShown)
 	{
 		exitInstEditor();
 	}
@@ -2335,7 +2336,7 @@ bool testInstrVolEnvMouseDown(bool mouseButtonDown)
 	int32_t x, y, mx, my, minX, maxX;
 	instrTyp *ins;
 
-	if (!editor.ui.instEditorShown || editor.curInstr == 0 || instr[editor.curInstr] == NULL)
+	if (!ui.instEditorShown || editor.curInstr == 0 || instr[editor.curInstr] == NULL)
 		return false;
 
 	ins = instr[editor.curInstr];
@@ -2434,7 +2435,7 @@ bool testInstrPanEnvMouseDown(bool mouseButtonDown)
 	int32_t x, y, mx, my, minX, maxX;
 	instrTyp *ins;
 
-	if (!editor.ui.instEditorShown || editor.curInstr == 0 || instr[editor.curInstr] == NULL)
+	if (!ui.instEditorShown || editor.curInstr == 0 || instr[editor.curInstr] == NULL)
 		return false;
 
 	ins = instr[editor.curInstr];
@@ -2606,14 +2607,14 @@ void drawInstEditorExt(void)
 
 void showInstEditorExt(void)
 {
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
 	showTopScreen(false);
 
-	editor.ui.instEditorExtShown = true;
-	editor.ui.scopesShown = false;
+	ui.instEditorExtShown = true;
+	ui.scopesShown = false;
 	drawInstEditorExt();
 }
 
@@ -2631,14 +2632,14 @@ void hideInstEditorExt(void)
 	hidePushButton(PB_INST_EXT_MIDI_BEND_DOWN);
 	hidePushButton(PB_INST_EXT_MIDI_BEND_UP);
 
-	editor.ui.instEditorExtShown = false;
-	editor.ui.scopesShown = true;
+	ui.instEditorExtShown = false;
+	ui.scopesShown = true;
 	drawScopeFramework();
 }
 
 void toggleInstEditorExt(void)
 {
-	if (editor.ui.instEditorExtShown)
+	if (ui.instEditorExtShown)
 		hideInstEditorExt();
 	else
 		showInstEditorExt();
@@ -2686,7 +2687,7 @@ static bool testInstrSwitcherNormal(void) // Welcome to the Jungle
 				editor.srcInstr = newEntry;
 				updateInstrumentSwitcher();
 
-				if (editor.ui.advEditShown)
+				if (ui.advEditShown)
 					updateAdvEdit();
 			}
 
@@ -2711,8 +2712,8 @@ static bool testInstrSwitcherNormal(void) // Welcome to the Jungle
 				updateInstrumentSwitcher();
 				updateSampleEditorSample();
 
-				     if (editor.ui.sampleEditorShown) updateSampleEditor();
-				else if (editor.ui.instEditorShown)   updateInstEditor();
+				     if (ui.sampleEditorShown) updateSampleEditor();
+				else if (ui.instEditorShown)   updateInstEditor();
 			}
 
 			return true;
@@ -2763,7 +2764,7 @@ static bool testInstrSwitcherExtended(void) // Welcome to the Jungle 2 - The Hap
 				editor.srcInstr = newEntry;
 				updateInstrumentSwitcher();
 
-				if (editor.ui.advEditShown)
+				if (ui.advEditShown)
 					updateAdvEdit();
 			}
 
@@ -2805,7 +2806,7 @@ static bool testInstrSwitcherExtended(void) // Welcome to the Jungle 2 - The Hap
 				editor.srcInstr = newEntry;
 				updateInstrumentSwitcher();
 
-				if (editor.ui.advEditShown)
+				if (ui.advEditShown)
 					updateAdvEdit();
 			}
 
@@ -2836,10 +2837,10 @@ static bool testInstrSwitcherExtended(void) // Welcome to the Jungle 2 - The Hap
 
 bool testInstrSwitcherMouseDown(void)
 {
-	if (!editor.ui.instrSwitcherShown)
+	if (!ui.instrSwitcherShown)
 		return false;
 
-	if (editor.ui.extended)
+	if (ui.extended)
 		return testInstrSwitcherExtended();
 	else
 		return testInstrSwitcherNormal();

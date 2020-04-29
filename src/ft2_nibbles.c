@@ -10,6 +10,7 @@
 #include "ft2_pattern_ed.h"
 #include "ft2_bmp.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 #define NI_MAXLEVEL 30
 
@@ -561,7 +562,7 @@ void moveNibblePlayers(void)
 {
 	int16_t i, j;
 
-	if (editor.ui.sysReqShown || --NI_CurTick60Hz != 0)
+	if (ui.sysReqShown || --NI_CurTick60Hz != 0)
 		return;
 
 	if (nibblesBufferFull(0))
@@ -731,11 +732,11 @@ NoMove:
 
 void showNibblesScreen(void)
 {
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
-	editor.ui.nibblesShown = true;
+	ui.nibblesShown = true;
 
 	drawFramework(0,     0, 632,   3, FRAMEWORK_TYPE1);
 	drawFramework(0,     3, 148,  49, FRAMEWORK_TYPE1);
@@ -812,7 +813,7 @@ void hideNibblesScreen(void)
 	hideCheckBox(CB_NIBBLES_GRID);
 	hideCheckBox(CB_NIBBLES_WRAP);
 
-	editor.ui.nibblesShown = false;
+	ui.nibblesShown = false;
 }
 
 void exitNibblesScreen(void)

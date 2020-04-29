@@ -6,6 +6,7 @@
 #include "ft2_bmp.h"
 #include "ft2_video.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 // ported from original FT2 code
 
@@ -235,12 +236,10 @@ extern uint32_t *unpackedData;
 void showAboutScreen(void) // called once when About screen is opened
 {
 #define TEXT_BORDER_COL 0x202020
-
-	const char *infoString = "Clone by Olav \"8bitbubsy\" S\025rensen - https://16-bits.org";
 	char verText[32];
 	uint16_t x, y;
 
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
@@ -254,24 +253,25 @@ void showAboutScreen(void) // called once when About screen is opened
 
 	setCustomPalColor(TEXT_BORDER_COL); // sets PAL_CUSTOM
 
-	x = 5 + (SCREEN_W - textWidth(infoString)) / 2;
+	const char *infoString = "Clone by Olav \"8bitbubsy\" S\025rensen";
+	x = (SCREEN_W - textWidth(infoString)) >> 1;
 	y = 147;
 	textOutBorder(x, y, PAL_FORGRND, PAL_CUSTOM, infoString);
 
 	sprintf(verText, "v%s (compiled on %s)", PROG_VER_STR, __DATE__);
-	x = ((3 + ABOUT_SCREEN_W) - textWidth(verText)) / 2;
-	y = (3 + ABOUT_SCREEN_H) - ((FONT1_CHAR_H - 2) + 3);
+	x = (SCREEN_W - textWidth(verText)) >> 1;
+	y = 159;
 	textOutBorder(x, y, PAL_FORGRND, PAL_CUSTOM, verText);
 
 	aboutInit();
 
-	editor.ui.aboutScreenShown = true;
+	ui.aboutScreenShown = true;
 }
 
 void hideAboutScreen(void)
 {
 	hidePushButton(PB_EXIT_ABOUT);
-	editor.ui.aboutScreenShown = false;
+	ui.aboutScreenShown = false;
 }
 
 void exitAboutScreen(void)

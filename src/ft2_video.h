@@ -16,7 +16,7 @@ enum
 	SPRITE_NUM
 };
 
-struct video_t
+typedef struct video_t
 {
 	bool fullscreen, showFPSCounter;
 	uint32_t xScale, yScale;
@@ -33,7 +33,7 @@ struct video_t
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
 	SDL_Surface *iconSurface;
-} video;
+} video_t;
 
 typedef struct
 {
@@ -43,6 +43,8 @@ typedef struct
 	int16_t newX, newY, x, y;
 	uint16_t w, h;
 } sprite_t;
+
+extern video_t video; // ft2_video.c
 
 void resetFPSCounter(void);
 void beginFPSCounter(void);

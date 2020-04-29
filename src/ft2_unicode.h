@@ -17,7 +17,7 @@ typedef wchar_t UNICHAR;
 #define UNICHAR_STRCMP(a, b) wcscmp(a, b)
 #define UNICHAR_STRNCMP(a, b, c) wcsncmp(a, b, c)
 #define UNICHAR_STRCAT(a, b) wcscat(a, b)
-#define UNICHAR_STRDUP(a) wcsdup(a)
+#define UNICHAR_STRDUP(a) _wcsdup(a)
 #define UNICHAR_FOPEN(a, b) _wfopen(a, L ## b)
 #define UNICHAR_CHDIR(a) _wchdir(a)
 #define UNICHAR_GETCWD(a, b) _wgetcwd(a, b)

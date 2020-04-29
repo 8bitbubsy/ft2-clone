@@ -14,6 +14,7 @@
 #include "ft2_sysreqs.h"
 #include "ft2_textboxes.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 enum
 {
@@ -70,7 +71,7 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 	uint16_t pattLen;
 	tonTyp *ton;
 
-	if (editor.cursor.object == CURSOR_NOTE)
+	if (cursor.object == CURSOR_NOTE)
 	{
 		// the edit cursor is at the note slot
 
@@ -88,7 +89,7 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 
 	// convert key to slot data
 
-	if (editor.cursor.object == CURSOR_VOL1)
+	if (cursor.object == CURSOR_VOL1)
 	{
 		// volume column effect type (mixed keys)
 
@@ -101,7 +102,7 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 		if (i == KEY2VOL_ENTRIES)
 			i = -1; // invalid key for slot
 	}
-	else if (editor.cursor.object == CURSOR_EFX0)
+	else if (cursor.object == CURSOR_EFX0)
 	{
 		// effect type (mixed keys)
 
@@ -133,8 +134,8 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 
 	// insert slot data
 
-	ton = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + editor.cursor.ch];
-	switch (editor.cursor.object)
+	ton = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
+	switch (cursor.object)
 	{
 		case CURSOR_INST1:
 		{
@@ -234,7 +235,7 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 	if (i == 0) // if we inserted a zero, check if pattern is empty, for killing
 		killPatternIfUnused(editor.editPattern);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	return true;
 }
 
@@ -352,7 +353,7 @@ void recordNote(uint8_t note, int8_t vol)
 		}
 		else
 		{
-			c = editor.cursor.ch;
+			c = cursor.ch;
 		}
 
 		for (i = 0; i < song.antChn; i++)
@@ -395,7 +396,7 @@ void recordNote(uint8_t note, int8_t vol)
 		}
 		else
 		{
-			c = editor.cursor.ch;
+			c = cursor.ch;
 		}
 
 		for (i = 0; i < song.antChn; i++)
@@ -454,7 +455,7 @@ void recordNote(uint8_t note, int8_t vol)
 					}
 				}
 
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 				setSongModifiedFlag();
 			}
 		}
@@ -525,7 +526,7 @@ void recordNote(uint8_t note, int8_t vol)
 					}
 				}
 
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 				setSongModifiedFlag();
 			}
 		}
@@ -547,7 +548,7 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 		if (patt[editor.editPattern] == NULL)
 			return true;
 
-		note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + editor.cursor.ch];
+		note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
 
 		if (keyb.leftShiftPressed)
 		{
@@ -569,7 +570,7 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 		}
 		else
 		{
-			if (editor.cursor.object == CURSOR_VOL1 || editor.cursor.object == CURSOR_VOL2)
+			if (cursor.object == CURSOR_VOL1 || cursor.object == CURSOR_VOL2)
 			{
 				// delete volume column
 				note->vol = 0;
@@ -589,7 +590,7 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 		if (playMode == PLAYMODE_EDIT && pattLen >= 1)
 			setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
-		editor.ui.updatePatternEditor = true;
+		ui.updatePatternEditor = true;
 		setSongModifiedFlag();
 
 		return true;
@@ -615,12 +616,12 @@ void writeToMacroSlot(uint8_t slot)
 
 	if (patt[editor.editPattern] != NULL)
 	{
-		note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + editor.cursor.ch];
+		note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
 		writeVol = note->vol;
 		writeEff = (note->effTyp << 8) | note->eff;
 	}
 
-	if (editor.cursor.object == CURSOR_VOL1 || editor.cursor.object == CURSOR_VOL2)
+	if (cursor.object == CURSOR_VOL1 || cursor.object == CURSOR_VOL2)
 		config.volMacro[slot] = writeVol;
 	else
 		config.comMacro[slot] = writeEff;
@@ -639,9 +640,9 @@ void writeFromMacroSlot(uint8_t slot)
 		return;
 
 	pattLen = pattLens[editor.editPattern];
-	note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + editor.cursor.ch];
+	note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
 
-	if (editor.cursor.object == CURSOR_VOL1 || editor.cursor.object == CURSOR_VOL2)
+	if (cursor.object == CURSOR_VOL1 || cursor.object == CURSOR_VOL2)
 	{
 		note->vol = (uint8_t)config.volMacro[slot];
 	}
@@ -666,7 +667,7 @@ void writeFromMacroSlot(uint8_t slot)
 
 	killPatternIfUnused(editor.editPattern);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -691,14 +692,14 @@ void insertPatternNote(void)
 	if (pattLen > 1)
 	{
 		for (int32_t i = pattLen-2; i >= pattPos; i--)
-			pattPtr[((i + 1) * MAX_VOICES) + editor.cursor.ch] = pattPtr[(i * MAX_VOICES) + editor.cursor.ch];
+			pattPtr[((i + 1) * MAX_VOICES) + cursor.ch] = pattPtr[(i * MAX_VOICES) + cursor.ch];
 	}
 
-	memset(&pattPtr[(pattPos * MAX_VOICES) + editor.cursor.ch], 0, sizeof (tonTyp));
+	memset(&pattPtr[(pattPos * MAX_VOICES) + cursor.ch], 0, sizeof (tonTyp));
 
 	killPatternIfUnused(nr);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -734,7 +735,7 @@ void insertPatternLine(void)
 		killPatternIfUnused(nr);
 	}
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -760,9 +761,9 @@ void deletePatternNote(void)
 			editor.pattPos = song.pattPos = pattPos;
 
 			for (int32_t i = pattPos; i < pattLen-1; i++)
-				pattPtr[(i * MAX_VOICES) + editor.cursor.ch] = pattPtr[((i + 1) * MAX_VOICES) + editor.cursor.ch];
+				pattPtr[(i * MAX_VOICES) + cursor.ch] = pattPtr[((i + 1) * MAX_VOICES) + cursor.ch];
 
-			memset(&pattPtr[((pattLen - 1) * MAX_VOICES) + editor.cursor.ch], 0, sizeof (tonTyp));
+			memset(&pattPtr[((pattLen - 1) * MAX_VOICES) + cursor.ch], 0, sizeof (tonTyp));
 		}
 	}
 	else
@@ -776,7 +777,7 @@ void deletePatternNote(void)
 
 	killPatternIfUnused(nr);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -824,7 +825,7 @@ void deletePatternLine(void)
 
 	killPatternIfUnused(nr);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -845,7 +846,7 @@ static void countOverflowingNotes(uint8_t currInsOnly, uint8_t transpMode, int8_
 			if (pattPtr == NULL)
 				return; // empty pattern
 
-			pattPtr += editor.cursor.ch;
+			pattPtr += cursor.ch;
 
 			pattLen = pattLens[editor.editPattern];
 			for (row = 0; row < pattLen; row++)
@@ -976,7 +977,7 @@ void doTranspose(void)
 			if (pattPtr == NULL)
 				return; // empty pattern
 
-			pattPtr += editor.cursor.ch;
+			pattPtr += cursor.ch;
 
 			pattLen = pattLens[editor.editPattern];
 			for (row = 0; row < pattLen; row++)
@@ -1094,7 +1095,7 @@ void doTranspose(void)
 		default: break;
 	}
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1401,19 +1402,19 @@ void cutTrack(void)
 	{
 		memset(trackCopyBuff, 0, MAX_PATT_LEN * sizeof (tonTyp));
 		for (i = 0; i < pattLen; i++)
-			copyNote(&pattPtr[(i * MAX_VOICES) + editor.cursor.ch], &trackCopyBuff[i]);
+			copyNote(&pattPtr[(i * MAX_VOICES) + cursor.ch], &trackCopyBuff[i]);
 
 		trkBufLen = pattLen;
 	}
 
 	pauseMusic();
 	for (i = 0; i < pattLen; i++)
-		pasteNote(&clearNote, &pattPtr[(i * MAX_VOICES) + editor.cursor.ch]);
+		pasteNote(&clearNote, &pattPtr[(i * MAX_VOICES) + cursor.ch]);
 	resumeMusic();
 
 	killPatternIfUnused(editor.editPattern);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1430,7 +1431,7 @@ void copyTrack(void)
 
 	memset(trackCopyBuff, 0, MAX_PATT_LEN * sizeof (tonTyp));
 	for (i = 0; i < pattLen; i++)
-		copyNote(&pattPtr[(i * MAX_VOICES) + editor.cursor.ch], &trackCopyBuff[i]);
+		copyNote(&pattPtr[(i * MAX_VOICES) + cursor.ch], &trackCopyBuff[i]);
 
 	trkBufLen = pattLen;
 }
@@ -1448,12 +1449,12 @@ void pasteTrack(void)
 
 	pauseMusic();
 	for (i = 0; i < pattLen; i++)
-		pasteNote(&trackCopyBuff[i], &pattPtr[(i * MAX_VOICES) + editor.cursor.ch]);
+		pasteNote(&trackCopyBuff[i], &pattPtr[(i * MAX_VOICES) + cursor.ch]);
 	resumeMusic();
 
 	killPatternIfUnused(editor.editPattern);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1490,7 +1491,7 @@ void cutPattern(void)
 
 	killPatternIfUnused(editor.editPattern);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1514,7 +1515,7 @@ void copyPattern(void)
 
 	ptnBufLen = pattLen;
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 }
 
 void pastePattern(void)
@@ -1547,7 +1548,7 @@ void pastePattern(void)
 
 	killPatternIfUnused(editor.editPattern);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1590,7 +1591,7 @@ void cutBlock(void)
 
 	killPatternIfUnused(editor.editPattern);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1631,7 +1632,7 @@ void pasteBlock(void)
 
 	pattLen = pattLens[editor.editPattern];
 
-	xpos = editor.cursor.ch;
+	xpos = cursor.ch;
 	ypos = editor.pattPos;
 
 	j = markXSize;
@@ -1657,7 +1658,7 @@ void pasteBlock(void)
 
 	killPatternIfUnused(editor.editPattern);
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1702,7 +1703,7 @@ void remapBlock(void)
 	             editor.srcInstr, editor.curInstr);
 	resumeMusic();
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1713,12 +1714,12 @@ void remapTrack(void)
 
 	pauseMusic();
 	remapInstrXY(editor.editPattern,
-	             editor.cursor.ch, 0,
-	             editor.cursor.ch, pattLens[editor.editPattern] - 1,
+	             cursor.ch, 0,
+	             cursor.ch, pattLens[editor.editPattern] - 1,
 	             editor.srcInstr, editor.curInstr);
 	resumeMusic();
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1734,7 +1735,7 @@ void remapPattern(void)
 	             editor.srcInstr, editor.curInstr);
 	resumeMusic();
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1757,7 +1758,7 @@ void remapSong(void)
 	}
 	resumeMusic();
 
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
@@ -1882,7 +1883,7 @@ void scaleFadeVolumeTrack(void)
 	pauseMusic();
 	for (uint16_t row = 0; row < pattLen; row++)
 	{
-		scaleNote(editor.editPattern, editor.cursor.ch, row, dVol);
+		scaleNote(editor.editPattern, cursor.ch, row, dVol);
 		dVol += dIPy;
 	}
 	resumeMusic();

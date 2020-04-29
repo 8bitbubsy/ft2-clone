@@ -41,6 +41,8 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src);
 static uint8_t *loadBMPTo1Bit(const uint8_t *src);
 static uint8_t *loadBMPTo4BitPal(const uint8_t *src);
 
+bmp_t bmp; // globalized
+
 // if you match a color in this table, you have the real palette index (LUT pos)
 #define NUM_CUSTOM_PALS 17
 static const uint32_t bmpCustomPalette[NUM_CUSTOM_PALS] =

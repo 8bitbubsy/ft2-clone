@@ -22,9 +22,9 @@
 #include "ft2_audio.h"
 #include "ft2_trim.h"
 #include "ft2_sample_ed_features.h"
+#include "ft2_structs.h"
 
-static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey);
-static bool checkModifiedKeys(SDL_Keycode keycode);
+keyb_t keyb; // globalized
 
 static const uint8_t scancodeKey2Note[52] = // keys (USB usage page standard) to FT2 notes look-up table
 {
@@ -36,6 +36,9 @@ static const uint8_t scancodeKey2Note[52] = // keys (USB usage page standard) to
 	0x00, 0x1F, 0x1E, 0x20, 0x13, 0x00, 0x10, 0x00,
 	0x00, 0x0D, 0x0F, 0x11
 };
+
+static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey);
+static bool checkModifiedKeys(SDL_Keycode keycode);
 
 int8_t scancodeKeyToNote(SDL_Scancode scancode)
 {
@@ -76,18 +79,19 @@ void keyUpHandler(SDL_Scancode scancode, SDL_Keycode keycode)
 {
 	(void)keycode;
 
-	if (editor.editTextFlag || editor.ui.sysReqShown)
+	if (editor.editTextFlag || ui.sysReqShown)
 		return; // kludge: don't handle key up! (XXX: Is this hack really needed anymore?)
 
 	/* Yet another kludge for not leaving a ghost key-up event after an inputBox/okBox
-	** was exited with a key press. They could be picked up as note release events. */
+	** was exited with a key press. They could be picked up as note release events.
+	*/
 	if (keyb.ignoreCurrKeyUp)
 	{
 		keyb.ignoreCurrKeyUp = false;
 		return;
 	}
 
-	if (editor.cursor.object == CURSOR_NOTE && !keyb.keyModifierDown)
+	if (cursor.object == CURSOR_NOTE && !keyb.keyModifierDown)
 		testNoteKeysRelease(scancode);
 
 	if (scancode == SDL_SCANCODE_KP_PLUS)
@@ -105,12 +109,12 @@ void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepea
 	if (mouse.mode != MOUSE_MODE_NORMAL)
 		setMouseMode(MOUSE_MODE_NORMAL);
 
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 	{
 		if (keycode == SDLK_RETURN)
-			editor.ui.sysReqEnterPressed = true;
+			ui.sysReqEnterPressed = true;
 		else if (keycode == SDLK_ESCAPE)
-			editor.ui.sysReqShown = false;
+			ui.sysReqShown = false;
 
 		return;
 	}
@@ -161,7 +165,6 @@ void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepea
 
 static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 {
-	bool audioWasntLocked;
 	uint16_t pattLen;
 
 	// if we're holding numpad plus but not pressing bank keys, don't check any other key
@@ -308,9 +311,9 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 					editor.ID_Add++;
 			}
 
-			if (!editor.ui.nibblesShown     && !editor.ui.configScreenShown &&
-				!editor.ui.aboutScreenShown && !editor.ui.diskOpShown       &&
-				!editor.ui.helpScreenShown  && !editor.ui.extended)
+			if (!ui.nibblesShown     && !ui.configScreenShown &&
+				!ui.aboutScreenShown && !ui.diskOpShown       &&
+				!ui.helpScreenShown  && !ui.extended)
 			{
 				drawIDAdd();
 			}
@@ -320,7 +323,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		default: break;
 	}
 
-	// no normal key (keycode) pressed (XXX: shouldn't happen? Whatever...)
+	// no normal key (keycode) pressed (XXX: shouldn't happen..?)
 	if (keycode == SDLK_UNKNOWN)
 		return;
 
@@ -331,7 +334,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 		case SDLK_DELETE: // non-FT2 addition
 		{
-			if (editor.ui.sampleEditorShown)
+			if (ui.sampleEditorShown)
 				sampCut();
 		}
 		break;
@@ -345,18 +348,19 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 				if (!allocatePattern(editor.editPattern))
 					break;
 
-				patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + editor.cursor.ch].ton = 97;
+				patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch].ton = 97;
 
 				pattLen = pattLens[editor.editPattern];
 				if (playMode == PLAYMODE_EDIT && pattLen >= 1)
 					setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 				setSongModifiedFlag();
 			}
 		}
 		break;
 
+		// This is maybe not ideal to implement...
 		//case SDLK_PRINTSCREEN: togglePatternEditorExtended(); break;
 
 		// EDIT/PLAY KEYS
@@ -382,7 +386,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 				lockMixerCallback();
 				memset(editor.keyOnTab, 0, sizeof (editor.keyOnTab));
 				playMode = PLAYMODE_EDIT;
-				editor.ui.updatePosSections = true; // for updating mode text
+				ui.updatePosSections = true; // for updating mode text
 				unlockMixerCallback();
 			}
 			else
@@ -482,7 +486,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (!songPlaying)
 			{
 				editor.pattPos = (uint8_t)song.pattPos;
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 			}
 
 			unlockAudio();
@@ -500,7 +504,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (!songPlaying)
 			{
 				editor.pattPos = (uint8_t)song.pattPos;
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 			}
 
 			unlockAudio();
@@ -518,7 +522,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (!songPlaying)
 			{
 				editor.pattPos = (uint8_t)song.pattPos;
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 			}
 
 			unlockAudio();
@@ -536,7 +540,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (!songPlaying)
 			{
 				editor.pattPos = (uint8_t)song.pattPos;
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 			}
 
 			unlockAudio();
@@ -556,7 +560,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 		case SDLK_BACKSPACE:
 		{
-			     if (editor.ui.diskOpShown) diskOpGoParent();
+			     if (ui.diskOpShown) diskOpGoParent();
 			else if (keyb.leftShiftPressed) deletePatternLine();
 			else                            deletePatternNote();
 		}
@@ -597,7 +601,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 		case SDLK_PAGEUP:
 		{
-			audioWasntLocked = !audio.locked;
+			const bool audioWasntLocked = !audio.locked;
 			if (audioWasntLocked)
 				lockAudio();
 
@@ -609,7 +613,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (!songPlaying)
 			{
 				editor.pattPos = (uint8_t)song.pattPos;
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 			}
 
 			if (audioWasntLocked)
@@ -619,7 +623,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 		case SDLK_PAGEDOWN:
 		{
-			audioWasntLocked = !audio.locked;
+			const bool audioWasntLocked = !audio.locked;
 			if (audioWasntLocked)
 				lockAudio();
 
@@ -631,7 +635,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (!songPlaying)
 			{
 				editor.pattPos = (uint8_t)song.pattPos;
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 			}
 
 			if (audioWasntLocked)
@@ -641,7 +645,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 		case SDLK_HOME:
 		{
-			audioWasntLocked = !audio.locked;
+			const bool audioWasntLocked = !audio.locked;
 			if (audioWasntLocked)
 				lockAudio();
 
@@ -649,7 +653,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (!songPlaying)
 			{
 				editor.pattPos = (uint8_t)song.pattPos;
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 			}
 
 			if (audioWasntLocked)
@@ -659,7 +663,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 		case SDLK_END:
 		{
-			audioWasntLocked = !audio.locked;
+			const bool audioWasntLocked = !audio.locked;
 			if (audioWasntLocked)
 				lockAudio();
 
@@ -667,7 +671,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (!songPlaying)
 			{
 				editor.pattPos = (uint8_t)song.pattPos;
-				editor.ui.updatePatternEditor = true;
+				ui.updatePatternEditor = true;
 			}
 
 			if (audioWasntLocked)
@@ -753,7 +757,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_a:
 			if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					rangeAll();
 				else
 					showAdvEdit();
@@ -762,7 +766,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			}
 			else if (keyb.leftAltPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					rangeAll();
 				else
 					jumpToChannel(8);
@@ -774,7 +778,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_b:
 			if (keyb.leftCtrlPressed)
 			{
-				if (!editor.ui.aboutScreenShown)
+				if (!ui.aboutScreenShown)
 					showAboutScreen();
 
 				return true;
@@ -784,26 +788,26 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_c:
 			if (keyb.leftAltPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 				{
 					sampCopy();
 				}
 				else
 				{
 					// mark current track (non-FT2 feature)
-					pattMark.markX1 = editor.cursor.ch;
+					pattMark.markX1 = cursor.ch;
 					pattMark.markX2 = pattMark.markX1;
 					pattMark.markY1 = 0;
 					pattMark.markY2 = pattLens[editor.editPattern];
 
-					editor.ui.updatePatternEditor = true;
+					ui.updatePatternEditor = true;
 				}
 
 				return true;
 			}
 			else if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					sampCopy();
 				else
 					showConfigScreen();
@@ -820,7 +824,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			}
 			else if (keyb.leftCtrlPressed)
 			{
-				if (!editor.ui.diskOpShown)
+				if (!ui.diskOpShown)
 					showDiskOpScreen();
 
 				return true;
@@ -835,10 +839,10 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			}
 			else if (keyb.leftCtrlPressed)
 			{
-				if (editor.ui.aboutScreenShown)  hideAboutScreen();
-				if (editor.ui.configScreenShown) hideConfigScreen();
-				if (editor.ui.helpScreenShown)   hideHelpScreen();
-				if (editor.ui.nibblesShown)      hideNibblesScreen();
+				if (ui.aboutScreenShown)  hideAboutScreen();
+				if (ui.configScreenShown) hideConfigScreen();
+				if (ui.helpScreenShown)   hideHelpScreen();
+				if (ui.nibblesShown)      hideNibblesScreen();
 
 				showSampleEditorExt();
 				return true;
@@ -860,7 +864,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				video.showFPSCounter ^= 1;
 				if (!video.showFPSCounter)
 				{
-					if (editor.ui.extended) // yet another kludge...
+					if (ui.extended) // yet another kludge...
 						exitPatternEditorExtended();
 
 					showTopScreen(false);
@@ -926,10 +930,10 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_m:
 			if (keyb.leftCtrlPressed)
 			{
-				if (editor.ui.aboutScreenShown)  hideAboutScreen();
-				if (editor.ui.configScreenShown) hideConfigScreen();
-				if (editor.ui.helpScreenShown)   hideHelpScreen();
-				if (editor.ui.nibblesShown)      hideNibblesScreen();
+				if (ui.aboutScreenShown)  hideAboutScreen();
+				if (ui.configScreenShown) hideConfigScreen();
+				if (ui.helpScreenShown)   hideHelpScreen();
+				if (ui.nibblesShown)      hideNibblesScreen();
 
 				showInstEditorExt();
 
@@ -948,11 +952,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_p:
 			if (keyb.leftCtrlPressed)
 			{
-				if (!editor.ui.patternEditorShown)
+				if (!ui.patternEditorShown)
 				{
-					if (editor.ui.sampleEditorShown)    hideSampleEditor();
-					if (editor.ui.sampleEditorExtShown) hideSampleEditorExt();
-					if (editor.ui.instEditorShown)      hideInstEditor();
+					if (ui.sampleEditorShown)    hideSampleEditor();
+					if (ui.sampleEditorExtShown) hideSampleEditorExt();
+					if (ui.instEditorShown)      hideInstEditor();
 
 					showPatternEditor();
 				}
@@ -972,7 +976,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_r:
 			if (keyb.leftAltPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					sampCrop();
 				else
 					jumpToChannel(3);
@@ -989,7 +993,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_s:
 			if (keyb.leftAltPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					showRange();
 				else
 					jumpToChannel(9);
@@ -1027,25 +1031,25 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_v:
 			if (keyb.leftAltPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					sampPaste();
-				else if (!editor.ui.instEditorShown)
+				else if (!ui.instEditorShown)
 					scaleFadeVolumeBlock();
 
 				return true;
 			}
 			else if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					sampPaste();
-				else if (!editor.ui.instEditorShown)
+				else if (!ui.instEditorShown)
 					scaleFadeVolumePattern();
 
 				return true;
 			}
 			else if (keyb.leftShiftPressed)
 			{
-				if (!editor.ui.sampleEditorShown && !editor.ui.instEditorShown)
+				if (!ui.sampleEditorShown && !ui.instEditorShown)
 				{
 					keyb.ignoreTextEditKey = true; // ignore key from first frame
 					scaleFadeVolumeTrack();
@@ -1066,29 +1070,29 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_x:
 			if (keyb.leftAltPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					sampCut();
 
 				return true;
 			}
 			else if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
 			{
-				if (editor.ui.extended)
+				if (ui.extended)
 					exitPatternEditorExtended();
 
-				if (editor.ui.sampleEditorShown)    hideSampleEditor();
-				if (editor.ui.sampleEditorExtShown) hideSampleEditorExt();
-				if (editor.ui.instEditorShown)      hideInstEditor();
-				if (editor.ui.instEditorExtShown)   hideInstEditorExt();
-				if (editor.ui.transposeShown)       hideTranspose();
-				if (editor.ui.aboutScreenShown)     hideAboutScreen();
-				if (editor.ui.configScreenShown)    hideConfigScreen();
-				if (editor.ui.helpScreenShown)      hideHelpScreen();
-				if (editor.ui.nibblesShown)         hideNibblesScreen();
-				if (editor.ui.diskOpShown)          hideDiskOpScreen();
-				if (editor.ui.advEditShown)         hideAdvEdit();
-				if (editor.ui.wavRendererShown)     hideWavRenderer();
-				if (editor.ui.trimScreenShown)      hideTrimScreen();
+				if (ui.sampleEditorShown)    hideSampleEditor();
+				if (ui.sampleEditorExtShown) hideSampleEditorExt();
+				if (ui.instEditorShown)      hideInstEditor();
+				if (ui.instEditorExtShown)   hideInstEditorExt();
+				if (ui.transposeShown)       hideTranspose();
+				if (ui.aboutScreenShown)     hideAboutScreen();
+				if (ui.configScreenShown)    hideConfigScreen();
+				if (ui.helpScreenShown)      hideHelpScreen();
+				if (ui.nibblesShown)         hideNibblesScreen();
+				if (ui.diskOpShown)          hideDiskOpScreen();
+				if (ui.advEditShown)         hideAdvEdit();
+				if (ui.wavRendererShown)     hideWavRenderer();
+				if (ui.trimScreenShown)      hideTrimScreen();
 
 				showTopScreen(false);
 				showBottomScreen();
@@ -1110,7 +1114,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_z:
 			if (keyb.leftAltPressed)
 			{
-				if (editor.ui.sampleEditorShown)
+				if (ui.sampleEditorShown)
 					zoomOut();
 
 				return true;

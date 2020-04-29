@@ -17,6 +17,7 @@
 #include "ft2_inst_ed.h"
 #include "ft2_audio.h"
 #include "ft2_wav_renderer.h"
+#include "ft2_structs.h"
 
 #define TICKS_PER_RENDER_CHUNK 64
 
@@ -117,20 +118,20 @@ void resetWavRenderer(void)
 	WDStartPos = 0;
 	WDStopPos  = (uint8_t)song.len - 1;
 
-	if (editor.ui.wavRendererShown)
+	if (ui.wavRendererShown)
 		updateWavRenderer();
 }
 
 void showWavRenderer(void)
 {
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
 	showTopScreen(false);
 
-	editor.ui.wavRendererShown = true;
-	editor.ui.scopesShown = false;
+	ui.wavRendererShown = true;
+	ui.scopesShown = false;
 
 	WDStartPos = 0;
 	WDStopPos = (uint8_t)song.len - 1;
@@ -140,7 +141,7 @@ void showWavRenderer(void)
 
 void hideWavRenderer(void)
 {
-	editor.ui.wavRendererShown = false;
+	ui.wavRendererShown = false;
 
 	hidePushButton(PB_WAV_RENDER);
 	hidePushButton(PB_WAV_EXIT);
@@ -154,7 +155,7 @@ void hideWavRenderer(void)
 	hidePushButton(PB_WAV_END_DOWN);
 	hideRadioButtonGroup(RB_GROUP_WAV_RENDER_BITDEPTH);
 
-	editor.ui.scopesShown = true;
+	ui.scopesShown = true;
 	drawScopeFramework();
 }
 
@@ -288,13 +289,13 @@ static void updateVisuals(void)
 	editor.tempo = song.tempo;
 	editor.globalVol = song.globVol;
 
-	editor.ui.drawPosEdFlag = true;
-	editor.ui.drawPattNumLenFlag = true;
-	editor.ui.drawReplayerPianoFlag = true;
-	editor.ui.drawBPMFlag = true;
-	editor.ui.drawSpeedFlag = true;
-	editor.ui.drawGlobVolFlag = true;
-	editor.ui.updatePatternEditor = true;
+	ui.drawPosEdFlag = true;
+	ui.drawPattNumLenFlag = true;
+	ui.drawReplayerPianoFlag = true;
+	ui.drawBPMFlag = true;
+	ui.drawSpeedFlag = true;
+	ui.drawGlobVolFlag = true;
+	ui.updatePatternEditor = true;
 
 	drawPlaybackTime();
 }

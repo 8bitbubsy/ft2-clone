@@ -11,6 +11,7 @@
 #include "ft2_video.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 #include "helpdata/ft2_help_data.h"
 
 typedef struct
@@ -386,11 +387,11 @@ void showHelpScreen(void)
 {
 	uint16_t tmpID;
 
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
-	editor.ui.helpScreenShown = true;
+	ui.helpScreenShown = true;
 
 	drawFramework(0,   0, 128, 173, FRAMEWORK_TYPE1);
 	drawFramework(128, 0, 504, 173, FRAMEWORK_TYPE1);
@@ -437,7 +438,7 @@ void hideHelpScreen(void)
 	hideRadioButtonGroup(RB_GROUP_HELP);
 	hideScrollBar(SB_HELP_SCROLL);
 
-	editor.ui.helpScreenShown = false;
+	ui.helpScreenShown = false;
 }
 
 void exitHelpScreen(void)

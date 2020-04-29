@@ -33,6 +33,7 @@
 #include "ft2_module_loader.h"
 #include "ft2_midi.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 static const uint8_t textCursorData[12] =
 {
@@ -41,6 +42,8 @@ static const uint8_t textCursorData[12] =
 	PAL_FORGRND, PAL_FORGRND, PAL_FORGRND,
 	PAL_FORGRND, PAL_FORGRND, PAL_FORGRND
 };
+
+video_t video; // globalized
 
 static bool songIsModified;
 static char wndTitle[128 + PATH_MAX];
@@ -282,8 +285,8 @@ void enterFullscreen(void)
 {
 	SDL_DisplayMode dm;
 
-	strcpy(editor.ui.fullscreenButtonText, "Go windowed");
-	if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MISCELLANEOUS)
+	strcpy(ui.fullscreenButtonText, "Go windowed");
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MISCELLANEOUS)
 		showConfigScreen(); // redraw so that we can see the new button text
 
 	if (config.windowFlags & FILTERING)
@@ -307,8 +310,8 @@ void enterFullscreen(void)
 
 void leaveFullScreen(void)
 {
-	strcpy(editor.ui.fullscreenButtonText, "Go fullscreen");
-	if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MISCELLANEOUS)
+	strcpy(ui.fullscreenButtonText, "Go fullscreen");
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MISCELLANEOUS)
 		showConfigScreen(); // redraw so that we can see the new button text
 
 	SDL_SetWindowFullscreen(video.window, 0);
@@ -1034,24 +1037,24 @@ void handleRedrawing(void)
 {
 	textBox_t *txt;
 
-	if (!editor.ui.configScreenShown && !editor.ui.helpScreenShown)
+	if (!ui.configScreenShown && !ui.helpScreenShown)
 	{
-		if (editor.ui.aboutScreenShown)
+		if (ui.aboutScreenShown)
 		{
 			aboutFrame();
 		}
-		else if (editor.ui.nibblesShown)
+		else if (ui.nibblesShown)
 		{
 			if (editor.NI_Play)
 				moveNibblePlayers();
 		}
 		else
 		{
-			if (editor.ui.updatePosSections)
+			if (ui.updatePosSections)
 			{
-				editor.ui.updatePosSections = false;
+				ui.updatePosSections = false;
 
-				if (!editor.ui.diskOpShown)
+				if (!ui.diskOpShown)
 				{
 					drawSongRepS();
 					drawSongLength();
@@ -1066,7 +1069,7 @@ void handleRedrawing(void)
 						setScrollBarPos(SB_POS_ED, editor.songPos, false);
 
 					// draw current mode text (not while in extended pattern editor mode)
-					if (!editor.ui.extended)
+					if (!ui.extended)
 					{
 						fillRect(115, 80, 74, 10, PAL_DESKTOP);
 
@@ -1078,21 +1081,21 @@ void handleRedrawing(void)
 				}
 			}
 
-			if (editor.ui.updatePosEdScrollBar)
+			if (ui.updatePosEdScrollBar)
 			{
-				editor.ui.updatePosEdScrollBar = false;
+				ui.updatePosEdScrollBar = false;
 				setScrollBarPos(SB_POS_ED, song.songPos, false);
 				setScrollBarEnd(SB_POS_ED, (song.len - 1) + 5);
 			}
 
-			if (!editor.ui.extended)
+			if (!ui.extended)
 			{
-				if (!editor.ui.diskOpShown)
+				if (!ui.diskOpShown)
 					drawPlaybackTime();
 
-				if (editor.ui.sampleEditorExtShown)
+				if (ui.sampleEditorExtShown)
 					handleSampleEditorExtRedrawing();
-				else if (editor.ui.scopesShown)
+				else if (ui.scopesShown)
 					drawScopes();
 			}
 		}
@@ -1100,9 +1103,9 @@ void handleRedrawing(void)
 
 	drawReplayerData();
 
-	if (editor.ui.instEditorShown)
+	if (ui.instEditorShown)
 		handleInstEditorRedrawing();
-	else if (editor.ui.sampleEditorShown)
+	else if (ui.sampleEditorShown)
 		handleSamplerRedrawing();
 
 	// blink text edit cursor
@@ -1131,66 +1134,66 @@ static void drawReplayerData(void)
 
 	if (songPlaying)
 	{
-		if (editor.ui.drawReplayerPianoFlag)
+		if (ui.drawReplayerPianoFlag)
 		{
-			editor.ui.drawReplayerPianoFlag = false;
-			if (editor.ui.instEditorShown && chSyncEntry != NULL)
+			ui.drawReplayerPianoFlag = false;
+			if (ui.instEditorShown && chSyncEntry != NULL)
 				drawPiano(chSyncEntry);
 		}
 
 		drawPosText = true;
-		if (editor.ui.configScreenShown || editor.ui.nibblesShown     ||
-			editor.ui.helpScreenShown   || editor.ui.aboutScreenShown ||
-			editor.ui.diskOpShown)
+		if (ui.configScreenShown || ui.nibblesShown     ||
+			ui.helpScreenShown   || ui.aboutScreenShown ||
+			ui.diskOpShown)
 		{
 			drawPosText = false;
 		}
 
 		if (drawPosText)
 		{
-			if (editor.ui.drawBPMFlag)
+			if (ui.drawBPMFlag)
 			{
-				editor.ui.drawBPMFlag = false;
+				ui.drawBPMFlag = false;
 				drawSongBPM(editor.speed);
 			}
 			
-			if (editor.ui.drawSpeedFlag)
+			if (ui.drawSpeedFlag)
 			{
-				editor.ui.drawSpeedFlag = false;
+				ui.drawSpeedFlag = false;
 				drawSongSpeed(editor.tempo);
 			}
 
-			if (editor.ui.drawGlobVolFlag)
+			if (ui.drawGlobVolFlag)
 			{
-				editor.ui.drawGlobVolFlag = false;
+				ui.drawGlobVolFlag = false;
 				drawGlobalVol(editor.globalVol);
 			}
 
-			if (editor.ui.drawPosEdFlag)
+			if (ui.drawPosEdFlag)
 			{
-				editor.ui.drawPosEdFlag = false;
+				ui.drawPosEdFlag = false;
 				drawPosEdNums(editor.songPos);
 				setScrollBarPos(SB_POS_ED, editor.songPos, false);
 			}
 
-			if (editor.ui.drawPattNumLenFlag)
+			if (ui.drawPattNumLenFlag)
 			{
-				editor.ui.drawPattNumLenFlag = false;
+				ui.drawPattNumLenFlag = false;
 				drawEditPattern(editor.editPattern);
 				drawPatternLength(editor.editPattern);
 			}
 		}
 	}
-	else if (editor.ui.instEditorShown)
+	else if (ui.instEditorShown)
 	{
 		drawPiano(NULL);
 	}
 
 	// handle pattern data updates
-	if (editor.ui.updatePatternEditor)
+	if (ui.updatePatternEditor)
 	{
-		editor.ui.updatePatternEditor = false;
-		if (editor.ui.patternEditorShown)
+		ui.updatePatternEditor = false;
+		if (ui.patternEditorShown)
 			writePattern(editor.pattPos, editor.editPattern);
 	}
 }

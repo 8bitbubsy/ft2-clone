@@ -76,6 +76,7 @@
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_gui.c">
       <Filter>graphics</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\ft2_structs.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\ft2_audio.h">
@@ -214,6 +215,9 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ft2_bmp.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_structs.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

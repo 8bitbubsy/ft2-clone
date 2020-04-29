@@ -4,13 +4,15 @@
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 
-struct keyb_t
+typedef struct keyb_t
 {
 	uint8_t keyRepeat, keyPressed;
 	bool ignoreCurrKeyUp, ignoreTextEditKey, numPadPlusPressed;
 	bool keyModifierDown, commandPressed, leftCommandPressed;
 	bool leftShiftPressed, leftCtrlPressed, ctrlPressed, leftAltPressed;
-} keyb;
+} keyb_t;
+
+extern keyb_t keyb; // ft2_keyboard.c
 
 int8_t scancodeKeyToNote(SDL_Scancode scancode);
 void keyUpHandler(SDL_Scancode scancode, SDL_Keycode keycode);

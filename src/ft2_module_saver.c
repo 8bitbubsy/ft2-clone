@@ -12,6 +12,7 @@
 #include "ft2_sample_ed.h"
 #include "ft2_module_loader.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 /* These savers are directly ported, so they should act identical to FT2
 ** except for some very minor changes.

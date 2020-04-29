@@ -19,23 +19,26 @@
 #include "ft2_audioselector.h"
 #include "ft2_midi.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 #define NUM_CURSORS 6
+
+mouse_t mouse; // globalized
 
 static bool mouseBusyGfxBackwards;
 static int16_t mouseShape;
 static int32_t mouseModeGfxOffs, mouseBusyGfxFrame;
 static SDL_Cursor *cursors[NUM_CURSORS];
 
-static bool setSystemCursor(SDL_Cursor *cursor)
+static bool setSystemCursor(SDL_Cursor *cur)
 {
-	if (cursor == NULL)
+	if (cur == NULL)
 	{
 		SDL_SetCursor(SDL_GetDefaultCursor());
 		return false;
 	}
 
-	SDL_SetCursor(cursor);
+	SDL_SetCursor(cur);
 	return true;
 }
 
@@ -298,7 +301,7 @@ static void changeCursorIfOverTextBoxes(void)
 
 	for (i = 0; i < NUM_TEXTBOXES; i++)
 	{
-		if (editor.ui.sysReqShown && i > 0)
+		if (ui.sysReqShown && i > 0)
 			continue;
 
 		t = &textBoxes[i];
@@ -345,20 +348,20 @@ void setMouseBusy(bool busy) // can be called from other threads
 {
 	if (busy)
 	{
-		editor.ui.setMouseIdle = false;
-		editor.ui.setMouseBusy = true;
+		ui.setMouseIdle = false;
+		ui.setMouseBusy = true;
 	}
 	else
 	{
-		editor.ui.setMouseBusy = false;
-		editor.ui.setMouseIdle = true;
+		ui.setMouseBusy = false;
+		ui.setMouseIdle = true;
 	}
 }
 
 void mouseAnimOn(void)
 {
-	editor.ui.setMouseBusy = false;
-	editor.ui.setMouseIdle = false;
+	ui.setMouseBusy = false;
+	ui.setMouseIdle = false;
 
 	editor.busy = true;
 	setMouseShape(config.mouseAnimType);
@@ -366,8 +369,8 @@ void mouseAnimOn(void)
 
 void mouseAnimOff(void)
 {
-	editor.ui.setMouseBusy = false;
-	editor.ui.setMouseIdle = false;
+	ui.setMouseBusy = false;
+	ui.setMouseIdle = false;
 
 	editor.busy = false;
 	setMouseShape(config.mouseType);
@@ -403,10 +406,10 @@ static void mouseWheelIncRow(void)
 
 void mouseWheelHandler(bool directionUp)
 {
-	if (editor.ui.sysReqShown || editor.editTextFlag)
+	if (ui.sysReqShown || editor.editTextFlag)
 		return;
 
-	if (editor.ui.extended)
+	if (ui.extended)
 	{
 		if (mouse.y <= 52)
 		{
@@ -425,7 +428,7 @@ void mouseWheelHandler(bool directionUp)
 	{
 		// top screens
 
-		if (editor.ui.helpScreenShown)
+		if (ui.helpScreenShown)
 		{
 			// help screen
 
@@ -440,7 +443,7 @@ void mouseWheelHandler(bool directionUp)
 				helpScrollDown();
 			}
 		}
-		else if (editor.ui.diskOpShown)
+		else if (ui.diskOpShown)
 		{
 			// disk op - 3x speed
 			if (mouse.x <= 355)
@@ -459,7 +462,7 @@ void mouseWheelHandler(bool directionUp)
 				}
 			}
 		}
-		else if (editor.ui.configScreenShown)
+		else if (ui.configScreenShown)
 		{
 			if (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
 			{
@@ -482,15 +485,15 @@ void mouseWheelHandler(bool directionUp)
 #endif
 		}
 
-		if (!editor.ui.aboutScreenShown  && !editor.ui.helpScreenShown &&
-			!editor.ui.configScreenShown && !editor.ui.nibblesShown)
+		if (!ui.aboutScreenShown  && !ui.helpScreenShown &&
+			!ui.configScreenShown && !ui.nibblesShown)
 		{
 			if (mouse.x >= 421 && mouse.y <= 173)
 			{
 				     if (mouse.y <= 93) directionUp ? decCurIns() : incCurIns();
 				else if (mouse.y >= 94) directionUp ? decCurSmp() : incCurSmp();
 			}
-			else if (!editor.ui.diskOpShown && mouse.x <= 111 && mouse.y <= 76)
+			else if (!ui.diskOpShown && mouse.x <= 111 && mouse.y <= 76)
 			{
 				directionUp ? decSongPos() : incSongPos();
 			}
@@ -500,12 +503,12 @@ void mouseWheelHandler(bool directionUp)
 	{
 		// bottom screens
 
-		if (editor.ui.sampleEditorShown)
+		if (ui.sampleEditorShown)
 		{
 			if (mouse.y >= 174 && mouse.y <= 328)
 				directionUp ? mouseZoomSampleDataIn() : mouseZoomSampleDataOut();
 		}
-		else if (editor.ui.patternEditorShown)
+		else if (ui.patternEditorShown)
 		{
 			directionUp ? mouseWheelDecRow() : mouseWheelIncRow();
 		}
@@ -514,7 +517,7 @@ void mouseWheelHandler(bool directionUp)
 
 static bool testSamplerDataMouseDown(void)
 {
-	if (editor.ui.sampleEditorShown && mouse.y >= 174 && mouse.y <= 327 && editor.ui.sampleDataOrLoopDrag == -1)
+	if (ui.sampleEditorShown && mouse.y >= 174 && mouse.y <= 327 && ui.sampleDataOrLoopDrag == -1)
 	{
 		handleSampleDataMouseDown(false);
 		return true;
@@ -527,10 +530,10 @@ static bool testPatternDataMouseDown(void)
 {
 	uint16_t y1, y2;
 
-	if (editor.ui.patternEditorShown)
+	if (ui.patternEditorShown)
 	{
-		y1 = editor.ui.extended ? 56 : 176;
-		y2 = editor.ui.pattChanScrollShown ? 382 : 396;
+		y1 = ui.extended ? 56 : 176;
+		y2 = ui.pattChanScrollShown ? 382 : 396;
 
 		if (mouse.y >= y1 && mouse.y <= y2 && mouse.x >= 29 && mouse.x <= 602)
 		{
@@ -549,16 +552,16 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 		mouse.leftButtonPressed = false;
 		mouse.leftButtonReleased = true;
 
-		if (editor.ui.leftLoopPinMoving)
+		if (ui.leftLoopPinMoving)
 		{
 			setLeftLoopPinState(false);
-			editor.ui.leftLoopPinMoving = false;
+			ui.leftLoopPinMoving = false;
 		}
 
-		if (editor.ui.rightLoopPinMoving)
+		if (ui.rightLoopPinMoving)
 		{
 			setRightLoopPinState(false);
-			editor.ui.rightLoopPinMoving = false;
+			ui.rightLoopPinMoving = false;
 		}
 	}
 	else if (mouseButton == SDL_BUTTON_RIGHT)
@@ -574,7 +577,7 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 
 			resumeAudio();
 
-			if (editor.ui.sampleEditorShown)
+			if (ui.sampleEditorShown)
 				writeSample(true);
 
 			setSongModifiedFlag();
@@ -591,13 +594,13 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 	if ( mouse.leftButtonPressed && !mouse.rightButtonPressed) return;
 	if (!mouse.leftButtonPressed &&  mouse.rightButtonPressed) return;
 
-	if (editor.ui.sampleEditorShown)
+	if (ui.sampleEditorShown)
 		testSmpEdMouseUp();
 
 	mouse.lastX = 0;
 	mouse.lastY = 0;
 
-	editor.ui.sampleDataOrLoopDrag = -1;
+	ui.sampleDataOrLoopDrag = -1;
 
 	// check if we released a GUI object
 	testDiskOpMouseRelease();
@@ -622,14 +625,14 @@ void mouseButtonDownHandler(uint8_t mouseButton)
 	// if already holding left button and clicking right, don't do mouse down handling
 	if (mouseButton == SDL_BUTTON_RIGHT && mouse.leftButtonPressed)
 	{
-		if (editor.ui.sampleDataOrLoopDrag == -1)
+		if (ui.sampleDataOrLoopDrag == -1)
 		{
 			mouse.rightButtonPressed = true;
 			mouse.rightButtonReleased = false;
 		}
 
 		// kludge - we must do scope solo/unmute all here
-		if (!editor.ui.sysReqShown)
+		if (!ui.sysReqShown)
 			testScopesMouseDown();
 
 		return;
@@ -638,14 +641,14 @@ void mouseButtonDownHandler(uint8_t mouseButton)
 	// if already holding right button and clicking left, don't do mouse down handling
 	if (mouseButton == SDL_BUTTON_LEFT && mouse.rightButtonPressed)
 	{
-		if (editor.ui.sampleDataOrLoopDrag == -1)
+		if (ui.sampleDataOrLoopDrag == -1)
 		{
 			mouse.leftButtonPressed = true;
 			mouse.leftButtonReleased = false;
 		}
 
 		// kludge - we must do scope solo/unmute all here
-		if (!editor.ui.sysReqShown)
+		if (!ui.sysReqShown)
 			testScopesMouseDown();
 
 		return;
@@ -701,7 +704,7 @@ void mouseButtonDownHandler(uint8_t mouseButton)
 	if (testRadioButtonMouseDown()) return;
 
 	// at this point, we don't need to test more widgets if a system request is shown
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 		return;
 
 	if (testInstrVolEnvMouseDown(false)) return;

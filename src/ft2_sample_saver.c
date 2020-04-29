@@ -14,6 +14,7 @@
 #include "ft2_sample_ed.h"
 #include "ft2_diskop.h"
 #include "ft2_mouse.h"
+#include "ft2_structs.h"
 
 typedef struct wavHeader_t
 {

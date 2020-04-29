@@ -42,7 +42,7 @@ enum
 // for audio/video sync queue. (2^n-1 - don't change this! Queue buffer is already ~2.7MB in size)
 #define SYNC_QUEUE_LEN 4095
 
-struct audio_t
+typedef struct audio_t
 {
 	char *currInputDevice, *currOutputDevice, *lastWorkingAudioDeviceName;
 	char *inputDeviceNames[MAX_AUDIO_DEVICES], *outputDeviceNames[MAX_AUDIO_DEVICES];
@@ -57,7 +57,7 @@ struct audio_t
 	double dAudioLatencyMs, dSpeedValMul, dPianoDeltaMul;
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
-} audio;
+} audio_t;
 
 typedef struct
 {
@@ -86,11 +86,11 @@ typedef struct pattSyncData_t
 	uint64_t timestamp;
 } pattSyncData_t;
 
-struct pattSync
+typedef struct pattSync_t
 {
 	volatile int32_t readPos, writePos;
 	pattSyncData_t data[SYNC_QUEUE_LEN + 1];
-} pattSync;
+} pattSync_t;
 
 typedef struct chSyncData_t
 {
@@ -98,14 +98,18 @@ typedef struct chSyncData_t
 	uint64_t timestamp;
 } chSyncData_t;
 
-struct chSync
+typedef struct chSync_t
 {
 	volatile int32_t readPos, writePos;
 	chSyncData_t data[SYNC_QUEUE_LEN + 1];
-} chSync;
+} chSync_t;
 
+// in ft2_audio.c
+extern audio_t audio;
 extern pattSyncData_t *pattSyncEntry;
 extern chSyncData_t *chSyncEntry;
+extern chSync_t chSync;
+extern pattSync_t pattSync;
 
 extern volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
 

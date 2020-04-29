@@ -38,8 +38,9 @@
 #include "ft2_events.h"
 #include "ft2_video.h"
 #include "ft2_inst_ed.h"
+#include "ft2_structs.h"
 
-// hide POSIX warnings
+// hide POSIX warnings for chdir()
 #ifdef _MSC_VER
 #pragma warning(disable: 4996)
 #endif
@@ -669,7 +670,7 @@ void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 
 	free(ansiPath);
 
-	if (editor.ui.diskOpShown)
+	if (ui.diskOpShown)
 		drawTextBox(TB_DISKOP_FILENAME);
 }
 
@@ -770,14 +771,14 @@ void changeFilenameExt(char *name, char *ext, int32_t nameMaxLen)
 
 	 strcat(name, ext);
 
-	 if (editor.ui.diskOpShown)
+	 if (ui.diskOpShown)
 		diskOp_DrawDirectory();
 }
 
 void diskOpChangeFilenameExt(char *ext)
 {
 	changeFilenameExt(FReq_FileName, ext, PATH_MAX);
-	if (editor.ui.diskOpShown)
+	if (ui.diskOpShown)
 		diskOp_DrawDirectory();
 }
 
@@ -1136,7 +1137,7 @@ bool testDiskOpMouseDown(bool mouseHeldDlown)
 {
 	int32_t tmpEntry, max;
 
-	if (!editor.ui.diskOpShown || FReq_FileCount == 0)
+	if (!ui.diskOpShown || FReq_FileCount == 0)
 		return false;
 
 	max = FReq_FileCount - FReq_DirPos;
@@ -1200,7 +1201,7 @@ bool testDiskOpMouseDown(bool mouseHeldDlown)
 
 void testDiskOpMouseRelease(void)
 {
-	if (editor.ui.diskOpShown && FReq_EntrySelected != -1)
+	if (ui.diskOpShown && FReq_EntrySelected != -1)
 	{
 		if (mouse.x >= 169 && mouse.x <= 329 && mouse.y >= 4 && mouse.y <= 168)
 			fileListPressed((mouse.y - 4) / (FONT1_CHAR_H + 1));
@@ -2071,7 +2072,7 @@ static void setDiskOpItemRadioButtons(void)
 	if (FReq_Item == DISKOP_ITEM_PATTERN) radioButtons[RB_DISKOP_PAT_SAVEAS_XP].state = RADIOBUTTON_CHECKED;
 	if (FReq_Item == DISKOP_ITEM_TRACK)   radioButtons[RB_DISKOP_TRK_SAVEAS_XT].state = RADIOBUTTON_CHECKED;
 
-	if (editor.ui.diskOpShown)
+	if (ui.diskOpShown)
 	{
 		switch (FReq_Item)
 		{
@@ -2104,7 +2105,12 @@ static void setDiskOpItem(uint8_t item)
 		case DISKOP_ITEM_MODULE:
 		{
 			FReq_FileName = modTmpFName;
+
+			// FReq_ModCurPathU is always set at this point
+
 			FReq_CurPathU = FReq_ModCurPathU;
+			if (FReq_CurPathU != NULL)
+				UNICHAR_CHDIR(FReq_CurPathU);
 		}
 		break;
 
@@ -2119,6 +2125,8 @@ static void setDiskOpItem(uint8_t item)
 			}
 
 			FReq_CurPathU = FReq_InsCurPathU;
+			if (FReq_CurPathU != NULL)
+				UNICHAR_CHDIR(FReq_CurPathU);
 		}
 		break;
 
@@ -2133,6 +2141,8 @@ static void setDiskOpItem(uint8_t item)
 			}
 
 			FReq_CurPathU = FReq_SmpCurPathU;
+			if (FReq_CurPathU != NULL)
+				UNICHAR_CHDIR(FReq_CurPathU);
 		}
 		break;
 
@@ -2142,11 +2152,13 @@ static void setDiskOpItem(uint8_t item)
 
 			if (!patPathSet)
 			{
-				UNICHAR_STRCPY(FReq_SmpCurPathU, FReq_CurPathU);
+				UNICHAR_STRCPY(FReq_PatCurPathU, FReq_CurPathU);
 				patPathSet = true;
 			}
 
 			FReq_CurPathU = FReq_PatCurPathU;
+			if (FReq_CurPathU != NULL)
+				UNICHAR_CHDIR(FReq_CurPathU);
 		}
 		break;
 
@@ -2161,6 +2173,8 @@ static void setDiskOpItem(uint8_t item)
 			}
 
 			FReq_CurPathU = FReq_TrkCurPathU;
+			if (FReq_CurPathU != NULL)
+				UNICHAR_CHDIR(FReq_CurPathU);
 		}
 		break;
 	}
@@ -2176,7 +2190,7 @@ static void setDiskOpItem(uint8_t item)
 
 	FReq_ShowAllFiles = false;
 
-	if (editor.ui.diskOpShown)
+	if (ui.diskOpShown)
 	{
 		editor.diskOpReadDir = true;
 
@@ -2275,12 +2289,12 @@ void showDiskOpScreen(void)
 		firstTimeOpeningDiskOp = false;
 	}
 
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
-	editor.ui.diskOpShown = true;
-	editor.ui.scopesShown = false;
+	ui.diskOpShown = true;
+	ui.scopesShown = false;
 
 	showTopRightMainScreen();
 	drawDiskOpScreen();
@@ -2322,19 +2336,19 @@ void hideDiskOpScreen(void)
 	hideRadioButtonGroup(RB_GROUP_DISKOP_PAT_SAVEAS);
 	hideRadioButtonGroup(RB_GROUP_DISKOP_TRK_SAVEAS);
 
-	editor.ui.diskOpShown = false;
+	ui.diskOpShown = false;
 }
 
 void exitDiskOpScreen(void)
 {
 	hideDiskOpScreen();
-	editor.ui.oldTopLeftScreen = 0; // disk op. ignores previously opened top screens
+	ui.oldTopLeftScreen = 0; // disk op. ignores previously opened top screens
 	showTopScreen(true);
 }
 
 void toggleDiskOpScreen(void)
 {
-	if (editor.ui.diskOpShown)
+	if (ui.diskOpShown)
 		exitDiskOpScreen();
 	else
 		showDiskOpScreen();

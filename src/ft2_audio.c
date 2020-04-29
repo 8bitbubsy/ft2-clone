@@ -14,8 +14,18 @@
 #include "ft2_wav_renderer.h"
 #include "ft2_mix.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 #define INITIAL_DITHER_SEED 0x12345000
+
+// globalized
+audio_t audio;
+pattSyncData_t *pattSyncEntry;
+chSyncData_t *chSyncEntry;
+chSync_t chSync;
+pattSync_t pattSync;
+volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
+
 
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
@@ -30,11 +40,6 @@ static void (*sendAudSamplesFunc)(uint8_t *, uint32_t, uint8_t); // "send mixed 
 static int32_t oldPeriod;
 static uint32_t oldSFrq, oldSFrqRev;
 #endif
-
-pattSyncData_t *pattSyncEntry;
-chSyncData_t *chSyncEntry;
-
-volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
 
 #if !defined __amd64__ && !defined _WIN64
 void resetCachedMixerVars(void)
@@ -93,7 +98,7 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 		}
 
 		// also update config audio radio buttons if we're on that screen at the moment
-		if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+		if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
 			setConfigIORadioButtonStates();
 
 		// if it didn't work to use the old settings again, then something is seriously wrong...
@@ -1214,7 +1219,7 @@ bool setupAudio(bool showErrorMsg)
 	setLastWorkingAudioDevName();
 
 	// update config audio radio buttons if we're on that screen at the moment
-	if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
 		showConfigScreen();
 
 	updateWavRendererSettings();

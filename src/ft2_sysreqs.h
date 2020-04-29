@@ -10,12 +10,14 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 bool askUnsavedChanges(uint8_t type);
 
 // for thread-safe version of okBox()
-struct
+typedef struct okBoxData_t
 {
 	volatile bool active;
 	int16_t typ, returnData;
 	const char *headline, *text;
-} okBoxData;
+} okBoxData_t;
+
+extern okBoxData_t okBoxData; // ft2_sysreqs.c
 
 enum
 {

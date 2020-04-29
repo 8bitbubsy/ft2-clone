@@ -32,6 +32,7 @@
 #include "ft2_midi.h"
 #include "ft2_events.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 #ifdef HAS_MIDI
 static SDL_Thread *initMidiThread;
@@ -77,8 +78,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 		showErrorMsgBox("SDL2.dll is not the expected version, the program will terminate.\n\n" \
 		                "Loaded dll version: %d.%d.%d\n" \
-		                "Required (compiled with) version: %d.%d.%d\n\n" \
-		                "The needed SDL2.dll is located in the .zip from 16-bits.org/ft2.php\n",
+		                "Required (compiled with) version: %d.%d.%d\n\n",
 		                sdlVer.major, sdlVer.minor, sdlVer.patch,
 		                SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL);
 #else
@@ -277,14 +277,14 @@ static void initializeVars(void)
 	audio.locked = true;
 	audio.rescanAudioDevicesSupported = true;
 
-	strcpy(editor.ui.fullscreenButtonText, "Go fullscreen");
+	strcpy(ui.fullscreenButtonText, "Go fullscreen");
 
 	// set non-zero values
 
 	editor.moduleSaveMode = MOD_SAVE_MODE_XM;
 	editor.sampleSaveMode = SMP_SAVE_MODE_WAV;
 
-	editor.ui.sampleDataOrLoopDrag = -1;
+	ui.sampleDataOrLoopDrag = -1;
 
 	mouse.lastUsedObjectID = OBJECT_ID_NONE;
 

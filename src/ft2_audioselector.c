@@ -11,6 +11,7 @@
 #include "ft2_gui.h"
 #include "ft2_mouse.h"
 #include "ft2_audioselector.h"
+#include "ft2_structs.h"
 
 char *getAudioOutputDeviceFromConfig(void)
 {
@@ -220,7 +221,7 @@ bool testAudioDeviceListsMouseDown(void)
 	int32_t mx, my, deviceNum;
 	uint32_t devStringLen;
 
-	if (!editor.ui.configScreenShown || editor.currConfigScreen != CONFIG_SCREEN_IO_DEVICES)
+	if (!ui.configScreenShown || editor.currConfigScreen != CONFIG_SCREEN_IO_DEVICES)
 		return false;
 
 	mx = mouse.x;
@@ -420,7 +421,7 @@ void rescanAudioDevices(void)
 	const char *deviceName;
 	uint32_t stringLen;
 
-	listShown = (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES);
+	listShown = (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES);
 
 	freeAudioDeviceLists();
 
@@ -518,7 +519,7 @@ void sbAudOutputSetPos(uint32_t pos)
 {
 	(void)pos;
 
-	if (editor.ui.configScreenShown && (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES))
+	if (ui.configScreenShown && (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES))
 		drawAudioOutputList();
 }
 
@@ -526,6 +527,6 @@ void sbAudInputSetPos(uint32_t pos)
 {
 	(void)pos;
 
-	if (editor.ui.configScreenShown && (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES))
+	if (ui.configScreenShown && (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES))
 		drawAudioInputList();
 }

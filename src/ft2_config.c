@@ -31,6 +31,7 @@
 #include "ft2_pattern_draw.h"
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 // globals
 config_t config;
@@ -189,7 +190,7 @@ static void loadConfigFromBuffer(void)
 	setMouseShape(config.mouseType);
 	changeLogoType(config.id_FastLogo);
 	changeBadgeType(config.id_TritonProd);
-	editor.ui.maxVisibleChannels = (uint8_t)(2 + ((config.ptnMaxChannels + 1) * 2));
+	ui.maxVisibleChannels = (uint8_t)(2 + ((config.ptnMaxChannels + 1) * 2));
 	setPal16(palTable[config.cfg_StdPalNr], true);
 	updatePattFontPtrs();
 
@@ -275,7 +276,7 @@ bool loadConfig(bool showErrorFlag)
 	if (midi.initThreadDone)
 	{
 		setMidiInputDeviceFromConfig();
-		if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
+		if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
 			drawMidiInputList();
 	}
 #endif
@@ -1083,11 +1084,11 @@ static void setConfigMiscRadioButtonStates(void)
 
 void showConfigScreen(void)
 {
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
-	editor.ui.configScreenShown = true;
+	ui.configScreenShown = true;
 
 	drawFramework(0, 0, 110, 173, FRAMEWORK_TYPE1);
 
@@ -1503,7 +1504,7 @@ void hideConfigScreen(void)
 	hideScrollBar(SB_MIDI_INPUT_SCROLL);
 #endif
 
-	editor.ui.configScreenShown = false;
+	ui.configScreenShown = false;
 }
 
 void exitConfigScreen(void)
@@ -1703,11 +1704,11 @@ void cbConfigDither(void)
 static void redrawPatternEditor(void) // called after changing some pattern editor settings in config
 {
 	// if the cursor was on the volume column while we turned volume column off, move it to effect type slot
-	if (!config.ptnS3M && (editor.cursor.object == CURSOR_VOL1 || editor.cursor.object == CURSOR_VOL2))
-		editor.cursor.object = CURSOR_EFX0;
+	if (!config.ptnS3M && (cursor.object == CURSOR_VOL1 || cursor.object == CURSOR_VOL2))
+		cursor.object = CURSOR_EFX0;
 
 	updateChanNums();
-	editor.ui.updatePatternEditor = true;
+	ui.updatePatternEditor = true;
 }
 
 void cbConfigPattStretch(void)
@@ -1841,7 +1842,7 @@ void rbConfigPatt4Chans(void)
 {
 	config.ptnMaxChannels = MAX_CHANS_SHOWN_4;
 	checkRadioButton(RB_CONFIG_MAXCHAN_4);
-	editor.ui.maxVisibleChannels = 2 + (((uint8_t)config.ptnMaxChannels + 1) * 2);
+	ui.maxVisibleChannels = 2 + (((uint8_t)config.ptnMaxChannels + 1) * 2);
 	redrawPatternEditor();
 }
 
@@ -1849,7 +1850,7 @@ void rbConfigPatt6Chans(void)
 {
 	config.ptnMaxChannels = MAX_CHANS_SHOWN_6;
 	checkRadioButton(RB_CONFIG_MAXCHAN_6);
-	editor.ui.maxVisibleChannels = 2 + (((uint8_t)config.ptnMaxChannels + 1) * 2);
+	ui.maxVisibleChannels = 2 + (((uint8_t)config.ptnMaxChannels + 1) * 2);
 	redrawPatternEditor();
 }
 
@@ -1857,7 +1858,7 @@ void rbConfigPatt8Chans(void)
 {
 	config.ptnMaxChannels = MAX_CHANS_SHOWN_8;
 	checkRadioButton(RB_CONFIG_MAXCHAN_8);
-	editor.ui.maxVisibleChannels = 2 + (((uint8_t)config.ptnMaxChannels + 1) * 2);
+	ui.maxVisibleChannels = 2 + (((uint8_t)config.ptnMaxChannels + 1) * 2);
 	redrawPatternEditor();
 }
 
@@ -1865,7 +1866,7 @@ void rbConfigPatt12Chans(void)
 {
 	config.ptnMaxChannels = MAX_CHANS_SHOWN_12;
 	checkRadioButton(RB_CONFIG_MAXCHAN_12);
-	editor.ui.maxVisibleChannels = 2 + (((uint8_t)config.ptnMaxChannels + 1) * 2);
+	ui.maxVisibleChannels = 2 + (((uint8_t)config.ptnMaxChannels + 1) * 2);
 	redrawPatternEditor();
 }
 

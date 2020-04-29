@@ -19,6 +19,7 @@
 #include "ft2_mouse.h"
 #include "ft2_sample_loader.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 /* This is a *huge* mess, directly ported from the original FT2 code (and modified).
 ** You will experience a lot of headaches if you dig into it...
@@ -97,17 +98,14 @@ void fixSampleName(int16_t nr) // removes spaces from right side of ins/smp name
 
 void resetChannels(void)
 {
-	bool audioWasntLocked;
-	stmTyp *ch;
-
-	audioWasntLocked = !audio.locked;
+	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
 	memset(stm, 0, sizeof (stm));
-	for (uint8_t i = 0; i < MAX_VOICES; i++)
+	for (int32_t i = 0; i < MAX_VOICES; i++)
 	{
-		ch = &stm[i];
+		stmTyp *ch = &stm[i];
 
 		ch->instrSeg = instr[0];
 		ch->status = IS_Vol;
@@ -153,14 +151,11 @@ void tuneSample(sampleTyp *s, int32_t midCFreq)
 
 void setPatternLen(uint16_t nr, int16_t len)
 {
-	bool audioWasntLocked;
-
 	assert(nr < MAX_PATTERNS);
-
 	if ((len < 1 || len > MAX_PATT_LEN) || len == pattLens[nr])
 		return;
 
-	audioWasntLocked = !audio.locked;
+	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
@@ -181,8 +176,8 @@ void setPatternLen(uint16_t nr, int16_t len)
 	if (audioWasntLocked)
 		unlockAudio();
 
-	editor.ui.updatePatternEditor = true;
-	editor.ui.updatePosSections = true;
+	ui.updatePatternEditor = true;
+	ui.updatePosSections = true;
 }
 
 int16_t getUsedSamples(int16_t nr)
@@ -298,7 +293,7 @@ void setFrqTab(bool linear)
 	resumeAudio();
 
 	// update "frequency table" radiobutton, if it's shown
-	if (editor.ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
 		setConfigIORadioButtonStates();
 }
 
@@ -2185,7 +2180,7 @@ void mainPlayer(void) // periodically called from audio callback
 
 void resetMusic(void)
 {
-	bool audioWasntLocked = !audio.locked;
+	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
@@ -2206,7 +2201,7 @@ void resetMusic(void)
 
 void setPos(int16_t songPos, int16_t pattPos, bool resetTimer)
 {
-	bool audioWasntLocked = !audio.locked;
+	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
@@ -2236,14 +2231,14 @@ void setPos(int16_t songPos, int16_t pattPos, bool resetTimer)
 		if (pattPos > -1)
 		{
 			editor.pattPos = (uint8_t)pattPos;
-			editor.ui.updatePatternEditor = true;
+			ui.updatePatternEditor = true;
 		}
 
 		if (songPos > -1)
 		{
 			editor.editPattern = (uint8_t)song.pattNr;
 			editor.songPos = song.songPos;
-			editor.ui.updatePosSections = true;
+			ui.updatePosSections = true;
 		}
 	}
 
@@ -2373,19 +2368,16 @@ void samp2Delta(int8_t *p, int32_t len, uint8_t typ)
 
 bool allocateInstr(int16_t nr)
 {
-	bool audioWasntLocked;
-	instrTyp *p;
-
 	if (instr[nr] != NULL)
 		return false; // already allocated
 
-	p = (instrTyp *)malloc(sizeof (instrTyp));
+	instrTyp *p = (instrTyp *)malloc(sizeof (instrTyp));
 	if (p == NULL)
 		return false;
 
 	memset(p, 0, sizeof (instrTyp));
 
-	for (int8_t i = 0; i < 16; i++) // set standard sample pan/vol
+	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++) // set standard sample pan/vol
 	{
 		p->samp[i].pan = 128;
 		p->samp[i].vol = 64;
@@ -2393,7 +2385,7 @@ bool allocateInstr(int16_t nr)
 
 	setStdEnvelope(p, 0, 3);
 
-	audioWasntLocked = !audio.locked;
+	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
@@ -2592,50 +2584,50 @@ void updateChanNums(void)
 		else if (song.antChn >= 12) pageLen = 12;
 	}
 
-	editor.ui.numChannelsShown = pageLen;
+	ui.numChannelsShown = pageLen;
 	if (song.antChn == 2)
-		editor.ui.numChannelsShown = 2;
+		ui.numChannelsShown = 2;
 
 	if (config.ptnMaxChannels == 0)
 	{
-		if (editor.ui.numChannelsShown > 4)
-			editor.ui.numChannelsShown = 4;
+		if (ui.numChannelsShown > 4)
+			ui.numChannelsShown = 4;
 	}
 	else if (config.ptnMaxChannels == 1)
 	{
-		if (editor.ui.numChannelsShown > 6)
-			editor.ui.numChannelsShown = 6;
+		if (ui.numChannelsShown > 6)
+			ui.numChannelsShown = 6;
 	}
 	else if (config.ptnMaxChannels == 2)
 	{
-		if (editor.ui.numChannelsShown > 8)
-			editor.ui.numChannelsShown = 8;
+		if (ui.numChannelsShown > 8)
+			ui.numChannelsShown = 8;
 	}
 	else if (config.ptnMaxChannels == 3)
 	{
 		if (config.ptnS3M)
 		{
-			if (editor.ui.numChannelsShown > 8)
-				editor.ui.numChannelsShown = 8;
+			if (ui.numChannelsShown > 8)
+				ui.numChannelsShown = 8;
 		}
 		else
 		{
-			if (editor.ui.numChannelsShown > 12)
-				editor.ui.numChannelsShown = 12;
+			if (ui.numChannelsShown > 12)
+				ui.numChannelsShown = 12;
 		}
 	}
 
-	editor.ui.pattChanScrollShown = song.antChn > getMaxVisibleChannels();
+	ui.pattChanScrollShown = song.antChn > getMaxVisibleChannels();
 
-	if (editor.ui.patternEditorShown)
+	if (ui.patternEditorShown)
 	{
-		if (editor.ui.channelOffset > song.antChn-editor.ui.numChannelsShown)
-			setScrollBarPos(SB_CHAN_SCROLL, song.antChn - editor.ui.numChannelsShown, true);
+		if (ui.channelOffset > song.antChn-ui.numChannelsShown)
+			setScrollBarPos(SB_CHAN_SCROLL, song.antChn - ui.numChannelsShown, true);
 	}
 
-	if (editor.ui.pattChanScrollShown)
+	if (ui.pattChanScrollShown)
 	{
-		if (editor.ui.patternEditorShown)
+		if (ui.patternEditorShown)
 		{
 			showScrollBar(SB_CHAN_SCROLL);
 			showPushButton(PB_CHAN_SCROLL_LEFT);
@@ -2643,7 +2635,7 @@ void updateChanNums(void)
 		}
 
 		setScrollBarEnd(SB_CHAN_SCROLL, song.antChn);
-		setScrollBarPageLength(SB_CHAN_SCROLL, editor.ui.numChannelsShown);
+		setScrollBarPageLength(SB_CHAN_SCROLL, ui.numChannelsShown);
 	}
 	else
 	{
@@ -2653,11 +2645,11 @@ void updateChanNums(void)
 
 		setScrollBarPos(SB_CHAN_SCROLL, 0, false);
 
-		editor.ui.channelOffset = 0;
+		ui.channelOffset = 0;
 	}
 
-	if (editor.cursor.ch >= editor.ui.channelOffset+editor.ui.numChannelsShown)
-		editor.cursor.ch = editor.ui.channelOffset+editor.ui.numChannelsShown - 1;
+	if (cursor.ch >= ui.channelOffset+ui.numChannelsShown)
+		cursor.ch = ui.channelOffset+ui.numChannelsShown - 1;
 }
 
 void conv8BitSample(int8_t *p, int32_t len, bool stereo)
@@ -2822,8 +2814,8 @@ void startPlaying(int8_t mode, int16_t row)
 
 	unlockMixerCallback();
 
-	editor.ui.updatePosSections = true;
-	editor.ui.updatePatternEditor = true;
+	ui.updatePosSections = true;
+	ui.updatePatternEditor = true;
 }
 
 void stopPlaying(void)
@@ -2862,13 +2854,13 @@ void stopPlaying(void)
 
 	memset(editor.keyOnTab, 0, sizeof (editor.keyOnTab));
 
-	editor.ui.updatePosSections = true;
-	editor.ui.updatePatternEditor = true;
+	ui.updatePosSections = true;
+	ui.updatePatternEditor = true;
 
 	// certain non-FT2 fixes
 	song.timer = editor.timer = 1;
 	song.globVol = editor.globalVol = 64;
-	editor.ui.drawGlobVolFlag = true;
+	ui.drawGlobVolFlag = true;
 }
 
 // from keyboard/smp. ed.
@@ -3064,16 +3056,13 @@ void playRange(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t 
 
 void stopVoices(void)
 {
-	bool audioWasntLocked;
-	stmTyp *ch;
-
-	audioWasntLocked = !audio.locked;
+	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
-	for (uint8_t i = 0; i < MAX_VOICES; i++)
+	for (int32_t i = 0; i < MAX_VOICES; i++)
 	{
-		ch = &stm[i];
+		stmTyp *ch = &stm[i];
 
 		lastChInstr[i].sampleNr = 255;
 		lastChInstr[i].instrNr = 255;
@@ -3121,7 +3110,7 @@ void decSongPos(void)
 	if (song.songPos == 0)
 		return;
 
-	bool audioWasntLocked = !audio.locked;
+	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
@@ -3137,7 +3126,7 @@ void incSongPos(void)
 	if (song.songPos == song.len-1)
 		return;
 
-	bool audioWasntLocked = !audio.locked;
+	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
@@ -3162,7 +3151,7 @@ void decCurIns(void)
 	updateTextBoxPointers();
 	updateNewInstrument();
 
-	if (editor.ui.advEditShown)
+	if (ui.advEditShown)
 		updateAdvEdit();
 }
 
@@ -3182,7 +3171,7 @@ void incCurIns(void)
 	updateTextBoxPointers();
 	updateNewInstrument();
 
-	if (editor.ui.advEditShown)
+	if (ui.advEditShown)
 		updateAdvEdit();
 }
 
@@ -3304,7 +3293,7 @@ void setSyncedReplayerVars(void)
 	if (chSyncEntry != NULL)
 	{
 		handleScopesFromChQueue(chSyncEntry, scopeUpdateStatus);
-		editor.ui.drawReplayerPianoFlag = true;
+		ui.drawReplayerPianoFlag = true;
 	}
 
 	if (!songPlaying || pattSyncEntry == NULL)
@@ -3317,25 +3306,25 @@ void setSyncedReplayerVars(void)
 	if (editor.speed != pattSyncEntry->speed)
 	{
 		editor.speed = pattSyncEntry->speed;
-		editor.ui.drawBPMFlag = true;
+		ui.drawBPMFlag = true;
 	}
 
 	if (editor.tempo != pattSyncEntry->tempo)
 	{
 		editor.tempo = pattSyncEntry->tempo;
-		editor.ui.drawSpeedFlag = true;
+		ui.drawSpeedFlag = true;
 	}
 
 	if (editor.globalVol != pattSyncEntry->globalVol)
 	{
 		editor.globalVol = pattSyncEntry->globalVol;
-		editor.ui.drawGlobVolFlag = true;
+		ui.drawGlobVolFlag = true;
 	}
 
 	if (editor.songPos != pattSyncEntry->songPos)
 	{
 		editor.songPos = pattSyncEntry->songPos;
-		editor.ui.drawPosEdFlag = true;
+		ui.drawPosEdFlag = true;
 	}
 
 	// somewhat of a kludge...
@@ -3344,10 +3333,10 @@ void setSyncedReplayerVars(void)
 		// set pattern number
 		editor.editPattern = editor.tmpPattern = pattSyncEntry->pattern;
 		checkMarkLimits();
-		editor.ui.drawPattNumLenFlag = true;
+		ui.drawPattNumLenFlag = true;
 
 		// set row
 		editor.pattPos = (uint8_t)pattSyncEntry->patternPos;
-		editor.ui.updatePatternEditor = true;
+		ui.updatePatternEditor = true;
 	}
 }

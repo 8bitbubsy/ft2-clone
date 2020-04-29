@@ -14,6 +14,7 @@
 #include "ft2_mouse.h"
 #include "ft2_edit.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 checkBox_t checkBoxes[NUM_CHECKBOXES] =
 {
@@ -182,7 +183,7 @@ bool testCheckBoxMouseDown(void)
 	uint16_t start, end;
 	checkBox_t *checkBox;
 
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 	{
 		// if a system request is open, only test the first three checkboxes (reserved)
 		start = 0;

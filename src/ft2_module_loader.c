@@ -25,6 +25,7 @@
 #include "ft2_events.h"
 #include "ft2_video.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 /* This is a *HUGE* mess!
 ** I hope you never have to modify it, and you probably shouldn't either.
@@ -2461,7 +2462,7 @@ static void setupLoadedModule(void)
 	diskOpSetFilename(DISKOP_ITEM_MODULE, editor.tmpFilenameU);
 
 	// redraw top part of screen
-	if (editor.ui.extended)
+	if (ui.extended)
 	{
 		togglePatternEditorExtended(); // exit
 		togglePatternEditorExtended(); // re-enter (force redrawing)
@@ -2476,7 +2477,7 @@ static void setupLoadedModule(void)
 	updateSampleEditorSample();
 	showBottomScreen(); // redraw bottom screen (also redraws pattern editor)
 
-	if (editor.ui.instEditorShown)
+	if (ui.instEditorShown)
 		drawPiano(NULL); // redraw piano now (since if playing = wait for next tick update)
 
 	removeSongModifiedFlag();
@@ -2549,7 +2550,7 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 	int32_t fullPathLen, filesize;
 	UNICHAR *fullPathU;
 
-	if (editor.ui.sysReqShown || fullPathUTF8 == NULL)
+	if (ui.sysReqShown || fullPathUTF8 == NULL)
 		return;
 
 	fullPathLen = (int32_t)strlen(fullPathUTF8);

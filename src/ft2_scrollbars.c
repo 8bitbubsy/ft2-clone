@@ -19,6 +19,7 @@
 #include "ft2_mouse.h"
 #include "ft2_video.h"
 #include "ft2_palette.h"
+#include "ft2_structs.h"
 
 /* Prevent the scrollbar thumbs from being so small that
 ** it's difficult to use them. In units of pixels.
@@ -501,7 +502,7 @@ bool testScrollBarMouseDown(void)
 	double dTmp;
 	scrollBar_t *scrollBar;
 
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 	{
 		// if a system request is open, only test the first three scrollbars (reserved)
 		start = 0;

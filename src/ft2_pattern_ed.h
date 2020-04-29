@@ -52,10 +52,12 @@ typedef struct markCoord_t
 	uint16_t upperRowsY, midRowY, lowerRowsY;
 } markCoord_t;
 
-struct pattMark_t
+typedef struct pattMark_t
 {
 	int16_t markX1, markX2, markY1, markY2;
-} pattMark;
+} pattMark_t;
+
+extern pattMark_t pattMark; // ft2_pattern_ed.c
 
 void resetPlaybackTime(void);
 

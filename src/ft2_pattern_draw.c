@@ -12,6 +12,7 @@
 #include "ft2_video.h"
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 static tonTyp emptyPattern[MAX_VOICES * MAX_PATT_LEN];
 
@@ -58,14 +59,14 @@ void drawPatternBorders(void)
 	const pattCoord2_t *pattCoord;
 
 	// get heights/pos/rows depending on configuration
-	pattCoord = &pattCoord2Table[config.ptnUnpressed][editor.ui.pattChanScrollShown][editor.ui.extended];
+	pattCoord = &pattCoord2Table[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
 
 	// set pattern cursor Y position
 	editor.ptnCursorY = pattCoord->lowerRowsY - 9;
 
-	chans = editor.ui.numChannelsShown;
-	if (chans > editor.ui.maxVisibleChannels)
-		chans = editor.ui.maxVisibleChannels;
+	chans = ui.numChannelsShown;
+	if (chans > ui.maxVisibleChannels)
+		chans = ui.maxVisibleChannels;
 
 	// in some configurations, there will be two empty channels to the right, fix that
 	if (chans == 2)
@@ -78,14 +79,14 @@ void drawPatternBorders(void)
 	chanWidth = chanWidths[(chans / 2) - 1] + 2;
 
 	// fill scrollbar framework (if needed)
-	if (editor.ui.pattChanScrollShown)
+	if (ui.pattChanScrollShown)
 		drawFramework(0, 383, 632, 17, FRAMEWORK_TYPE1);
 
 	if (config.ptnFrmWrk)
 	{
 		// pattern editor w/ framework
 
-		if (editor.ui.extended)
+		if (ui.extended)
 		{
 			vLine(0,   54, 345, PAL_DSKTOP1);
 			vLine(631, 53, 346, PAL_DSKTOP2);
@@ -96,7 +97,7 @@ void drawPatternBorders(void)
 			hLine(0, 53, 631, PAL_DSKTOP1);
 			hLine(1, 54, 630, PAL_DESKTOP);
 
-			if (!editor.ui.pattChanScrollShown)
+			if (!ui.pattChanScrollShown)
 			{
 				hLine(1, 398, 630, PAL_DESKTOP);
 				hLine(0, 399, 632, PAL_DSKTOP2);
@@ -113,7 +114,7 @@ void drawPatternBorders(void)
 			hLine(0, 173, 631, PAL_DSKTOP1);
 			hLine(1, 174, 630, PAL_DESKTOP);
 
-			if (!editor.ui.pattChanScrollShown)
+			if (!ui.pattChanScrollShown)
 			{
 				hLine(1, 398, 630, PAL_DESKTOP);
 				hLine(0, 399, 632, PAL_DSKTOP2);
@@ -149,21 +150,21 @@ void drawPatternBorders(void)
 	{
 		// pattern editor without framework
 
-		if (editor.ui.extended)
+		if (ui.extended)
 		{
-			clearSize = editor.ui.pattChanScrollShown ? (SCREEN_W * sizeof (int32_t) * 330) : (SCREEN_W * sizeof (int32_t) * 347);
+			clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof (int32_t) * 330) : (SCREEN_W * sizeof (int32_t) * 347);
 			memset(&video.frameBuffer[53 * SCREEN_W], 0, clearSize);
 		}
 		else
 		{
-			clearSize = editor.ui.pattChanScrollShown ? (SCREEN_W * sizeof(int32_t) * 210) : (SCREEN_W * sizeof(int32_t) * 227);
+			clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof(int32_t) * 210) : (SCREEN_W * sizeof(int32_t) * 227);
 			memset(&video.frameBuffer[173 * SCREEN_W], 0, clearSize);
 		}
 
 		drawFramework(0, pattCoord->lowerRowsY - 10, SCREEN_W, 11, FRAMEWORK_TYPE1);
 	}
 
-	if (editor.ui.pattChanScrollShown)
+	if (ui.pattChanScrollShown)
 	{
 		showScrollBar(SB_CHAN_SCROLL);
 		showPushButton(PB_CHAN_SCROLL_LEFT);
@@ -183,13 +184,13 @@ static void writeCursor(void)
 {
 	uint32_t *dstPtr, xPos, width, tabOffset;
 
-	tabOffset = (config.ptnS3M * 32) + (columnModeTab[editor.ui.numChannelsShown - 1] * 8) + editor.cursor.object;
+	tabOffset = (config.ptnS3M * 32) + (columnModeTab[ui.numChannelsShown - 1] * 8) + cursor.object;
 
 	xPos = pattCursorXTab[tabOffset];
 	width = pattCursorWTab[tabOffset];
 
 	assert(editor.ptnCursorY > 0 && xPos > 0 && width > 0);
-	xPos += ((editor.cursor.ch - editor.ui.channelOffset) * editor.ui.patternChannelWidth);
+	xPos += ((cursor.ch - ui.channelOffset) * ui.patternChannelWidth);
 
 	dstPtr = &video.frameBuffer[(editor.ptnCursorY * SCREEN_W) + xPos];
 	for (uint32_t y = 0; y < 9; y++)
@@ -211,8 +212,8 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 	if (pattMark.markY1 > pattMark.markY2)
 		return;
 
-	startCh = editor.ui.channelOffset;
-	endCh = editor.ui.channelOffset + (editor.ui.numChannelsShown - 1);
+	startCh = ui.channelOffset;
+	endCh = ui.channelOffset + (ui.numChannelsShown - 1);
 	startRow = currRow - pattCoord->numUpperRows;
 	endRow = currRow + pattCoord->numLowerRows;
 
@@ -220,18 +221,18 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 	if (pattMark.markX1 > endCh || pattMark.markX2 < startCh || pattMark.markY1 > endRow || pattMark.markY2 < startRow)
 		return;
 
-	markCoord = &markCoordTable[config.ptnUnpressed][editor.ui.pattChanScrollShown][editor.ui.extended];
+	markCoord = &markCoordTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
 	pattYStart = markCoord->upperRowsY;
 
 	// X1
 
-	x1 = 32 + ((pattMark.markX1 - editor.ui.channelOffset) * editor.ui.patternChannelWidth);
+	x1 = 32 + ((pattMark.markX1 - ui.channelOffset) * ui.patternChannelWidth);
 	if (x1 < 32)
 		x1 = 32;
 
 	// X2
 
-	x2 = (32 - 8) + (((pattMark.markX2 + 1) - editor.ui.channelOffset) * editor.ui.patternChannelWidth);
+	x2 = (32 - 8) + (((pattMark.markX2 + 1) - ui.channelOffset) * ui.patternChannelWidth);
 	if (x2 > 608)
 		x2 = 608;
 
@@ -272,7 +273,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 	}
 
 	// kludge! (some mark situations could overwrite illegal areas)
-	if (config.ptnUnpressed && editor.ui.pattChanScrollShown)
+	if (config.ptnUnpressed && ui.pattChanScrollShown)
 	{
 		if (y1 == pattCoord->upperRowsY-1 || y1 == pattCoord->lowerRowsY-1)
 			y1++;
@@ -310,9 +311,9 @@ static void drawChannelNumbering(uint16_t yPos)
 #define CH_NUM_XPOS 30
 
 	uint16_t xPos = CH_NUM_XPOS;
-	int32_t ch = editor.ui.channelOffset + 1;
+	int32_t ch = ui.channelOffset + 1;
 
-	for (uint8_t i = 0; i < editor.ui.numChannelsShown; i++)
+	for (uint8_t i = 0; i < ui.numChannelsShown; i++)
 	{
 		if (ch < 10)
 		{
@@ -325,7 +326,7 @@ static void drawChannelNumbering(uint16_t yPos)
 		}
 
 		ch++;
-		xPos += editor.ui.patternChannelWidth;
+		xPos += ui.patternChannelWidth;
 	}
 }
 
@@ -385,7 +386,7 @@ static void showNoteNum(uint32_t xPos, uint32_t yPos, int16_t ton, uint32_t colo
 
 	assert(ton >= 0 && ton <= 97);
 
-	if (editor.ui.numChannelsShown <= 4)
+	if (ui.numChannelsShown <= 4)
 	{
 		if (ton <= 0 || ton > 97)
 			drawEmptyNoteBig(xPos, yPos, color);
@@ -409,13 +410,13 @@ static void showInstrNum(uint32_t xPos, uint32_t yPos, uint8_t ins, uint32_t col
 {
 	uint8_t chr1, chr2, charW, fontType;
 
-	if (editor.ui.numChannelsShown <= 4)
+	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
 		xPos += 67;
 	}
-	else if (editor.ui.numChannelsShown <= 6)
+	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
@@ -450,7 +451,7 @@ static void showVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t color
 {
 	uint8_t char1, char2, fontType, charW;
 
-	if (editor.ui.numChannelsShown <= 4)
+	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
@@ -462,7 +463,7 @@ static void showVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t color
 		else
 			char2 = vol & 0x0F;
 	}
-	else if (editor.ui.numChannelsShown <= 6)
+	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
@@ -495,13 +496,13 @@ static void showEfx(uint32_t xPos, uint32_t yPos, uint8_t effTyp, uint8_t eff, u
 {
 	uint8_t fontType, charW;
 
-	if (editor.ui.numChannelsShown <= 4)
+	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
 		xPos += 115;
 	}
-	else if (editor.ui.numChannelsShown <= 6)
+	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
@@ -527,7 +528,7 @@ static void showNoteNumNoVolColumn(uint32_t xPos, uint32_t yPos, int16_t ton, ui
 
 	assert(ton >= 0 && ton <= 97);
 
-	if (editor.ui.numChannelsShown <= 6)
+	if (ui.numChannelsShown <= 6)
 	{
 		if (ton <= 0 || ton > 97)
 			drawEmptyNoteBig(xPos, yPos, color);
@@ -536,7 +537,7 @@ static void showNoteNumNoVolColumn(uint32_t xPos, uint32_t yPos, int16_t ton, ui
 		else
 			drawNoteBig(xPos, yPos, ton, color);
 	}
-	else if (editor.ui.numChannelsShown <= 8)
+	else if (ui.numChannelsShown <= 8)
 	{
 		if (ton <= 0 || ton > 97)
 			drawEmptyNoteMedium(xPos, yPos, color);
@@ -560,19 +561,19 @@ static void showInstrNumNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t ins, u
 {
 	uint8_t chr1, chr2, charW, fontType;
 
-	if (editor.ui.numChannelsShown <= 4)
+	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE5;
 		charW = FONT5_CHAR_W;
 		xPos += 59;
 	}
-	else if (editor.ui.numChannelsShown <= 6)
+	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
 		xPos += 51;
 	}
-	else if (editor.ui.numChannelsShown <= 8)
+	else if (ui.numChannelsShown <= 8)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
@@ -616,19 +617,19 @@ static void showEfxNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t effTyp, uin
 {
 	uint8_t charW, fontType;
 
-	if (editor.ui.numChannelsShown <= 4)
+	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE5;
 		charW = FONT5_CHAR_W;
 		xPos += 91;
 	}
-	else if (editor.ui.numChannelsShown <= 6)
+	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
 		xPos += 67;
 	}
-	else if (editor.ui.numChannelsShown <= 8)
+	else if (ui.numChannelsShown <= 8)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
@@ -667,19 +668,19 @@ void writePattern(int32_t currRow, int32_t pattern)
 
 	// setup variables
 
-	chans = editor.ui.numChannelsShown;
-	if (chans > editor.ui.maxVisibleChannels)
-		chans = editor.ui.maxVisibleChannels;
+	chans = ui.numChannelsShown;
+	if (chans > ui.maxVisibleChannels)
+		chans = ui.maxVisibleChannels;
 
 	assert(chans >= 2 && chans <= 12);
 
 	// get channel width
 	chanWidth = chanWidths[(chans / 2) - 1];
-	editor.ui.patternChannelWidth = (uint16_t)(chanWidth + 3);
+	ui.patternChannelWidth = (uint16_t)(chanWidth + 3);
 
 	// get heights/pos/rows depending on configuration
 	rowHeight = config.ptnUnpressed ? 11 : 8;
-	pattCoord = &pattCoordTable[config.ptnUnpressed][editor.ui.pattChanScrollShown][editor.ui.extended];
+	pattCoord = &pattCoordTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
 	midRowTextY = pattCoord->midRowTextY;
 	lowerRowsTextY = pattCoord->lowerRowsTextY;
 	row = currRow - pattCoord->numUpperRows;
@@ -687,7 +688,7 @@ void writePattern(int32_t currRow, int32_t pattern)
 	textY = pattCoord->upperRowsTextY;
 
 	afterCurrRow = currRow + 1;
-	numChannels = editor.ui.numChannelsShown;
+	numChannels = ui.numChannelsShown;
 	pattPtr = patt[pattern];
 	numRows = pattLens[pattern];
 	noteTextColors[0] = video.palette[PAL_PATTEXT]; // not selected
@@ -695,7 +696,7 @@ void writePattern(int32_t currRow, int32_t pattern)
 
 	// increment pattern data pointer by horizontal scrollbar offset/channel
 	if (pattPtr != NULL)
-		pattPtr += editor.ui.channelOffset;
+		pattPtr += ui.channelOffset;
 
 	// set up function pointers for drawing
 	if (config.ptnS3M)
@@ -728,7 +729,7 @@ void writePattern(int32_t currRow, int32_t pattern)
 				note = &pattPtr[(uint32_t)row * MAX_VOICES];
 
 			xPos = 29;
-			xWidth = editor.ui.patternChannelWidth;
+			xWidth = ui.patternChannelWidth;
 
 			color = noteTextColors[selectedRowFlag];
 			for (int32_t j = 0; j < numChannels; j++)

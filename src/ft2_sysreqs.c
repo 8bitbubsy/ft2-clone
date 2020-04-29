@@ -6,12 +6,16 @@
 #include "ft2_keyboard.h"
 #include "ft2_textboxes.h"
 #include "ft2_video.h"
+#include "ft2_sysreqs.h"
+#include "ft2_structs.h"
 
 #define SYSTEM_REQUEST_H 67
 #define SYSTEM_REQUEST_Y 249
 #define SYSTEM_REQUEST_Y_EXT 91
 
 #define NUM_SYSREQ_TYPES 10
+
+okBoxData_t okBoxData; // globalized
 
 static char *buttonText[NUM_SYSREQ_TYPES][5] =
 {
@@ -75,8 +79,8 @@ static void drawWindow(uint16_t w)
 	const uint16_t h = SYSTEM_REQUEST_H;
 	uint16_t x, y;
 
-	x = (SCREEN_W - w) / 2;
-	y = editor.ui.extended ? 91 : SYSTEM_REQUEST_Y;
+	x = (SCREEN_W - w) >> 1;
+	y = ui.extended ? 91 : SYSTEM_REQUEST_Y;
 
 	// main fill
 	fillRect(x + 1, y + 1, w - 2, h - 2, PAL_BUTTONS);
@@ -168,12 +172,12 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	if (mouse.mode != MOUSE_MODE_NORMAL)
 		setMouseMode(MOUSE_MODE_NORMAL);
 
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 		return 0;
 
 	SDL_EventState(SDL_DROPFILE, SDL_DISABLE);
 
-	editor.ui.sysReqShown = true;
+	ui.sysReqShown = true;
 	mouseAnimOff();
 
 	oldLastUsedObjectID = mouse.lastUsedObjectID;
@@ -204,7 +208,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	x = (SCREEN_W - wlen) >> 1;
 
 	// the box y position differs in extended pattern editor mode
-	y = editor.ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
+	y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set up buttons
 	for (i = 0; i < knp; i++)
@@ -250,7 +254,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 
 	// input/rendering loop
 	returnVal = 0;
-	while (editor.ui.sysReqShown)
+	while (ui.sysReqShown)
 	{
 		beginFPSCounter();
 		readMouseXY();
@@ -271,12 +275,12 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 				if (inputEvent.key.keysym.sym == SDLK_ESCAPE)
 				{
 					returnVal = 0;
-					editor.ui.sysReqShown = false;
+					ui.sysReqShown = false;
 				}
 				else if (inputEvent.key.keysym.sym == SDLK_RETURN)
 				{
 					returnVal = 1;
-					editor.ui.sysReqShown = false;
+					ui.sysReqShown = false;
 					keyb.ignoreCurrKeyUp = true; // don't handle key up event for any keys that were pressed
 				}
 
@@ -285,7 +289,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 					if (shortCut[typ][i] == inputEvent.key.keysym.sym)
 					{
 						returnVal = i + 1;
-						editor.ui.sysReqShown = false;
+						ui.sysReqShown = false;
 						keyb.ignoreCurrKeyUp = true; // don't handle key up event for any keys that were pressed
 						break;
 					}
@@ -300,7 +304,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 
 					returnVal = testPushButtonMouseRelease(false) + 1;
 					if (returnVal > 0)
-						editor.ui.sysReqShown = false;
+						ui.sysReqShown = false;
 
 					mouse.lastUsedObjectID = OBJECT_ID_NONE;
 					mouse.lastUsedObjectType = OBJECT_NONE;
@@ -315,11 +319,11 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 				}
 			}
 
-			if (!editor.ui.sysReqShown)
+			if (!ui.sysReqShown)
 				break;
 		}
 
-		if (!editor.ui.sysReqShown)
+		if (!ui.sysReqShown)
 			break;
 
 		handleRedrawing();
@@ -378,7 +382,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	if (mouse.mode != MOUSE_MODE_NORMAL)
 		setMouseMode(MOUSE_MODE_NORMAL);
 
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 		return 0;
 
 	oldLastUsedObjectID = mouse.lastUsedObjectID;
@@ -408,7 +412,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 
 	SDL_EventState(SDL_DROPFILE, SDL_DISABLE);
 
-	editor.ui.sysReqShown = true;
+	ui.sysReqShown = true;
 	mouseAnimOff();
 
 	wlen = textWidth(headline);
@@ -432,7 +436,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 		wlen = 600;
 
 	// the box y position differs in extended pattern editor mode
-	y = editor.ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
+	y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set further text box settings
 	t->x = (SCREEN_W - TEXTBOX_W) >> 1;
@@ -466,7 +470,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 
 	// input/rendering loop
 	returnVal = 0;
-	while (editor.ui.sysReqShown)
+	while (ui.sysReqShown)
 	{
 		beginFPSCounter();
 		readMouseXY();
@@ -508,12 +512,12 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 				if (inputEvent.key.keysym.sym == SDLK_ESCAPE)
 				{
 					returnVal = 0;
-					editor.ui.sysReqShown = false;
+					ui.sysReqShown = false;
 				}
 				else if (inputEvent.key.keysym.sym == SDLK_RETURN)
 				{
 					returnVal = 1;
-					editor.ui.sysReqShown = false;
+					ui.sysReqShown = false;
 					keyb.ignoreCurrKeyUp = true; // don't handle key up event for any keys that were pressed
 				}
 
@@ -528,7 +532,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 						if (shortCut[1][i] == inputEvent.key.keysym.sym)
 						{
 							returnVal = i + 1;
-							editor.ui.sysReqShown = false;
+							ui.sysReqShown = false;
 							keyb.ignoreCurrKeyUp = true; // don't handle key up event for any keys that were pressed
 							break;
 						}
@@ -541,7 +545,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 				{
 					returnVal = testPushButtonMouseRelease(false) + 1;
 					if (returnVal > 0)
-						editor.ui.sysReqShown = false;
+						ui.sysReqShown = false;
 
 					mouse.lastUsedObjectID = OBJECT_ID_NONE;
 					mouse.lastUsedObjectType = OBJECT_NONE;
@@ -556,11 +560,11 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 				}
 			}
 
-			if (!editor.ui.sysReqShown)
+			if (!ui.sysReqShown)
 				break;
 		}
 
-		if (!editor.ui.sysReqShown)
+		if (!ui.sysReqShown)
 			break;
 
 		handleRedrawing();
@@ -648,7 +652,7 @@ bool askUnsavedChanges(uint8_t type)
 
 int16_t quitBox(bool skipQuitMsg)
 {
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 		return 0;
 
 	if (!song.isModified && skipQuitMsg)

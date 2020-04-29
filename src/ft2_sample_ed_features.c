@@ -24,6 +24,7 @@
 #include "ft2_sample_ed.h"
 #include "ft2_keyboard.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 static volatile bool stopThread;
 
@@ -35,14 +36,14 @@ static SDL_Thread *thread;
 
 static void pbExit(void)
 {
-	editor.ui.sysReqShown = false;
+	ui.sysReqShown = false;
 	exitFlag = true;
 }
 
 static void windowOpen(void)
 {
-	editor.ui.sysReqShown = true;
-	editor.ui.sysReqEnterPressed = false;
+	ui.sysReqShown = true;
+	ui.sysReqEnterPressed = false;
 
 	unstuckLastUsedGUIElement();
 	SDL_EventState(SDL_DROPFILE, SDL_DISABLE);
@@ -108,7 +109,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	{
 		outOfMemory = true;
 		setMouseBusy(false);
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return true;
 	}
 
@@ -188,7 +189,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	setSongModifiedFlag();
 	setMouseBusy(false);
 
-	editor.ui.sysReqShown = false;
+	ui.sysReqShown = false;
 	return true;
 }
 
@@ -346,10 +347,10 @@ void pbSampleResample(void)
 	outOfMemory = false;
 
 	exitFlag = false;
-	while (editor.ui.sysReqShown)
+	while (ui.sysReqShown)
 	{
 		readInput();
-		if (editor.ui.sysReqEnterPressed)
+		if (ui.sysReqEnterPressed)
 			pbDoResampling();
 
 		setSyncedReplayerVars();
@@ -456,7 +457,7 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 
 	if (echo_nEcho < 1)
 	{
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return true;
 	}
 
@@ -472,7 +473,7 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 
 	if (nEchoes < 1)
 	{
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return true;
 	}
 
@@ -499,7 +500,7 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 	{
 		outOfMemory = true;
 		setMouseBusy(false);
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return false;
 	}
 
@@ -614,7 +615,7 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 	setSongModifiedFlag();
 	setMouseBusy(false);
 
-	editor.ui.sysReqShown = false;
+	ui.sysReqShown = false;
 	return true;
 }
 
@@ -848,10 +849,10 @@ void pbSampleEcho(void)
 	outOfMemory = false;
 
 	exitFlag = false;
-	while (editor.ui.sysReqShown)
+	while (ui.sysReqShown)
 	{
 		readInput();
-		if (editor.ui.sysReqEnterPressed)
+		if (ui.sysReqEnterPressed)
 			pbCreateEcho();
 
 		setSyncedReplayerVars();
@@ -895,7 +896,7 @@ static int32_t SDLCALL mixThread(void *ptr)
 	if (destIns == mixIns && destSmp == mixSmp)
 	{
 		setMouseBusy(false);
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return true;
 	}
 
@@ -948,7 +949,7 @@ static int32_t SDLCALL mixThread(void *ptr)
 	if (maxLen <= 0)
 	{
 		setMouseBusy(false);
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return true;
 	}
 
@@ -957,7 +958,7 @@ static int32_t SDLCALL mixThread(void *ptr)
 	{
 		outOfMemory = true;
 		setMouseBusy(false);
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return true;
 	}
 
@@ -965,7 +966,7 @@ static int32_t SDLCALL mixThread(void *ptr)
 	{
 		outOfMemory = true;
 		setMouseBusy(false);
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return true;
 	}
 
@@ -1023,7 +1024,7 @@ static int32_t SDLCALL mixThread(void *ptr)
 	setSongModifiedFlag();
 	setMouseBusy(false);
 
-	editor.ui.sysReqShown = false;
+	ui.sysReqShown = false;
 	return true;
 }
 
@@ -1165,10 +1166,10 @@ void pbSampleMix(void)
 	outOfMemory = false;
 
 	exitFlag = false;
-	while (editor.ui.sysReqShown)
+	while (ui.sysReqShown)
 	{
 		readInput();
-		if (editor.ui.sysReqEnterPressed)
+		if (ui.sysReqEnterPressed)
 			pbMix();
 
 		setSyncedReplayerVars();
@@ -1346,7 +1347,7 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 
 applyVolumeExit:
 	setMouseBusy(false);
-	editor.ui.sysReqShown = false;
+	ui.sysReqShown = false;
 
 	(void)ptr;
 	return true;
@@ -1356,7 +1357,7 @@ static void pbApplyVolume(void)
 {
 	if (vol_StartVol == 100 && vol_EndVol == 100)
 	{
-		editor.ui.sysReqShown = false;
+		ui.sysReqShown = false;
 		return; // no volume change to be done
 	}
 
@@ -1692,10 +1693,10 @@ void pbSampleVolume(void)
 	windowOpen();
 
 	exitFlag = false;
-	while (editor.ui.sysReqShown)
+	while (ui.sysReqShown)
 	{
 		readInput();
-		if (editor.ui.sysReqEnterPressed)
+		if (ui.sysReqEnterPressed)
 		{
 			pbApplyVolume();
 			keyb.ignoreCurrKeyUp = true; // don't handle key up event for this key release
@@ -1705,7 +1706,7 @@ void pbSampleVolume(void)
 		handleRedrawing();
 
 		// this is needed for the "Get maximum scale" button
-		if (editor.ui.setMouseIdle) mouseAnimOff();
+		if (ui.setMouseIdle) mouseAnimOff();
 
 		drawSampleVolumeBox();
 		setScrollBarPos(0, 500 + vol_StartVol, false);

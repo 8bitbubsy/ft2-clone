@@ -11,6 +11,7 @@
 #include "ft2_sample_ed.h"
 #include "ft2_video.h"
 #include "ft2_sampling.h"
+#include "ft2_structs.h"
 
 // these may very well change after opening the audio input device
 #define SAMPLING_BUFFER_SIZE 2048

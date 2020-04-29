@@ -29,6 +29,7 @@
 #include "ft2_edit.h"
 #include "ft2_sample_ed_features.h"
 #include "ft2_palette.h"
+#include "ft2_structs.h"
 
 pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 {
@@ -335,7 +336,7 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 
 	// ------ CONFIG MISCELLANEOUS PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,                         text #2, funcOnDown,          funcOnUp
-	{ 113, 155, 93, 16, 0, 0, editor.ui.fullscreenButtonText,  NULL,    NULL,                toggleFullScreen },
+	{ 113, 155, 93, 16, 0, 0, ui.fullscreenButtonText,  NULL,    NULL,                toggleFullScreen },
 	{ 370, 121, 18, 13, 1, 4, ARROW_UP_STRING,                 NULL,    configQuantizeUp,    NULL },
 	{ 387, 121, 18, 13, 1, 4, ARROW_DOWN_STRING,               NULL,    configQuantizeDown,  NULL },
 	{ 594, 106, 18, 13, 1, 4, ARROW_UP_STRING,                 NULL,    configMIDIChnUp,     NULL },
@@ -560,7 +561,7 @@ bool testPushButtonMouseDown(void)
 	uint16_t start, end;
 	pushButton_t *pushButton;
 
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 	{
 		// if a system request is open, only test the first eight pushbuttons (reserved)
 		start = 0;

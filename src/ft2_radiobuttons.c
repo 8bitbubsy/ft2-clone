@@ -16,6 +16,7 @@
 #include "ft2_mouse.h"
 #include "ft2_wav_renderer.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 {
@@ -321,7 +322,7 @@ bool testRadioButtonMouseDown(void)
 {
 	radioButton_t *radioButton;
 
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 		return false;
 
 	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++)

@@ -23,6 +23,7 @@
 #include "ft2_mouse.h"
 #include "ft2_diskop.h"
 #include "ft2_keyboard.h"
+#include "ft2_structs.h"
 
 static const char sharpNote1Char[12] = { 'C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B' };
 static const char sharpNote2Char[12] = { '-', '#', '-', '#', '-', '-', '#', '-', '#', '-', '#', '-' };
@@ -400,10 +401,10 @@ static void fixRepeatGadgets(void)
 	bool showLoopPins = true;
 
 	s = getCurSample();
-	if (s == NULL || s->len <= 0 || s->pek == NULL || (s->typ & 3) == 0 || !editor.ui.sampleEditorShown)
+	if (s == NULL || s->len <= 0 || s->pek == NULL || (s->typ & 3) == 0 || !ui.sampleEditorShown)
 		showLoopPins = false;
 
-	if (editor.ui.sampleEditorShown)
+	if (ui.sampleEditorShown)
 	{
 		// draw Repeat/Replen. numbers
 		hexOutBg(536, 375, PAL_FORGRND, PAL_DESKTOP, curSmpRepS, 8);
@@ -577,7 +578,7 @@ static void writeRange(void)
 	uint32_t *ptr32;
 
 	// very first sample (rx1=0,rx2=0) is the "no range" special case
-	if (!editor.ui.sampleEditorShown || smpEd_ViewSize == 0 || (smpEd_Rx1 == 0 && smpEd_Rx2 == 0))
+	if (!ui.sampleEditorShown || smpEd_ViewSize == 0 || (smpEd_Rx1 == 0 && smpEd_Rx2 == 0))
 		return;
 
 	// test if range is outside of view (passed it by scrolling)
@@ -1084,18 +1085,18 @@ void writeSample(bool forceSmpRedraw)
 	}
 
 	// handle updating
-	if (editor.ui.sampleEditorShown)
+	if (ui.sampleEditorShown)
 	{
 		// check if we need to redraw sample data
 		if (forceSmpRedraw || (old_SmpScrPos != smpEd_ScrPos || old_ViewSize != smpEd_ViewSize))
 		{
-			if (editor.ui.sampleEditorShown)
+			if (ui.sampleEditorShown)
 				writeWaveform();
 
 			old_SmpScrPos = smpEd_ScrPos;
 			old_ViewSize = smpEd_ViewSize;
 
-			if (editor.ui.sampleEditorShown)
+			if (ui.sampleEditorShown)
 				writeRange(); // range was overwritten, draw it again
 
 			smpEd_OldSmpPosLine = -1;
@@ -1114,14 +1115,14 @@ void writeSample(bool forceSmpRedraw)
 			smpEd_Rx1 = old_Rx1;
 			smpEd_Rx2 = old_Rx2;
 
-			if (editor.ui.sampleEditorShown)
+			if (ui.sampleEditorShown)
 				writeRange();
 
 			// write new range
 			smpEd_Rx1 = tmpRx1;
 			smpEd_Rx2 = tmpRx2;
 
-			if (editor.ui.sampleEditorShown)
+			if (ui.sampleEditorShown)
 				writeRange();
 
 			old_Rx1 = smpEd_Rx1;
@@ -1131,7 +1132,7 @@ void writeSample(bool forceSmpRedraw)
 		fixRepeatGadgets();
 	}
 
-	if (editor.ui.sampleEditorShown)
+	if (ui.sampleEditorShown)
 		fixSampleDrag();
 
 	updateSampleEditor();
@@ -1191,7 +1192,7 @@ void updateSampleEditor(void)
 	uint8_t note, typ;
 	int32_t sampleLen;
 
-	if (!editor.ui.sampleEditorShown)
+	if (!ui.sampleEditorShown)
 		return;
 
 	if (instr[editor.curInstr] == NULL)
@@ -1344,17 +1345,17 @@ void scrollSampleData(uint32_t pos)
 
 void sampPlayWave(void)
 {
-	playSample(editor.cursor.ch, editor.curInstr, editor.curSmp, editor.smpEd_NoteNr, 0, 0);
+	playSample(cursor.ch, editor.curInstr, editor.curSmp, editor.smpEd_NoteNr, 0, 0);
 }
 
 void sampPlayDisplay(void)
 {
-	playRange(editor.cursor.ch, editor.curInstr, editor.curSmp, editor.smpEd_NoteNr, 0, 0, smpEd_ScrPos, smpEd_ViewSize);
+	playRange(cursor.ch, editor.curInstr, editor.curSmp, editor.smpEd_NoteNr, 0, 0, smpEd_ScrPos, smpEd_ViewSize);
 }
 
 void sampPlayRange(void)
 {
-	playRange(editor.cursor.ch, editor.curInstr, editor.curSmp, editor.smpEd_NoteNr, 0, 0, smpEd_Rx1, smpEd_Rx2 - smpEd_Rx1);
+	playRange(cursor.ch, editor.curInstr, editor.curSmp, editor.smpEd_NoteNr, 0, 0, smpEd_Rx1, smpEd_Rx2 - smpEd_Rx1);
 }
 
 void showRange(void)
@@ -2813,7 +2814,7 @@ void hideSampleEditor(void)
 
 	hideScrollBar(SB_SAMP_SCROLL);
 
-	editor.ui.sampleEditorShown = false;
+	ui.sampleEditorShown = false;
 
 	hideSprite(SPRITE_LEFT_LOOP_PIN);
 	hideSprite(SPRITE_RIGHT_LOOP_PIN);
@@ -2823,7 +2824,7 @@ void exitSampleEditor(void)
 {
 	hideSampleEditor();
 
-	if (editor.ui.sampleEditorExtShown)
+	if (ui.sampleEditorExtShown)
 		hideSampleEditorExt();
 
 	showPatternEditor();
@@ -2831,12 +2832,12 @@ void exitSampleEditor(void)
 
 void showSampleEditor(void)
 {
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideInstEditor();
 	hidePatternEditor();
-	editor.ui.sampleEditorShown = true;
+	ui.sampleEditorShown = true;
 
 	drawFramework(0,   329, 632, 17, FRAMEWORK_TYPE1);
 	drawFramework(0,   346, 115, 54, FRAMEWORK_TYPE1);
@@ -2903,7 +2904,7 @@ void toggleSampleEditor(void)
 {
 	hideInstEditor();
 
-	if (editor.ui.sampleEditorShown)
+	if (ui.sampleEditorShown)
 	{
 		exitSampleEditor();
 	}
@@ -2980,7 +2981,7 @@ void handleSamplerRedrawing(void)
 {
 	// update sample editor
 
-	if (!editor.ui.sampleEditorShown || editor.samplingAudioFlag)
+	if (!ui.sampleEditorShown || editor.samplingAudioFlag)
 		return;
 
 	if (writeSampleFlag)
@@ -3262,9 +3263,9 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 
 	if (!mouseButtonHeld)
 	{
-		editor.ui.rightLoopPinMoving  = false;
-		editor.ui.leftLoopPinMoving = false;
-		editor.ui.sampleDataOrLoopDrag = -1;
+		ui.rightLoopPinMoving  = false;
+		ui.leftLoopPinMoving = false;
+		ui.sampleDataOrLoopDrag = -1;
 
 		mouseXOffs = 0;
 		lastMouseX = mx;
@@ -3282,12 +3283,12 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 				{
 					mouseXOffs = (leftLoopPinPos + 8) - mx;
 
-					editor.ui.sampleDataOrLoopDrag = true;
+					ui.sampleDataOrLoopDrag = true;
 
 					setLeftLoopPinState(true);
 					lastMouseX = mx;
 
-					editor.ui.leftLoopPinMoving = true;
+					ui.leftLoopPinMoving = true;
 					return;
 				}
 			}
@@ -3298,26 +3299,26 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 				{
 					mouseXOffs = (rightLoopPinPos + 8) - mx;
 
-					editor.ui.sampleDataOrLoopDrag = true;
+					ui.sampleDataOrLoopDrag = true;
 
 					setRightLoopPinState(true);
 					lastMouseX = mx;
 
-					editor.ui.rightLoopPinMoving = true;
+					ui.rightLoopPinMoving = true;
 					return;
 				}
 			}
 
 			// mark data
 			lastMouseX = mx;
-			editor.ui.sampleDataOrLoopDrag = mx;
+			ui.sampleDataOrLoopDrag = mx;
 
 			setSampleRange(mx, mx);
 		}
 		else if (mouse.rightButtonPressed)
 		{
 			// edit data
-			editor.ui.sampleDataOrLoopDrag = true;
+			ui.sampleDataOrLoopDrag = true;
 			editSampleData(false);
 		}
 
@@ -3334,27 +3335,27 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 	{
 		if (mouse.leftButtonPressed)
 		{
-			if (editor.ui.leftLoopPinMoving)
+			if (ui.leftLoopPinMoving)
 			{
 				lastMouseX = mx;
 				setLeftLoopPinPos(mouseXOffs + mx);
 			}
-			else if (editor.ui.rightLoopPinMoving)
+			else if (ui.rightLoopPinMoving)
 			{
 				lastMouseX = mx;
 				setRightLoopPinPos(mouseXOffs + mx);
 			}
-			else if (editor.ui.sampleDataOrLoopDrag >= 0)
+			else if (ui.sampleDataOrLoopDrag >= 0)
 			{
 				// mark data
 				lastMouseX = mx;
 
-				if (lastMouseX > editor.ui.sampleDataOrLoopDrag)
-					setSampleRange(editor.ui.sampleDataOrLoopDrag, mx);
-				else if (lastMouseX == editor.ui.sampleDataOrLoopDrag)
-					setSampleRange(editor.ui.sampleDataOrLoopDrag, editor.ui.sampleDataOrLoopDrag);
-				else if (lastMouseX < editor.ui.sampleDataOrLoopDrag)
-					setSampleRange(mx, editor.ui.sampleDataOrLoopDrag);
+				if (lastMouseX > ui.sampleDataOrLoopDrag)
+					setSampleRange(ui.sampleDataOrLoopDrag, mx);
+				else if (lastMouseX == ui.sampleDataOrLoopDrag)
+					setSampleRange(ui.sampleDataOrLoopDrag, ui.sampleDataOrLoopDrag);
+				else if (lastMouseX < ui.sampleDataOrLoopDrag)
+					setSampleRange(mx, ui.sampleDataOrLoopDrag);
 			}
 		}
 	}
@@ -3409,20 +3410,20 @@ void showSampleEditorExt(void)
 	hideTopScreen();
 	showTopScreen(false);
 
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
-	if (!editor.ui.sampleEditorShown)
+	if (!ui.sampleEditorShown)
 		showSampleEditor();
 
-	editor.ui.sampleEditorExtShown = true;
-	editor.ui.scopesShown = false;
+	ui.sampleEditorExtShown = true;
+	ui.scopesShown = false;
 	drawSampleEditorExt();
 }
 
 void hideSampleEditorExt(void)
 {
-	editor.ui.sampleEditorExtShown = false;
+	ui.sampleEditorExtShown = false;
 
 	hidePushButton(PB_SAMP_EXT_CLEAR_COPYBUF);
 	hidePushButton(PB_SAMP_EXT_CONV);
@@ -3437,13 +3438,13 @@ void hideSampleEditorExt(void)
 	hidePushButton(PB_SAMP_EXT_RESAMPLE);
 	hidePushButton(PB_SAMP_EXT_MIX_SAMPLE);
 
-	editor.ui.scopesShown = true;
+	ui.scopesShown = true;
 	drawScopeFramework();
 }
 
 void toggleSampleEditorExt(void)
 {
-	if (editor.ui.sampleEditorExtShown)
+	if (ui.sampleEditorExtShown)
 		hideSampleEditorExt();
 	else
 		showSampleEditorExt();

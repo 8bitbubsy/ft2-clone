@@ -22,6 +22,7 @@
 #include "ft2_video.h"
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 static void releaseMouseStates(void)
 {
@@ -35,9 +36,9 @@ static void releaseMouseStates(void)
 	mouse.buttonCounter = 0;
 	mouse.lastX = 0;
 	mouse.lastY = 0;
-	editor.ui.sampleDataOrLoopDrag = -1;
-	editor.ui.leftLoopPinMoving = false;
-	editor.ui.rightLoopPinMoving = false;
+	ui.sampleDataOrLoopDrag = -1;
+	ui.leftLoopPinMoving = false;
+	ui.rightLoopPinMoving = false;
 }
 
 void unstuckLastUsedGUIElement(void)
@@ -53,16 +54,16 @@ void unstuckLastUsedGUIElement(void)
 		** sample data loop pins, and unstuck them if so
 		*/
 
-		if (editor.ui.leftLoopPinMoving)
+		if (ui.leftLoopPinMoving)
 		{
 			setLeftLoopPinState(false);
-			editor.ui.leftLoopPinMoving = false;
+			ui.leftLoopPinMoving = false;
 		}
 
-		if (editor.ui.rightLoopPinMoving)
+		if (ui.rightLoopPinMoving)
 		{
 			setRightLoopPinState(false);
-			editor.ui.rightLoopPinMoving = false;
+			ui.rightLoopPinMoving = false;
 		}
 
 		releaseMouseStates();
@@ -1052,36 +1053,36 @@ void drawFramework(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t type)
 
 void showTopLeftMainScreen(bool restoreScreens)
 {
-	editor.ui.diskOpShown = false;
-	editor.ui.sampleEditorExtShown = false;
-	editor.ui.instEditorExtShown = false;
-	editor.ui.transposeShown = false;
-	editor.ui.advEditShown = false;
-	editor.ui.wavRendererShown = false;
-	editor.ui.trimScreenShown = false;
+	ui.diskOpShown = false;
+	ui.sampleEditorExtShown = false;
+	ui.instEditorExtShown = false;
+	ui.transposeShown = false;
+	ui.advEditShown = false;
+	ui.wavRendererShown = false;
+	ui.trimScreenShown = false;
 
-	editor.ui.scopesShown = true;
+	ui.scopesShown = true;
 	if (restoreScreens)
 	{
-		switch (editor.ui.oldTopLeftScreen)
+		switch (ui.oldTopLeftScreen)
 		{
 			default: break;
-			case 1: editor.ui.diskOpShown = true; break;
-			case 2: editor.ui.sampleEditorExtShown = true; break;
-			case 3: editor.ui.instEditorExtShown = true; break;
-			case 4: editor.ui.transposeShown = true; break;
-			case 5: editor.ui.advEditShown = true; break;
-			case 6: editor.ui.wavRendererShown = true; break;
-			case 7: editor.ui.trimScreenShown = true; break;
+			case 1: ui.diskOpShown = true; break;
+			case 2: ui.sampleEditorExtShown = true; break;
+			case 3: ui.instEditorExtShown = true; break;
+			case 4: ui.transposeShown = true; break;
+			case 5: ui.advEditShown = true; break;
+			case 6: ui.wavRendererShown = true; break;
+			case 7: ui.trimScreenShown = true; break;
 		}
 
-		if (editor.ui.oldTopLeftScreen > 0)
-			editor.ui.scopesShown = false;
+		if (ui.oldTopLeftScreen > 0)
+			ui.scopesShown = false;
 	}
 
-	editor.ui.oldTopLeftScreen = 0;
+	ui.oldTopLeftScreen = 0;
 
-	if (editor.ui.diskOpShown)
+	if (ui.diskOpShown)
 	{
 		showDiskOpScreen();
 	}
@@ -1157,7 +1158,7 @@ void showTopLeftMainScreen(bool restoreScreens)
 		textOutShadow(4, 80, PAL_FORGRND, PAL_DSKTOP2, "Global volume");
 		drawGlobalVol(song.globVol);
 
-		editor.ui.updatePosSections = true;
+		ui.updatePosSections = true;
 
 		textOutShadow(204, 80, PAL_FORGRND, PAL_DSKTOP2, "Time");
 		charOutShadow(250, 80, PAL_FORGRND, PAL_DSKTOP2, ':');
@@ -1165,14 +1166,14 @@ void showTopLeftMainScreen(bool restoreScreens)
 
 		drawPlaybackTime();
 
-		     if (editor.ui.sampleEditorExtShown) drawSampleEditorExt();
-		else if (editor.ui.instEditorExtShown)   drawInstEditorExt();
-		else if (editor.ui.transposeShown)       drawTranspose();
-		else if (editor.ui.advEditShown)         drawAdvEdit();
-		else if (editor.ui.wavRendererShown)     drawWavRenderer();
-		else if (editor.ui.trimScreenShown)      drawTrimScreen();
+		     if (ui.sampleEditorExtShown) drawSampleEditorExt();
+		else if (ui.instEditorExtShown)   drawInstEditorExt();
+		else if (ui.transposeShown)       drawTranspose();
+		else if (ui.advEditShown)         drawAdvEdit();
+		else if (ui.wavRendererShown)     drawWavRenderer();
+		else if (ui.trimScreenShown)      drawTrimScreen();
 
-		if (editor.ui.scopesShown)
+		if (ui.scopesShown)
 			drawScopeFramework();
 	}
 }
@@ -1187,7 +1188,7 @@ void hideTopLeftMainScreen(void)
 	hideWavRenderer();
 	hideTrimScreen();
 
-	editor.ui.scopesShown = false;
+	ui.scopesShown = false;
 
 	// position editor
 	hideScrollBar(SB_POS_ED);
@@ -1251,7 +1252,7 @@ void showTopRightMainScreen(void)
 	showPushButton(PB_HELP);
 
 	// instrument switcher
-	editor.ui.instrSwitcherShown = true;
+	ui.instrSwitcherShown = true;
 	showInstrumentSwitcher();
 
 	// song name
@@ -1275,7 +1276,7 @@ void hideTopRightMainScreen(void)
 
 	// instrument switcher
 	hideInstrumentSwitcher();
-	editor.ui.instrSwitcherShown = false;
+	ui.instrSwitcherShown = false;
 
 	hideTextBox(TB_SONG_NAME);
 }
@@ -1284,13 +1285,13 @@ void hideTopRightMainScreen(void)
 
 void setOldTopLeftScreenFlag(void)
 {
-	     if (editor.ui.diskOpShown)          editor.ui.oldTopLeftScreen = 1;
-	else if (editor.ui.sampleEditorExtShown) editor.ui.oldTopLeftScreen = 2;
-	else if (editor.ui.instEditorExtShown)   editor.ui.oldTopLeftScreen = 3;
-	else if (editor.ui.transposeShown)       editor.ui.oldTopLeftScreen = 4;
-	else if (editor.ui.advEditShown)         editor.ui.oldTopLeftScreen = 5;
-	else if (editor.ui.wavRendererShown)     editor.ui.oldTopLeftScreen = 6;
-	else if (editor.ui.trimScreenShown)      editor.ui.oldTopLeftScreen = 7;
+	     if (ui.diskOpShown)          ui.oldTopLeftScreen = 1;
+	else if (ui.sampleEditorExtShown) ui.oldTopLeftScreen = 2;
+	else if (ui.instEditorExtShown)   ui.oldTopLeftScreen = 3;
+	else if (ui.transposeShown)       ui.oldTopLeftScreen = 4;
+	else if (ui.advEditShown)         ui.oldTopLeftScreen = 5;
+	else if (ui.wavRendererShown)     ui.oldTopLeftScreen = 6;
+	else if (ui.trimScreenShown)      ui.oldTopLeftScreen = 7;
 }
 
 void hideTopLeftScreen(void)
@@ -1315,44 +1316,44 @@ void hideTopScreen(void)
 	hideAboutScreen();
 	hideHelpScreen();
 
-	editor.ui.instrSwitcherShown = false;
-	editor.ui.scopesShown = false;
+	ui.instrSwitcherShown = false;
+	ui.scopesShown = false;
 }
 
 void showTopScreen(bool restoreScreens)
 {
-	editor.ui.scopesShown = false;
+	ui.scopesShown = false;
 
-	if (editor.ui.aboutScreenShown)
+	if (ui.aboutScreenShown)
 	{
 		showAboutScreen();
 	}
-	else if (editor.ui.configScreenShown)
+	else if (ui.configScreenShown)
 	{
 		showConfigScreen();
 	}
-	else if (editor.ui.helpScreenShown)
+	else if (ui.helpScreenShown)
 	{
 		showHelpScreen();
 	}
-	else if (editor.ui.nibblesShown)
+	else if (ui.nibblesShown)
 	{
 		showNibblesScreen();
 	}
 	else
 	{
-		showTopLeftMainScreen(restoreScreens); // updates editor.ui.scopesShown
+		showTopLeftMainScreen(restoreScreens); // updates ui.scopesShown
 		showTopRightMainScreen();
 	}
 }
 
 void showBottomScreen(void)
 {
-	if (editor.ui.extended || editor.ui.patternEditorShown)
+	if (ui.extended || ui.patternEditorShown)
 		showPatternEditor();
-	else if (editor.ui.instEditorShown)
+	else if (ui.instEditorShown)
 		showInstEditor();
-	else if (editor.ui.sampleEditorShown)
+	else if (ui.sampleEditorShown)
 		showSampleEditor();
 }
 
@@ -1363,5 +1364,5 @@ void drawGUIOnRunTime(void)
 	showTopScreen(false); // false = don't restore screens
 	showPatternEditor();
 
-	editor.ui.updatePosSections = true;
+	ui.updatePosSections = true;
 }

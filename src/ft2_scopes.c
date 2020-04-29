@@ -21,6 +21,7 @@
 #include "ft2_video.h"
 #include "ft2_scopedraw.h"
 #include "ft2_tables.h"
+#include "ft2_structs.h"
 
 enum
 {
@@ -273,7 +274,7 @@ bool testScopesMouseDown(void)
 	const uint16_t *scopeLens;
 	int32_t i, chansPerRow, chanToToggle;
 
-	if (!editor.ui.scopesShown)
+	if (!ui.scopesShown)
 		return false;
 
 	if (mouse.y >= 95 && mouse.y <= 169 && mouse.x >= 3 && mouse.x <= 288)

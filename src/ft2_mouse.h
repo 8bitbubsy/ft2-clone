@@ -13,7 +13,7 @@ enum
 	MOUSE_WHEEL_UP = 1
 };
 
-struct mouse_t
+typedef struct mouse_t
 {
 	volatile bool setPosFlag;
 	bool leftButtonPressed, rightButtonPressed, leftButtonReleased, rightButtonReleased;
@@ -23,7 +23,9 @@ struct mouse_t
 	int32_t x, y, lastX, lastY, xBias, yBias, setPosX, setPosY;
 	int32_t lastScrollX, lastScrollXTmp, lastScrollY, saveMouseX, saveMouseY;
 	uint32_t buttonState;
-} mouse;
+} mouse_t;
+
+extern mouse_t mouse; // ft2_mouse.c
 
 // do not change these!
 #define MOUSE_CURSOR_W 26

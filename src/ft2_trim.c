@@ -15,6 +15,7 @@
 #include "ft2_replayer.h"
 #include "ft2_audio.h"
 #include "ft2_mouse.h"
+#include "ft2_structs.h"
 
 // this is truly a mess, but it works...
 
@@ -999,14 +1000,14 @@ void trimThreadDone(void)
 
 	if (removeChans)
 	{
-		if (editor.ui.patternEditorShown)
+		if (ui.patternEditorShown)
 		{
-			if (editor.ui.channelOffset > song.antChn-editor.ui.numChannelsShown)
-				setScrollBarPos(SB_CHAN_SCROLL, song.antChn - editor.ui.numChannelsShown, true);
+			if (ui.channelOffset > song.antChn-ui.numChannelsShown)
+				setScrollBarPos(SB_CHAN_SCROLL, song.antChn - ui.numChannelsShown, true);
 		}
 
-		if (editor.cursor.ch >= editor.ui.channelOffset+editor.ui.numChannelsShown)
-			editor.cursor.ch = editor.ui.channelOffset+editor.ui.numChannelsShown - 1;
+		if (cursor.ch >= ui.channelOffset+ui.numChannelsShown)
+			cursor.ch = ui.channelOffset+ui.numChannelsShown - 1;
 	}
 
 	checkMarkLimits();
@@ -1137,28 +1138,28 @@ void hideTrimScreen(void)
 	hidePushButton(PB_TRIM_CALC);
 	hidePushButton(PB_TRIM_TRIM);
 
-	editor.ui.trimScreenShown = false;
-	editor.ui.scopesShown = true;
+	ui.trimScreenShown = false;
+	ui.scopesShown = true;
 	drawScopeFramework();
 }
 
 void showTrimScreen(void)
 {
-	if (editor.ui.extended)
+	if (ui.extended)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
 	showTopScreen(false);
 
-	editor.ui.trimScreenShown = true;
-	editor.ui.scopesShown = false;
+	ui.trimScreenShown = true;
+	ui.scopesShown = false;
 
 	drawTrimScreen();
 }
 
 void toggleTrimScreen(void)
 {
-	if (editor.ui.trimScreenShown)
+	if (ui.trimScreenShown)
 		hideTrimScreen();
 	else
 		showTrimScreen();
@@ -1220,7 +1221,7 @@ void pbTrimCalc(void)
 	if (xmAfterTrimSize64 < 0)
 		xmAfterTrimSize64 = 0;
 
-	if (editor.ui.trimScreenShown)
+	if (ui.trimScreenShown)
 		drawTrimScreen();
 }
 
@@ -1252,6 +1253,6 @@ void resetTrimSizes(void)
 	xmAfterTrimSize64 = -1;
 	spaceSaved64 = -1;
 
-	if (editor.ui.trimScreenShown)
+	if (ui.trimScreenShown)
 		drawTrimScreen();
 }

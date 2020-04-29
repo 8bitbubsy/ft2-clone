@@ -13,6 +13,7 @@
 #include "ft2_keyboard.h"
 #include "ft2_mouse.h"
 #include "ft2_bmp.h"
+#include "ft2_structs.h"
 
 textBox_t textBoxes[NUM_TEXTBOXES] =
 {
@@ -699,7 +700,7 @@ bool testTextBoxMouseDown(void)
 	oldMouseX = mouse.x;
 	oldCursorPos = 0;
 
-	if (editor.ui.sysReqShown)
+	if (ui.sysReqShown)
 	{
 		// if a system request is open, only test the first textbox (reserved)
 		start = 0;
