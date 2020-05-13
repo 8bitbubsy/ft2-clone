@@ -368,11 +368,12 @@ static void scopeTrigger(int32_t ch, sampleTyp *s, int32_t playOffset)
 	}
 
 	// these has to be read
-	tempState.active = true;
 	tempState.wasCleared = sc->wasCleared;
 	tempState.SFrq = sc->SFrq;
 	tempState.DFrq = sc->DFrq;
 	tempState.SVol = sc->SVol;
+
+	tempState.active = true;
 
 	/* Update live scope now.
 	** In theory it -can- be written to in the middle of a cached read,
@@ -581,10 +582,6 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 
 static int32_t SDLCALL scopeThreadFunc(void *ptr)
 {
-	int32_t time32;
-	uint32_t diff32;
-	uint64_t time64;
-
 	// this is needed for scope stability (confirmed)
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 
@@ -598,16 +595,19 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 		updateScopes();
 		editor.scopeThreadMutex = false;
 
-		time64 = SDL_GetPerformanceCounter();
+		uint64_t time64 = SDL_GetPerformanceCounter();
 		if (time64 < timeNext64)
 		{
-			assert(timeNext64-time64 <= 0xFFFFFFFFULL);
-			diff32 = (uint32_t)(timeNext64 - time64);
+			time64 = timeNext64 - time64;
+			if (time64 > UINT32_MAX)
+				time64 = UINT32_MAX;
+
+			const uint32_t diff32 = (uint32_t)time64;
 
 			// convert to microseconds and round to integer
-			time32 = (int32_t)((diff32 * editor.dPerfFreqMulMicro) + 0.5);
+			const int32_t time32 = (int32_t)((diff32 * editor.dPerfFreqMulMicro) + 0.5);
 
-			// delay until we have reached next tick
+			// delay until we have reached the next frame
 			if (time32 > 0)
 				usleep(time32);
 		}

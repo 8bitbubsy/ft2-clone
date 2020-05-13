@@ -54,7 +54,7 @@ static SDL_Thread *thread;
 // used to restore mixer interpolation fix .RAW/.IFF/.WAV files after save
 static bool fileRestoreSampleData(UNICHAR *filenameU, int32_t sampleDataOffset, sampleTyp *smp)
 {
-	int8_t fixSpar8;
+	int8_t fixedSmp;
 	FILE *f;
 
 	if (!smp->fixed)
@@ -67,15 +67,15 @@ static bool fileRestoreSampleData(UNICHAR *filenameU, int32_t sampleDataOffset, 
 	if (smp->typ & 16)
 	{
 		// 16-bit sample
-		if (smp->fixedPos < smp->len/2)
+		if (smp->fixedPos < smp->len)
 		{
-			fseek(f, sampleDataOffset + (smp->fixedPos * 2), SEEK_SET);
+			fseek(f, sampleDataOffset + smp->fixedPos, SEEK_SET);
 			fwrite(&smp->fixedSmp1, sizeof (int16_t), 1, f);
 		}
 
-		if (smp->fixedPos+2 < smp->len/2)
+		if (smp->fixedPos+2 < smp->len)
 		{
-			fseek(f, sampleDataOffset + ((smp->fixedPos + 2) * 2), SEEK_SET);
+			fseek(f, sampleDataOffset + (smp->fixedPos + 2), SEEK_SET);
 			fwrite(&smp->fixedSmp2, sizeof (int16_t), 1, f);
 		}
 	}
@@ -86,22 +86,22 @@ static bool fileRestoreSampleData(UNICHAR *filenameU, int32_t sampleDataOffset, 
 		{
 			fseek(f, sampleDataOffset + smp->fixedPos, SEEK_SET);
 
-			fixSpar8 = (int8_t)smp->fixedSmp1;
+			fixedSmp = (int8_t)smp->fixedSmp1;
 			if (editor.sampleSaveMode == SMP_SAVE_MODE_WAV) // on 8-bit WAVs the sample data is unsigned
-				fixSpar8 ^= 0x80;
+				fixedSmp ^= 0x80;
 
-			fwrite(&fixSpar8, sizeof (int8_t), 1, f);
+			fwrite(&fixedSmp, sizeof (int8_t), 1, f);
 		}
 
 		if (smp->fixedPos+1 < smp->len)
 		{
 			fseek(f, sampleDataOffset + (smp->fixedPos + 1), SEEK_SET);
 
-			fixSpar8 = (int8_t)smp->fixedSmp2;
+			fixedSmp = (int8_t)smp->fixedSmp2;
 			if (editor.sampleSaveMode == SMP_SAVE_MODE_WAV) // on 8-bit WAVs the sample data is unsigned
-				fixSpar8 ^= 0x80;
+				fixedSmp ^= 0x80;
 
-			fwrite(&fixSpar8, sizeof (int8_t), 1, f);
+			fwrite(&fixedSmp, sizeof (int8_t), 1, f);
 		}
 	}
 
@@ -181,6 +181,17 @@ static void iffWriteUint16(FILE *f, uint16_t value)
 	fwrite(&value, sizeof (int16_t), 1, f);
 }
 
+static void iffWriteUint8(FILE *f, const uint8_t value)
+{
+	fwrite(&value, sizeof (int8_t), 1, f);
+}
+
+static void iffWriteChunkData(FILE *f, const void *data, size_t length)
+{
+	fwrite(data, sizeof (int8_t), length, f);
+	if (length & 1) fputc(0, f); // write pad byte if chunk size is uneven
+}
+
 static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 {
 	char *smpNamePtr;
@@ -239,12 +250,11 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 
 	// samplesPerSec
 	tmp32 = getSampleMiddleCRate(smp);
-	if (tmp32 == 0 || tmp32 > 65535)
-		tmp32 = 16726;
-	iffWriteUint16(f, tmp32 & 0xFFFF);
+	if (tmp32 == 0 || tmp32 > 65535) tmp32 = 16726;
+	iffWriteUint16(f, (uint16_t)tmp32);
 
-	fputc(1, f); // ctOctave (number of samples)
-	fputc(0, f); // sCompression
+	iffWriteUint8(f, 1); // ctOctave (number of samples)
+	iffWriteUint8(f, 0); // sCompression
 	iffWriteUint32(f, smp->vol * 1024); // volume (max: 65536/0x10000)
 
 	// "NAME" chunk
@@ -268,38 +278,33 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 		}
 	}
 
-	if (smpNameLen > 0)
+	// "NAME" chunk
+	chunkLen = smpNameLen;
+	if (chunkLen > 0)
 	{
-		chunkLen = smpNameLen;
 		iffWriteChunkHeader(f, "NAME", chunkLen);
-		fwrite(smpNamePtr, 1, chunkLen, f);
-		if (chunkLen & 1) fputc(0, f); // write pad byte if chunk size is uneven
+		iffWriteChunkData(f, smpNamePtr, chunkLen);
 	}
 
 	// "ANNO" chunk (we put the program name here)
-	if (PROG_NAME_STR[0] != '\0')
-	{
-		chunkLen = sizeof (PROG_NAME_STR) - 1;
-		iffWriteChunkHeader(f, "ANNO", chunkLen);
-		fwrite(PROG_NAME_STR, 1, chunkLen, f);
-		if (chunkLen & 1) fputc(0, f); // write pad byte if chunk size is uneven
-	}
+	chunkLen = sizeof (PROG_NAME_STR) - 1;
+	iffWriteChunkHeader(f, "ANNO", chunkLen);
+	iffWriteChunkData(f, PROG_NAME_STR, chunkLen);
 
 	// "BODY" chunk
 	chunkLen = sampleLen;
 	iffWriteChunkHeader(f, "BODY", chunkLen);
 	sampleDataPos = ftell(f);
-	fwrite(samplePtr, 1, chunkLen, f);
-	if (chunkLen & 1) fputc(0, f); // write pad byte if chunk size is uneven
+	iffWriteChunkData(f, samplePtr, chunkLen);
 
 	// go back and fill in "FORM" chunk size
-	tmp32 = ftell(f) - 8;
+	chunkLen = ftell(f) - 8;
 	fseek(f, 4, SEEK_SET);
-	iffWriteUint32(f, tmp32);
+	iffWriteUint32(f, chunkLen);
 
 	fclose(f);
 
-	// restore mixer interpolation fix
+	// restore interpolation sample fix (was used for audio mixer)
 	fileRestoreSampleData(filenameU, sampleDataPos, smp);
 
 	editor.diskOpReadDir = true; // force diskop re-read
@@ -395,7 +400,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 		samplerChunk.chunkID = 0x6C706D73; // "smpl"
 		samplerChunk.chunkSize = sizeof (samplerChunk) - 4 - 4;
 		samplerChunk.dwSamplePeriod = 1000000000 / wavHeader.sampleRate;
-		samplerChunk.dwMIDIUnityNote = 60; // 60 = C-4
+		samplerChunk.dwMIDIUnityNote = 60; // 60 = MIDI middle-C
 		samplerChunk.cSampleLoops = 1;
 		samplerChunk.loop.dwType = (smp->typ & 3) - 1; // 0 = forward, 1 = ping-pong
 
@@ -424,7 +429,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 
 		mptExtraChunk.chunkID = 0x61727478; // "xtra"
 		mptExtraChunk.chunkSize = sizeof (mptExtraChunk) - 4 - 4;
-		mptExtraChunk.flags = 0x20; // set pan flag - used when loading .WAVs in OpenMPT
+		mptExtraChunk.flags = 0x20; // set pan flag
 		mptExtraChunk.defaultPan = smp->pan; // 0..255
 		mptExtraChunk.defaultVolume = smp->vol * 4; // 0..256
 		mptExtraChunk.globalVolume = 64; // 0..64

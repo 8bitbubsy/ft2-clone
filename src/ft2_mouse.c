@@ -784,8 +784,8 @@ void handleLastGUIObjectDown(void)
 
 void updateMouseScaling(void)
 {
-	if (video.renderW > 0.0) video.dMouseXMul = (double)SCREEN_W / video.renderW;
-	if (video.renderH > 0.0) video.dMouseYMul = (double)SCREEN_H / video.renderH;
+	if (video.renderW > 0.0) video.fMouseXMul = (float)SCREEN_W / video.renderW;
+	if (video.renderH > 0.0) video.fMouseYMul = (float)SCREEN_H / video.renderH;
 }
 
 void readMouseXY(void)
@@ -801,7 +801,10 @@ void readMouseXY(void)
 		return;
 	}
 
-	mouse.buttonState = SDL_GetGlobalMouseState(&mx, &my);
+	if (video.useDesktopMouseCoords)
+		mouse.buttonState = SDL_GetGlobalMouseState(&mx, &my);
+	else
+		mouse.buttonState = SDL_GetMouseState(&mx, &my);
 
 	if (video.fullscreen)
 	{
@@ -848,7 +851,7 @@ void readMouseXY(void)
 			my -= video.renderY;
 		}
 	}
-	else
+	else if (video.useDesktopMouseCoords)
 	{
 		// convert desktop coords to window coords
 
@@ -860,8 +863,8 @@ void readMouseXY(void)
 	}
 
 	// multiply coords by video upscaling factors (don't round)
-	mouse.x = (int32_t)(mx * video.dMouseXMul);
-	mouse.y = (int32_t)(my * video.dMouseYMul);
+	mouse.x = (int32_t)(mx * video.fMouseXMul);
+	mouse.y = (int32_t)(my * video.fMouseYMul);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 	{

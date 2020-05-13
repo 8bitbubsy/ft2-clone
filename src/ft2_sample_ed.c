@@ -76,7 +76,7 @@ void fixSample(sampleTyp *s)
 			if (len < 2)
 				return;
 
-			len /= 2;
+			len >>= 1;
 			ptr16 = (int16_t *)s->pek;
 
 			// write new values
@@ -112,8 +112,8 @@ void fixSample(sampleTyp *s)
 			if (s->repL < 2)
 				return;
 
-			loopStart = s->repS / 2;
-			loopEnd = (s->repS + s->repL) / 2;
+			loopStart = s->repS >> 1;
+			loopEnd = (s->repS + s->repL) >> 1;
 
 			ptr16 = (int16_t *)s->pek;
 
@@ -163,8 +163,8 @@ void fixSample(sampleTyp *s)
 			if (s->repL < 2)
 				return;
 
-			loopStart = s->repS / 2;
-			loopLen = s->repL/ 2;
+			loopStart = s->repS >> 1;
+			loopLen = s->repL >> 1;
 
 			loopEnd = loopStart + loopLen;
 			ptr16 = (int16_t *)s->pek;
@@ -229,7 +229,7 @@ void restoreSample(sampleTyp *s)
 	assert(s->pek != NULL);
 	s->fixed = false;
 
-	// clear pre-start bytes
+	// clear pre-start bytes (this is safe, we have allocated room on the left for this)
 	s->pek[-4] = 0;
 	s->pek[-3] = 0;
 	s->pek[-2] = 0;

@@ -18,14 +18,15 @@ enum
 
 typedef struct video_t
 {
-	bool fullscreen, showFPSCounter;
+	bool fullscreen, showFPSCounter, useDesktopMouseCoords;
 	uint32_t xScale, yScale;
 	uint32_t *frameBuffer, palette[PAL_NUM], vblankTimeLen, vblankTimeLenFrac;
 #ifdef _WIN32
 	HWND hWnd;
 #endif
 	SDL_Window *window;
-	double dMonitorRefreshRate, dMouseXMul, dMouseYMul;
+	double dMonitorRefreshRate;
+	float fMouseXMul, fMouseYMul;
 	uint8_t upscaleFactor;
 	bool vsync60HzPresent, windowHidden;
 	int32_t renderX, renderY, renderW, renderH, displayW, displayH;
