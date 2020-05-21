@@ -987,8 +987,8 @@ static int32_t SDLCALL mixThread(void *ptr)
 	{
 		int32_t index16 = i << 1;
 
-		x1 = (i >= mix8Size) ? 0 : getSampleValueNr(mixPtr, mixTyp, src16Bits ? index16 : i);
-		x2 = (i >= dest8Size) ? 0 : getSampleValueNr(destPtr, destTyp, dst16Bits ? index16 : i);
+		x1 = (i >= mix8Size) ? 0 : getSampleValue(mixPtr, mixTyp, src16Bits ? index16 : i);
+		x2 = (i >= dest8Size) ? 0 : getSampleValue(destPtr, destTyp, dst16Bits ? index16 : i);
 
 		if (!src16Bits) x1 <<= 8;
 		if (!dst16Bits) x2 <<= 8;
@@ -999,7 +999,7 @@ static int32_t SDLCALL mixThread(void *ptr)
 		if (!dst16Bits)
 			smp32 >>= 8;
 
-		putSampleValueNr(destPek, destTyp, dst16Bits ? index16 : i, (int16_t)smp32);
+		putSampleValue(destPek, destTyp, dst16Bits ? index16 : i, (int16_t)smp32);
 	}
 
 	if (instr[destIns]->samp[destSmp].origPek != NULL)

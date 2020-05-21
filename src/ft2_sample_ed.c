@@ -254,7 +254,7 @@ void restoreSample(sampleTyp *s)
 	}
 }
 
-inline int16_t getSampleValueNr(int8_t *ptr, uint8_t typ, int32_t pos)
+inline int16_t getSampleValue(int8_t *ptr, uint8_t typ, int32_t pos)
 {
 	assert(pos >= 0);
 	if (ptr == NULL)
@@ -271,7 +271,7 @@ inline int16_t getSampleValueNr(int8_t *ptr, uint8_t typ, int32_t pos)
 	}
 }
 
-inline void putSampleValueNr(int8_t *ptr, uint8_t typ, int32_t pos, int16_t val)
+inline void putSampleValue(int8_t *ptr, uint8_t typ, int32_t pos, int16_t val)
 {
 	assert(pos >= 0);
 	if (ptr == NULL)
@@ -2178,7 +2178,7 @@ void sampXFade(void)
 
 			if (x2 <= y1 || x2 >= s->repS+s->repL)
 			{
-				okBox(0, "System message", "Not enough sample data outside loop!");
+				okBox(0, "System message", "Invalid range!");
 				return;
 			}
 
@@ -2189,21 +2189,25 @@ void sampXFade(void)
 			d2 = y1 - x1;
 			d3 = x2 - y1;
 
-			if (d1 < 1 || d2 < 1 || d3 < 1)
-			{
-				okBox(0, "System message", "Not enough sample data outside loop!");
-				return;
-			}
-
-			if (y1-d1 < 0 || y1+d1 >= s->len)
+			if (d1 < 2 || d2 < 2 || d3 < 2)
 			{
 				okBox(0, "System message", "Invalid range!");
 				return;
 			}
 
-			dist = 1;
+			if (y1-d1 < 0 || y1+d1 >= s->len)
+			{
+				okBox(0, "System message", "Not enough sample data outside loop!");
+				return;
+			}
+
 			if (is16Bit)
-				dist++;
+			{
+				y1 >>= 1;
+				d1 >>= 1;
+				d2 >>= 1;
+				d3 >>= 1;
+			}
 
 			pauseAudio();
 			restoreSample(s);
@@ -2211,8 +2215,8 @@ void sampXFade(void)
 			i = 0;
 			while (i < d1)
 			{
-				a = getSampleValueNr(s->pek, t, y1 + dist * (-i - 1));
-				b = getSampleValueNr(s->pek, t, y1 + dist * i);
+				a = getSampleValue(s->pek, t, (y1 - i - 1) << is16Bit);
+				b = getSampleValue(s->pek, t, (y1 + i) << is16Bit);
 
 				dS1 = 1.0 - i / (double)d2; dS2 = 2.0 - dS1;
 				dS3 = 1.0 - i / (double)d3; dS4 = 2.0 - dS3;
@@ -2223,10 +2227,10 @@ void sampXFade(void)
 				tmp32 = (int32_t)round((b * dS4 + a * dS3) / (dS3 + dS4));
 				d = (int16_t)tmp32;
 
-				if (i < d2) putSampleValueNr(s->pek, t, y1 + dist * (-i - 1), c);
-				if (i < d3) putSampleValueNr(s->pek, t, y1 + dist * i, d);
+				if (i < d2) putSampleValue(s->pek, t, (y1 - i - 1) << is16Bit, c);
+				if (i < d3) putSampleValue(s->pek, t, (y1 + i) << is16Bit, d);
 
-				i += dist;
+				i++;
 			}
 
 			fixSample(s);
@@ -2239,7 +2243,7 @@ void sampXFade(void)
 			y1 += s->repL;
 			if (x1 >= y1 || x2 <= y1 || x2 >= s->len)
 			{
-				okBox(0, "System message", "Not enough sample data outside loop!");
+				okBox(0, "System message", "Invalid range!");
 				return;
 			}
 
@@ -2250,19 +2254,25 @@ void sampXFade(void)
 			d2 = y1 - x1;
 			d3 = x2 - y1;
 
-			if (d1 < 1 || d2 < 1 || d3 < 1)
-			{
-				okBox(0, "System message", "Not enough sample data outside loop!");
-				return;
-			}
-
-			if (y1-d1 < 0 || y1+d1 >= s->len)
+			if (d1 < 2 || d2 < 2 || d3 < 2)
 			{
 				okBox(0, "System message", "Invalid range!");
 				return;
 			}
 
-			dist = is16Bit ? 2 : 1;
+			if (y1-d1 < 0 || y1+d1 >= s->len)
+			{
+				okBox(0, "System message", "Not enough sample data outside loop!");
+				return;
+			}
+
+			if (is16Bit)
+			{
+				y1 >>= 1;
+				d1 >>= 1;
+				d2 >>= 1;
+				d3 >>= 1;
+			}
 
 			pauseAudio();
 			restoreSample(s);
@@ -2270,8 +2280,8 @@ void sampXFade(void)
 			i = 0;
 			while (i < d1)
 			{
-				a = getSampleValueNr(s->pek, t, y1 - i - dist);
-				b = getSampleValueNr(s->pek, t, y1 + i);
+				a = getSampleValue(s->pek, t, (y1 - i - 1) << is16Bit);
+				b = getSampleValue(s->pek, t, (y1 + i) << is16Bit);
 
 				dS1 = 1.0 - i / (double)d2; dS2 = 2.0 - dS1;
 				dS3 = 1.0 - i / (double)d3; dS4 = 2.0 - dS3;
@@ -2282,10 +2292,10 @@ void sampXFade(void)
 				tmp32 = (int32_t)round((b * dS4 + a * dS3) / (dS3 + dS4));
 				d = (int16_t)tmp32;
 
-				if (i < d2) putSampleValueNr(s->pek, t, y1 - i - dist, c);
-				if (i < d3) putSampleValueNr(s->pek, t, y1 + i, d);
+				if (i < d2) putSampleValue(s->pek, t, (y1 - i - 1) << is16Bit, c);
+				if (i < d3) putSampleValue(s->pek, t, (y1 + i) << is16Bit, d);
 
-				i += dist;
+				i++;
 			}
 
 			fixSample(s);
@@ -2304,11 +2314,11 @@ void sampXFade(void)
 
 		if (x1 < 0 || x2 <= x1 || x2 >= s->len)
 		{
-			okBox(0, "System message", "Not enough sample data outside loop!");
+			okBox(0, "System message", "Invalid range!");
 			return;
 		}
 
-		i = (x2 - x1 + 1) / 2;
+		i = (x2 - x1 + 1) >> 1;
 		y1 = s->repS - i;
 		y2 = s->repS + s->repL - i;
 
@@ -2320,7 +2330,7 @@ void sampXFade(void)
 
 		if (y1 < 0 || y2+(x2-x1) >= s->len)
 		{
-			okBox(0, "System message", "Invalid range!");
+			okBox(0, "System message", "Not enough sample data outside loop!");
 			return;
 		}
 
@@ -2330,7 +2340,7 @@ void sampXFade(void)
 
 		if (y1+(x2-x1) <= s->repS || d1 == 0 || d3 == 0 || d1 > s->repL)
 		{
-			okBox(0, "System message", "Not enough sample data outside loop!");
+			okBox(0, "System message", "Invalid range!");
 			return;
 		}
 
@@ -2343,8 +2353,8 @@ void sampXFade(void)
 		i = 0;
 		while (i < x2-x1)
 		{
-			a = getSampleValueNr(s->pek, t, y1 + i);
-			b = getSampleValueNr(s->pek, t, y2 + i);
+			a = getSampleValue(s->pek, t, y1 + i);
+			b = getSampleValue(s->pek, t, y2 + i);
 
 			dS2 = i / (double)d1;
 			dS1 = 1.0 - dS2;
@@ -2372,8 +2382,8 @@ void sampXFade(void)
 				d = (int16_t)tmp32;
 			}
 
-			putSampleValueNr(s->pek, t, y1 + i, c);
-			putSampleValueNr(s->pek, t, y2 + i, d);
+			putSampleValue(s->pek, t, y1 + i, c);
+			putSampleValue(s->pek, t, y2 + i, d);
 
 			i += dist;
 		}
