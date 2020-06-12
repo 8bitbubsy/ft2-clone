@@ -845,7 +845,7 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 		bodyLen = filesize - bodyPtr;
 
 	fseek(f, vhdrPtr, SEEK_SET);
-	fread(&sampleLoopStart,  4, 1, f); sampleLoopStart  = SWAP32(sampleLoopStart);
+	fread(&sampleLoopStart,  4, 1, f); sampleLoopStart = SWAP32(sampleLoopStart);
 	fread(&sampleLoopLength, 4, 1, f); sampleLoopLength = SWAP32(sampleLoopLength);
 	fseek(f, 4, SEEK_CUR);
 	fread(&sampleRate, 2, 1, f); sampleRate = SWAP16(sampleRate);

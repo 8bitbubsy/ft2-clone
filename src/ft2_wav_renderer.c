@@ -168,7 +168,7 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 {
 	uint32_t maxSamplesPerTick, sampleSize;
 
-	maxSamplesPerTick = ((frq * 5) / 2) / MIN_BPM; // absolute max samples per tidck
+	maxSamplesPerTick = (int32_t)ceil((frq * 2.5) / MIN_BPM); // absolute max samples per tick
 	sampleSize = (WDBitDepth / 8) * 2; // 2 channels
 
 	// *2 for stereo

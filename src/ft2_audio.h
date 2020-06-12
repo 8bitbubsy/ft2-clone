@@ -11,7 +11,7 @@ enum
 	FREQ_TABLE_AMIGA = 1,
 };
 
-/*  Use 16 on non-x86_64 platforms so that we can avoid a
+/* Use 16 on non-x86_64 platforms so that we can avoid a
 ** 64-bit division in the outside mixer loop. x86_64 users
 ** are lucky and will get double the fractional delta precision.
 ** This is beneficial in 96kHz/192kHz mode, where deltas are
@@ -50,10 +50,10 @@ typedef struct audio_t
 	bool linearFreqTable, rescanAudioDevicesSupported;
 	int32_t inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
 	int32_t quickVolSizeVal, *mixBufferL, *mixBufferR, *mixBufferLUnaligned, *mixBufferRUnaligned;
-	int32_t rampQuickVolMul, rampSpeedValMul;
+	int32_t rampQuickVolMul, rampSpeedValMul, speedValTab[MAX_BPM+1], rampSpeedValMulTab[MAX_BPM+1];
 	uint32_t freq;
 	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac, speedVal, musicTimeSpeedVal;
-	uint64_t tickTime64, tickTime64Frac;
+	uint64_t tickTime64, tickTime64Frac, tickTimeLengthTab[MAX_BPM+1];
 	double dAudioLatencyMs, dSpeedValMul, dPianoDeltaMul;
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
@@ -111,7 +111,7 @@ extern chSyncData_t *chSyncEntry;
 extern chSync_t chSync;
 extern pattSync_t pattSync;
 
-extern volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
+extern volatile bool pattQueueClearing, chQueueClearing;
 
 #if !defined __amd64__ && !defined _WIN64
 void resetCachedMixerVars(void);

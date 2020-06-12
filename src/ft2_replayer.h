@@ -33,7 +33,8 @@ enum
 };
 
 // DO NOT TOUCH!
-#define MIN_BPM 32
+#define MIN_BPM 1
+#define MAX_BPM 999
 #define MAX_VOICES 32
 #define TRACK_WIDTH (5 * MAX_VOICES)
 #define MAX_NOTES ((12 * 10 * 16) + 16)

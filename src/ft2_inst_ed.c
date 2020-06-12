@@ -22,6 +22,7 @@
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#include "ft2_bmp.h"
 
 #ifdef _MSC_VER
 #pragma pack(push)
@@ -2008,18 +2009,102 @@ static void writeEnvelope(int32_t nr)
 	}
 }
 
+static void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color)
+{
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+
+	while (*str != '\0')
+	{
+		const char chr = *str++;
+		if (chr < '0' || chr > '9')
+		{
+			dstPtr += FONT3_CHAR_W;
+			continue;
+		}
+
+		const uint8_t *srcPtr = &bmp.font3[(chr - '0') * FONT3_CHAR_W];
+		for (int32_t y = 0; y < FONT3_CHAR_H; y++)
+		{
+			for (int32_t x = 0; x < FONT3_CHAR_W; x++)
+			{
+				if (srcPtr[x])
+					dstPtr[x] = color;
+			}
+
+			srcPtr += FONT3_WIDTH;
+			dstPtr += SCREEN_W;
+		}
+
+		dstPtr -= (SCREEN_W * FONT3_CHAR_H) - FONT3_CHAR_W;
+	}
+}
+
+static void drawVolEnvCoords(int16_t tick, int16_t val)
+{
+	char str[8];
+
+	tick = CLAMP(tick, 0, 324);
+	val = CLAMP(val, 0, 64);
+	
+	sprintf(str, "%03d %02d", tick, val);
+
+	textOutTiny(312, 190, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 189, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(314, 190, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 191, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 190, str, video.palette[PAL_FORGRND]);
+
+}
+
+static void drawPanEnvCoords(int16_t tick, int16_t val)
+{
+	char str[8];
+
+	tick = CLAMP(tick, 0, 324);
+	val = CLAMP(val, 0, 63);
+
+	sprintf(str, "%03d %02d", tick, val);
+
+	textOutTiny(312, 276, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 275, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(314, 276, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 277, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 276, str, video.palette[PAL_FORGRND]);
+}
+
 void handleInstEditorRedrawing(void)
 {
+	instrTyp *ins = instr[editor.curInstr];
+
+	int16_t tick, val;
 	if (updateVolEnv)
 	{
 		updateVolEnv = false;
 		writeEnvelope(0);
+
+		tick = val = 0;
+		if (ins != NULL)
+		{
+			tick = ins->envVP[editor.currVolEnvPoint][0];
+			val = ins->envVP[editor.currVolEnvPoint][1];
+		}
+
+		drawVolEnvCoords(tick, val);
 	}
 
 	if (updatePanEnv)
 	{
 		updatePanEnv = false;
 		writeEnvelope(1);
+
+		tick = val = 0;
+		if (ins != NULL)
+		{
+			tick = ins->envPP[editor.currPanEnvPoint][0];
+			val = ins->envPP[editor.currPanEnvPoint][1];
+		}
+
+		drawPanEnvCoords(tick, val);
 	}
 }
 

@@ -2155,9 +2155,10 @@ void drawSongBPM(uint16_t val)
 	}
 	else
 	{
-		if (val > 999)
-			val = 999;
+		if (val > MAX_BPM)
+			val = MAX_BPM;
 
+		assert(MAX_BPM == 999);
 		str[0] = '0' + (char)(val / 100);
 		str[1] = '0' + ((val / 10) % 10);
 		str[2] = '0' + (val % 10);

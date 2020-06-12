@@ -124,7 +124,7 @@
 	*audioMixL++ += sample; \
 	*audioMixR++ += sample; \
 
-// 4-tap cubic spline interpolation (default - slower than linear, but better quality)
+// 4-tap cubic spline interpolation
 
 // in: int32_t s0,s1,s2,s3 = -128..127 | f = 0..65535 (frac) | out: 16-bit s0 (will exceed 16-bits because of overshoot)
 #define INTERPOLATE8(s0, s1, s2, s3, f) \

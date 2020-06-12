@@ -30,7 +30,7 @@
 ** FT2 obviously didn't have such big tables.
 */
 
-static uint32_t musicTimeTab[1000];
+static uint32_t musicTimeTab[MAX_BPM+1];
 static uint64_t period2ScopeDeltaTab[65536];
 static double dLogTab[768], dLogTabMul[32], dAudioRateFactor;
 
@@ -392,27 +392,47 @@ void calcAudioTables(void)
 		dLogTabMul[i] = exp2(-i);
 }
 
-void calcReplayRate(int32_t rate)
+void calcReplayRate(int32_t audioFreq)
 {
 	int32_t i;
 
-	if (rate == 0)
+	if (audioFreq == 0)
 		return;
-	
-	dAudioRateFactor = (double)MIXER_FRAC_SCALE / rate;
 
-	audio.quickVolSizeVal = rate / 200; // FT2 truncates here
+	dAudioRateFactor = (double)MIXER_FRAC_SCALE / audioFreq;
+
+	audio.quickVolSizeVal = audioFreq / 200; // FT2 truncates here
 	audio.rampQuickVolMul = (int32_t)(((UINT32_MAX + 1.0) / audio.quickVolSizeVal) + 0.5);
-	audio.dSpeedValMul = editor.dPerfFreq / rate; // for audio/video sync
+	audio.dSpeedValMul = editor.dPerfFreq / audioFreq; // for audio/video sync
+
+	/* Calculate tables to prevent floating point operations on systems that
+	** might have a slow FPU. This is quite hackish and not really needed,
+	** but it doesn't take up THAT much RAM anyway.
+	*/
 
 	// calculate table used to count replayer time (displayed as hours/minutes/seconds)
-	const double dMul = (UINT32_MAX + 1.0) / rate;
+	const double dMul = (UINT32_MAX + 1.0) / audioFreq;
+
+	audio.speedValTab[0] = 0;
 	musicTimeTab[0] = UINT32_MAX;
-	for (i = 1; i < 1000; i++)
+	audio.rampSpeedValMulTab[0] = UINT32_MAX;
+	audio.tickTimeLengthTab[0] = (uint64_t)UINT32_MAX << 32;
+
+	const double dTickTimeLenMul = audio.dSpeedValMul * (UINT32_MAX + 1.0);
+	for (i = 1; i <= MAX_BPM; i++)
 	{
-		uint32_t samplesPerTick = ((rate + rate) + (rate >> 1)) / i; // exactly how setSpeed() calculates it
-		const double dVal = samplesPerTick * dMul;
-		musicTimeTab[i] = (uint32_t)(dVal + 0.5);
+		int32_t samplesPerTick = (int32_t)(((audioFreq * 2.5) / i) + 0.5); // rounded
+
+		audio.speedValTab[i] = samplesPerTick;
+
+		// used for song playback counter (hh:mm:ss)
+		musicTimeTab[i] = (uint32_t)((samplesPerTick * dMul) + 0.5);
+
+		// number of samples per tick -> tick length for performance counter (syncing visuals to audio)
+		audio.tickTimeLengthTab[i] = (uint64_t)(samplesPerTick * dTickTimeLenMul);
+
+		// for calculating volume ramp length for "tick" ramps
+		audio.rampSpeedValMulTab[i] = (int32_t)(((UINT32_MAX + 1.0) / samplesPerTick) + 0.5);
 	}
 
 	calcPeriod2DeltaTables();
@@ -2063,7 +2083,8 @@ static void getNextPos(void)
 
 	if (song.pattDelTime2 > 0)
 	{
-		if (--song.pattDelTime2 > 0)
+		song.pattDelTime2--;
+		if (song.pattDelTime2 > 0)
 			song.pattPos--;
 	}
 
@@ -2086,13 +2107,10 @@ static void getNextPos(void)
 				song.songPos = 0;
 				bxxOverflow = false;
 			}
-			else
+			else if (++song.songPos >= song.len)
 			{
-				if (++song.songPos >= song.len)
-				{
-					editor.wavReachedEndFlag = true;
-					song.songPos = song.repS;
-				}
+				editor.wavReachedEndFlag = true;
+				song.songPos = song.repS;
 			}
 
 			assert(song.songPos <= 255);
@@ -2135,11 +2153,13 @@ void mainPlayer(void) // periodically called from audio callback
 		return;
 	}
 
-	assert(song.speed >= 1 && song.speed <= 999);
-	song.musicTime64 += musicTimeTab[song.speed]; // for playback counter
+	assert(song.speed >= MIN_BPM && song.speed <= MAX_BPM);
+	song.musicTime64 += musicTimeTab[song.speed]; // for song playback counter (hh:mm:ss)
 
 	readNewNote = false;
-	if (--song.timer == 0)
+
+	song.timer--;
+	if (song.timer == 0)
 	{
 		song.timer = song.tempo;
 		readNewNote = true;
@@ -3240,8 +3260,6 @@ void setSyncedReplayerVars(void)
 	// handle channel sync queue
 
 	while (chQueueClearing);
-
-	chQueueReading = true;
 	while (chQueueReadSize() > 0)
 	{
 		if (frameTime64 < getChQueueTimestamp())
@@ -3257,18 +3275,16 @@ void setSyncedReplayerVars(void)
 		if (!chQueuePop())
 			break;
 	}
-	chQueueReading = false;
 
-	/* extra validation because of possible issues when the buffer is full
-	** and positions are being reset, which is not entirely thread safe. */
+	/* Extra validation because of possible issues when the buffer is full
+	** and positions are being reset, which is not entirely thread safe.
+	*/
 	if (chSyncEntry != NULL && chSyncEntry->timestamp == 0)
 		chSyncEntry = NULL;
 
 	// handle pattern sync queue
 
 	while (pattQueueClearing);
-
-	pattQueueReading = true;
 	while (pattQueueReadSize() > 0)
 	{
 		if (frameTime64 < getPattQueueTimestamp())
@@ -3281,10 +3297,10 @@ void setSyncedReplayerVars(void)
 		if (!pattQueuePop())
 			break;
 	}
-	pattQueueReading = false;
 
-	/* extra validation because of possible issues when the buffer is full
-	** and positions are being reset, which is not entirely thread safe. */
+	/* Extra validation because of possible issues when the buffer is full
+	** and positions are being reset, which is not entirely thread safe.
+	*/
 	if (pattSyncEntry != NULL && pattSyncEntry->timestamp == 0)
 		pattSyncEntry = NULL;
 

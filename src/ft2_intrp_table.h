@@ -13,8 +13,8 @@
 
 #else
 
-#define CUBIC_PHASES 512
-#define CUBIC_PHASES_BITS 9
+#define CUBIC_PHASES 1024
+#define CUBIC_PHASES_BITS 10
 
 #endif
 

@@ -24,8 +24,7 @@ pattSyncData_t *pattSyncEntry;
 chSyncData_t *chSyncEntry;
 chSync_t chSync;
 pattSync_t pattSync;
-volatile bool pattQueueReading, pattQueueClearing, chQueueReading, chQueueClearing;
-
+volatile bool pattQueueClearing, chQueueClearing;
 
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
@@ -153,33 +152,22 @@ void setBackOldAudioFreq(void) // for song to WAV rendering
 
 void setSpeed(uint16_t bpm)
 {
-	double dInt, dFrac;
-
 	if (bpm == 0)
 		return;
 
-	audio.speedVal = ((audio.freq + audio.freq) + (audio.freq >> 1)) / bpm; // (audio.freq * 2.5) / BPM
-	if (audio.speedVal > 0) // calculate tick time length for audio/video sync timestamp
-	{
-		// number of samples per tick -> tick length for performance counter
-		dFrac = modf(audio.speedVal * audio.dSpeedValMul, &dInt);
+	// non-FT2 check for security
+	if (bpm > MAX_BPM)
+		return;
 
-		/* - integer part -
-		** Cast to int32_t so that the compiler will use fast SSE2 float->int instructions.
-		** This result won't be above 2^31, so this is safe.
-		*/
-		tickTimeLen = (int32_t)dInt;
+	audio.speedVal = audio.speedValTab[bpm];
 
-		// - fractional part (scaled to 0..2^32-1) -
-		dFrac *= UINT32_MAX;
-		dFrac += 0.5;
-		if (dFrac > UINT32_MAX)
-			dFrac = UINT32_MAX;
+	// get tick time length for audio/video sync timestamp
+	const uint64_t tickTimeLen64 = audio.tickTimeLengthTab[bpm];
+	tickTimeLen = tickTimeLen64 >> 32;
+	tickTimeLenFrac = tickTimeLen64 & 0xFFFFFFFF;
 
-		tickTimeLenFrac = (uint32_t)dFrac;
-
-		audio.rampSpeedValMul = 0xFFFFFFFF / audio.speedVal;
-	}
+	// used for calculating volume ramp length for "ticks" ramps
+	audio.rampSpeedValMul = audio.rampSpeedValMulTab[bpm];
 }
 
 void audioSetVolRamp(bool volRamp)
@@ -651,8 +639,8 @@ int32_t pattQueueWriteSize(void)
 		** read/write are two different threads, but because of timestamp validation it
 		** shouldn't be that dangerous.
 		** It will also create a small visual stutter while the buffer is getting filled,
-		** though that is barely noticable on normal buffer sizes, and it takes several
-		** minutes between each time (when queue size is default, 16384) */
+		** though that is barely noticable on normal buffer sizes, and it takes a minute
+		** or two at max BPM between each time (when queue size is default, 4095) */
 		pattSync.data[0].timestamp = 0;
 		pattSync.readPos = 0;
 		pattSync.writePos = 0;
@@ -878,15 +866,68 @@ void resumeAudio(void) // unlock audio
 	audioPaused = false;
 }
 
-static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
+static void fillVisualsSyncBuffer(void)
 {
-	int32_t a, b;
 	pattSyncData_t pattSyncData;
 	chSyncData_t chSyncData;
 	syncedChannel_t *c;
 	stmTyp *s;
 
-	(void)userdata;
+	if (audio.resetSyncTickTimeFlag)
+	{
+		audio.resetSyncTickTimeFlag = false;
+
+		audio.tickTime64 = SDL_GetPerformanceCounter() + audio.audLatencyPerfValInt;
+		audio.tickTime64Frac = audio.audLatencyPerfValFrac;
+	}
+
+	if (songPlaying)
+	{
+		// push pattern variables to sync queue
+		pattSyncData.timer = song.curReplayerTimer;
+		pattSyncData.patternPos = song.curReplayerPattPos;
+		pattSyncData.pattern = song.curReplayerPattNr;
+		pattSyncData.songPos = song.curReplayerSongPos;
+		pattSyncData.speed = song.speed;
+		pattSyncData.tempo = (uint8_t)song.tempo;
+		pattSyncData.globalVol = (uint8_t)song.globVol;
+		pattSyncData.timestamp = audio.tickTime64;
+		pattQueuePush(pattSyncData);
+	}
+
+	// push channel variables to sync queue
+
+	c = chSyncData.channels;
+	s = stm;
+
+	for (int32_t i = 0; i < song.antChn; i++, c++, s++)
+	{
+		c->finalPeriod = s->finalPeriod;
+		c->fineTune = s->fineTune;
+		c->relTonNr = s->relTonNr;
+		c->instrNr = s->instrNr;
+		c->sampleNr = s->sampleNr;
+		c->envSustainActive = s->envSustainActive;
+		c->status = s->tmpStatus;
+		c->finalVol = s->finalVol;
+		c->smpStartPos = s->smpStartPos;
+	}
+
+	chSyncData.timestamp = audio.tickTime64;
+	chQueuePush(chSyncData);
+
+	audio.tickTime64 += tickTimeLen;
+	audio.tickTime64Frac += tickTimeLenFrac;
+	if (audio.tickTime64Frac > 0xFFFFFFFF)
+	{
+		audio.tickTime64Frac &= 0xFFFFFFFF;
+		audio.tickTime64++;
+	}
+}
+
+static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
+{
+	int32_t a, b;
 
 	assert(len < 65536); // limitation in mixer
 	assert(pmpCountDiv > 0);
@@ -899,7 +940,7 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 	{
 		if (pmpLeft == 0)
 		{
-			// replayer tick
+			// new replayer tick
 
 			replayerBusy = true;
 
@@ -908,61 +949,10 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 
 			mainPlayer();
 			mix_UpdateChannelVolPanFrq();
-
-			// AUDIO/VIDEO SYNC
-
-			if (audio.resetSyncTickTimeFlag)
-			{
-				audio.resetSyncTickTimeFlag = false;
-
-				audio.tickTime64 = SDL_GetPerformanceCounter() + audio.audLatencyPerfValInt;
-				audio.tickTime64Frac = audio.audLatencyPerfValFrac;
-			}
-
-			if (songPlaying)
-			{
-				// push pattern variables to sync queue
-				pattSyncData.timer = song.curReplayerTimer;
-				pattSyncData.patternPos = song.curReplayerPattPos;
-				pattSyncData.pattern = song.curReplayerPattNr;
-				pattSyncData.songPos = song.curReplayerSongPos;
-				pattSyncData.speed = song.speed;
-				pattSyncData.tempo = (uint8_t)song.tempo;
-				pattSyncData.globalVol = (uint8_t)song.globVol;
-				pattSyncData.timestamp = audio.tickTime64;
-				pattQueuePush(pattSyncData);
-			}
-
-			// push channel variables to sync queue
-
-			c = chSyncData.channels;
-			s = stm;
-
-			for (int32_t i = 0; i < song.antChn; i++, c++, s++)
-			{
-				c->finalPeriod = s->finalPeriod;
-				c->fineTune = s->fineTune;
-				c->relTonNr = s->relTonNr;
-				c->instrNr = s->instrNr;
-				c->sampleNr = s->sampleNr;
-				c->envSustainActive = s->envSustainActive;
-				c->status = s->tmpStatus;
-				c->finalVol = s->finalVol;
-				c->smpStartPos = s->smpStartPos;
-			}
-
-			chSyncData.timestamp = audio.tickTime64;
-			chQueuePush(chSyncData);
-
-			audio.tickTime64 += tickTimeLen;
-			audio.tickTime64Frac += tickTimeLenFrac;
-			if (audio.tickTime64Frac > 0xFFFFFFFF)
-			{
-				audio.tickTime64Frac &= 0xFFFFFFFF;
-				audio.tickTime64++;
-			}
+			fillVisualsSyncBuffer();
 
 			pmpLeft = audio.speedVal;
+
 			replayerBusy = false;
 		}
 
@@ -976,6 +966,8 @@ static void SDLCALL mixCallback(void *userdata, Uint8 *stream, int len)
 		a -= b;
 		pmpLeft -= b;
 	}
+
+	(void)userdata;
 }
 
 static bool setupAudioBuffers(void)
@@ -1054,15 +1046,14 @@ void updateSendAudSamplesRoutine(bool lockMixer)
 		unlockMixerCallback();
 }
 
-static void calcAudioLatencyVars(uint16_t haveSamples, int32_t haveFreq)
+static void calcAudioLatencyVars(int32_t audioBufferSize, int32_t audioFreq)
 {
-	double dHaveFreq, dAudioLatencySecs, dInt, dFrac;
+	double dInt, dFrac;
 
-	dHaveFreq = haveFreq;
-	if (dHaveFreq == 0.0)
-		return; // panic!
+	if (audioFreq == 0)
+		return;
 
-	dAudioLatencySecs = haveSamples / dHaveFreq;
+	const double dAudioLatencySecs = audioBufferSize / (double)audioFreq;
 
 	dFrac = modf(dAudioLatencySecs * editor.dPerfFreq, &dInt);
 
@@ -1134,7 +1125,7 @@ bool setupAudio(bool showErrorMsg)
 	want.format = (config.specialFlags & BITDEPTH_32) ? AUDIO_F32 : AUDIO_S16;
 	want.channels = 2;
 	// -------------------------------------------------------------------------------
-	want.callback = mixCallback;
+	want.callback = audioCallback;
 	want.samples  = configAudioBufSize;
 
 	audio.dev = SDL_OpenAudioDevice(audio.currOutputDevice, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE); // prevent SDL2 from resampling
