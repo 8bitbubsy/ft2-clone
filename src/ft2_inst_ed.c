@@ -2065,11 +2065,11 @@ static void drawPanEnvCoords(int16_t tick, int16_t val)
 
 	sprintf(str, "%03d %02d", tick, val);
 
-	textOutTiny(312, 276, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 275, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(314, 276, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 277, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 276, str, video.palette[PAL_FORGRND]);
+	textOutTiny(312, 277, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 276, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(314, 277, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 278, str, video.palette[PAL_BCKGRND]);
+	textOutTiny(313, 277, str, video.palette[PAL_FORGRND]);
 }
 
 void handleInstEditorRedrawing(void)
