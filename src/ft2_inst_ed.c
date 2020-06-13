@@ -1853,7 +1853,7 @@ static void envelopeDot(int32_t nr, int16_t x, int16_t y)
 		*dstPtr++ = pixVal;
 		*dstPtr++ = pixVal;
 
-		dstPtr += (SCREEN_W - 3);
+		dstPtr += SCREEN_W-3;
 	}
 }
 
@@ -1872,7 +1872,7 @@ static void envelopeVertLine(int32_t nr, int16_t x, int16_t y, uint8_t col)
 		if (*dstPtr != pixVal2)
 			*dstPtr = pixVal1;
 
-		dstPtr += (SCREEN_W * 2);
+		dstPtr += SCREEN_W*2;
 	}
 }
 
@@ -1884,9 +1884,9 @@ static void writeEnvelope(int32_t nr)
 
 	// clear envelope area
 	if (nr == 0)
-		clearRect(5, 189, 331, 67);
+		clearRect(5, 189, 333, 67);
 	else
-		clearRect(5, 276, 331, 67);
+		clearRect(5, 276, 333, 67);
 
 	// draw dotted x/y lines
 	for (i = 0; i <= 32; i++) envelopePixel(nr, 5, 1 + i * 2, PAL_PATTEXT);
@@ -2011,6 +2011,9 @@ static void writeEnvelope(int32_t nr)
 
 static void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color)
 {
+#ifndef __arm__
+	uint32_t tmp;
+#endif
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	while (*str != '\0')
@@ -2027,8 +2030,15 @@ static void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color)
 		{
 			for (int32_t x = 0; x < FONT3_CHAR_W; x++)
 			{
-				if (srcPtr[x])
-					dstPtr[x] = color;
+#ifdef __arm__
+				if (srcPtr[x] != 0)
+					dstPtr[x] = pixVal;
+#else
+				// carefully written like this to generate conditional move instructions (font data is hard to predict)
+				tmp = dstPtr[x];
+				if (srcPtr[x] != 0) tmp = color;
+				dstPtr[x] = tmp;
+#endif
 			}
 
 			srcPtr += FONT3_WIDTH;
@@ -2039,37 +2049,62 @@ static void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color)
 	}
 }
 
+static void textOutTinyOutline(int32_t xPos, int32_t yPos, char *str)
+{
+	const uint32_t bgColor = video.palette[PAL_BCKGRND];
+	const uint32_t fgColor = video.palette[PAL_FORGRND];
+
+	textOutTiny(xPos-1, yPos,   str, bgColor);
+	textOutTiny(xPos,   yPos-1, str, bgColor);
+	textOutTiny(xPos+1, yPos,   str, bgColor);
+	textOutTiny(xPos,   yPos+1, str, bgColor);
+
+	textOutTiny(xPos, yPos, str, fgColor);
+}
+
 static void drawVolEnvCoords(int16_t tick, int16_t val)
 {
-	char str[8];
+	char str[4];
 
 	tick = CLAMP(tick, 0, 324);
+	sprintf(str, "%03d", tick);
+	textOutTinyOutline(326, 190, str);
+
 	val = CLAMP(val, 0, 64);
-	
-	sprintf(str, "%03d %02d", tick, val);
-
-	textOutTiny(312, 190, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 189, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(314, 190, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 191, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 190, str, video.palette[PAL_FORGRND]);
-
+	sprintf(str, "%02d", val);
+	textOutTinyOutline(330, 199, str);
 }
 
 static void drawPanEnvCoords(int16_t tick, int16_t val)
 {
-	char str[8];
+	bool negative = false;
+	char str[4];
 
 	tick = CLAMP(tick, 0, 324);
-	val = CLAMP(val, 0, 63);
+	sprintf(str, "%03d", tick);
+	textOutTinyOutline(326, 277, str);
+	
+	val -= 32;
+	val = CLAMP(val, -32, 31);
+	if (val < 0)
+	{
+		negative = true;
+		val = -val;
+	}
 
-	sprintf(str, "%03d %02d", tick, val);
+	if (negative) // draw minus sign
+	{
+		// outline
+		hLine(326, 288, 3, PAL_BCKGRND);
+		hLine(326, 290, 3, PAL_BCKGRND);
+		video.frameBuffer[(289 * SCREEN_W) + 325] = video.palette[PAL_BCKGRND];
+		video.frameBuffer[(289 * SCREEN_W) + 329] = video.palette[PAL_BCKGRND];
 
-	textOutTiny(312, 277, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 276, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(314, 277, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 278, str, video.palette[PAL_BCKGRND]);
-	textOutTiny(313, 277, str, video.palette[PAL_FORGRND]);
+		hLine(326, 289, 3, PAL_FORGRND);
+	}
+	
+	sprintf(str, "%02d", val);
+	textOutTinyOutline(330, 286, str);
 }
 
 void handleInstEditorRedrawing(void)
@@ -2082,7 +2117,9 @@ void handleInstEditorRedrawing(void)
 		updateVolEnv = false;
 		writeEnvelope(0);
 
-		tick = val = 0;
+		tick = 0;
+		val = 0;
+
 		if (ins != NULL)
 		{
 			tick = ins->envVP[editor.currVolEnvPoint][0];
@@ -2097,7 +2134,9 @@ void handleInstEditorRedrawing(void)
 		updatePanEnv = false;
 		writeEnvelope(1);
 
-		tick = val = 0;
+		tick = 0;
+		val = 32;
+
 		if (ins != NULL)
 		{
 			tick = ins->envPP[editor.currPanEnvPoint][0];
