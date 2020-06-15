@@ -2032,7 +2032,7 @@ static void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color)
 			{
 #ifdef __arm__
 				if (srcPtr[x] != 0)
-					dstPtr[x] = pixVal;
+					dstPtr[x] = color;
 #else
 				// carefully written like this to generate conditional move instructions (font data is hard to predict)
 				tmp = dstPtr[x];
@@ -2072,7 +2072,7 @@ static void drawVolEnvCoords(int16_t tick, int16_t val)
 
 	val = CLAMP(val, 0, 64);
 	sprintf(str, "%02d", val);
-	textOutTinyOutline(330, 199, str);
+	textOutTinyOutline(330, 198, str);
 }
 
 static void drawPanEnvCoords(int16_t tick, int16_t val)
@@ -2095,16 +2095,16 @@ static void drawPanEnvCoords(int16_t tick, int16_t val)
 	if (negative) // draw minus sign
 	{
 		// outline
-		hLine(326, 288, 3, PAL_BCKGRND);
-		hLine(326, 290, 3, PAL_BCKGRND);
-		video.frameBuffer[(289 * SCREEN_W) + 325] = video.palette[PAL_BCKGRND];
-		video.frameBuffer[(289 * SCREEN_W) + 329] = video.palette[PAL_BCKGRND];
+		hLine(326, 287, 3, PAL_BCKGRND);
+		hLine(326, 289, 3, PAL_BCKGRND);
+		video.frameBuffer[(288 * SCREEN_W) + 325] = video.palette[PAL_BCKGRND];
+		video.frameBuffer[(288 * SCREEN_W) + 329] = video.palette[PAL_BCKGRND];
 
-		hLine(326, 289, 3, PAL_FORGRND);
+		hLine(326, 288, 3, PAL_FORGRND);
 	}
 	
 	sprintf(str, "%02d", val);
-	textOutTinyOutline(330, 286, str);
+	textOutTinyOutline(330, 285, str);
 }
 
 void handleInstEditorRedrawing(void)
