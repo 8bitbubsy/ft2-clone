@@ -26,19 +26,9 @@
 ** If something looks to be off, it probably isn't!
 */
 
-/* Tables for pre-calculated stuff on run time and when changing freq. and/or linear/amiga mode.
-** FT2 obviously didn't have such big tables.
-*/
-
+// non-FT2 precalced stuff
 static uint32_t musicTimeTab[MAX_BPM+1];
-static uint64_t period2ScopeDeltaTab[65536];
-static double dLogTab[768], dLogTabMul[32], dAudioRateFactor;
-
-#if defined _WIN64 || defined __amd64__
-static uint64_t period2DeltaTab[65536];
-#else
-static uint32_t period2DeltaTab[65536];
-#endif
+static double dPeriod2HzTab[65536], dLogTab[768], dAudioRateFactor;
 
 static bool bxxOverflow;
 static tonTyp nilPatternLine;
@@ -141,8 +131,8 @@ void tuneSample(sampleTyp *s, int32_t midCFreq)
 		return;
 	}
 
-	double dFreq = log2(midCFreq * (1.0 / 8363.0)) * (12.0 * 128.0);
-	int32_t linearFreq = (int32_t)(dFreq + 0.5);
+	double dFreq = log2(midCFreq / 8363.0) * (12.0 * 128.0);
+	int32_t linearFreq = (int32_t)(dFreq + 0.5); // rounded
 	s->fine = ((linearFreq + 128) & 255) - 128;
 
 	int32_t relTon = (linearFreq - s->fine) >> 7;
@@ -220,61 +210,29 @@ int16_t getRealUsedSamples(int16_t nr)
 	return i+1;
 }
 
-// called every time you change linear/amiga mode and mixing frequency
-static void calcPeriod2DeltaTables(void)
+static void calcPeriod2HzTab(void) // called every time you change linear/amiga period mode
 {
-	int32_t baseDelta;
-	uint32_t i;
-
-	period2DeltaTab[0] = 0; // in FT2, a period of 0 is converted to a delta of 0
-
-	const double dScopeRateFactor = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
+	dPeriod2HzTab[0] = 0.0; // in FT2, a period of 0 yields 0Hz
 
 	if (audio.linearFreqTable)
 	{
 		// linear periods
-		for (i = 1; i < 65536; i++)
+		for (int32_t i = 1; i < 65536; i++)
 		{
 			const uint16_t invPeriod = (12 * 192 * 4) - (uint16_t)i; // this intentionally overflows uint16_t to be accurate to FT2
 			const int32_t octave = invPeriod / 768;
 			const int32_t period = invPeriod % 768;
-			const int32_t shift = (14 - octave) & 0x1F; // 100% accurate to FT2!
+			const int32_t bitshift = (14 - octave) & 0x1F; // 100% accurate to FT2
 
-			const double dHz = dLogTab[period] * dLogTabMul[shift];
-
-#if defined _WIN64 || defined __amd64__
-			period2DeltaTab[i] = (uint64_t)((dHz * dAudioRateFactor) + 0.5);
-#else
-			period2DeltaTab[i] = (uint32_t)((dHz * dAudioRateFactor) + 0.5);
-#endif
-			period2ScopeDeltaTab[i] = (uint64_t)((dHz * dScopeRateFactor) + 0.5);
+			dPeriod2HzTab[i] = dLogTab[period] / (1UL << bitshift);
 		}
 	}
 	else
 	{
 		// Amiga periods
-		for (i = 1; i < 65536; i++)
-		{
-			double dHz = (8363.0 * 1712.0) / i;
-
-#if defined _WIN64 || defined __amd64__
-			period2DeltaTab[i] = (uint64_t)((dHz * dAudioRateFactor) + 0.5);
-#else
-			period2DeltaTab[i] = (uint32_t)((dHz * dAudioRateFactor) + 0.5);
-#endif
-			period2ScopeDeltaTab[i] = (uint64_t)((dHz * dScopeRateFactor) + 0.5);
-		}
+		for (int32_t i = 1; i < 65536; i++)
+			dPeriod2HzTab[i] = (8363.0 * 1712.0) / i;
 	}
-
-	// for piano in Instr. Ed.
-
-	// (this delta is small enough to fit in int32_t even with 32.32 deltas)
-	if (audio.linearFreqTable)
-		baseDelta = (int32_t)period2DeltaTab[7680];
-	else
-		baseDelta = (int32_t)period2DeltaTab[1712*16];
-
-	audio.dPianoDeltaMul = 1.0 / baseDelta;
 }
 
 void setFrqTab(bool linear)
@@ -288,7 +246,7 @@ void setFrqTab(bool linear)
 	else
 		note2Period = amigaPeriods;
 
-	calcPeriod2DeltaTables();
+	calcPeriod2HzTab();
 
 	resumeAudio();
 
@@ -302,7 +260,7 @@ static void retrigVolume(stmTyp *ch)
 	ch->realVol = ch->oldVol;
 	ch->outVol = ch->oldVol;
 	ch->outPan = ch->oldPan;
-	ch->status |= (IS_Vol + IS_Pan + IS_QuickVol);
+	ch->status |= IS_Vol + IS_Pan + IS_QuickVol;
 }
 
 static void retrigEnvelopeVibrato(stmTyp *ch)
@@ -376,26 +334,18 @@ void keyOff(stmTyp *ch)
 	{
 		ch->realVol = 0;
 		ch->outVol = 0;
-		ch->status |= (IS_Vol + IS_QuickVol);
+		ch->status |= IS_Vol + IS_QuickVol;
 	}
 }
 
-void calcAudioTables(void)
+void calcReplayerLogTab(void)
 {
-	int32_t i;
-
-	for (i = 0; i < 768; i++)
+	for (int32_t i = 0; i < 768; i++)
 		dLogTab[i] = exp2(i / 768.0) * (8363.0 * 256.0);
-
-	dLogTabMul[0] = 1.0;
-	for (i = 1; i < 32; i++)
-		dLogTabMul[i] = exp2(-i);
 }
 
 void calcReplayRate(int32_t audioFreq)
 {
-	int32_t i;
-
 	if (audioFreq == 0)
 		return;
 
@@ -403,75 +353,64 @@ void calcReplayRate(int32_t audioFreq)
 
 	audio.quickVolSizeVal = audioFreq / 200; // FT2 truncates here
 	audio.rampQuickVolMul = (int32_t)(((UINT32_MAX + 1.0) / audio.quickVolSizeVal) + 0.5);
-	audio.dSpeedValMul = editor.dPerfFreq / audioFreq; // for audio/video sync
 
 	/* Calculate tables to prevent floating point operations on systems that
 	** might have a slow FPU. This is quite hackish and not really needed,
-	** but it doesn't take up THAT much RAM anyway.
+	** but it doesn't take up a lot of RAM, so why not.
 	*/
-
-	// calculate table used to count replayer time (displayed as hours/minutes/seconds)
-	const double dMul = (UINT32_MAX + 1.0) / audioFreq;
 
 	audio.speedValTab[0] = 0;
 	musicTimeTab[0] = UINT32_MAX;
-	audio.rampSpeedValMulTab[0] = UINT32_MAX;
-	audio.tickTimeLengthTab[0] = (uint64_t)UINT32_MAX << 32;
+	audio.tickTimeLengthTab[0] = UINT64_MAX;
+	audio.rampSpeedValMulTab[0] = INT32_MAX;
 
-	const double dTickTimeLenMul = audio.dSpeedValMul * (UINT32_MAX + 1.0);
-	for (i = 1; i <= MAX_BPM; i++)
+	const double dMul1 = (UINT32_MAX + 1.0) / audioFreq;
+	const double dMul2 = (editor.dPerfFreq / audioFreq) * (UINT32_MAX + 1.0);
+
+	for (int32_t i = 1; i <= MAX_BPM; i++)
 	{
-		int32_t samplesPerTick = (int32_t)(((audioFreq * 2.5) / i) + 0.5); // rounded
-
+		const int32_t samplesPerTick = (int32_t)(((audioFreq * 2.5) / i) + 0.5); // rounded
 		audio.speedValTab[i] = samplesPerTick;
 
 		// used for song playback counter (hh:mm:ss)
-		musicTimeTab[i] = (uint32_t)((samplesPerTick * dMul) + 0.5);
+		musicTimeTab[i] = (uint32_t)((samplesPerTick * dMul1) + 0.5);
 
 		// number of samples per tick -> tick length for performance counter (syncing visuals to audio)
-		audio.tickTimeLengthTab[i] = (uint64_t)(samplesPerTick * dTickTimeLenMul);
+		audio.tickTimeLengthTab[i] = (uint64_t)(samplesPerTick * dMul2);
 
 		// for calculating volume ramp length for "tick" ramps
 		audio.rampSpeedValMulTab[i] = (int32_t)(((UINT32_MAX + 1.0) / samplesPerTick) + 0.5);
 	}
+}
 
-	calcPeriod2DeltaTables();
+double period2Hz(uint16_t period)
+{
+	return dPeriod2HzTab[period];
 }
 
 #if defined _WIN64 || defined __amd64__
-uint64_t getFrequenceValue(uint16_t period)
+int64_t getMixerDelta(uint16_t period)
 {
-	return period2DeltaTab[period];
+	return (int64_t)((dPeriod2HzTab[period] * dAudioRateFactor) + 0.5); // Hz -> rounded fixed-point mixer delta
 }
 #else
-uint32_t getFrequenceValue(uint16_t period)
+int32_t getMixerDelta(uint16_t period)
 {
-	return period2DeltaTab[period];
+	return (int32_t)((dPeriod2HzTab[period] * dAudioRateFactor) + 0.5); // Hz -> rounded fixed-point mixer delta
 }
 #endif
 
 int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote) // for piano in Instr. Ed.
 {
-#if defined _WIN64 || defined __amd64__
-	uint64_t delta = period2DeltaTab[period];
-#else
-	uint32_t delta = period2DeltaTab[period];
-#endif
-
 	finetune >>= 3; // FT2 does this in the replayer internally, so the actual range is -16..15
 
-	const double dNote = (log2(delta * audio.dPianoDeltaMul) * 12.0) - (finetune * (1.0 / 16.0));
-	int32_t note = (int32_t)(dNote + 0.5);
+	const double dRelativeHz = dPeriod2HzTab[period] * (1.0 / (8363.0 / 16.0));
+	const double dNote = (log2(dRelativeHz) * 12.0) - (finetune * (1.0 / 16.0));
 
-	note -= relativeNote;
+	const int32_t note = (int32_t)(dNote + 0.5) - relativeNote; // rounded
 
-	// "note" is now the raw piano key number, unaffected by finetune/relativeNote
+	// "note" is now the raw piano key number, unaffected by finetune and relativeNote
 	return note;
-}
-
-uint64_t getScopeFrequenceValue(uint16_t period)
-{
-	return period2ScopeDeltaTab[period];
 }
 
 static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
@@ -538,7 +477,7 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 		}
 	}
 
-	ch->status |= (IS_Period + IS_Vol + IS_Pan + IS_NyTon + IS_QuickVol);
+	ch->status |= IS_Period + IS_Vol + IS_Pan + IS_NyTon + IS_QuickVol;
 
 	if (effTyp == 9)
 	{
@@ -787,7 +726,7 @@ static void checkMoreEffects(stmTyp *ch) // called even if channel is muted
 			{
 				ch->realVol = 0;
 				ch->outVol = 0;
-				ch->status |= (IS_Vol + IS_QuickVol);
+				ch->status |= IS_Vol + IS_QuickVol;
 			}
 		}
 
@@ -978,7 +917,7 @@ static void checkEffects(stmTyp *ch)
 		ch->outVol = volKol;
 		ch->realVol = volKol;
 
-		ch->status |= (IS_Vol + IS_QuickVol);
+		ch->status |= IS_Vol + IS_QuickVol;
 	}
 
 	// fine volume slide down
@@ -1035,7 +974,7 @@ static void checkEffects(stmTyp *ch)
 			ch->realVol = 64;
 
 		ch->outVol = ch->realVol;
-		ch->status |= (IS_Vol + IS_QuickVol);
+		ch->status |= IS_Vol + IS_QuickVol;
 
 		return;
 	}
@@ -1939,7 +1878,7 @@ static void doEffects(stmTyp *ch)
 			{
 				ch->outVol = 0;
 				ch->realVol = 0;
-				ch->status |= (IS_Vol + IS_QuickVol);
+				ch->status |= IS_Vol + IS_QuickVol;
 			}
 		}
 
@@ -2064,7 +2003,7 @@ static void doEffects(stmTyp *ch)
 		ch->tremorPos = tremorSign | tremorData;
 
 		ch->outVol = (tremorSign == 0x80) ? ch->realVol : 0;
-		ch->status |= (IS_Vol + IS_QuickVol);
+		ch->status |= IS_Vol + IS_QuickVol;
 	}
 }
 
@@ -2779,6 +2718,7 @@ bool setupReplayer(void)
 
 	audio.linearFreqTable = true;
 	note2Period = linearPeriods;
+	calcPeriod2HzTab();
 
 	setPos(0, 0, true);
 
@@ -3114,9 +3054,8 @@ void stopVoices(void)
 
 	stopAllScopes();
 	resetAudioDither();
-#if !defined __amd64__ && !defined _WIN64
 	resetCachedMixerVars();
-#endif
+	resetCachedScopeVars();
 
 	// wait for scope thread to finish, so that we know pointers aren't deprecated
 	while (editor.scopeThreadMutex);

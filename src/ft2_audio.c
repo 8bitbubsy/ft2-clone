@@ -18,14 +18,6 @@
 
 #define INITIAL_DITHER_SEED 0x12345000
 
-// globalized
-audio_t audio;
-pattSyncData_t *pattSyncEntry;
-chSyncData_t *chSyncEntry;
-chSync_t chSync;
-pattSync_t pattSync;
-volatile bool pattQueueClearing, chQueueClearing;
-
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
 static int32_t masterVol, oldAudioFreq, pmpLeft, randSeed = INITIAL_DITHER_SEED;
@@ -35,19 +27,29 @@ static float fAudioAmpMul;
 static voice_t voice[MAX_VOICES * 2];
 static void (*sendAudSamplesFunc)(uint8_t *, uint32_t, uint8_t); // "send mixed samples" routines
 
-#if !defined __amd64__ && !defined _WIN64
 static int32_t oldPeriod;
+#if !defined __amd64__ && !defined _WIN64
 static uint32_t oldSFrq, oldSFrqRev;
+#else
+static uint64_t oldSFrq;
 #endif
 
-#if !defined __amd64__ && !defined _WIN64
+// globalized
+audio_t audio;
+pattSyncData_t *pattSyncEntry;
+chSyncData_t *chSyncEntry;
+chSync_t chSync;
+pattSync_t pattSync;
+volatile bool pattQueueClearing, chQueueClearing;
+
 void resetCachedMixerVars(void)
 {
 	oldPeriod = -1;
 	oldSFrq = 0;
+#if !defined __amd64__ && !defined _WIN64
 	oldSFrqRev = 0xFFFFFFFF;
-}
 #endif
+}
 
 void stopVoice(int32_t i)
 {
@@ -368,22 +370,23 @@ void mix_UpdateChannelVolPanFrq(void)
 
 		if (status & IS_Period)
 		{
-#if defined __amd64__ || defined _WIN64
-			v->SFrq = getFrequenceValue(ch->finalPeriod);
-#else
-			// use cached values to prevent a 32-bit divsion all the time
-			if (ch->finalPeriod != oldPeriod)
+			// use cached values if possible
+
+			const uint16_t period = ch->finalPeriod;
+			if (period != oldPeriod)
 			{
-				oldPeriod = ch->finalPeriod;
+				oldPeriod = period;
+				oldSFrq = getMixerDelta(period);
 
-				oldSFrq = getFrequenceValue(ch->finalPeriod);
-
+#if !defined __amd64__ && !defined _WIN64
 				oldSFrqRev = 0xFFFFFFFF;
 				if (oldSFrq != 0)
 					oldSFrqRev /= oldSFrq;
+#endif
 			}
 
 			v->SFrq = oldSFrq;
+#if !defined __amd64__ && !defined _WIN64
 			v->SFrqRev = oldSFrqRev;
 #endif
 		}

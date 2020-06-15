@@ -101,13 +101,13 @@
 
 #define SCOPE_UPDATE_DRAWPOS \
 	scopeDrawFrac += scopeDrawDelta; \
-	scopeDrawPos += scopeDrawFrac >> 16; \
-	scopeDrawFrac &= 0xFFFF; \
+	scopeDrawPos += scopeDrawFrac >> SCOPE_DRAW_FRAC_BITS; \
+	scopeDrawFrac &= SCOPE_DRAW_FRAC_MASK; \
 
 #define SCOPE_UPDATE_DRAWPOS_PINGPONG \
 	scopeDrawFrac += scopeDrawDelta; \
-	scopeDrawPos += (scopeDrawFrac >> 16) * drawPosDir; \
-	scopeDrawFrac &= 0xFFFF; \
+	scopeDrawPos += (scopeDrawFrac >> SCOPE_DRAW_FRAC_BITS) * drawPosDir; \
+	scopeDrawFrac &= SCOPE_DRAW_FRAC_MASK; \
 
 #define SCOPE_DRAW_SMP \
 	video.frameBuffer[((lineY - sample) * SCREEN_W) + x] = scopePixelColor;

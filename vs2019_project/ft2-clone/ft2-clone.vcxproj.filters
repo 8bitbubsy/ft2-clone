@@ -22,7 +22,6 @@
     <ClCompile Include="..\..\src\ft2_unicode.c" />
     <ClCompile Include="..\..\src\ft2_midi.c" />
     <ClCompile Include="..\..\src\ft2_wav_renderer.c" />
-    <ClCompile Include="..\..\src\ft2_about.c" />
     <ClCompile Include="..\..\src\ft2_trim.c" />
     <ClCompile Include="..\..\src\ft2_checkboxes.c" />
     <ClCompile Include="..\..\src\ft2_pushbuttons.c" />
@@ -77,6 +76,7 @@
       <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\ft2_structs.c" />
+    <ClCompile Include="..\..\src\ft2_about.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\ft2_audio.h">

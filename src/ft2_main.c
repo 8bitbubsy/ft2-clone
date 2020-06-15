@@ -312,7 +312,7 @@ static void initializeVars(void)
 
 	audio.linearFreqTable = true;
 
-	calcAudioTables();
+	calcReplayerLogTab();
 }
 
 static void cleanUpAndExit(void) // never call this inside the main loop!

@@ -237,18 +237,18 @@ typedef struct syncedChannel_t // used for audio/video sync queue
 
 void fixSongName(void); // removes spaces from right side of song name
 void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
-
 void calcReplayRate(int32_t rate);
 void tuneSample(sampleTyp *s, int32_t midCFreq);
 
+void calcReplayerLogTab(void);
+double period2Hz(uint16_t period);
 
 #if defined _WIN64 || defined __amd64__
-uint64_t getFrequenceValue(uint16_t period);
+int64_t getMixerDelta(uint16_t period);
 #else
-uint32_t getFrequenceValue(uint16_t period);
+int32_t getMixerDelta(uint16_t period);
 #endif
 
-uint64_t getScopeFrequenceValue(uint16_t period);
 int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote); // for piano in Instr. Ed.
 
 bool allocateInstr(int16_t nr);

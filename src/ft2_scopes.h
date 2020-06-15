@@ -9,6 +9,12 @@
 #define SCOPE_FRAC_SCALE (1ULL << SCOPE_FRAC_BITS)
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
 
+// just about max safe bits, don't mess with it!
+#define SCOPE_DRAW_FRAC_BITS 20
+#define SCOPE_DRAW_FRAC_SCALE (1UL << SCOPE_DRAW_FRAC_BITS)
+#define SCOPE_DRAW_FRAC_MASK (SCOPE_DRAW_FRAC_SCALE-1)
+
+void resetCachedScopeVars(void);
 int32_t getSamplePosition(uint8_t ch);
 void stopAllScopes(void);
 void refreshScopes(void);

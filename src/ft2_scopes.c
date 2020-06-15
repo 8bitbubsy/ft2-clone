@@ -41,13 +41,21 @@ typedef struct scopeState_t
 } scopeState_t;
 
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
-static uint32_t scopeTimeLen, scopeTimeLenFrac;
-static uint64_t timeNext64, timeNext64Frac;
+static int32_t oldPeriod;
+static uint32_t oldDFrq, scopeTimeLen, scopeTimeLenFrac;
+static uint64_t oldSFrq, timeNext64, timeNext64Frac;
 static volatile scope_t scope[MAX_VOICES];
 static SDL_Thread *scopeThread;
 static uint8_t *scopeMuteBMP_Ptrs[16];
 
 lastChInstr_t lastChInstr[MAX_VOICES]; // global
+
+void resetCachedScopeVars(void)
+{
+	oldPeriod = -1;
+	oldSFrq = 0;
+	oldDFrq = 0;
+}
 
 int32_t getSamplePosition(uint8_t ch)
 {
@@ -202,7 +210,7 @@ static void redrawScope(int32_t ch)
 
 void refreshScopes(void)
 {
-	for (int16_t i = 0; i < MAX_VOICES; i++)
+	for (int32_t i = 0; i < MAX_VOICES; i++)
 		scope[i].wasCleared = false;
 }
 
@@ -292,7 +300,7 @@ bool testScopesMouseDown(void)
 			if (mouse.x >= x && mouse.x < x+scopeLens[i])
 				break;
 
-			x += scopeLens[i] + 3;
+			x += scopeLens[i]+3;
 		}
 
 		if (i == chansPerRow)
@@ -309,7 +317,7 @@ bool testScopesMouseDown(void)
 	return false;
 }
 
-static void scopeTrigger(int32_t ch, sampleTyp *s, int32_t playOffset)
+static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 {
 	bool sampleIs16Bit;
 	uint8_t loopType;
@@ -387,32 +395,28 @@ static void scopeTrigger(int32_t ch, sampleTyp *s, int32_t playOffset)
 static void updateScopes(void)
 {
 	int32_t loopOverflowVal;
-	volatile scope_t *sc;
-	scope_t tempState;
 
 	scopesUpdatingFlag = true;
 
-	sc = scope;
+	volatile scope_t *sc = scope;
 	for (int32_t i = 0; i < song.antChn; i++, sc++)
 	{
-		tempState = *sc; // cache it
+		scope_t tempState = *sc; // cache it
 		if (!tempState.active)
 			continue; // scope is not active, no need
 
 		// scope position update
 
 		tempState.SPosDec += tempState.SFrq;
-
 		const uint32_t posAdd = tempState.SPosDec >> SCOPE_FRAC_BITS;
+		tempState.SPosDec &= SCOPE_FRAC_MASK;
+
 		if (tempState.backwards)
 			tempState.SPos -= posAdd;
 		else
 			tempState.SPos += posAdd;
 
-		tempState.SPosDec &= SCOPE_FRAC_MASK;
-
 		// handle loop wrapping or sample end
-
 		if (tempState.backwards && tempState.SPos < tempState.SRepS) // sampling backwards (definitely pingpong loop)
 		{
 			tempState.backwards = false; // change direction to forwards
@@ -460,9 +464,7 @@ void drawScopes(void)
 	const uint16_t *scopeLens;
 	uint16_t scopeXOffs, scopeYOffs, scopeDrawLen;
 	int32_t chansPerRow;
-	volatile scope_t *sc;
-	scope_t s;
-
+	
 	scopesDisplayingFlag = true;
 	chansPerRow = (uint32_t)song.antChn >> 1;
 
@@ -482,18 +484,16 @@ void drawScopes(void)
 		}
 
 		scopeDrawLen = scopeLens[i];
-
 		if (!editor.chnMode[i]) // scope muted (mute graphics blit()'ed elsewhere)
 		{
-			scopeXOffs += scopeDrawLen + 3; // align x to next scope
+			scopeXOffs += scopeDrawLen+3; // align x to next scope
 			continue;
 		}
 
-		s = scope[i]; // cache scope to lower thread race condition issues
+		const scope_t s = scope[i]; // cache scope to lower thread race condition issues
 		if (s.active && s.SVol > 0 && !audio.locked)
 		{
 			// scope is active
-
 			scope[i].wasCleared = false;
 
 			// clear scope background
@@ -506,8 +506,7 @@ void drawScopes(void)
 		else
 		{
 			// scope is inactive
-
-			sc = &scope[i];
+			volatile scope_t *sc = &scope[i];
 			if (!sc->wasCleared)
 			{
 				// clear scope background
@@ -528,7 +527,7 @@ void drawScopes(void)
 		if (config.multiRecChn[i])
 			blit(scopeXOffs + 1, scopeYOffs + 31, bmp.scopeRec, 13, 4);
 
-		scopeXOffs += scopeDrawLen + 3; // align x to next scope
+		scopeXOffs += scopeDrawLen+3; // align x to next scope
 	}
 
 	scopesDisplayingFlag = false;
@@ -537,18 +536,16 @@ void drawScopes(void)
 void drawScopeFramework(void)
 {
 	drawFramework(0, 92, 291, 81, FRAMEWORK_TYPE1);
-	for (uint8_t i = 0; i < song.antChn; i++)
+	for (int32_t i = 0; i < song.antChn; i++)
 		redrawScope(i);
 }
 
 void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatus)
 {
 	uint8_t status;
-	syncedChannel_t *ch;
-	volatile scope_t *sc;
 
-	sc = scope;
-	ch = chSyncData->channels;
+	volatile scope_t *sc = scope;
+	syncedChannel_t *ch = chSyncData->channels;
 	for (int32_t i = 0; i < song.antChn; i++, sc++, ch++)
 	{
 		status = scopeUpdateStatus[i];
@@ -558,8 +555,23 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 
 		if (status & IS_Period)
 		{
-			sc->SFrq = getScopeFrequenceValue(ch->finalPeriod);
-			sc->DFrq = (uint32_t)(sc->SFrq >> (SCOPE_FRAC_BITS - 10)); // amount of samples to skip after drawing a pixel
+			// use cached values if possible
+
+			const uint16_t period = ch->finalPeriod;
+			if (period != oldPeriod)
+			{
+				oldPeriod = period;
+				const double dHz = period2Hz(period);
+
+				const double dScopeRateFactor = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
+				oldSFrq = (int64_t)((dHz * dScopeRateFactor) + 0.5); // Hz -> rounded fixed-point delta
+
+				const double dRelativeHz = dHz * (1.0 / (8363.0 / 2.0));
+				oldDFrq = (int32_t)((dRelativeHz * SCOPE_DRAW_FRAC_SCALE) + 0.5); // Hz -> rounded fixed-point draw delta
+			}
+
+			sc->SFrq = oldSFrq;
+			sc->DFrq = oldDFrq;
 		}
 
 		if (status & IS_NyTon)

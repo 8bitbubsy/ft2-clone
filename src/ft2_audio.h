@@ -54,7 +54,7 @@ typedef struct audio_t
 	uint32_t freq;
 	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac, speedVal, musicTimeSpeedVal;
 	uint64_t tickTime64, tickTime64Frac, tickTimeLengthTab[MAX_BPM+1];
-	double dAudioLatencyMs, dSpeedValMul, dPianoDeltaMul;
+	double dAudioLatencyMs;
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
 } audio_t;
@@ -104,21 +104,7 @@ typedef struct chSync_t
 	chSyncData_t data[SYNC_QUEUE_LEN + 1];
 } chSync_t;
 
-// in ft2_audio.c
-extern audio_t audio;
-extern pattSyncData_t *pattSyncEntry;
-extern chSyncData_t *chSyncEntry;
-extern chSync_t chSync;
-extern pattSync_t pattSync;
-
-extern volatile bool pattQueueClearing, chQueueClearing;
-
-#if !defined __amd64__ && !defined _WIN64
 void resetCachedMixerVars(void);
-#endif
-
-void calcAudioTables(void);
-
 int32_t pattQueueReadSize(void);
 int32_t pattQueueWriteSize(void);
 bool pattQueuePush(pattSyncData_t t);
@@ -153,3 +139,12 @@ void updateSendAudSamplesRoutine(bool lockMixer);
 void mix_SaveIPVolumes(void);
 void mix_UpdateChannelVolPanFrq(void);
 uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth);
+
+// in ft2_audio.c
+extern audio_t audio;
+extern pattSyncData_t *pattSyncEntry;
+extern chSyncData_t *chSyncEntry;
+extern chSync_t chSync;
+extern pattSync_t pattSync;
+
+extern volatile bool pattQueueClearing, chQueueClearing;
