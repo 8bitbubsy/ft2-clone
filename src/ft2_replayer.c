@@ -1727,7 +1727,15 @@ static void doEffects(stmTyp *ch)
 	// 0xy - Arpeggio
 	if (ch->effTyp == 0)
 	{
-		tick = arpTab[song.timer & 0x1F]; // 8bitbubsy: AND it for security
+		int16_t timer = song.timer;
+
+		/* Non-FT2 protection for our extended 100-byte arp table.
+		** (this shouldn't happen, but just in case)
+		*/
+		if (timer > 99)
+			timer = 99;
+
+		tick = arpTab[timer];
 		if (tick == 0)
 		{
 			ch->outPeriod = ch->realPeriod;
