@@ -51,8 +51,9 @@ typedef struct audio_t
 	int32_t inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
 	int32_t quickVolSizeVal, *mixBufferL, *mixBufferR, *mixBufferLUnaligned, *mixBufferRUnaligned;
 	int32_t rampQuickVolMul, rampSpeedValMul, speedValTab[MAX_BPM+1], rampSpeedValMulTab[MAX_BPM+1];
+	int32_t tickSampleCounter;
 	uint32_t freq;
-	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac, speedVal, musicTimeSpeedVal;
+	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;
 	uint64_t tickTime64, tickTime64Frac, tickTimeLengthTab[MAX_BPM+1];
 	double dAudioLatencyMs;
 	SDL_AudioDeviceID dev;

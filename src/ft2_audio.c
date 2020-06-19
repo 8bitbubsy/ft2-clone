@@ -20,7 +20,7 @@
 
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
-static int32_t masterVol, oldAudioFreq, pmpLeft, randSeed = INITIAL_DITHER_SEED;
+static int32_t masterVol, oldAudioFreq, randSeed = INITIAL_DITHER_SEED;
 static int32_t prngStateL, prngStateR;
 static uint32_t tickTimeLen, tickTimeLenFrac;
 static float fAudioAmpMul;
@@ -161,7 +161,7 @@ void setSpeed(uint16_t bpm)
 	if (bpm > MAX_BPM)
 		return;
 
-	audio.speedVal = audio.speedValTab[bpm];
+	audio.samplesPerTick = audio.speedValTab[bpm];
 
 	// get tick time length for audio/video sync timestamp
 	const uint64_t tickTimeLen64 = audio.tickTimeLengthTab[bpm];
@@ -261,7 +261,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 			}
 			else
 			{
-				v->SVolIPLen = audio.speedVal;
+				v->SVolIPLen = audio.samplesPerTick;
 				v->SLVolIP = ((int64_t)destVolL * audio.rampSpeedValMul) >> 32;
 				v->SRVolIP = ((int64_t)destVolR * audio.rampSpeedValMul) >> 32;
 			}
@@ -584,8 +584,8 @@ uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth)
 	voice_t *v, *r;
 
 	assert(audio.speedVal <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
-	memset(audio.mixBufferL, 0, audio.speedVal * sizeof (int32_t));
-	memset(audio.mixBufferR, 0, audio.speedVal * sizeof (int32_t));
+	memset(audio.mixBufferL, 0, audio.samplesPerTick * sizeof (int32_t));
+	memset(audio.mixBufferR, 0, audio.samplesPerTick * sizeof (int32_t));
 
 	// mix channels
 	v = voice; // normal voices
@@ -594,24 +594,24 @@ uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth)
 	for (int32_t i = 0; i < song.antChn; i++, v++, r++)
 	{
 		// call the mixing routine currently set for the voice
-		if (v->mixRoutine != NULL) v->mixRoutine(v, audio.speedVal); // mix normal voice
-		if (r->mixRoutine != NULL) r->mixRoutine(r, audio.speedVal); // mix volume ramp voice
+		if (v->mixRoutine != NULL) v->mixRoutine(v, audio.samplesPerTick); // mix normal voice
+		if (r->mixRoutine != NULL) r->mixRoutine(r, audio.samplesPerTick); // mix volume ramp voice
 	}
 
 	// normalize mix buffer and send to audio stream
 	if (bitDepth == 16)
 	{
 		if (config.specialFlags2 & DITHERED_AUDIO)
-			sendSamples16BitDitherStereo(stream, audio.speedVal, 2);
+			sendSamples16BitDitherStereo(stream, audio.samplesPerTick, 2);
 		else
-			sendSamples16BitStereo(stream, audio.speedVal, 2);
+			sendSamples16BitStereo(stream, audio.samplesPerTick, 2);
 	}
 	else
 	{
-		sendSamples24BitStereo(stream, audio.speedVal, 2);
+		sendSamples24BitStereo(stream, audio.samplesPerTick, 2);
 	}
 
-	return audio.speedVal;
+	return audio.samplesPerTick;
 }
 
 int32_t pattQueueReadSize(void)
@@ -930,18 +930,16 @@ static void fillVisualsSyncBuffer(void)
 
 static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 {
-	int32_t a, b;
-
 	assert(len < 65536); // limitation in mixer
 	assert(pmpCountDiv > 0);
 
-	a = len / pmpCountDiv;
-	if (a <= 0)
+	int32_t samplesLeft = len / pmpCountDiv;
+	if (samplesLeft <= 0)
 		return;
 
-	while (a > 0)
+	while (samplesLeft > 0)
 	{
-		if (pmpLeft == 0)
+		if (audio.tickSampleCounter == 0)
 		{
 			// new replayer tick
 
@@ -954,20 +952,20 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 			mix_UpdateChannelVolPanFrq();
 			fillVisualsSyncBuffer();
 
-			pmpLeft = audio.speedVal;
+			audio.tickSampleCounter = audio.samplesPerTick;
 
 			replayerBusy = false;
 		}
 
-		b = a;
-		if (b > pmpLeft)
-			b = pmpLeft;
+		int32_t samplesToMix = samplesLeft;
+		if (samplesToMix > audio.tickSampleCounter)
+			samplesToMix = audio.tickSampleCounter;
 
-		mixAudio(stream, b, pmpChannels);
-		stream += b * pmpCountDiv;
+		mixAudio(stream, samplesToMix, pmpChannels);
+		stream += samplesToMix * pmpCountDiv;
 
-		a -= b;
-		pmpLeft -= b;
+		samplesLeft -= samplesToMix;
+		audio.tickSampleCounter -= samplesToMix;
 	}
 
 	(void)userdata;
@@ -1225,7 +1223,7 @@ bool setupAudio(bool showErrorMsg)
 
 	stopAllScopes();
 
-	pmpLeft = 0; // reset sample counter
+	audio.tickSampleCounter = 0; // zero tick sample counter so that it will instantly initiate a tick
 
 	calcReplayRate(audio.freq);
 

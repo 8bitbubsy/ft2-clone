@@ -2780,6 +2780,8 @@ void startPlaying(int8_t mode, int16_t row)
 	if (song.tempo == 0)
 		song.tempo = song.initialTempo;
 
+	audio.tickSampleCounter = 0; // zero tick sample counter so that it will instantly initiate a tick
+
 	unlockMixerCallback();
 
 	ui.updatePosSections = true;
