@@ -2244,7 +2244,8 @@ void drawPlaybackTime(void)
 {
 	if (songPlaying)
 	{
-		uint32_t seconds = song.musicTime64 >> 32;
+		const uint32_t milliseconds = song.musicTime64 >> 32;
+		uint32_t seconds = milliseconds / 1000;
 
 		last_TimeH = seconds / 3600; seconds -= last_TimeH * 3600;
 		last_TimeM = seconds / 60;   seconds -= last_TimeM * 60;

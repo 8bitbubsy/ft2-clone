@@ -50,12 +50,11 @@ typedef struct audio_t
 	bool linearFreqTable, rescanAudioDevicesSupported;
 	int32_t inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
 	int32_t quickVolSizeVal, *mixBufferL, *mixBufferR, *mixBufferLUnaligned, *mixBufferRUnaligned;
-	int32_t rampQuickVolMul, rampSpeedValMul, speedValTab[MAX_BPM+1], rampSpeedValMulTab[MAX_BPM+1];
-	int32_t tickSampleCounter;
+	int32_t rampQuickVolMul, rampSpeedValMul, rampSpeedValMulTab[MAX_BPM+1];
 	uint32_t freq;
 	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;
 	uint64_t tickTime64, tickTime64Frac, tickTimeLengthTab[MAX_BPM+1];
-	double dAudioLatencyMs;
+	double dAudioLatencyMs, dSamplesPerTick, dTickSampleCounter, dSpeedValTab[MAX_BPM+1];
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
 } audio_t;
@@ -139,7 +138,7 @@ void unlockMixerCallback(void);
 void updateSendAudSamplesRoutine(bool lockMixer);
 void mix_SaveIPVolumes(void);
 void mix_UpdateChannelVolPanFrq(void);
-uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth);
+void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bitDepth);
 
 // in ft2_audio.c
 extern audio_t audio;

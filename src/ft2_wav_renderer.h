@@ -22,7 +22,7 @@ void drawWavRenderer(void);
 void showWavRenderer(void);
 void hideWavRenderer(void);
 void exitWavRenderer(void);
-uint32_t dump_RenderTick(uint8_t *buffer);
+void dump_RenderTick(uint32_t samplesPerTick, uint8_t *buffer);
 void pbWavRender(void);
 void pbWavExit(void);
 void pbWavFreqUp(void);

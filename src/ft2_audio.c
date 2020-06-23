@@ -161,7 +161,8 @@ void setSpeed(uint16_t bpm)
 	if (bpm > MAX_BPM)
 		return;
 
-	audio.samplesPerTick = audio.speedValTab[bpm];
+	audio.dSamplesPerTick = audio.dSpeedValTab[bpm];
+	audio.samplesPerTick = (int32_t)(audio.dSamplesPerTick + 0.5);
 
 	// get tick time length for audio/video sync timestamp
 	const uint64_t tickTimeLen64 = audio.tickTimeLengthTab[bpm];
@@ -579,13 +580,13 @@ static void mixAudio(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAud
 }
 
 // used for song-to-WAV renderer
-uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth)
+void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bitDepth)
 {
 	voice_t *v, *r;
 
-	assert(audio.speedVal <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
-	memset(audio.mixBufferL, 0, audio.samplesPerTick * sizeof (int32_t));
-	memset(audio.mixBufferR, 0, audio.samplesPerTick * sizeof (int32_t));
+	assert(samplesToMix <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
+	memset(audio.mixBufferL, 0, samplesToMix * sizeof (int32_t));
+	memset(audio.mixBufferR, 0, samplesToMix * sizeof (int32_t));
 
 	// mix channels
 	v = voice; // normal voices
@@ -594,24 +595,22 @@ uint32_t mixReplayerTickToBuffer(uint8_t *stream, uint8_t bitDepth)
 	for (int32_t i = 0; i < song.antChn; i++, v++, r++)
 	{
 		// call the mixing routine currently set for the voice
-		if (v->mixRoutine != NULL) v->mixRoutine(v, audio.samplesPerTick); // mix normal voice
-		if (r->mixRoutine != NULL) r->mixRoutine(r, audio.samplesPerTick); // mix volume ramp voice
+		if (v->mixRoutine != NULL) v->mixRoutine(v, samplesToMix); // mix normal voice
+		if (r->mixRoutine != NULL) r->mixRoutine(r, samplesToMix); // mix volume ramp voice
 	}
 
 	// normalize mix buffer and send to audio stream
 	if (bitDepth == 16)
 	{
 		if (config.specialFlags2 & DITHERED_AUDIO)
-			sendSamples16BitDitherStereo(stream, audio.samplesPerTick, 2);
+			sendSamples16BitDitherStereo(stream, samplesToMix, 2);
 		else
-			sendSamples16BitStereo(stream, audio.samplesPerTick, 2);
+			sendSamples16BitStereo(stream, samplesToMix, 2);
 	}
 	else
 	{
-		sendSamples24BitStereo(stream, audio.samplesPerTick, 2);
+		sendSamples24BitStereo(stream, samplesToMix, 2);
 	}
-
-	return audio.samplesPerTick;
 }
 
 int32_t pattQueueReadSize(void)
@@ -930,16 +929,13 @@ static void fillVisualsSyncBuffer(void)
 
 static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 {
-	assert(len < 65536); // limitation in mixer
-	assert(pmpCountDiv > 0);
-
 	int32_t samplesLeft = len / pmpCountDiv;
 	if (samplesLeft <= 0)
 		return;
 
 	while (samplesLeft > 0)
 	{
-		if (audio.tickSampleCounter == 0)
+		if (audio.dTickSampleCounter <= 0.0)
 		{
 			// new replayer tick
 
@@ -952,23 +948,25 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 			mix_UpdateChannelVolPanFrq();
 			fillVisualsSyncBuffer();
 
-			audio.tickSampleCounter = audio.samplesPerTick;
+			audio.dTickSampleCounter += audio.dSamplesPerTick;
 
 			replayerBusy = false;
 		}
 
+		const int32_t remainingTick = (int32_t)ceil(audio.dTickSampleCounter);
+
 		int32_t samplesToMix = samplesLeft;
-		if (samplesToMix > audio.tickSampleCounter)
-			samplesToMix = audio.tickSampleCounter;
+		if (samplesToMix > remainingTick)
+			samplesToMix = remainingTick;
 
 		mixAudio(stream, samplesToMix, pmpChannels);
 		stream += samplesToMix * pmpCountDiv;
 
 		samplesLeft -= samplesToMix;
-		audio.tickSampleCounter -= samplesToMix;
+		audio.dTickSampleCounter -= samplesToMix;
 	}
 
-	(void)userdata;
+	(void)userdata; // make compiler not complain
 }
 
 static bool setupAudioBuffers(void)
@@ -1223,7 +1221,7 @@ bool setupAudio(bool showErrorMsg)
 
 	stopAllScopes();
 
-	audio.tickSampleCounter = 0; // zero tick sample counter so that it will instantly initiate a tick
+	audio.dTickSampleCounter = 0.0; // zero tick sample counter so that it will instantly initiate a tick
 
 	calcReplayRate(audio.freq);
 

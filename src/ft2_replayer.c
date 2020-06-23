@@ -27,7 +27,6 @@
 */
 
 // non-FT2 precalced stuff
-static uint32_t musicTimeTab[MAX_BPM+1];
 static double dPeriod2HzTab[65536], dLogTab[768], dAudioRateFactor;
 
 static bool bxxOverflow;
@@ -359,24 +358,21 @@ void calcReplayRate(int32_t audioFreq)
 	** but it doesn't take up a lot of RAM, so why not.
 	*/
 
-	audio.speedValTab[0] = 0;
-	musicTimeTab[0] = UINT32_MAX;
+	audio.dSpeedValTab[0] = 0.0;
 	audio.tickTimeLengthTab[0] = UINT64_MAX;
 	audio.rampSpeedValMulTab[0] = INT32_MAX;
 
-	const double dMul1 = (UINT32_MAX + 1.0) / audioFreq;
-	const double dMul2 = (editor.dPerfFreq / audioFreq) * (UINT32_MAX + 1.0);
-
-	for (int32_t i = 1; i <= MAX_BPM; i++)
+	const double dMul = (UINT32_MAX + 1.0) / audioFreq;
+	for (int32_t i = MIN_BPM; i <= MAX_BPM; i++)
 	{
-		const int32_t samplesPerTick = (int32_t)(((audioFreq * 2.5) / i) + 0.5); // rounded
-		audio.speedValTab[i] = samplesPerTick;
+		const double dBpmHz = i / 2.5;
+		const double dSamplesPerTick = audioFreq / dBpmHz;
+		const int32_t samplesPerTick = (int32_t)(dSamplesPerTick + 0.5); // rounded
 
-		// used for song playback counter (hh:mm:ss)
-		musicTimeTab[i] = (uint32_t)((samplesPerTick * dMul1) + 0.5);
+		audio.dSpeedValTab[i] = dSamplesPerTick;
 
 		// number of samples per tick -> tick length for performance counter (syncing visuals to audio)
-		audio.tickTimeLengthTab[i] = (uint64_t)(samplesPerTick * dMul2);
+		audio.tickTimeLengthTab[i] = (uint64_t)(dSamplesPerTick * dMul);
 
 		// for calculating volume ramp length for "tick" ramps
 		audio.rampSpeedValMulTab[i] = (int32_t)(((UINT32_MAX + 1.0) / samplesPerTick) + 0.5);
@@ -2100,8 +2096,8 @@ void mainPlayer(void) // periodically called from audio callback
 		return;
 	}
 
-	assert(song.speed >= MIN_BPM && song.speed <= MAX_BPM);
-	song.musicTime64 += musicTimeTab[song.speed]; // for song playback counter (hh:mm:ss)
+	if (song.speed >= MIN_BPM && song.speed <= MAX_BPM)
+		song.musicTime64 += musicTimeTab64[song.speed]; // for song playback counter (hh:mm:ss)
 
 	readNewNote = false;
 
@@ -2780,7 +2776,7 @@ void startPlaying(int8_t mode, int16_t row)
 	if (song.tempo == 0)
 		song.tempo = song.initialTempo;
 
-	audio.tickSampleCounter = 0; // zero tick sample counter so that it will instantly initiate a tick
+	audio.dTickSampleCounter = 0.0; // zero tick sample counter so that it will instantly initiate a tick
 
 	unlockMixerCallback();
 

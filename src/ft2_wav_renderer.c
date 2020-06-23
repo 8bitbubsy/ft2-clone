@@ -265,7 +265,7 @@ static bool dump_EndOfTune(int16_t endSongPos) // exactly the same as in real FT
 	return returnValue;
 }
 
-uint32_t dump_RenderTick(uint8_t *buffer) // returns bytes mixed
+void dump_RenderTick(uint32_t samplesPerTick, uint8_t *buffer)
 {
 	replayerBusy = true;
 
@@ -277,7 +277,7 @@ uint32_t dump_RenderTick(uint8_t *buffer) // returns bytes mixed
 
 	replayerBusy = false;
 
-	return mixReplayerTickToBuffer(buffer, WDBitDepth);
+	mixReplayerTickToBuffer(samplesPerTick, buffer, WDBitDepth);
 }
 
 static void updateVisuals(void)
@@ -304,7 +304,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 {
 	bool renderDone;
 	uint8_t *ptr8, loopCounter;
-	uint32_t samplesInChunk, tickSamples, sampleCounter;
+	uint32_t samplesInChunk, sampleCounter;
 	FILE *f;
 
 	(void)ptr;
@@ -325,6 +325,8 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	renderDone = false;
 	loopCounter = 8;
 
+	double dTickSamples = audio.dSamplesPerTick;
+
 	editor.wavReachedEndFlag = false;
 	while (!renderDone)
 	{
@@ -340,16 +342,21 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 				break;
 			}
 
-			tickSamples = dump_RenderTick(ptr8) << 1; // *2 for stereo
+			int32_t tickSamples = (int32_t)dTickSamples;
+			dump_RenderTick(tickSamples, ptr8);
 
+			dTickSamples -= tickSamples; // keep fractional part
+			dTickSamples += audio.dSamplesPerTick;
+
+			tickSamples *= 2; // stereo
 			samplesInChunk += tickSamples;
-			sampleCounter  += tickSamples;
+			sampleCounter += tickSamples;
 
 			// increase buffer pointer
 			if (WDBitDepth == 16)
-				ptr8 += (tickSamples * sizeof (int16_t));
+				ptr8 += tickSamples * sizeof (int16_t);
 			else
-				ptr8 += (tickSamples * sizeof (float));
+				ptr8 += tickSamples * sizeof (float);
 
 			if (++loopCounter >= 8)
 			{
