@@ -1,8 +1,10 @@
+Windows: If the program can't start at all, you might need to install
+"Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019"
+which can be found here:
+https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads
+
 If you have any problems, read Help -> "Problems/FAQ" inside the program.
 Also read "Known bugs".
-
-If the program can't start at all, then I recommend that you send me a mail
-to olav.sorensen@live.no
 
 If you selected a big window size by accident and can't go back, press
 ALT+ENTER to enter fullscreen, then you go to Config and reset the config.
