@@ -873,7 +873,7 @@ static void setConfigIOCheckButtonStates(void)
 {
 	checkBoxes[CB_CONF_INTERPOLATION].checked = config.interpolation;
 	checkBoxes[CB_CONF_VOL_RAMP].checked = (config.specialFlags & NO_VOLRAMP_FLAG) ? false : true;
-	checkBoxes[CB_CONF_DITHER].checked = (config.specialFlags & BITDEPTH_32) ? false : config.specialFlags2 & DITHERED_AUDIO;
+	checkBoxes[CB_CONF_DITHER].checked = (config.specialFlags2 & DITHERED_AUDIO) ? true : false;
 
 	showCheckBox(CB_CONF_INTERPOLATION);
 	showCheckBox(CB_CONF_VOL_RAMP);
@@ -912,10 +912,10 @@ static void setConfigLayoutRadioButtonStates(void)
 	switch (config.mouseType)
 	{
 		default:
-		case MOUSE_IDLE_SHAPE_NICE:    tmpID = RB_CONFIG_MOUSE_NICE;    break;
-		case MOUSE_IDLE_SHAPE_UGLY:    tmpID = RB_CONFIG_MOUSE_UGLY;    break;
-		case MOUSE_IDLE_SHAPE_AWFUL:   tmpID = RB_CONFIG_MOUSE_AWFUL;   break;
-		case MOUSE_IDLE_SHAPE_USABLE:  tmpID = RB_CONFIG_MOUSE_USABLE;  break;
+		case MOUSE_IDLE_SHAPE_NICE:   tmpID = RB_CONFIG_MOUSE_NICE;    break;
+		case MOUSE_IDLE_SHAPE_UGLY:   tmpID = RB_CONFIG_MOUSE_UGLY;    break;
+		case MOUSE_IDLE_SHAPE_AWFUL:  tmpID = RB_CONFIG_MOUSE_AWFUL;   break;
+		case MOUSE_IDLE_SHAPE_USABLE: tmpID = RB_CONFIG_MOUSE_USABLE;  break;
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -1165,7 +1165,7 @@ void showConfigScreen(void)
 			textOutShadow(390, 120, PAL_FORGRND, PAL_DSKTOP2, "Mixing device ctrl.:");
 			textOutShadow(406, 134, PAL_FORGRND, PAL_DSKTOP2, "Interpolation");
 			textOutShadow(406, 147, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
-			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "1-bit dither");
+			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "Dithering");
 
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Mixing frequency:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
@@ -1600,8 +1600,6 @@ void rbConfigAudio24bit(void)
 	config.specialFlags &= ~BITDEPTH_16;
 	config.specialFlags |=  BITDEPTH_32;
 
-	config.specialFlags2 &= ~DITHERED_AUDIO; // no dither in "32-bit float" mode
-
 	checkBoxes[CB_CONF_DITHER].checked = false;
 	if (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
 		drawCheckBox(CB_CONF_DITHER);
@@ -1682,21 +1680,10 @@ void cbConfigVolRamp(void)
 	audioSetVolRamp((config.specialFlags & NO_VOLRAMP_FLAG) ? false : true);
 }
 
-void cbConfigDither(void)
+void cbConfigDithering(void)
 {
-	if (config.specialFlags & BITDEPTH_32) // no dither in float mode, force off
-	{
-		config.specialFlags2 &= ~DITHERED_AUDIO;
-
-		checkBoxes[CB_CONF_DITHER].checked = false;
-		if (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
-			drawCheckBox(CB_CONF_DITHER);
-	}
-	else
-	{
-		config.specialFlags2 ^= DITHERED_AUDIO;
-		updateSendAudSamplesRoutine(true);
-	}
+	config.specialFlags2 ^= DITHERED_AUDIO;
+	updateSendAudSamplesRoutine(true);
 }
 
 // CONFIG LAYOUT

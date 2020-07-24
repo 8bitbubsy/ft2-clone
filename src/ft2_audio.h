@@ -63,20 +63,18 @@ typedef struct
 {
 	const int8_t *SBase8, *SRevBase8;
 	const int16_t *SBase16, *SRevBase16;
-	bool backwards, isFadeOutVoice;
-	uint8_t SPan;
+	bool active, backwards, isFadeOutVoice;
+	uint8_t mixFuncOffset, SPan, SLoopType;
 	uint16_t SVol;
 	int32_t SLVol1, SRVol1, SLVol2, SRVol2, SLVolIP, SRVolIP;
 	int32_t SPos, SLen, SRepS, SRepL;
-	uint32_t SVolIPLen;
+	uint32_t SVolIPLen, SFrqRev;
 
 #if defined _WIN64 || defined __amd64__
 	uint64_t SPosDec, SFrq;
 #else
-	uint32_t SPosDec, SFrq, SFrqRev;
+	uint32_t SPosDec, SFrq;
 #endif
-
-	void (*mixRoutine)(void *, int32_t); // function pointer to mix routine
 } voice_t;
 
 typedef struct pattSyncData_t

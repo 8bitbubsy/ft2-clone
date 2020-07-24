@@ -17,7 +17,7 @@ extern const uint16_t amigaPeriod[12 * 8];
 extern const uint16_t linearPeriods[1936];
 extern const uint16_t amigaPeriods[1936];
 
-extern const uint32_t panningTab[257];
+extern const uint16_t panningTab[257];
 
 extern const char *dec2StrTab[100];
 extern const char *dec3StrTab[256];

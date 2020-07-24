@@ -12,9 +12,13 @@
 #include "ft2_gui.h"
 #include "ft2_midi.h"
 #include "ft2_wav_renderer.h"
-#include "ft2_mix.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
+// --------------------------------
+#include "mixer/ft2_mix.h"
+#include "mixer/ft2_center_mix.h"
+#include "mixer/ft2_silence_mix.h"
+// --------------------------------
 
 #define INITIAL_DITHER_SEED 0x12345000
 
@@ -28,8 +32,9 @@ static voice_t voice[MAX_VOICES * 2];
 static void (*sendAudSamplesFunc)(uint8_t *, uint32_t, uint8_t); // "send mixed samples" routines
 
 static int32_t oldPeriod;
+static uint32_t oldSFrqRev;
 #if !defined __amd64__ && !defined _WIN64
-static uint32_t oldSFrq, oldSFrqRev;
+static uint32_t oldSFrq;
 #else
 static uint64_t oldSFrq;
 #endif
@@ -46,9 +51,7 @@ void resetCachedMixerVars(void)
 {
 	oldPeriod = -1;
 	oldSFrq = 0;
-#if !defined __amd64__ && !defined _WIN64
 	oldSFrqRev = 0xFFFFFFFF;
-#endif
 }
 
 void stopVoice(int32_t i)
@@ -195,20 +198,21 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 
 	v = &voice[i];
 
-	vol = v->SVol; // 0..65535
+	vol = v->SVol; // 0..4096
 
-	// (0..65535 * 0..65536) >> 4 = 0..268431360
-	volR = (vol * panningTab[    v->SPan]) >> 4;
-	volL = (vol * panningTab[256-v->SPan]) >> 4;
+	// 0..4096 * 0..65535 = 0..268431360 (about max safe volume range)
+	volR = vol * panningTab[    v->SPan];
+	volL = vol * panningTab[256-v->SPan];
 
 	if (!audio.volumeRampingFlag)
 	{
+		v->SVolIPLen = 0; // reset volume ramp length
 		v->SLVol2 = volL;
 		v->SRVol2 = volR;
 	}
 	else
 	{
-		v->SLVol1 = volL;
+		v->SLVol1 = volL; // ramp destination volumes
 		v->SRVol1 = volR;
 
 		if (status & IS_NyTon)
@@ -233,7 +237,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 				f->isFadeOutVoice = true;
 			}
 
-			// make current voice fade in when it starts
+			// make current voice fade in from zero when it starts
 			v->SLVol2 = 0;
 			v->SRVol2 = 0;
 		}
@@ -245,7 +249,8 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 		** Normal: The duration of a tick (speedVal)
 		*/
 
-		if (volL == v->SLVol2 && volR == v->SRVol2)
+		// if destination volume and current volume is the same (and we have no sample trigger), don't do ramp
+		if (volL == v->SLVol2 && volR == v->SRVol2 && !(status & IS_NyTon))
 		{
 			v->SVolIPLen = 0; // there is no volume change
 		}
@@ -298,7 +303,7 @@ static void voiceTrigger(int32_t i, sampleTyp *s, int32_t position)
 
 	if (s->pek == NULL || length < 1)
 	{
-		v->mixRoutine = NULL; // shut down voice (illegal parameters)
+		v->active = false; // shut down voice (illegal parameters)
 		return;
 	}
 
@@ -317,6 +322,7 @@ static void voiceTrigger(int32_t i, sampleTyp *s, int32_t position)
 	}
 
 	v->backwards = false;
+	v->SLoopType = loopType;
 	v->SLen = (loopType > 0) ? (loopBegin + loopLength) : length;
 	v->SRepS = loopBegin;
 	v->SRepL = loopLength;
@@ -327,11 +333,12 @@ static void voiceTrigger(int32_t i, sampleTyp *s, int32_t position)
 	oldSLen = (loopType > 0) ? (loopBegin + loopLength) : length;
 	if (v->SPos >= oldSLen)
 	{
-		v->mixRoutine = NULL;
+		v->active = false;
 		return;
 	}
 
-	v->mixRoutine = mixRoutineTable[(sampleIs16Bit * 12) + (audio.volumeRampingFlag * 6) + (audio.interpolationFlag * 3) + loopType];
+	v->mixFuncOffset = (sampleIs16Bit * 6) + (audio.interpolationFlag * 3) + loopType;
+	v->active = true;
 }
 
 void mix_SaveIPVolumes(void) // for volume ramping
@@ -356,8 +363,8 @@ void mix_UpdateChannelVolPanFrq(void)
 
 	for (int32_t i = 0; i < song.antChn; i++, ch++, v++)
 	{
-		status = ch->tmpStatus = ch->status; // ch->tmpStatus is used for audio/video sync queue
-		if (status == 0) continue;
+		status = ch->tmpStatus = ch->status; // (tmpStatus is used for audio/video sync queue)
+		if (status == 0) continue; // nothing to do
 		ch->status = 0;
 
 		if (status & IS_Vol)
@@ -379,17 +386,19 @@ void mix_UpdateChannelVolPanFrq(void)
 				oldPeriod = period;
 				oldSFrq = getMixerDelta(period);
 
-#if !defined __amd64__ && !defined _WIN64
 				oldSFrqRev = 0xFFFFFFFF;
 				if (oldSFrq != 0)
+				{
+#if defined __amd64__ || defined _WIN64
+					oldSFrqRev = (uint32_t)((0xFFFFFFFFFFFFFFFF / oldSFrq) >> 16);
+#else
 					oldSFrqRev /= oldSFrq;
 #endif
+				}
 			}
 
 			v->SFrq = oldSFrq;
-#if !defined __amd64__ && !defined _WIN64
 			v->SFrqRev = oldSFrqRev;
-#endif
 		}
 
 		if (status & IS_NyTon)
@@ -454,6 +463,7 @@ static void sendSamples16BitMultiChan(uint8_t *stream, uint32_t sampleBlockLengt
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 
+		// send zeroes to the rest of the channels
 		for (j = 2; j < numAudioChannels; j++)
 			*streamPointer16++ = 0;
 	}
@@ -507,6 +517,7 @@ static void sendSamples16BitDitherMultiChan(uint8_t *stream, uint32_t sampleBloc
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 
+		// send zeroes to the rest of the channels
 		for (uint32_t j = 2; j < numAudioChannels; j++)
 			*streamPointer16++ = 0;
 	}
@@ -550,30 +561,57 @@ static void sendSamples24BitMultiChan(uint8_t *stream, uint32_t sampleBlockLengt
 		fOut = CLAMP(fOut, -1.0f, 1.0f);
 		*fStreamPointer24++ = fOut;
 
+		// send zeroes to the rest of the channels
 		for (uint32_t j = 2; j < numAudioChannels; j++)
 			*fStreamPointer24++ = 0.0f;
 	}
 }
 
+static void doChannelMixing(int32_t samplesToMix)
+{
+	voice_t *v = voice; // normal voices
+	voice_t *r = &voice[MAX_VOICES]; // volume ramp fadeout-voices
+
+	for (int32_t i = 0; i < song.antChn; i++, v++, r++)
+	{
+		if (v->active)
+		{
+			bool centerMixFlag;
+
+			const bool volRampFlag = v->SVolIPLen > 0;
+			if (volRampFlag)
+			{
+				centerMixFlag = (v->SLVol1 == v->SRVol1) && (v->SLVolIP == v->SRVolIP);
+			}
+			else
+			{
+				if (v->SLVol2 == 0 && v->SRVol2 == 0)
+				{ 
+					silenceMixRoutine(v, samplesToMix);
+					continue;
+				}
+
+				centerMixFlag = v->SLVol2 == v->SRVol2;
+			}
+
+			mixFuncTab[(centerMixFlag * 24) + (volRampFlag * 12) + v->mixFuncOffset](v, samplesToMix);
+		}
+
+		if (r->active) // volume ramp fadeout-voice
+		{
+			const bool centerMixFlag = (r->SLVol1 == r->SRVol1) && (r->SLVolIP == r->SRVolIP);
+			mixFuncTab[(centerMixFlag * 24) + 12 + r->mixFuncOffset](r, samplesToMix);
+		}
+	}
+}
+
 static void mixAudio(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	voice_t *v, *r;
-
 	assert(sampleBlockLength <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
 	memset(audio.mixBufferL, 0, sampleBlockLength * sizeof (int32_t));
 	memset(audio.mixBufferR, 0, sampleBlockLength * sizeof (int32_t));
 
-	// mix channels
-
-	v = voice; // normal voices
-	r = &voice[MAX_VOICES]; // volume ramp voices
-
-	for (int32_t i = 0; i < song.antChn; i++, v++, r++)
-	{
-		// call the mixing routine currently set for the voice
-		if (v->mixRoutine != NULL) v->mixRoutine(v, sampleBlockLength); // mix normal voice
-		if (r->mixRoutine != NULL) r->mixRoutine(r, sampleBlockLength); // mix volume ramp voice
-	}
+	doChannelMixing(sampleBlockLength);
 
 	// normalize mix buffer and send to audio stream
 	sendAudSamplesFunc(stream, sampleBlockLength, numAudioChannels);
@@ -582,22 +620,11 @@ static void mixAudio(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAud
 // used for song-to-WAV renderer
 void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bitDepth)
 {
-	voice_t *v, *r;
-
 	assert(samplesToMix <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
 	memset(audio.mixBufferL, 0, samplesToMix * sizeof (int32_t));
 	memset(audio.mixBufferR, 0, samplesToMix * sizeof (int32_t));
 
-	// mix channels
-	v = voice; // normal voices
-	r = &voice[MAX_VOICES]; // volume ramp voices
-
-	for (int32_t i = 0; i < song.antChn; i++, v++, r++)
-	{
-		// call the mixing routine currently set for the voice
-		if (v->mixRoutine != NULL) v->mixRoutine(v, samplesToMix); // mix normal voice
-		if (r->mixRoutine != NULL) r->mixRoutine(r, samplesToMix); // mix volume ramp voice
-	}
+	doChannelMixing(samplesToMix);
 
 	// normalize mix buffer and send to audio stream
 	if (bitDepth == 16)
@@ -642,7 +669,8 @@ int32_t pattQueueWriteSize(void)
 		** shouldn't be that dangerous.
 		** It will also create a small visual stutter while the buffer is getting filled,
 		** though that is barely noticable on normal buffer sizes, and it takes a minute
-		** or two at max BPM between each time (when queue size is default, 4095) */
+		** or two at max BPM between each time (when queue size is default, 4095)
+		*/
 		pattSync.data[0].timestamp = 0;
 		pattSync.readPos = 0;
 		pattSync.writePos = 0;
@@ -729,7 +757,8 @@ int32_t chQueueWriteSize(void)
 		** shouldn't be that dangerous.
 		** It will also create a small visual stutter while the buffer is getting filled,
 		** though that is barely noticable on normal buffer sizes, and it takes several
-		** minutes between each time (when queue size is default, 16384) */
+		** minutes between each time (when queue size is default, 16384)
+		*/
 		chSync.data[0].timestamp = 0;
 		chSync.readPos = 0;
 		chSync.writePos = 0;
@@ -929,6 +958,9 @@ static void fillVisualsSyncBuffer(void)
 
 static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 {
+	if (editor.wavIsRendering)
+		return;
+
 	int32_t samplesLeft = len / pmpCountDiv;
 	if (samplesLeft <= 0)
 		return;
@@ -1009,36 +1041,29 @@ void updateSendAudSamplesRoutine(bool lockMixer)
 	if (lockMixer)
 		lockMixerCallback();
 
-	// force dither off if somehow set with 32-bit float (illegal)
-	if ((config.specialFlags2 & DITHERED_AUDIO) && (config.specialFlags & BITDEPTH_32))
-		config.specialFlags2 &= ~DITHERED_AUDIO;
-
-	if (config.specialFlags2 & DITHERED_AUDIO)
+	if (config.specialFlags & BITDEPTH_16)
 	{
-		if (config.specialFlags & BITDEPTH_16)
+		if (config.specialFlags2 & DITHERED_AUDIO)
 		{
 			if (pmpChannels > 2)
 				sendAudSamplesFunc = sendSamples16BitDitherMultiChan;
 			else
 				sendAudSamplesFunc = sendSamples16BitDitherStereo;
 		}
-	}
-	else
-	{
-		if (config.specialFlags & BITDEPTH_16)
+		else
 		{
 			if (pmpChannels > 2)
 				sendAudSamplesFunc = sendSamples16BitMultiChan;
 			else
 				sendAudSamplesFunc = sendSamples16BitStereo;
 		}
+	}
+	else
+	{
+		if (pmpChannels > 2)
+			sendAudSamplesFunc = sendSamples24BitMultiChan;
 		else
-		{
-			if (pmpChannels > 2)
-				sendAudSamplesFunc = sendSamples24BitMultiChan;
-			else
-				sendAudSamplesFunc = sendSamples24BitStereo;
-		}
+			sendAudSamplesFunc = sendSamples24BitStereo;
 	}
 
 	if (lockMixer)
@@ -1195,9 +1220,6 @@ bool setupAudio(bool showErrorMsg)
 	smpBuffSize = have.samples;
 
 	calcAudioLatencyVars(have.samples, have.freq);
-
-	if ((config.specialFlags2 & DITHERED_AUDIO) && newBitDepth == 24)
-		config.specialFlags2 &= ~DITHERED_AUDIO;
 
 	pmpChannels = have.channels;
 	pmpCountDiv = pmpChannels * ((newBitDepth == 16) ? sizeof (int16_t) : sizeof (float));

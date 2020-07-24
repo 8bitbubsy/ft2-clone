@@ -240,7 +240,7 @@ void rbWinSize4x(void);
 void cbToggleAutoSaveConfig(void);
 void cbConfigInterpolation(void);
 void cbConfigVolRamp(void);
-void cbConfigDither(void);
+void cbConfigDithering(void);
 void cbConfigPattStretch(void);
 void cbConfigHexCount(void);
 void cbConfigAccidential(void);

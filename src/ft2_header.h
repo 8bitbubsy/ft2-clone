@@ -12,7 +12,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.26"
+#define PROG_VER_STR "1.27"
 
 // do NOT change these! It will only mess things up...
 
@@ -21,9 +21,7 @@
 */
 #define VBLANK_HZ 60
 
-/* Scopes are clocked at 64Hz instead of 60Hz to prevent possible stutters
-** from monitors not being exactly 60Hz (and unstable non-vsync mode).
-*/
+// scopes must be clocked slightly higher than the nominal vblank rate
 #define SCOPE_HZ 64
 
 #define FT2_VBLANK_HZ 70

@@ -1,19 +1,32 @@
 #pragma once
 
-#include "ft2_header.h"
-#include "ft2_audio.h"
+#include <assert.h>
+#include "../ft2_audio.h"
 
 /* ----------------------------------------------------------------------- */
 /*                          GENERAL MIXER MACROS                           */
 /* ----------------------------------------------------------------------- */
 
 #define GET_VOL \
+	const int32_t CDA_LVol = v->SLVol2; \
+	const int32_t CDA_RVol = v->SRVol2; \
+
+#define GET_VOL_MONO \
+	const int32_t CDA_LVol = v->SLVol2; \
+
+#define GET_VOL_RAMP \
 	CDA_LVol = v->SLVol2; \
 	CDA_RVol = v->SRVol2; \
+
+#define GET_VOL_MONO_RAMP \
+	CDA_LVol = v->SLVol2; \
 
 #define SET_VOL_BACK \
 	v->SLVol2 = CDA_LVol; \
 	v->SRVol2 = CDA_RVol; \
+
+#define SET_VOL_BACK_MONO \
+	v->SLVol2 = v->SRVol2 = CDA_LVol; \
 
 #if defined _WIN64 || defined __amd64__
 
@@ -21,7 +34,6 @@
 	const uint64_t SFrq = v->SFrq; \
 	audioMixL = audio.mixBufferL; \
 	audioMixR = audio.mixBufferR; \
-	const bool mixInMono = (CDA_LVol == CDA_RVol); \
 	realPos = v->SPos; \
 	pos = v->SPosDec; \
 
@@ -31,7 +43,14 @@
 	audioMixR = audio.mixBufferR; \
 	CDA_LVolIP = v->SLVolIP; \
 	CDA_RVolIP = v->SRVolIP; \
-	const bool mixInMono = (v->SLVol2 == v->SRVol2) && (CDA_LVolIP == CDA_RVolIP); \
+	realPos = v->SPos; \
+	pos = v->SPosDec; \
+
+#define GET_MIXER_VARS_MONO_RAMP \
+	const uint64_t SFrq = v->SFrq; \
+	audioMixL = audio.mixBufferL; \
+	audioMixR = audio.mixBufferR; \
+	CDA_LVolIP = v->SLVolIP; \
 	realPos = v->SPos; \
 	pos = v->SPosDec; \
 
@@ -41,7 +60,6 @@
 	const uint32_t SFrq = v->SFrq; \
 	audioMixL = audio.mixBufferL; \
 	audioMixR = audio.mixBufferR; \
-	const bool mixInMono = (CDA_LVol == CDA_RVol); \
 	realPos = v->SPos; \
 	pos = v->SPosDec; \
 
@@ -51,7 +69,14 @@
 	audioMixR = audio.mixBufferR; \
 	CDA_LVolIP = v->SLVolIP; \
 	CDA_RVolIP = v->SRVolIP; \
-	const bool mixInMono = (v->SLVol2 == v->SRVol2) && (CDA_LVolIP == CDA_RVolIP); \
+	realPos = v->SPos; \
+	pos = v->SPosDec; \
+
+#define GET_MIXER_VARS_MONO_RAMP \
+	const uint32_t SFrq = v->SFrq; \
+	audioMixL = audio.mixBufferL; \
+	audioMixR = audio.mixBufferR; \
+	CDA_LVolIP = v->SLVolIP; \
 	realPos = v->SPos; \
 	pos = v->SPosDec; \
 
@@ -96,7 +121,10 @@
 	CDA_LVol += CDA_LVolIP; \
 	CDA_RVol += CDA_RVolIP; \
 
-// all the 64-bit MULs here convert to fast logic on most 32-bit CPUs
+#define VOLUME_RAMPING_MONO \
+	CDA_LVol += CDA_LVolIP; \
+
+// all the 64-bit MULs here convert to fast logic even on most 32-bit CPUs
 
 #define RENDER_8BIT_SMP \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
@@ -203,17 +231,16 @@
 #if defined _WIN64 || defined __amd64__
 
 #define LIMIT_MIX_NUM \
-	samplesToMix = CDA_BytesLeft; \
 	i = (v->SLen - 1) - realPos; \
+	if (i > 65535) \
+		i = 65535; \
 	\
-	if (SFrq > 0) \
-	{ \
-		uint64_t tmp64 = ((uint64_t)i << MIXER_FRAC_BITS) | (pos ^ MIXER_FRAC_MASK); \
-		samplesToMix = (uint32_t)(tmp64 / SFrq) + 1; \
-		if (samplesToMix > CDA_BytesLeft) \
-			samplesToMix = CDA_BytesLeft; \
-	} \
+	i = (i << 16) | ((uint32_t)(pos >> 16) ^ 0xFFFF); \
+	samplesToMix = ((int64_t)i * v->SFrqRev) >> 32; \
+	samplesToMix++; \
 	\
+	if (samplesToMix > CDA_BytesLeft) \
+		samplesToMix = CDA_BytesLeft; \
 
 #define START_BIDI \
 	if (v->backwards) \
@@ -238,8 +265,8 @@
 
 #define LIMIT_MIX_NUM \
 	i = (v->SLen - 1) - realPos; \
-	if (i > (1UL << (32-MIXER_FRAC_BITS))) \
-		i = 1UL << (32-MIXER_FRAC_BITS); \
+	if (i > (1UL << (32-MIXER_FRAC_BITS))-1) \
+		i = (1UL << (32-MIXER_FRAC_BITS))-1; \
 	\
 	i = (i << MIXER_FRAC_BITS) | (pos ^ MIXER_FRAC_MASK); \
 	samplesToMix = ((int64_t)i * v->SFrqRev) >> 32; \
@@ -277,7 +304,25 @@
 		\
 		if (v->isFadeOutVoice) \
 		{ \
-			v->mixRoutine = NULL; /* fade out voice is done, shut it down */ \
+			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \
+			return; \
+		} \
+	} \
+	else \
+	{ \
+		if (samplesToMix > v->SVolIPLen) \
+			samplesToMix = v->SVolIPLen; \
+		\
+		v->SVolIPLen -= samplesToMix; \
+	} \
+
+#define LIMIT_MIX_NUM_MONO_RAMP \
+	if (v->SVolIPLen == 0) \
+	{ \
+		CDA_LVolIP = 0; \
+		if (v->isFadeOutVoice) \
+		{ \
+			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \
 			return; \
 		} \
 	} \
@@ -293,7 +338,7 @@
 	realPos = (int32_t)(smpPtr - CDA_LinearAdr); \
 	if (realPos >= v->SLen) \
 	{ \
-		v->mixRoutine = NULL; \
+		v->active = false; \
 		return; \
 	} \
 
@@ -320,102 +365,4 @@
 	{ \
 		realPos = (int32_t)(smpPtr - CDA_LinearAdr); \
 	} \
-	\
 
-/* ----------------------------------------------------------------------- */
-/*                          VOLUME=0 MIXING MACROS                         */
-/* ----------------------------------------------------------------------- */
-
-
-#if defined _WIN64 || defined __amd64__
-
-#define	VOL0_INC_POS \
-	const uint64_t newPos = v->SFrq * (uint64_t)numSamples; \
-	const uint32_t addPos = (uint32_t)(newPos >> MIXER_FRAC_BITS); \
-	uint64_t addFrac = newPos & MIXER_FRAC_MASK; \
-	\
-	addFrac += v->SPosDec; \
-	realPos = v->SPos + addPos + (uint32_t)(addFrac >> MIXER_FRAC_BITS); \
-	pos = addFrac & MIXER_FRAC_MASK; \
-
-#define VOL0_MIXING_NO_LOOP \
-	VOL0_INC_POS \
-	if (realPos >= v->SLen) \
-	{ \
-		v->mixRoutine = NULL; /* shut down voice */ \
-		return; \
-	} \
-	\
-	SET_BACK_MIXER_POS
-
-#define VOL0_MIXING_LOOP \
-	VOL0_INC_POS \
-	if (realPos >= v->SLen) \
-	{ \
-		if (v->SRepL >= 2) \
-			realPos = v->SRepS + ((realPos - v->SLen) % v->SRepL); \
-		else \
-			realPos = v->SRepS; \
-	} \
-	\
-	SET_BACK_MIXER_POS
-
-#define VOL0_MIXING_BIDI_LOOP \
-	VOL0_INC_POS \
-	if (realPos >= v->SLen) \
-	{ \
-		if (v->SRepL >= 2) \
-		{ \
-			const int32_t overflow = realPos - v->SLen; \
-			const int32_t cycles = overflow / v->SRepL; \
-			const int32_t phase = overflow % v->SRepL; \
-			\
-			realPos = v->SRepS + phase; \
-			v->backwards ^= !(cycles & 1); \
-		} \
-		else \
-		{ \
-			realPos = v->SRepS; \
-		} \
-	} \
-	\
-	SET_BACK_MIXER_POS
-
-#else
-
-#define	VOL0_INC_POS \
-	assert(numSamples <= 65536); \
-	\
-	pos = v->SPosDec + ((v->SFrq & 0xFFFF) * numSamples); \
-	realPos = v->SPos + ((v->SFrq >> 16) * numSamples) + (pos >> 16); \
-	pos &= 0xFFFF; \
-
-#define VOL0_MIXING_NO_LOOP \
-	VOL0_INC_POS \
-	if (realPos >= v->SLen) \
-	{ \
-		v->mixRoutine = NULL; /* shut down voice */ \
-		return; \
-	} \
-	\
-	SET_BACK_MIXER_POS
-
-#define VOL0_MIXING_LOOP \
-	VOL0_INC_POS \
-	\
-	while (realPos >= v->SLen) \
-		realPos -= v->SRepL; \
-	\
-	SET_BACK_MIXER_POS
-
-#define VOL0_MIXING_BIDI_LOOP \
-	VOL0_INC_POS \
-	while (realPos >= v->SLen) \
-	{ \
-		realPos -= v->SRepL; \
-		v->backwards ^= 1; \
-	} \
-	\
-	SET_BACK_MIXER_POS
-
-#endif

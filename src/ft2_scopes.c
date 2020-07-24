@@ -46,7 +46,6 @@ static uint32_t oldDFrq, scopeTimeLen, scopeTimeLenFrac;
 static uint64_t oldSFrq, timeNext64, timeNext64Frac;
 static volatile scope_t scope[MAX_VOICES];
 static SDL_Thread *scopeThread;
-static uint8_t *scopeMuteBMP_Ptrs[16];
 
 lastChInstr_t lastChInstr[MAX_VOICES]; // global
 
@@ -199,7 +198,7 @@ static void redrawScope(int32_t ch)
 		muteGfxLen = scopeMuteBMP_Widths[chanLookup];
 		muteGfxX = x + ((scopeLen - muteGfxLen) >> 1);
 
-		blitFastClipX(muteGfxX, y + 6, scopeMuteBMP_Ptrs[chanLookup], 162, scopeMuteBMP_Heights[chanLookup], muteGfxLen);
+		blitFastClipX(muteGfxX, y + 6, bmp.scopeMute+scopeMuteBMP_Offs[chanLookup], 162, scopeMuteBMP_Heights[chanLookup], muteGfxLen);
 
 		if (config.ptnChnNumbers)
 			drawScopeNumber(x + 1, y + 1, (uint8_t)i, true);
@@ -551,7 +550,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 		status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
-			sc->SVol = (int8_t)(((ch->finalVol * SCOPE_HEIGHT) + (1 << 15)) >> 16); // rounded
+			sc->SVol = (int8_t)(((ch->finalVol * SCOPE_HEIGHT) + (1 << 11)) >> 12); // rounded
 
 		if (status & IS_Period)
 		{
@@ -655,11 +654,6 @@ bool initScopes(void)
 		dFrac = UINT32_MAX;
 
 	scopeTimeLenFrac = (uint32_t)dFrac;
-
-	// setup scope mute BMP pointers
-	assert(bmp.scopeMute != NULL);
-	for (int32_t i = 0; i < 16; i++)
-		scopeMuteBMP_Ptrs[i] = bmp.scopeMute + scopeMuteBMP_Offs[i];
 
 	scopeThread = SDL_CreateThread(scopeThreadFunc, NULL, NULL);
 	if (scopeThread == NULL)

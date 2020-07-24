@@ -9,6 +9,7 @@ file(GLOB ft2-clone_SRC
     "${ft2-clone_SOURCE_DIR}/src/rtmidi/*.cpp"
     "${ft2-clone_SOURCE_DIR}/src/*.c"
     "${ft2-clone_SOURCE_DIR}/src/gfxdata/*.c"
+    "${ft2-clone_SOURCE_DIR}/src/mixer/*.c"
 )
 
 add_executable(ft2-clone ${ft2-clone_SRC})

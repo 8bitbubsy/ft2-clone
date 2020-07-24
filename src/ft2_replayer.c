@@ -362,7 +362,6 @@ void calcReplayRate(int32_t audioFreq)
 	audio.tickTimeLengthTab[0] = UINT64_MAX;
 	audio.rampSpeedValMulTab[0] = INT32_MAX;
 
-	const double dMul = (UINT32_MAX + 1.0) / audioFreq;
 	for (int32_t i = MIN_BPM; i <= MAX_BPM; i++)
 	{
 		const double dBpmHz = i / 2.5;
@@ -372,7 +371,17 @@ void calcReplayRate(int32_t audioFreq)
 		audio.dSpeedValTab[i] = dSamplesPerTick;
 
 		// number of samples per tick -> tick length for performance counter (syncing visuals to audio)
-		audio.tickTimeLengthTab[i] = (uint64_t)(dSamplesPerTick * dMul);
+		double dTimeInt;
+		double dTimeFrac = modf(editor.dPerfFreq / dBpmHz, &dTimeInt);
+		const int32_t timeInt = (int32_t)dTimeInt;
+
+		// - fractional part (scaled to 0..2^32-1) -
+		dTimeFrac *= UINT32_MAX;
+		dTimeFrac += 0.5;
+		if (dTimeFrac > UINT32_MAX)
+			dTimeFrac = UINT32_MAX;
+
+		audio.tickTimeLengthTab[i] = ((uint64_t)timeInt << 32) | (uint32_t)dTimeFrac;
 
 		// for calculating volume ramp length for "tick" ramps
 		audio.rampSpeedValMulTab[i] = (int32_t)(((UINT32_MAX + 1.0) / samplesPerTick) + 0.5);
@@ -1312,25 +1321,25 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 				}
 			}
 
-			/* calculate with 256 times more precision (vol = 0..65535)
+			/* calculate with 16 times more precision than FT2 (vol = 0..4096)
 			** Also, vol envelope range is now 0..16384 instead of being shifted to 0..64
 			*/
 
 			int32_t vol1 = song.globVol * ch->outVol * ch->fadeOutAmp; // 0..64 * 0..64 * 0..32768 = 0..134217728
-			int32_t vol2 = envVal << 7; // 0..16384 * 2^7 = 0..2097152
+			int32_t vol2 = envVal << 3; // 0..16384 * 2^3 = 0..131072
 
-			vol = ((int64_t)vol1 * vol2) >> 32; // 0..65536
+			vol = ((int64_t)vol1 * vol2) >> 32; // 0..4096
 
 			ch->status |= IS_Vol;
 		}
 		else
 		{
-			// calculate with four times more precision (finalVol = 0..65535)
-			vol = ((song.globVol * ch->outVol * ch->fadeOutAmp) + (1 << 10)) >> 11; // 0..64 * 0..64 * 0..32768 -> 0..65536 (rounded)
+			// calculate with 16 times more precision than FT2 (vol = 0..4096)
+			vol = ((song.globVol * ch->outVol * ch->fadeOutAmp) + (1 << 14)) >> 15; // 0..64 * 0..64 * 0..32768 -> 0..4096 (rounded)
 		}
 
-		if (vol > 65535)
-			vol = 65535; // range is now 0..65535 to prevent MUL overflow when voice volume is calculated
+		if (vol > 4096)
+			vol = 4096;
 
 		ch->finalVol = (uint16_t)vol;
 	}
