@@ -10,6 +10,9 @@
 #ifndef _WIN32
 #include <unistd.h> // chdir() in UNICHAR_CHDIR()
 #endif
+#if defined __APPLE__ || defined _WIN32 || defined __amd64__ || (defined __i386__ && defined __SSE2__)
+#include <emmintrin.h>
+#endif
 #include "ft2_header.h"
 #include "ft2_config.h"
 #include "ft2_audio.h"
@@ -254,7 +257,7 @@ void restoreSample(sampleTyp *s)
 	}
 }
 
-inline int16_t getSampleValue(int8_t *ptr, uint8_t typ, int32_t pos)
+int16_t getSampleValue(int8_t *ptr, uint8_t typ, int32_t pos)
 {
 	assert(pos >= 0);
 	if (ptr == NULL)
@@ -271,7 +274,7 @@ inline int16_t getSampleValue(int8_t *ptr, uint8_t typ, int32_t pos)
 	}
 }
 
-inline void putSampleValue(int8_t *ptr, uint8_t typ, int32_t pos, int16_t val)
+void putSampleValue(int8_t *ptr, uint8_t typ, int32_t pos, int16_t val)
 {
 	assert(pos >= 0);
 	if (ptr == NULL)

@@ -1085,10 +1085,7 @@ static void calcAudioLatencyVars(int32_t audioBufferSize, int32_t audioFreq)
 	audio.audLatencyPerfValInt = (int32_t)dInt;
 
 	// fractional part (scaled to 0..2^32-1)
-	dFrac *= UINT32_MAX;
-	dFrac += 0.5;
-	if (dFrac > UINT32_MAX)
-		dFrac = UINT32_MAX;
+	dFrac *= UINT32_MAX+1.0;
 	audio.audLatencyPerfValFrac = (uint32_t)dFrac;
 
 	audio.dAudioLatencyMs = dAudioLatencySecs * 1000.0;

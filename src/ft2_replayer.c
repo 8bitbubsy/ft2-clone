@@ -370,16 +370,12 @@ void calcReplayRate(int32_t audioFreq)
 
 		audio.dSpeedValTab[i] = dSamplesPerTick;
 
-		// number of samples per tick -> tick length for performance counter (syncing visuals to audio)
+		// BPM -> Hz -> tick length for performance counter (syncing visuals to audio)
 		double dTimeInt;
 		double dTimeFrac = modf(editor.dPerfFreq / dBpmHz, &dTimeInt);
 		const int32_t timeInt = (int32_t)dTimeInt;
 
-		// - fractional part (scaled to 0..2^32-1) -
-		dTimeFrac *= UINT32_MAX;
-		dTimeFrac += 0.5;
-		if (dTimeFrac > UINT32_MAX)
-			dTimeFrac = UINT32_MAX;
+		dTimeFrac *= UINT32_MAX+1.0; // fractional part (scaled to 0..2^32-1)
 
 		audio.tickTimeLengthTab[i] = ((uint64_t)timeInt << 32) | (uint32_t)dTimeFrac;
 

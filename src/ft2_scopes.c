@@ -648,11 +648,7 @@ bool initScopes(void)
 	scopeTimeLen = (int32_t)dInt;
 
 	// fractional part (scaled to 0..2^32-1)
-	dFrac *= UINT32_MAX;
-	dFrac += 0.5;
-	if (dFrac > UINT32_MAX)
-		dFrac = UINT32_MAX;
-
+	dFrac *= UINT32_MAX+1.0;
 	scopeTimeLenFrac = (uint32_t)dFrac;
 
 	scopeThread = SDL_CreateThread(scopeThreadFunc, NULL, NULL);
