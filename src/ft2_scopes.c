@@ -58,7 +58,7 @@ void resetCachedScopeVars(void)
 
 int32_t getSamplePosition(uint8_t ch)
 {
-	volatile bool active, sample16Bit;
+	volatile bool active, sampleIs16Bit;
 	volatile int32_t pos, len;
 	volatile scope_t *sc;
 
@@ -71,14 +71,14 @@ int32_t getSamplePosition(uint8_t ch)
 	active = sc->active;
 	pos = sc->SPos;
 	len = sc->SLen;
-	sample16Bit = sc->sample16Bit;
+	sampleIs16Bit = sc->sampleIs16Bit;
 
 	if (!active || len == 0)
 		return -1;
 
 	if (pos >= 0 && pos < len)
 	{
-		if (sample16Bit)
+		if (sampleIs16Bit)
 			pos <<= 1;
 
 		return pos;
@@ -357,7 +357,7 @@ static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 	else
 		tempState.sampleData8 = (const int8_t *)s->pek;
 
-	tempState.sample16Bit = sampleIs16Bit;
+	tempState.sampleIs16Bit = sampleIs16Bit;
 	tempState.loopType = loopType;
 
 	tempState.backwards = false;
@@ -499,8 +499,8 @@ void drawScopes(void)
 			clearRect(scopeXOffs, scopeYOffs, scopeDrawLen, SCOPE_HEIGHT);
 
 			// draw scope
-			bool linedScopes = !!(config.specialFlags & LINED_SCOPES);
-			scopeDrawRoutineTable[(linedScopes * 6) + (s.sample16Bit * 3) + s.loopType](&s, scopeXOffs, scopeLineY, scopeDrawLen);
+			bool linedScopesFlag = !!(config.specialFlags & LINED_SCOPES);
+			scopeDrawRoutineTable[(linedScopesFlag * 6) + (s.sampleIs16Bit * 3) + s.loopType](&s, scopeXOffs, scopeLineY, scopeDrawLen);
 		}
 		else
 		{
@@ -550,7 +550,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 		status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
-			sc->SVol = (int8_t)(((ch->finalVol * SCOPE_HEIGHT) + (1 << 11)) >> 12); // rounded
+			sc->SVol = (int8_t)((((ch->finalVol >> 6) * SCOPE_HEIGHT)) >> 24); // rounded
 
 		if (status & IS_Period)
 		{
@@ -560,7 +560,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 			if (period != oldPeriod)
 			{
 				oldPeriod = period;
-				const double dHz = period2Hz(period);
+				const double dHz = dPeriod2Hz(period);
 
 				const double dScopeRateFactor = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
 				oldSFrq = (int64_t)((dHz * dScopeRateFactor) + 0.5); // Hz -> rounded fixed-point delta

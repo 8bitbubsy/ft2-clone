@@ -201,9 +201,10 @@ typedef struct stmTyp_t
 	uint8_t volKolVol, tonNr, envPPos, eVibPos, envVPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
 	int16_t midiPitch, envVIPValue, envPIPValue;
-	uint16_t finalVol, outPeriod, realPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
+	uint16_t outPeriod, realPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
 	uint16_t envVCnt, envVAmp, envPCnt, envPAmp, eVibAmp, eVibSweep;
 	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;
+	uint32_t finalVol;
 	int32_t smpStartPos;
 	sampleTyp *smpPtr;
 	instrTyp *instrSeg;
@@ -231,8 +232,9 @@ typedef struct syncedChannel_t // used for audio/video sync queue
 	bool envSustainActive;
 	int8_t fineTune, relTonNr;
 	uint8_t status, sampleNr, instrNr;
-	uint16_t finalPeriod, finalVol;
+	uint16_t finalPeriod;
 	int32_t smpStartPos;
+	uint32_t finalVol;
 } syncedChannel_t;
 
 void fixSongName(void); // removes spaces from right side of song name
@@ -241,7 +243,7 @@ void calcReplayRate(int32_t rate);
 void tuneSample(sampleTyp *s, int32_t midCFreq);
 
 void calcReplayerLogTab(void);
-double period2Hz(uint16_t period);
+double dPeriod2Hz(uint16_t period);
 
 #if defined _WIN64 || defined __amd64__
 int64_t getMixerDelta(uint16_t period);

@@ -21,13 +21,13 @@
 #include "ft2_tables.h"
 #include "ft2_structs.h"
 
-/* This is a *huge* mess, directly ported from the original FT2 code (and modified).
+/* This is a mess, directly ported from the original FT2 code (with some modifications).
 ** You will experience a lot of headaches if you dig into it...
 ** If something looks to be off, it probably isn't!
 */
 
 // non-FT2 precalced stuff
-static double dPeriod2HzTab[65536], dLogTab[768], dAudioRateFactor;
+static double dPeriod2HzTab[65536], dLogTab[768], d2nRevTab[32], dHz2MixDeltaMul;
 
 static bool bxxOverflow;
 static tonTyp nilPatternLine;
@@ -209,21 +209,28 @@ int16_t getRealUsedSamples(int16_t nr)
 	return i+1;
 }
 
-static void calcPeriod2HzTab(void) // called every time you change linear/amiga period mode
+static void calc2nRevTable(void) // for calcPeriod2HzTable()
 {
-	dPeriod2HzTab[0] = 0.0; // in FT2, a period of 0 yields 0Hz
+	d2nRevTab[0] = 1.0;
+	for (int32_t i = 0; i < 32; i++)
+		d2nRevTab[i] = 1.0 / (1UL << i);
+}
+
+static void calcPeriod2HzTable(void) // called every time "linear/amiga frequency" mode is changed
+{
+	dPeriod2HzTab[0] = 0.0; // in FT2, a period of 0 converts to 0Hz
 
 	if (audio.linearFreqTable)
 	{
 		// linear periods
 		for (int32_t i = 1; i < 65536; i++)
 		{
-			const uint16_t invPeriod = (12 * 192 * 4) - (uint16_t)i; // this intentionally overflows uint16_t to be accurate to FT2
+			const uint16_t invPeriod = (12 * 192 * 4) - (uint16_t)i; // this intentionally 16-bit-underflows to be accurate to FT2
 			const int32_t octave = invPeriod / 768;
 			const int32_t period = invPeriod % 768;
-			const int32_t bitshift = (14 - octave) & 0x1F; // 100% accurate to FT2
+			const int32_t invOct = (14 - octave) & 0x1F; // accurate to FT2
 
-			dPeriod2HzTab[i] = dLogTab[period] / (1UL << bitshift);
+			dPeriod2HzTab[i] = dLogTab[period] * d2nRevTab[invOct]; // x = y / 2^invOct
 		}
 	}
 	else
@@ -245,7 +252,7 @@ void setFrqTab(bool linear)
 	else
 		note2Period = amigaPeriods;
 
-	calcPeriod2HzTab();
+	calcPeriod2HzTable();
 
 	resumeAudio();
 
@@ -348,9 +355,9 @@ void calcReplayRate(int32_t audioFreq)
 	if (audioFreq == 0)
 		return;
 
-	dAudioRateFactor = (double)MIXER_FRAC_SCALE / audioFreq;
+	dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
 
-	audio.quickVolSizeVal = audioFreq / 200; // FT2 truncates here
+	audio.quickVolSizeVal = (int32_t)((audioFreq / 200.0) + 0.5);
 	audio.rampQuickVolMul = (int32_t)(((UINT32_MAX + 1.0) / audio.quickVolSizeVal) + 0.5);
 
 	/* Calculate tables to prevent floating point operations on systems that
@@ -384,7 +391,7 @@ void calcReplayRate(int32_t audioFreq)
 	}
 }
 
-double period2Hz(uint16_t period)
+double dPeriod2Hz(uint16_t period)
 {
 	return dPeriod2HzTab[period];
 }
@@ -392,12 +399,12 @@ double period2Hz(uint16_t period)
 #if defined _WIN64 || defined __amd64__
 int64_t getMixerDelta(uint16_t period)
 {
-	return (int64_t)((dPeriod2HzTab[period] * dAudioRateFactor) + 0.5); // Hz -> rounded fixed-point mixer delta
+	return (int64_t)((dPeriod2Hz(period) * dHz2MixDeltaMul) + 0.5); // Hz -> rounded fixed-point mixer delta
 }
 #else
 int32_t getMixerDelta(uint16_t period)
 {
-	return (int32_t)((dPeriod2HzTab[period] * dAudioRateFactor) + 0.5); // Hz -> rounded fixed-point mixer delta
+	return (int32_t)((dPeriod2Hz(period) * dHz2MixDeltaMul) + 0.5); // Hz -> rounded fixed-point mixer delta
 }
 #endif
 
@@ -405,7 +412,7 @@ int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote) // 
 {
 	finetune >>= 3; // FT2 does this in the replayer internally, so the actual range is -16..15
 
-	const double dRelativeHz = dPeriod2HzTab[period] * (1.0 / (8363.0 / 16.0));
+	const double dRelativeHz = dPeriod2Hz(period) * (1.0 / (8363.0 / 16.0));
 	const double dNote = (log2(dRelativeHz) * 12.0) - (finetune * (1.0 / 16.0));
 
 	const int32_t note = (int32_t)(dNote + 0.5) - relativeNote; // rounded
@@ -1317,27 +1324,28 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 				}
 			}
 
-			/* calculate with 16 times more precision than FT2 (vol = 0..4096)
-			** Also, vol envelope range is now 0..16384 instead of being shifted to 0..64
-			*/
+			// original FT2 shifts the vol env. range to 0..64, but we keep its full resolution (0..16384)
 
-			int32_t vol1 = song.globVol * ch->outVol * ch->fadeOutAmp; // 0..64 * 0..64 * 0..32768 = 0..134217728
-			int32_t vol2 = envVal << 3; // 0..16384 * 2^3 = 0..131072
+			// 0..64 * 0..64 * 0..32768 = 0..134217728
+			vol = song.globVol * ch->outVol * ch->fadeOutAmp;
 
-			vol = ((int64_t)vol1 * vol2) >> 32; // 0..4096
+			// ((0..134217728 * 0..16384) + 2^10) / 2^11 = 0..1073741824 (rounded)
+			vol = (uint32_t)((((int64_t)vol * envVal) + (1UL << 10)) >> 11);
 
 			ch->status |= IS_Vol;
 		}
 		else
 		{
-			// calculate with 16 times more precision than FT2 (vol = 0..4096)
-			vol = ((song.globVol * ch->outVol * ch->fadeOutAmp) + (1 << 14)) >> 15; // 0..64 * 0..64 * 0..32768 -> 0..4096 (rounded)
+			// (0..64 * 0..64 * 0..32768) * 2^3 = 0..1073741824
+			vol = (uint32_t)(song.globVol * ch->outVol * ch->fadeOutAmp) << 3;
 		}
 
-		if (vol > 4096)
-			vol = 4096;
+		// original FT2 calculates final volume with a range of 0..256. We do it with a range of 0..1073741824 (why not)
 
-		ch->finalVol = (uint16_t)vol;
+		if (vol > (1UL<<30)) // shouldn't happen, but just in case...
+			vol = (1UL<<30);
+
+		ch->finalVol = vol;
 	}
 	else
 	{
@@ -2727,7 +2735,9 @@ bool setupReplayer(void)
 
 	audio.linearFreqTable = true;
 	note2Period = linearPeriods;
-	calcPeriod2HzTab();
+	calc2nRevTable();
+	calcPeriod2HzTable();
+	calcPanningTable();
 
 	setPos(0, 0, true);
 

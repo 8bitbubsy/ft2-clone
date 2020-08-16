@@ -440,38 +440,36 @@ static void setupPerfFreq(void)
 #ifdef _WIN32
 static void disableWasapi(void)
 {
-	const char *audioDriver;
-	int32_t i, numAudioDrivers;
-
 	// disable problematic WASAPI SDL2 audio driver on Windows (causes clicks/pops sometimes...)
 
-	numAudioDrivers = SDL_GetNumAudioDrivers();
-	for (i = 0; i < numAudioDrivers; i++)
+	const int32_t numAudioDrivers = SDL_GetNumAudioDrivers();
+	if (numAudioDrivers <= 1)
+		return;
+
+	// look for directsound and enable it if found
+	for (int32_t i = 0; i < numAudioDrivers; i++)
 	{
-		audioDriver = SDL_GetAudioDriver(i);
+		const char *audioDriver = SDL_GetAudioDriver(i);
 		if (audioDriver != NULL && strcmp("directsound", audioDriver) == 0)
 		{
 			SDL_setenv("SDL_AUDIODRIVER", "directsound", true);
 			audio.rescanAudioDevicesSupported = false;
-			break;
+			return;
 		}
 	}
 
-	if (i == numAudioDrivers)
+	// directsound is not available, try winmm
+	for (int32_t i = 0; i < numAudioDrivers; i++)
 	{
-		// directsound is not available, try winmm
-		for (i = 0; i < numAudioDrivers; i++)
+		const char *audioDriver = SDL_GetAudioDriver(i);
+		if (audioDriver != NULL && strcmp("winmm", audioDriver) == 0)
 		{
-			audioDriver = SDL_GetAudioDriver(i);
-			if (audioDriver != NULL && strcmp("winmm", audioDriver) == 0)
-			{
-				SDL_setenv("SDL_AUDIODRIVER", "winmm", true);
-				audio.rescanAudioDevicesSupported = false;
-				break;
-			}
+			SDL_setenv("SDL_AUDIODRIVER", "winmm", true);
+			audio.rescanAudioDevicesSupported = false;
+			return;
 		}
 	}
 
-	// maybe we didn't find directsound or winmm, let's use wasapi after all then...
+	// we didn't find directsound or winmm, let's use wasapi after all...
 }
 #endif

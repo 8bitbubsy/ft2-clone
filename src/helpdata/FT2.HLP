@@ -898,7 +898,7 @@ END
 >@C001Sample editor:
 >@C002
 >@X010- When a looped sample is zoomed out in the sample editor, you could see
->@X021unwanted sample data at the loop-end point. This is because of a kludge
+>@X021unexpected sample data at the loop-end point. This is because of a kludge
 for the resampling interpolation to work faster in the audio mixer, and the
 original FT2 has the same problem. I have made it so that if you zoom in to
 see the individual sample points, it will look like normal.
@@ -907,12 +907,9 @@ see the individual sample points, it will look like normal.
 >
 >@C002- Linux: The mouse cursor graphics can be glitchy at times...
 >@X010
->@C002- The "clear sample" shortcut (shift + num-pad Del/',') only works if
->@X021num lock is off. There's no way I can fix this...
->@X010
 >@C001Video:
 >@C002
->@X010- Fullscreen mode can be unbearably slow on a Raspberry Pi (even an RPi 4)
+>@X010- Fullscreen mode can be unbearably slow on a Raspberry Pi (even on RPi 4)
 >
 >@X010- The scopes can mildly flicker depending on the waveform and pitch.
 >@X021This is because their frequency is not clocked to exactly the same rate

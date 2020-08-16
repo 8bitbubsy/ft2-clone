@@ -30,7 +30,7 @@ typedef struct scope_t
 	const int8_t *sampleData8;
 	const int16_t *sampleData16;
 	int8_t SVol;
-	bool wasCleared, sample16Bit, backwards;
+	bool wasCleared, sampleIs16Bit, backwards;
 	uint8_t loopType;
 	int32_t SRepS, SRepL, SLen, SPos;
 	uint32_t DFrq;

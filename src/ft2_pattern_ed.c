@@ -2305,6 +2305,9 @@ void updateInstrumentSwitcher(void)
 	int8_t i;
 	int16_t y;
 
+	if (ui.aboutScreenShown || ui.configScreenShown || ui.helpScreenShown || ui.nibblesShown)
+		return; // don't redraw instrument switcher when it's not shown!
+
 	if (ui.extended) // extended pattern editor
 	{
 		//INSTRUMENTS

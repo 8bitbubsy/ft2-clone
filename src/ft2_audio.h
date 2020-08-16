@@ -65,9 +65,8 @@ typedef struct
 	const int16_t *SBase16, *SRevBase16;
 	bool active, backwards, isFadeOutVoice;
 	uint8_t mixFuncOffset, SPan, SLoopType;
-	uint16_t SVol;
 	int32_t SLVol1, SRVol1, SLVol2, SRVol2, SLVolIP, SRVolIP;
-	int32_t SPos, SLen, SRepS, SRepL;
+	int32_t SVol, SPos, SLen, SRepS, SRepL;
 	uint32_t SVolIPLen, SFrqRev;
 
 #if defined _WIN64 || defined __amd64__
@@ -116,6 +115,8 @@ bool chQueuePush(chSyncData_t t);
 bool chQueuePop(void);
 chSyncData_t *chQueuePeek(void);
 uint64_t getChQueueTimestamp(void);
+
+void calcPanningTable(void);
 void setAudioAmp(int16_t ampFactor, int16_t master, bool bitDepth32Flag);
 void setNewAudioFreq(uint32_t freq);
 void setBackOldAudioFreq(void);

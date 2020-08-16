@@ -128,13 +128,13 @@
 
 #define RENDER_8BIT_SMP \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = *smpPtr << 20; \
+	sample = *smpPtr << (12+8); \
 	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
 	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
 
 #define RENDER_8BIT_SMP_MONO \
 	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = *smpPtr << 20; \
+	sample = *smpPtr << (12+8); \
 	sample = ((int64_t)sample * CDA_LVol) >> 32; \
 	*audioMixL++ += sample; \
 	*audioMixR++ += sample; \

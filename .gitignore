@@ -20,3 +20,4 @@ vs2019_project/ft2-clone/Debug/ft2-clone.vcxproj.FileListAbsolute.txt
 *.opendb
 *.db-shm
 *.db-wal
+*.recipe

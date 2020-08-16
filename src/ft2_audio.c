@@ -27,7 +27,7 @@ static uint16_t smpBuffSize;
 static int32_t masterVol, oldAudioFreq, randSeed = INITIAL_DITHER_SEED;
 static int32_t prngStateL, prngStateR;
 static uint32_t tickTimeLen, tickTimeLenFrac;
-static float fAudioAmpMul;
+static double dAudioAmpMul, dPanningTab[256+1];
 static voice_t voice[MAX_VOICES * 2];
 static void (*sendAudSamplesFunc)(uint8_t *, uint32_t, uint8_t); // "send mixed samples" routines
 
@@ -123,18 +123,17 @@ void setAudioAmp(int16_t ampFactor, int16_t master, bool bitDepth32Flag)
 	ampFactor = CLAMP(ampFactor, 1, 32);
 	master = CLAMP(master, 0, 256);
 
-	// voiceVolume = (vol(0..65535) * pan(0..65536)) >> 4
-	const float fAudioNorm = 1.0f / (((65535UL * 65536) / 16) / MAX_VOICES);
+	const double dAudioNorm = 1.0 / (1UL << 25); // 2^25 = internal voice mixing range (per voice)
 
 	if (bitDepth32Flag)
 	{
-		// 32-bit floating point
-		fAudioAmpMul = fAudioNorm * (master / 256.0f) * (ampFactor / 32.0f);
+		// 32-bit floating point mixing mode
+		dAudioAmpMul = dAudioNorm * (master / 256.0) * (ampFactor / 32.0);
 	}
 	else
 	{
-		// 16-bit integer
-		masterVol = master * ampFactor * 2048;
+		// 16-bit integer mixing mode
+		masterVol = (master * ampFactor) * 512;
 	}
 }
 
@@ -190,21 +189,23 @@ void audioSetInterpolation(bool interpolation)
 	unlockMixerCallback();
 }
 
+void calcPanningTable(void)
+{
+	// same formula as FT2's panning table (with 0.0..1.0 range)
+	for (int32_t i = 0; i <= 256; i++)
+		dPanningTab[i] = sqrt(i * (1.0 / 256.0));
+}
+
 static void voiceUpdateVolumes(int32_t i, uint8_t status)
 {
-	int32_t volL, volR, destVolL, destVolR;
-	uint32_t vol;
-	voice_t *v, *f;
+	int32_t destVolL, destVolR;
 
-	v = &voice[i];
+	voice_t *v = &voice[i];
 
-	vol = v->SVol; // 0..4096
+	const int32_t volR = (int32_t)((v->SVol * dPanningTab[    v->SPan]) + 0.5);
+	const int32_t volL = (int32_t)((v->SVol * dPanningTab[256-v->SPan]) + 0.5);
 
-	// 0..4096 * 0..65535 = 0..268431360 (about max safe volume range)
-	volR = vol * panningTab[    v->SPan];
-	volL = vol * panningTab[256-v->SPan];
-
-	if (!audio.volumeRampingFlag)
+	if (!audio.volumeRampingFlag) // is volume ramping disabled?
 	{
 		v->SVolIPLen = 0; // reset volume ramp length
 		v->SLVol2 = volL;
@@ -222,7 +223,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 			// setup "fade out" voice (only if current voice volume>0)
 			if (v->SLVol2 > 0 || v->SRVol2 > 0)
 			{
-				f = &voice[MAX_VOICES + i];
+				voice_t *f = &voice[MAX_VOICES + i];
 
 				*f = *v; // copy voice
 
@@ -231,7 +232,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 				destVolL = -f->SLVol2;
 				destVolR = -f->SRVol2;
 
-				f->SLVolIP = ((int64_t)destVolL * audio.rampQuickVolMul) >> 32;
+				f->SLVolIP = ((int64_t)destVolL * audio.rampQuickVolMul) >> 32; // x = a / b
 				f->SRVolIP = ((int64_t)destVolR * audio.rampQuickVolMul) >> 32;
 
 				f->isFadeOutVoice = true;
@@ -262,13 +263,13 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 			if (status & IS_QuickVol)
 			{
 				v->SVolIPLen = audio.quickVolSizeVal;
-				v->SLVolIP = ((int64_t)destVolL * audio.rampQuickVolMul) >> 32;
+				v->SLVolIP = ((int64_t)destVolL * audio.rampQuickVolMul) >> 32; // x = a / b
 				v->SRVolIP = ((int64_t)destVolR * audio.rampQuickVolMul) >> 32;
 			}
 			else
 			{
 				v->SVolIPLen = audio.samplesPerTick;
-				v->SLVolIP = ((int64_t)destVolL * audio.rampSpeedValMul) >> 32;
+				v->SLVolIP = ((int64_t)destVolL * audio.rampSpeedValMul) >> 32; // x = a / b
 				v->SRVolIP = ((int64_t)destVolR * audio.rampSpeedValMul) >> 32;
 			}
 		}
@@ -424,12 +425,9 @@ static inline uint32_t random32(void)
 
 static void sendSamples16BitStereo(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	int16_t *streamPointer16;
 	int32_t out32;
 
-	(void)numAudioChannels;
-
-	streamPointer16 = (int16_t *)stream;
+	int16_t *streamPointer16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel
@@ -442,16 +440,16 @@ static void sendSamples16BitStereo(uint8_t *stream, uint32_t sampleBlockLength, 
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 	}
+
+	(void)numAudioChannels;
 }
 
 static void sendSamples16BitMultiChan(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	int16_t *streamPointer16;
 	int32_t out32;
-	uint32_t i, j;
 
-	streamPointer16 = (int16_t *)stream;
-	for (i = 0; i < sampleBlockLength; i++)
+	int16_t *streamPointer16 = (int16_t *)stream;
+	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel
 		out32 = ((int64_t)audio.mixBufferL[i] * masterVol) >> 32;
@@ -464,19 +462,16 @@ static void sendSamples16BitMultiChan(uint8_t *stream, uint32_t sampleBlockLengt
 		*streamPointer16++ = (int16_t)out32;
 
 		// send zeroes to the rest of the channels
-		for (j = 2; j < numAudioChannels; j++)
+		for (uint32_t j = 2; j < numAudioChannels; j++)
 			*streamPointer16++ = 0;
 	}
 }
 
 static void sendSamples16BitDitherStereo(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	int16_t *streamPointer16;
 	int32_t prng, out32;
 
-	(void)numAudioChannels;
-
-	streamPointer16 = (int16_t *)stream;
+	int16_t *streamPointer16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel - 1-bit triangular dithering
@@ -493,14 +488,15 @@ static void sendSamples16BitDitherStereo(uint8_t *stream, uint32_t sampleBlockLe
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 	}
+
+	(void)numAudioChannels;
 }
 
 static void sendSamples16BitDitherMultiChan(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	int16_t *streamPointer16;
 	int32_t prng, out32;
 
-	streamPointer16 = (int16_t *)stream;
+	int16_t *streamPointer16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel - 1-bit triangular dithering
@@ -523,47 +519,47 @@ static void sendSamples16BitDitherMultiChan(uint8_t *stream, uint32_t sampleBloc
 	}
 }
 
-static void sendSamples24BitStereo(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
+static void sendSamples32BitStereo(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	float fOut, *fStreamPointer24;
+	double dOut;
+
+	float *fStreamPointer32 = (float *)stream;
+	for (uint32_t i = 0; i < sampleBlockLength; i++)
+	{
+		// left channel
+		dOut = audio.mixBufferL[i] * dAudioAmpMul;
+		dOut = CLAMP(dOut, -1.0, 1.0);
+		*fStreamPointer32++ = (float)dOut;
+
+		// right channel
+		dOut = audio.mixBufferR[i] * dAudioAmpMul;
+		dOut = CLAMP(dOut, -1.0, 1.0);
+		*fStreamPointer32++ = (float)dOut;
+	}
 
 	(void)numAudioChannels;
-
-	fStreamPointer24 = (float *)stream;
-	for (uint32_t i = 0; i < sampleBlockLength; i++)
-	{
-		// left channel
-		fOut = audio.mixBufferL[i] * fAudioAmpMul;
-		fOut = CLAMP(fOut, -1.0f, 1.0f);
-		*fStreamPointer24++ = fOut;
-
-		// right channel
-		fOut = audio.mixBufferR[i] * fAudioAmpMul;
-		fOut = CLAMP(fOut, -1.0f, 1.0f);
-		*fStreamPointer24++ = fOut;
-	}
 }
 
-static void sendSamples24BitMultiChan(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
+static void sendSamples32BitMultiChan(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	float fOut, *fStreamPointer24;
+	double dOut;
 
-	fStreamPointer24 = (float *)stream;
+	float *fStreamPointer32 = (float *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel
-		fOut = audio.mixBufferL[i] * fAudioAmpMul;
-		fOut = CLAMP(fOut, -1.0f, 1.0f);
-		*fStreamPointer24++ = fOut;
+		dOut = audio.mixBufferL[i] * dAudioAmpMul;
+		dOut = CLAMP(dOut, -1.0, 1.0);
+		*fStreamPointer32++ = (float)dOut;
 
 		// right channel
-		fOut = audio.mixBufferR[i] * fAudioAmpMul;
-		fOut = CLAMP(fOut, -1.0f, 1.0f);
-		*fStreamPointer24++ = fOut;
+		dOut = audio.mixBufferR[i] * dAudioAmpMul;
+		dOut = CLAMP(dOut, -1.0, 1.0);
+		*fStreamPointer32++ = (float)dOut;
 
 		// send zeroes to the rest of the channels
 		for (uint32_t j = 2; j < numAudioChannels; j++)
-			*fStreamPointer24++ = 0.0f;
+			*fStreamPointer32++ = 0.0f;
 	}
 }
 
@@ -636,7 +632,7 @@ void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bit
 	}
 	else
 	{
-		sendSamples24BitStereo(stream, samplesToMix, 2);
+		sendSamples32BitStereo(stream, samplesToMix, 2);
 	}
 }
 
@@ -1061,9 +1057,9 @@ void updateSendAudSamplesRoutine(bool lockMixer)
 	else
 	{
 		if (pmpChannels > 2)
-			sendAudSamplesFunc = sendSamples24BitMultiChan;
+			sendAudSamplesFunc = sendSamples32BitMultiChan;
 		else
-			sendAudSamplesFunc = sendSamples24BitStereo;
+			sendAudSamplesFunc = sendSamples32BitStereo;
 	}
 
 	if (lockMixer)
