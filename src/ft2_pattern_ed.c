@@ -375,7 +375,10 @@ void cursorChannelLeft(void)
 	{
 		cursor.ch = (uint8_t)(song.antChn - 1);
 		if (ui.pattChanScrollShown)
+		{
+			scrollBars[SB_CHAN_SCROLL].oldPos = 0xFFFFFFFF; // kludge
 			setScrollBarPos(SB_CHAN_SCROLL, song.antChn, true);
+		}
 	}
 	else
 	{
@@ -396,7 +399,10 @@ void cursorChannelRight(void)
 	{
 		cursor.ch = 0;
 		if (ui.pattChanScrollShown)
+		{
+			scrollBars[SB_CHAN_SCROLL].oldPos = 0xFFFFFFFF; // kludge
 			setScrollBarPos(SB_CHAN_SCROLL, 0, true);
+		}
 	}
 	else
 	{
