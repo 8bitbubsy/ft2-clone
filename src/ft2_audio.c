@@ -24,10 +24,9 @@
 
 static int8_t pmpCountDiv, pmpChannels = 2;
 static uint16_t smpBuffSize;
-static int32_t masterVol, oldAudioFreq, randSeed = INITIAL_DITHER_SEED;
-static int32_t prngStateL, prngStateR;
+static int32_t oldAudioFreq, randSeed = INITIAL_DITHER_SEED;
 static uint32_t tickTimeLen, tickTimeLenFrac;
-static double dAudioAmpMul, dPanningTab[256+1];
+static double dAudioNormalizeMul, dPanningTab[256+1], dPrngStateL, dPrngStateR;
 static voice_t voice[MAX_VOICES * 2];
 static void (*sendAudSamplesFunc)(uint8_t *, uint32_t, uint8_t); // "send mixed samples" routines
 
@@ -114,27 +113,25 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 	}
 
 	resumeAudio();
+
+	setWavRenderFrequency(audio.freq);
+	setWavRenderBitDepth((config.specialFlags & BITDEPTH_32) ? 32 : 16);
 	return true;
 }
 
-// ampFactor = 1..32, masterVol = 0..256
-void setAudioAmp(int16_t ampFactor, int16_t master, bool bitDepth32Flag)
+// amp = 1..32, masterVol = 0..256
+void setAudioAmp(int16_t amp, int16_t masterVol, bool bitDepth32Flag)
 {
-	ampFactor = CLAMP(ampFactor, 1, 32);
-	master = CLAMP(master, 0, 256);
+	amp = CLAMP(amp, 1, 32);
+	masterVol = CLAMP(masterVol, 0, 256);
 
-	const double dAudioNorm = 1.0 / (1UL << 25); // 2^25 = internal voice mixing range (per voice)
+	const double dAmp = (amp * masterVol) / (32.0 * 256.0);
 
-	if (bitDepth32Flag)
-	{
-		// 32-bit floating point mixing mode
-		dAudioAmpMul = dAudioNorm * (master / 256.0) * (ampFactor / 32.0);
-	}
-	else
-	{
-		// 16-bit integer mixing mode
-		masterVol = (master * ampFactor) * 512;
-	}
+	int32_t normalizeBits = 25; // 2^25 = mixing bits per voice
+	if (!bitDepth32Flag)
+		normalizeBits -= 16-1; // change scale from -1.0..1.0 to signed 16-bit
+
+	dAudioNormalizeMul = dAmp / (1UL << normalizeBits);
 }
 
 void setNewAudioFreq(uint32_t freq) // for song to WAV rendering
@@ -410,8 +407,8 @@ void mix_UpdateChannelVolPanFrq(void)
 void resetAudioDither(void)
 {
 	randSeed = INITIAL_DITHER_SEED;
-	prngStateL = 0;
-	prngStateR = 0;
+	dPrngStateL = 0.0;
+	dPrngStateR = 0.0;
 }
 
 static inline uint32_t random32(void)
@@ -431,12 +428,12 @@ static void sendSamples16BitStereo(uint8_t *stream, uint32_t sampleBlockLength, 
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel
-		out32 = ((int64_t)audio.mixBufferL[i] * masterVol) >> 32;
+		out32 = (int32_t)(audio.mixBufferL[i] * dAudioNormalizeMul);
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 
 		// right channel
-		out32 = ((int64_t)audio.mixBufferR[i] * masterVol) >> 32;
+		out32 = (int32_t)(audio.mixBufferR[i] * dAudioNormalizeMul);
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 	}
@@ -452,12 +449,12 @@ static void sendSamples16BitMultiChan(uint8_t *stream, uint32_t sampleBlockLengt
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel
-		out32 = ((int64_t)audio.mixBufferL[i] * masterVol) >> 32;
+		out32 = (int32_t)(audio.mixBufferL[i] * dAudioNormalizeMul);
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 
 		// right channel
-		out32 = ((int64_t)audio.mixBufferR[i] * masterVol) >> 32;
+		out32 = (int32_t)(audio.mixBufferR[i] * dAudioNormalizeMul);
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 
@@ -469,22 +466,25 @@ static void sendSamples16BitMultiChan(uint8_t *stream, uint32_t sampleBlockLengt
 
 static void sendSamples16BitDitherStereo(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	int32_t prng, out32;
+	int32_t out32;
+	double dOut, dPrng;
 
 	int16_t *streamPointer16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel - 1-bit triangular dithering
-		prng = random32();
-		out32 = ((((int64_t)audio.mixBufferL[i] * masterVol) + prng) - prngStateL) >> 32;
-		prngStateL = prng;
+		dPrng = random32() * (0.5 / INT32_MAX); // -0.5..0.5
+		dOut = ((audio.mixBufferL[i] * dAudioNormalizeMul) + dPrng) - dPrngStateL;
+		dPrngStateL = dPrng;
+		out32 = (int32_t)dOut;
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 
 		// right channel - 1-bit triangular dithering
-		prng = random32();
-		out32 = ((((int64_t)audio.mixBufferR[i] * masterVol) + prng) - prngStateR) >> 32;
-		prngStateR = prng;
+		dPrng = random32() * (0.5 / INT32_MAX); // -0.5..0.5
+		dOut = ((audio.mixBufferR[i] * dAudioNormalizeMul) + dPrng) - dPrngStateR;
+		dPrngStateR = dPrng;
+		out32 = (int32_t)dOut;
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 	}
@@ -494,22 +494,25 @@ static void sendSamples16BitDitherStereo(uint8_t *stream, uint32_t sampleBlockLe
 
 static void sendSamples16BitDitherMultiChan(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
 {
-	int32_t prng, out32;
+	int32_t out32;
+	double dOut, dPrng;
 
 	int16_t *streamPointer16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel - 1-bit triangular dithering
-		prng = random32();
-		out32 = ((((int64_t)audio.mixBufferL[i] * masterVol) + prng) - prngStateL) >> 32;
-		prngStateL = prng;
+		dPrng = random32() * (0.5 / INT32_MAX); // -0.5..0.5
+		dOut = ((audio.mixBufferL[i] * dAudioNormalizeMul) + dPrng) - dPrngStateL;
+		dPrngStateL = dPrng;
+		out32 = (int32_t)dOut;
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 
 		// right channel - 1-bit triangular dithering
-		prng = random32();
-		out32 = ((((int64_t)audio.mixBufferR[i] * masterVol) + prng) - prngStateR) >> 32;
-		prngStateR = prng;
+		dPrng = random32() * (0.5 / INT32_MAX); // -0.5..0.5
+		dOut = ((audio.mixBufferR[i] * dAudioNormalizeMul) + dPrng) - dPrngStateR;
+		dPrngStateR = dPrng;
+		out32 = (int32_t)dOut;
 		CLAMP16(out32);
 		*streamPointer16++ = (int16_t)out32;
 
@@ -527,12 +530,12 @@ static void sendSamples32BitStereo(uint8_t *stream, uint32_t sampleBlockLength, 
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel
-		dOut = audio.mixBufferL[i] * dAudioAmpMul;
+		dOut = audio.mixBufferL[i] * dAudioNormalizeMul;
 		dOut = CLAMP(dOut, -1.0, 1.0);
 		*fStreamPointer32++ = (float)dOut;
 
 		// right channel
-		dOut = audio.mixBufferR[i] * dAudioAmpMul;
+		dOut = audio.mixBufferR[i] * dAudioNormalizeMul;
 		dOut = CLAMP(dOut, -1.0, 1.0);
 		*fStreamPointer32++ = (float)dOut;
 	}
@@ -548,12 +551,12 @@ static void sendSamples32BitMultiChan(uint8_t *stream, uint32_t sampleBlockLengt
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel
-		dOut = audio.mixBufferL[i] * dAudioAmpMul;
+		dOut = audio.mixBufferL[i] * dAudioNormalizeMul;
 		dOut = CLAMP(dOut, -1.0, 1.0);
 		*fStreamPointer32++ = (float)dOut;
 
 		// right channel
-		dOut = audio.mixBufferR[i] * dAudioAmpMul;
+		dOut = audio.mixBufferR[i] * dAudioNormalizeMul;
 		dOut = CLAMP(dOut, -1.0, 1.0);
 		*fStreamPointer32++ = (float)dOut;
 
@@ -1247,6 +1250,9 @@ bool setupAudio(bool showErrorMsg)
 
 	updateSendAudSamplesRoutine(false);
 	audio.resetSyncTickTimeFlag = true;
+
+	setWavRenderFrequency(audio.freq);
+	setWavRenderBitDepth((config.specialFlags & BITDEPTH_32) ? 32 : 16);
 
 	return true;
 }

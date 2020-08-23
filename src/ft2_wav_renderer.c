@@ -39,11 +39,7 @@ typedef struct wavHeader_t
 static char WAV_SysReqText[192];
 static uint8_t WDBitDepth = 16, WDStartPos, WDStopPos, *wavRenderBuffer;
 static int16_t WDAmp;
-#if defined __amd64__ || defined _WIN64
-static uint32_t WDFrequency = 96000;
-#else
 static uint32_t WDFrequency = 48000;
-#endif
 static SDL_Thread *thread;
 
 static void updateWavRenderer(void)
@@ -65,6 +61,24 @@ static void updateWavRenderer(void)
 
 	hexOut(237, 144, PAL_FORGRND, WDStartPos, 2);
 	hexOut(237, 158, PAL_FORGRND, WDStopPos,  2);
+}
+
+void setWavRenderFrequency(int32_t freq)
+{
+	WDFrequency = CLAMP(freq, MIN_WAV_RENDER_FREQ, MAX_WAV_RENDER_FREQ);
+	if (ui.wavRendererShown)
+		updateWavRenderer();
+}
+
+void setWavRenderBitDepth(uint8_t bitDepth)
+{
+	if (bitDepth == 16)
+		WDBitDepth = 16;
+	else if (bitDepth == 32)
+		WDBitDepth = 32;
+
+	if (ui.wavRendererShown)
+		updateWavRenderer();
 }
 
 void updateWavRendererSettings(void) // called when changing config.boostLevel

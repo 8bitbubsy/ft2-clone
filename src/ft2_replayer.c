@@ -357,8 +357,8 @@ void calcReplayRate(int32_t audioFreq)
 
 	dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
 
-	audio.quickVolSizeVal = (int32_t)((audioFreq / 200.0) + 0.5);
-	audio.rampQuickVolMul = (int32_t)(((UINT32_MAX + 1.0) / audio.quickVolSizeVal) + 0.5);
+	audio.quickVolSizeVal = (int32_t)((audioFreq / 200.0) + 0.5); // rounded
+	audio.rampQuickVolMul = (int32_t)(((UINT32_MAX + 1.0) / audio.quickVolSizeVal) + 0.5); // rounded
 
 	/* Calculate tables to prevent floating point operations on systems that
 	** might have a slow FPU. This is quite hackish and not really needed,
@@ -373,8 +373,6 @@ void calcReplayRate(int32_t audioFreq)
 	{
 		const double dBpmHz = i / 2.5;
 		const double dSamplesPerTick = audioFreq / dBpmHz;
-		const int32_t samplesPerTick = (int32_t)(dSamplesPerTick + 0.5); // rounded
-
 		audio.dSpeedValTab[i] = dSamplesPerTick;
 
 		// BPM -> Hz -> tick length for performance counter (syncing visuals to audio)
@@ -387,7 +385,8 @@ void calcReplayRate(int32_t audioFreq)
 		audio.tickTimeLengthTab[i] = ((uint64_t)timeInt << 32) | (uint32_t)dTimeFrac;
 
 		// for calculating volume ramp length for "tick" ramps
-		audio.rampSpeedValMulTab[i] = (int32_t)(((UINT32_MAX + 1.0) / samplesPerTick) + 0.5);
+		const int32_t samplesPerTick = (int32_t)(dSamplesPerTick + 0.5); // this has to be rounded
+		audio.rampSpeedValMulTab[i] = (int32_t)(((UINT32_MAX + 1.0) / samplesPerTick) + 0.5); // rounded
 	}
 }
 

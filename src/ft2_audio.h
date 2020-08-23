@@ -117,7 +117,7 @@ chSyncData_t *chQueuePeek(void);
 uint64_t getChQueueTimestamp(void);
 
 void calcPanningTable(void);
-void setAudioAmp(int16_t ampFactor, int16_t master, bool bitDepth32Flag);
+void setAudioAmp(int16_t amp, int16_t masterVol, bool bitDepth32Flag);
 void setNewAudioFreq(uint32_t freq);
 void setBackOldAudioFreq(void);
 void setSpeed(uint16_t bpm);
