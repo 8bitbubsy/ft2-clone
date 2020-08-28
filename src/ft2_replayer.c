@@ -27,7 +27,8 @@
 */
 
 // non-FT2 precalced stuff
-static double dPeriod2HzTab[65536], dLogTab[768], d2nRevTab[32], dHz2MixDeltaMul;
+static double dPeriod2HzTab[65536], dLogTab[768], dHz2MixDeltaMul;
+static uint32_t revMixDeltaTab[65536];
 
 static bool bxxOverflow;
 static tonTyp nilPatternLine;
@@ -209,13 +210,6 @@ int16_t getRealUsedSamples(int16_t nr)
 	return i+1;
 }
 
-static void calc2nRevTable(void) // for calcPeriod2HzTable()
-{
-	d2nRevTab[0] = 1.0;
-	for (int32_t i = 0; i < 32; i++)
-		d2nRevTab[i] = 1.0 / (1UL << i);
-}
-
 static void calcPeriod2HzTable(void) // called every time "linear/amiga frequency" mode is changed
 {
 	dPeriod2HzTab[0] = 0.0; // in FT2, a period of 0 converts to 0Hz
@@ -230,7 +224,7 @@ static void calcPeriod2HzTable(void) // called every time "linear/amiga frequenc
 			const int32_t period = invPeriod % 768;
 			const int32_t invOct = (14 - octave) & 0x1F; // accurate to FT2
 
-			dPeriod2HzTab[i] = dLogTab[period] * d2nRevTab[invOct]; // x = y / 2^invOct
+			dPeriod2HzTab[i] = dLogTab[period] / (1UL << invOct); // x = y / 2^invOct
 		}
 	}
 	else
@@ -238,6 +232,29 @@ static void calcPeriod2HzTable(void) // called every time "linear/amiga frequenc
 		// Amiga periods
 		for (int32_t i = 1; i < 65536; i++)
 			dPeriod2HzTab[i] = (8363.0 * 1712.0) / i;
+	}
+}
+
+/* Called every time "linear/amiga frequency" mode or audio frequency is changed.
+**
+** Used to replace a DIV with a MUL in the outside audio mixer loop. This can actually
+** be beneficial if you are playing VERY tightly looped samples, and/or if the CPU has
+** no DIV instruction (certain ARM CPUs, for instance).
+**
+** A bit hackish and extreme considering it's 65536*4 bytes, but that's My Game™
+*/
+void calcRevMixDeltaTable(void)
+{
+	for (int32_t i = 0; i < 65536; i++)
+	{
+		const uint16_t period = (uint16_t)i;
+		const uint64_t delta = getMixerDelta(period);
+
+		uint32_t revDelta = UINT32_MAX;
+		if (delta != 0)
+			revDelta = (uint32_t)((UINT64_MAX / delta) >> 16); // MUST be truncated, not rounded!
+
+		revMixDeltaTab[i] = revDelta;
 	}
 }
 
@@ -253,6 +270,7 @@ void setFrqTab(bool linear)
 		note2Period = amigaPeriods;
 
 	calcPeriod2HzTable();
+	calcRevMixDeltaTable();
 
 	resumeAudio();
 
@@ -356,26 +374,20 @@ void calcReplayRate(int32_t audioFreq)
 		return;
 
 	dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
+	audio.quickVolRampSamples = (int32_t)((audioFreq / 200.0) + 0.5); // rounded
+	audio.fRampQuickVolMul = 1.0f / audio.quickVolRampSamples;
 
-	audio.quickVolSizeVal = (int32_t)((audioFreq / 200.0) + 0.5); // rounded
-	audio.rampQuickVolMul = (int32_t)(((UINT32_MAX + 1.0) / audio.quickVolSizeVal) + 0.5); // rounded
-
-	/* Calculate tables to prevent floating point operations on systems that
-	** might have a slow FPU. This is quite hackish and not really needed,
-	** but it doesn't take up a lot of RAM, so why not.
-	*/
-
-	audio.dSpeedValTab[0] = 0.0;
+	audio.dSamplesPerTickTab[0] = 0.0;
 	audio.tickTimeLengthTab[0] = UINT64_MAX;
-	audio.rampSpeedValMulTab[0] = INT32_MAX;
+	audio.fRampTickMulTab[0] = 0.0f;
 
 	for (int32_t i = MIN_BPM; i <= MAX_BPM; i++)
 	{
-		const double dBpmHz = i / 2.5;
+		const double dBpmHz = i * (1.0 / 2.5); // i / 2.5
 		const double dSamplesPerTick = audioFreq / dBpmHz;
-		audio.dSpeedValTab[i] = dSamplesPerTick;
+		audio.dSamplesPerTickTab[i] = dSamplesPerTick;
 
-		// BPM -> Hz -> tick length for performance counter (syncing visuals to audio)
+		// BPM Hz -> tick length for performance counter (syncing visuals to audio)
 		double dTimeInt;
 		double dTimeFrac = modf(editor.dPerfFreq / dBpmHz, &dTimeInt);
 		const int32_t timeInt = (int32_t)dTimeInt;
@@ -384,9 +396,9 @@ void calcReplayRate(int32_t audioFreq)
 
 		audio.tickTimeLengthTab[i] = ((uint64_t)timeInt << 32) | (uint32_t)dTimeFrac;
 
-		// for calculating volume ramp length for "tick" ramps
-		const int32_t samplesPerTick = (int32_t)(dSamplesPerTick + 0.5); // this has to be rounded
-		audio.rampSpeedValMulTab[i] = (int32_t)(((UINT32_MAX + 1.0) / samplesPerTick) + 0.5); // rounded
+		// for calculating volume ramp length for tick-lenghted ramps
+		const int32_t samplesPerTick = (int32_t)(dSamplesPerTick + 0.5); // this has to be rounded first
+		audio.fRampTickMulTab[i] = 1.0f / samplesPerTick;
 	}
 }
 
@@ -395,17 +407,15 @@ double dPeriod2Hz(uint16_t period)
 	return dPeriod2HzTab[period];
 }
 
-#if defined _WIN64 || defined __amd64__
 int64_t getMixerDelta(uint16_t period)
 {
 	return (int64_t)((dPeriod2Hz(period) * dHz2MixDeltaMul) + 0.5); // Hz -> rounded fixed-point mixer delta
 }
-#else
-int32_t getMixerDelta(uint16_t period)
+
+uint32_t getRevMixerDelta(uint16_t period)
 {
-	return (int32_t)((dPeriod2Hz(period) * dHz2MixDeltaMul) + 0.5); // Hz -> rounded fixed-point mixer delta
+	return revMixDeltaTab[period];
 }
-#endif
 
 int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote) // for piano in Instr. Ed.
 {
@@ -1216,9 +1226,9 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 {
 	bool envInterpolateFlag, envDidInterpolate;
 	uint8_t envPos;
-	int16_t autoVibVal, panTmp;
+	int16_t autoVibVal;
 	uint16_t tmpPeriod, autoVibAmp, envVal;
-	uint32_t vol;
+	float fVol;
 	instrTyp *ins;
 
 	ins = ch->instrSeg;
@@ -1323,32 +1333,28 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 				}
 			}
 
-			// original FT2 shifts the vol env. range to 0..64, but we keep its full resolution (0..16384)
+			fVol  = song.globVol   * (1.0f / 64.0f);
+			fVol *= ch->outVol     * (1.0f / 64.0f);
+			fVol *= ch->fadeOutAmp * (1.0f / 32768.0f);
+			fVol *= envVal         * (1.0f / 16384.0f);
 
-			// 0..64 * 0..64 * 0..32768 = 0..134217728
-			vol = song.globVol * ch->outVol * ch->fadeOutAmp;
-
-			// ((0..134217728 * 0..16384) + 2^10) / 2^11 = 0..1073741824 (rounded)
-			vol = (uint32_t)((((int64_t)vol * envVal) + (1UL << 10)) >> 11);
-
-			ch->status |= IS_Vol;
+			ch->status |= IS_Vol; // update vol every tick because vol envelope is enabled
 		}
 		else
 		{
-			// (0..64 * 0..64 * 0..32768) * 2^3 = 0..1073741824
-			vol = (uint32_t)(song.globVol * ch->outVol * ch->fadeOutAmp) << 3;
+			fVol  = song.globVol   * (1.0f / 64.0f);
+			fVol *= ch->outVol     * (1.0f / 64.0f);
+			fVol *= ch->fadeOutAmp * (1.0f / 32768.0f);
 		}
 
-		// original FT2 calculates final volume with a range of 0..256. We do it with a range of 0..1073741824 (why not)
+		if (fVol > 1.0f) // shouldn't happen, but just in case...
+			fVol = 1.0f;
 
-		if (vol > (1UL<<30)) // shouldn't happen, but just in case...
-			vol = (1UL<<30);
-
-		ch->finalVol = vol;
+		ch->fFinalVol = fVol;
 	}
 	else
 	{
-		ch->finalVol = 0;
+		ch->fFinalVol = 0.0f;
 	}
 
 	// *** PANNING ENVELOPE ***
@@ -1432,15 +1438,12 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 			}
 		}
 
-		panTmp = ch->outPan - 128;
-		if (panTmp > 0)
-			panTmp = 0 - panTmp;
-		panTmp += 128;
+		const int32_t panTmp = 128 - ABS(ch->outPan - 128);
+		const int32_t panEnv = (int32_t)envVal - (32*256); // -8192..7936
+		const int32_t panAdd = (int32_t)roundf((panTmp * panEnv) * (1.0f / 8192.0f)); // -128..124
+		ch->finalPan = (uint8_t)CLAMP(ch->outPan + panAdd, 0, 255);
 
-		envVal -= 32*256;
-
-		ch->finalPan = ch->outPan + (uint8_t)(((int16_t)envVal * panTmp) >> 13);
-		ch->status |= IS_Pan;
+		ch->status |= IS_Pan; // update pan every tick because pan envelope is enabled
 	}
 	else
 	{
@@ -2095,7 +2098,7 @@ static void noNewAllChannels(void)
 	}
 }
 
-void mainPlayer(void) // periodically called from audio callback
+void tickReplayer(void) // periodically called from audio callback
 {
 	bool readNewNote;
 	int32_t i;
@@ -2734,8 +2737,9 @@ bool setupReplayer(void)
 
 	audio.linearFreqTable = true;
 	note2Period = linearPeriods;
-	calc2nRevTable();
+
 	calcPeriod2HzTable();
+	calcRevMixDeltaTable();
 	calcPanningTable();
 
 	setPos(0, 0, true);
@@ -3055,7 +3059,7 @@ void stopVoices(void)
 		ch->realVol = 0;
 		ch->outVol = 0;
 		ch->oldVol = 0;
-		ch->finalVol = 0;
+		ch->fFinalVol = 0.0f;
 		ch->oldPan = 128;
 		ch->outPan = 128;
 		ch->finalPan = 128;

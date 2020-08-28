@@ -48,13 +48,8 @@ static void updateWavRenderer(void)
 
 	fillRect(209, 116, 41, 51, PAL_DESKTOP);
 
-#if defined __amd64__ || defined _WIN64
-	sprintf(str, "%06d", WDFrequency);
-	textOut(209, 116, PAL_FORGRND, str);
-#else
-	sprintf(str, "%05d", WDFrequency);
-	textOut(216, 116, PAL_FORGRND, str);
-#endif
+	sprintf(str, "%6d", WDFrequency);
+	textOutFixed(209, 116, PAL_FORGRND, PAL_DESKTOP, str);
 
 	sprintf(str, "%02d", WDAmp);
 	textOut(237, 130, PAL_FORGRND, str);
@@ -92,7 +87,7 @@ void drawWavRenderer(void)
 	drawFramework(0,  109,  79, 64, FRAMEWORK_TYPE1);
 	drawFramework(79, 109, 212, 64, FRAMEWORK_TYPE1);
 
-	textOutShadow(4,   96, PAL_FORGRND, PAL_DSKTOP2, "Harddisk recording:");
+	textOutShadow(4,   96, PAL_FORGRND, PAL_DSKTOP2, "WAV exporting:");
 	textOutShadow(156, 96, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
 	textOutShadow(221, 96, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
 
@@ -284,10 +279,10 @@ void dump_RenderTick(uint32_t samplesPerTick, uint8_t *buffer)
 	replayerBusy = true;
 
 	if (audio.volumeRampingFlag)
-		mix_SaveIPVolumes();
+		resetRampVolumes();
 
-	mainPlayer();
-	mix_UpdateChannelVolPanFrq();
+	tickReplayer();
+	updateVoices();
 
 	replayerBusy = false;
 
@@ -464,15 +459,9 @@ void pbWavFreqUp(void)
 {
 	if (WDFrequency < MAX_WAV_RENDER_FREQ)
 	{
-		
-#if defined __amd64__ || defined _WIN64
 		     if (WDFrequency == 44100) WDFrequency = 48000;
 		else if (WDFrequency == 48000) WDFrequency = 96000;
 		else if (WDFrequency == 96000) WDFrequency = 192000;
-#else
-		     if (WDFrequency == 44100) WDFrequency = 48000;
-		else if (WDFrequency == 48000) WDFrequency = 96000;
-#endif
 		updateWavRenderer();
 	}
 }
@@ -481,13 +470,9 @@ void pbWavFreqDown(void)
 {
 	if (WDFrequency > MIN_WAV_RENDER_FREQ)
 	{
-#if defined __amd64__ || defined _WIN64
 		     if (WDFrequency == 192000) WDFrequency = 96000;
 		else if (WDFrequency == 96000) WDFrequency = 48000;
 		else if (WDFrequency == 48000) WDFrequency = 44100;
-#else
-		if (WDFrequency == 48000) WDFrequency = 44100;
-#endif
 
 		updateWavRenderer();
 	}

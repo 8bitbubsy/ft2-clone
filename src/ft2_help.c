@@ -453,7 +453,7 @@ static void setHelpSubject(uint8_t Nr)
 	fHlp_Line = 0;
 
 	// force update even if new pos value was to be the same as old
-	scrollBars[SB_HELP_SCROLL].oldPos = 0xFFFFFFFF;
+	scrollBars[SB_HELP_SCROLL].oldPos = UINT32_MAX;
 
 	setScrollBarEnd(SB_HELP_SCROLL, subjLen[fHlp_Nr]);
 	setScrollBarPos(SB_HELP_SCROLL, 0, false);

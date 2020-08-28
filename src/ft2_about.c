@@ -34,7 +34,6 @@ typedef struct
 } matrix_t;
 
 static const uint8_t starColConv[24] = { 2,2,2,2,2,2,2,2, 2,2,2,1,1,1,3,3, 3,3,3,3,3,3,3,3 };
-static const int16_t *sin32767 = sinusTables, *cos32767 = &sinusTables[256];
 static int16_t hastighet;
 static int32_t lastStarScreenPos[NUM_STARS];
 static uint32_t randSeed;
@@ -60,26 +59,27 @@ static inline int32_t random32(int32_t l) // Turbo Pascal Random() implementatio
 
 static void fixaMatris(rotate_t a, matrix_t *mat)
 {
-	int16_t sa, sb, sc, ca, cb, cc;
+	int32_t sa, sb, sc, ca, cb, cc;
 
-	sa = sin32767[a.x >> 6];
-	ca = cos32767[a.x >> 6];
-	sb = sin32767[a.y >> 6];
-	cb = cos32767[a.y >> 6];
-	sc = sin32767[a.z >> 6];
-	cc = cos32767[a.z >> 6];
+	// original code used a cos/sin table, but this only runs once per frame, no need...
+	sa = (int32_t)round(32767.0 * sin(a.x * (2.0 * M_PI / 65536.0)));
+	ca = (int32_t)round(32767.0 * cos(a.x * (2.0 * M_PI / 65536.0)));
+	sb = (int32_t)round(32767.0 * sin(a.y * (2.0 * M_PI / 65536.0)));
+	cb = (int32_t)round(32767.0 * cos(a.y * (2.0 * M_PI / 65536.0)));
+	sc = (int32_t)round(32767.0 * sin(a.z * (2.0 * M_PI / 65536.0)));
+	cc = (int32_t)round(32767.0 * cos(a.z * (2.0 * M_PI / 65536.0)));
 
-	mat->x.x = ((ca * cc) >> 16) + ((sc * ((sa * sb) >> 16)) >> (16-1));
-	mat->y.x = (sa * cb) >> 16;
-	mat->z.x = ((cc * ((sa * sb) >> 16)) >> (16-1)) - ((ca * sc) >> 16);
+	mat->x.x = (int16_t)(((ca * cc) >> 16) + ((sc * ((sa * sb) >> 16)) >> (16-1)));
+	mat->y.x = (int16_t)((sa * cb) >> 16);
+	mat->z.x = (int16_t)(((cc * ((sa * sb) >> 16)) >> (16-1)) - ((ca * sc) >> 16));
 
-	mat->x.y = ((sc * ((ca * sb) >> 16)) >> (16-1)) - ((sa * cc) >> 16);
-	mat->y.y = (ca * cb) >> 16;
-	mat->z.y = ((sa * sc) >> 16) + ((cc * ((ca * sb) >> 16)) >> (16-1));
+	mat->x.y = (int16_t)(((sc * ((ca * sb) >> 16)) >> (16-1)) - ((sa * cc) >> 16));
+	mat->y.y = (int16_t)((ca * cb) >> 16);
+	mat->z.y = (int16_t)(((sa * sc) >> 16) + ((cc * ((ca * sb) >> 16)) >> (16-1)));
 
-	mat->x.z = (cb * sc) >> 16;
-	mat->y.z = 0 - (sb >> 1);
-	mat->z.z = (cb * cc) >> 16;
+	mat->x.z = (int16_t)((cb * sc) >> 16);
+	mat->y.z = (int16_t)(0 - (sb >> 1));
+	mat->z.z = (int16_t)((cb * cc) >> 16);
 }
 
 static inline int32_t sqr(int32_t x)
@@ -144,11 +144,15 @@ static void aboutInit(void)
 			{
 				r = (int32_t)round(sqrt(random32(500) * 500));
 				w = random32(3000);
-				h = cos32767[(((w * 8) + r) / 16) & 1023] / 4;
+				ww = ((w * 8) + r) / 16.0;
 
-				starcrd[i].z = (int16_t)((cos32767[w & 1023] * (w + r)) / 3500);
-				starcrd[i].y = (int16_t)((sin32767[w & 1023] * (w + r)) / 3500);
-				starcrd[i].x = (int16_t)((h * r) / 500);
+				const int32_t z = (int32_t)round(32767.0 * cos(w * (2.0 * M_PI / 1024.0)));
+				const int32_t y = (int32_t)round(32767.0 * sin(w * (2.0 * M_PI / 1024.0)));
+				const int32_t x = (int32_t)round(32767.0 * cos(ww * (2.0 * M_PI / 1024.0))) / 4;
+
+				starcrd[i].z = (int16_t)((z * (w + r)) / 3500);
+				starcrd[i].y = (int16_t)((y * (w + r)) / 3500);
+				starcrd[i].x = (int16_t)((x * r) / 500);
 			}
 		}
 		break;
@@ -169,7 +173,7 @@ static void realStars(void)
 {
 	uint8_t col;
 	int16_t z, xx, xy, xz, yx, yy, yz, zx, zy, zz;
-	int32_t x, y, zMul, screenBufferPos;
+	int32_t x, y, screenBufferPos;
 	vector_t *star;
 
 	xx = starmat.x.x; xy = starmat.x.y; xz = starmat.x.z;
@@ -189,21 +193,20 @@ static void realStars(void)
 		}
 
 		star = &starcrd[i];
-		star->z += hastighet;
+		star->z += hastighet; // this intentionally overflows int16_t
 
 		z = ((xz * star->x) + (yz * star->y) + (zz * star->z)) >> 16;
 		z += 9000;
 		if (z <= 100) continue;
-		zMul = 0xFFFFFFFF / z; // 8bitbubsy: optimization
 		
 		y = ((xy * star->x) + (yy * star->y) + (zy * star->z)) >> (16-7);
-		y = ((int64_t)y * zMul) >> 32;
+		y /= z;
 		y += (2+ABOUT_SCREEN_H)/2;
 		if ((uint32_t)y > 2+ABOUT_SCREEN_H) continue;
 
 		x = ((xx * star->x) + (yx * star->y) + (zx * star->z)) >> (16-7);
 		x += x >> 2; // x *= 1.25
-		x = ((int64_t)x * zMul) >> 32;
+		x /= z;
 		x += (2+ABOUT_SCREEN_W)/2;
 		if ((uint32_t)x > 2+ABOUT_SCREEN_W) continue;
 
@@ -264,7 +267,6 @@ void showAboutScreen(void) // called once when About screen is opened
 	textOutBorder(x, y, PAL_FORGRND, PAL_CUSTOM, verText);
 
 	aboutInit();
-
 	ui.aboutScreenShown = true;
 }
 

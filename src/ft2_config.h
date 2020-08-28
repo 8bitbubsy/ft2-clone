@@ -74,7 +74,7 @@ enum
 	LINED_SCOPES = 128,
 
 	// specialFlags2
-	DITHERED_AUDIO = 1,
+	DITHERED_AUDIO = 1, /* DEPRECATED */
 	HARDWARE_MOUSE = 2,
 
 	// windowFlags
@@ -240,7 +240,6 @@ void rbWinSize4x(void);
 void cbToggleAutoSaveConfig(void);
 void cbConfigInterpolation(void);
 void cbConfigVolRamp(void);
-void cbConfigDithering(void);
 void cbConfigPattStretch(void);
 void cbConfigHexCount(void);
 void cbConfigAccidential(void);

@@ -1273,11 +1273,23 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 				}
 				else if (extLen == 4)
 				{
-					if (_stricmp(".nst", extPtr) && _stricmp(".mod", extPtr) &&
-						_stricmp(".s3m", extPtr) && _stricmp(".stm", extPtr) &&
-						_stricmp(".fst", extPtr) && _stricmp(".wav", extPtr))
+					if (editor.moduleSaveMode == MOD_SAVE_MODE_WAV)
 					{
-						goto skipEntry; // skip, none of the extensions above
+						if (_stricmp(".nst", extPtr) && _stricmp(".mod", extPtr) &&
+							_stricmp(".s3m", extPtr) && _stricmp(".stm", extPtr) &&
+							_stricmp(".fst", extPtr) && _stricmp(".wav", extPtr))
+						{
+							goto skipEntry; // skip, none of the extensions above
+						}
+					}
+					else
+					{
+						if (_stricmp(".nst", extPtr) && _stricmp(".mod", extPtr) &&
+							_stricmp(".s3m", extPtr) && _stricmp(".stm", extPtr) &&
+							_stricmp(".fst", extPtr))
+						{
+							goto skipEntry; // skip, none of the extensions above
+						}
 					}
 				}
 				else
@@ -2059,6 +2071,7 @@ static void setDiskOpItemRadioButtons(void)
 	hideRadioButtonGroup(RB_GROUP_DISKOP_PAT_SAVEAS);
 	hideRadioButtonGroup(RB_GROUP_DISKOP_TRK_SAVEAS);
 
+
 	if (editor.moduleSaveMode > 3)
 		editor.moduleSaveMode = 3;
 
@@ -2497,6 +2510,9 @@ void rbDiskOpTrack(void)
 
 void rbDiskOpModSaveMod(void)
 {
+	if (editor.moduleSaveMode == MOD_SAVE_MODE_WAV)
+		editor.diskOpReadDir = true;
+
 	editor.moduleSaveMode = MOD_SAVE_MODE_MOD;
 	checkRadioButton(RB_DISKOP_MOD_SAVEAS_MOD);
 	diskOpChangeFilenameExt(".mod");
@@ -2507,6 +2523,9 @@ void rbDiskOpModSaveMod(void)
 
 void rbDiskOpModSaveXm(void)
 {
+	if (editor.moduleSaveMode == MOD_SAVE_MODE_WAV)
+		editor.diskOpReadDir = true;
+
 	editor.moduleSaveMode = MOD_SAVE_MODE_XM;
 	checkRadioButton(RB_DISKOP_MOD_SAVEAS_XM);
 	diskOpChangeFilenameExt(".xm");
@@ -2523,6 +2542,8 @@ void rbDiskOpModSaveWav(void)
 
 	updateCurrSongFilename(); // for window title
 	updateWindowTitle(true);
+
+	editor.diskOpReadDir = true;
 }
 
 void rbDiskOpSmpSaveRaw(void)

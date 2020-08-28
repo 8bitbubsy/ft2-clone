@@ -8,164 +8,128 @@
 /* ----------------------------------------------------------------------- */
 
 #define GET_VOL \
-	const int32_t CDA_LVol = v->SLVol2; \
-	const int32_t CDA_RVol = v->SRVol2; \
+	const float fVolL = v->fVolL; \
+	const float fVolR = v->fVolR; \
 
 #define GET_VOL_MONO \
-	const int32_t CDA_LVol = v->SLVol2; \
+	const float fVolL = v->fVolL; \
 
 #define GET_VOL_RAMP \
-	CDA_LVol = v->SLVol2; \
-	CDA_RVol = v->SRVol2; \
+	fVolL = v->fVolL; \
+	fVolR = v->fVolR; \
 
 #define GET_VOL_MONO_RAMP \
-	CDA_LVol = v->SLVol2; \
+	fVolL = v->fVolL; \
 
 #define SET_VOL_BACK \
-	v->SLVol2 = CDA_LVol; \
-	v->SRVol2 = CDA_RVol; \
+	v->fVolL = fVolL; \
+	v->fVolR = fVolR; \
 
 #define SET_VOL_BACK_MONO \
-	v->SLVol2 = v->SRVol2 = CDA_LVol; \
-
-#if defined _WIN64 || defined __amd64__
+	v->fVolL = v->fVolR = fVolL; \
 
 #define GET_MIXER_VARS \
-	const uint64_t SFrq = v->SFrq; \
-	audioMixL = audio.mixBufferL; \
-	audioMixR = audio.mixBufferR; \
-	realPos = v->SPos; \
-	pos = v->SPosDec; \
+	const uint64_t delta = v->delta; \
+	fMixBufferL = audio.fMixBufferL; \
+	fMixBufferR = audio.fMixBufferR; \
+	pos = v->pos; \
+	posFrac = v->posFrac; \
 
 #define GET_MIXER_VARS_RAMP \
-	const uint64_t SFrq = v->SFrq; \
-	audioMixL = audio.mixBufferL; \
-	audioMixR = audio.mixBufferR; \
-	CDA_LVolIP = v->SLVolIP; \
-	CDA_RVolIP = v->SRVolIP; \
-	realPos = v->SPos; \
-	pos = v->SPosDec; \
+	const uint64_t delta = v->delta; \
+	fMixBufferL = audio.fMixBufferL; \
+	fMixBufferR = audio.fMixBufferR; \
+	fVolLDelta = v->fVolDeltaL; \
+	fVolRDelta = v->fVolDeltaR; \
+	pos = v->pos; \
+	posFrac = v->posFrac; \
 
 #define GET_MIXER_VARS_MONO_RAMP \
-	const uint64_t SFrq = v->SFrq; \
-	audioMixL = audio.mixBufferL; \
-	audioMixR = audio.mixBufferR; \
-	CDA_LVolIP = v->SLVolIP; \
-	realPos = v->SPos; \
-	pos = v->SPosDec; \
-
-#else
-
-#define GET_MIXER_VARS \
-	const uint32_t SFrq = v->SFrq; \
-	audioMixL = audio.mixBufferL; \
-	audioMixR = audio.mixBufferR; \
-	realPos = v->SPos; \
-	pos = v->SPosDec; \
-
-#define GET_MIXER_VARS_RAMP \
-	const uint32_t SFrq = v->SFrq; \
-	audioMixL = audio.mixBufferL; \
-	audioMixR = audio.mixBufferR; \
-	CDA_LVolIP = v->SLVolIP; \
-	CDA_RVolIP = v->SRVolIP; \
-	realPos = v->SPos; \
-	pos = v->SPosDec; \
-
-#define GET_MIXER_VARS_MONO_RAMP \
-	const uint32_t SFrq = v->SFrq; \
-	audioMixL = audio.mixBufferL; \
-	audioMixR = audio.mixBufferR; \
-	CDA_LVolIP = v->SLVolIP; \
-	realPos = v->SPos; \
-	pos = v->SPosDec; \
-
-#endif
+	const uint64_t delta = v->delta; \
+	fMixBufferL = audio.fMixBufferL; \
+	fMixBufferR = audio.fMixBufferR; \
+	fVolLDelta = v->fVolDeltaL; \
+	pos = v->pos; \
+	posFrac = v->posFrac; \
 
 #define SET_BASE8 \
-	CDA_LinearAdr = v->SBase8; \
-	smpPtr = CDA_LinearAdr + realPos; \
+	base = v->base8; \
+	smpPtr = base + pos; \
 
 #define SET_BASE16 \
-	CDA_LinearAdr = v->SBase16; \
-	smpPtr = CDA_LinearAdr + realPos; \
+	base = v->base16; \
+	smpPtr = base + pos; \
 
 #define SET_BASE8_BIDI \
-	CDA_LinearAdr = v->SBase8; \
-	CDA_LinAdrRev = v->SRevBase8; \
+	base = v->base8; \
+	revBase = v->revBase8; \
 
 #define SET_BASE16_BIDI \
-	CDA_LinearAdr = v->SBase16; \
-	CDA_LinAdrRev = v->SRevBase16; \
+	base = v->base16; \
+	revBase = v->revBase16; \
 
 #define INC_POS \
-	pos += SFrq; \
-	smpPtr += pos >> MIXER_FRAC_BITS; \
-	pos &= MIXER_FRAC_MASK; \
+	posFrac += delta; \
+	smpPtr += posFrac >> MIXER_FRAC_BITS; \
+	posFrac &= MIXER_FRAC_MASK; \
 
 #define INC_POS_BIDI \
-	pos += CDA_IPValL; \
-	smpPtr += pos >> MIXER_FRAC_BITS; \
-	smpPtr += CDA_IPValH; \
-	pos &= MIXER_FRAC_MASK; \
+	posFrac += deltaLo; \
+	smpPtr += posFrac >> MIXER_FRAC_BITS; \
+	smpPtr += deltaHi; \
+	posFrac &= MIXER_FRAC_MASK; \
 
 #define SET_BACK_MIXER_POS \
-	v->SPosDec = pos; \
-	v->SPos = realPos; \
+	v->posFrac = posFrac; \
+	v->pos = pos; \
 
 /* ----------------------------------------------------------------------- */
 /*                          SAMPLE RENDERING MACROS                        */
 /* ----------------------------------------------------------------------- */
 
 #define VOLUME_RAMPING \
-	CDA_LVol += CDA_LVolIP; \
-	CDA_RVol += CDA_RVolIP; \
+	fVolL += fVolLDelta; \
+	fVolR += fVolRDelta; \
 
 #define VOLUME_RAMPING_MONO \
-	CDA_LVol += CDA_LVolIP; \
-
-// all the 64-bit MULs here convert to fast logic even on most 32-bit CPUs
+	fVolL += fVolLDelta; \
 
 #define RENDER_8BIT_SMP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = *smpPtr << (12+8); \
-	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	fSample = *smpPtr * (1.0f / 128.0f); \
+	*fMixBufferL++ += fSample * fVolL; \
+	*fMixBufferR++ += fSample * fVolR; \
 
 #define RENDER_8BIT_SMP_MONO \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = *smpPtr << (12+8); \
-	sample = ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixL++ += sample; \
-	*audioMixR++ += sample; \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	fSample = (*smpPtr * (1.0f / 128.0f)) * fVolL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample; \
 
 #define RENDER_16BIT_SMP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = *smpPtr << 12; \
-	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	fSample = *smpPtr * (1.0f / 32768.0f); \
+	*fMixBufferL++ += fSample * fVolL; \
+	*fMixBufferR++ += fSample * fVolR; \
 
 #define RENDER_16BIT_SMP_MONO \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = *smpPtr << 12; \
-	sample = ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixL++ += sample; \
-	*audioMixR++ += sample; \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	fSample = (*smpPtr * (1.0f / 32768.0f)) * fVolL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample; \
 
 // 4-tap cubic spline interpolation
 
-// in: int32_t s0,s1,s2,s3 = -128..127 | f = 0..65535 (frac) | out: 16-bit s0 (will exceed 16-bits because of overshoot)
 #define INTERPOLATE8(s0, s1, s2, s3, f) \
 { \
-	const int16_t *t = cubicSplineTable + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
-	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> (CUBIC_QUANTSHIFT-8); \
+	const float *t = (float *)fCubicSplineTable + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
+	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) * (1.0f / 128.0f); \
 } \
 
-// in: int32_t s0,s1,s2,s3 = -32768..32767 | f = 0..65535 (frac) | out: 16-bit s0 (will exceed 16-bits because of overshoot)
 #define INTERPOLATE16(s0, s1, s2, s3, f) \
 { \
-	const int16_t *t = cubicSplineTable + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
-	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) >> CUBIC_QUANTSHIFT; \
+	const float *t = (float *)fCubicSplineTable + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
+	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) * (1.0f / 32768.0f); \
 } \
 
 /* 8bitbubsy: It may look like we are potentially going out of bounds by looking up sample point
@@ -179,128 +143,87 @@
 */
 
 #define RENDER_8BIT_SMP_INTRP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[-1]; \
-	sample2 = smpPtr[0]; \
-	sample3 = smpPtr[1]; \
-	sample4 = smpPtr[2]; \
-	INTERPOLATE8(sample, sample2, sample3, sample4, pos) \
-	sample <<= 12; \
-	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	fSample = smpPtr[-1]; \
+	fSample2 = smpPtr[0]; \
+	fSample3 = smpPtr[1]; \
+	fSample4 = smpPtr[2]; \
+	INTERPOLATE8(fSample, fSample2, fSample3, fSample4, posFrac) \
+	*fMixBufferL++ += fSample * fVolL; \
+	*fMixBufferR++ += fSample * fVolR; \
 
 #define RENDER_8BIT_SMP_MONO_INTRP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[-1]; \
-	sample2 = smpPtr[0]; \
-	sample3 = smpPtr[1]; \
-	sample4 = smpPtr[2]; \
-	INTERPOLATE8(sample, sample2, sample3, sample4, pos) \
-	sample <<= 12; \
-	sample = ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixL++ += sample; \
-	*audioMixR++ += sample; \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	fSample = smpPtr[-1]; \
+	fSample2 = smpPtr[0]; \
+	fSample3 = smpPtr[1]; \
+	fSample4 = smpPtr[2]; \
+	INTERPOLATE8(fSample, fSample2, fSample3, fSample4, posFrac) \
+	fSample *= fVolL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample; \
 
 #define RENDER_16BIT_SMP_INTRP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[-1]; \
-	sample2 = smpPtr[0]; \
-	sample3 = smpPtr[1]; \
-	sample4 = smpPtr[2]; \
-	INTERPOLATE16(sample, sample2, sample3, sample4, pos) \
-	sample <<= 12; \
-	*audioMixL++ += ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixR++ += ((int64_t)sample * CDA_RVol) >> 32; \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	fSample = smpPtr[-1]; \
+	fSample2 = smpPtr[0]; \
+	fSample3 = smpPtr[1]; \
+	fSample4 = smpPtr[2]; \
+	INTERPOLATE16(fSample, fSample2, fSample3, fSample4, posFrac) \
+	*fMixBufferL++ += fSample * fVolL; \
+	*fMixBufferR++ += fSample * fVolR; \
 
 #define RENDER_16BIT_SMP_MONO_INTRP \
-	assert(smpPtr >= CDA_LinearAdr && smpPtr < CDA_LinearAdr+v->SLen); \
-	sample = smpPtr[-1]; \
-	sample2 = smpPtr[0]; \
-	sample3 = smpPtr[1]; \
-	sample4 = smpPtr[2]; \
-	INTERPOLATE16(sample, sample2, sample3, sample4, pos) \
-	sample <<= 12; \
-	sample = ((int64_t)sample * CDA_LVol) >> 32; \
-	*audioMixL++ += sample; \
-	*audioMixR++ += sample; \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	fSample = smpPtr[-1]; \
+	fSample2 = smpPtr[0]; \
+	fSample3 = smpPtr[1]; \
+	fSample4 = smpPtr[2]; \
+	INTERPOLATE16(fSample, fSample2, fSample3, fSample4, posFrac) \
+	fSample *= fVolL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample; \
 
 /* ----------------------------------------------------------------------- */
 /*                      SAMPLES-TO-MIX LIMITING MACROS                     */
 /* ----------------------------------------------------------------------- */
 
-#if defined _WIN64 || defined __amd64__
-
 #define LIMIT_MIX_NUM \
-	i = (v->SLen - 1) - realPos; \
+	i = (v->end - 1) - pos; \
 	if (i > 65535) \
 		i = 65535; \
 	\
-	i = (i << 16) | ((uint32_t)(pos >> 16) ^ 0xFFFF); \
-	samplesToMix = ((int64_t)i * v->SFrqRev) >> 32; \
+	i = (i << 16) | ((uint32_t)(posFrac >> 16) ^ 0xFFFF); \
+	samplesToMix = ((int64_t)i * v->revDelta) >> 32; \
 	samplesToMix++; \
 	\
-	if (samplesToMix > CDA_BytesLeft) \
-		samplesToMix = CDA_BytesLeft; \
+	if (samplesToMix > samplesLeft) \
+		samplesToMix = samplesLeft; \
 
 #define START_BIDI \
 	if (v->backwards) \
 	{ \
-		delta = 0 - SFrq; \
-		assert(realPos >= v->SRepS && realPos < v->SLen); \
-		realPos = ~realPos; \
-		smpPtr = CDA_LinAdrRev + realPos; \
-		pos ^= MIXER_FRAC_MASK; \
+		tmpDelta = 0 - delta; \
+		assert(pos >= v->loopStart && pos < v->end); \
+		pos = ~pos; \
+		smpPtr = revBase + pos; \
+		posFrac ^= MIXER_FRAC_MASK; \
 	} \
 	else \
 	{ \
-		delta = SFrq; \
-		assert(realPos >= 0 && realPos < v->SLen); \
-		smpPtr = CDA_LinearAdr + realPos; \
+		tmpDelta = delta; \
+		assert(pos >= 0 && pos < v->end); \
+		smpPtr = base + pos; \
 	} \
 	\
-	const int32_t CDA_IPValH = (int64_t)delta >> MIXER_FRAC_BITS; \
-	const uint32_t CDA_IPValL = delta & MIXER_FRAC_MASK; \
-
-#else
-
-#define LIMIT_MIX_NUM \
-	i = (v->SLen - 1) - realPos; \
-	if (i > (1UL << (32-MIXER_FRAC_BITS))-1) \
-		i = (1UL << (32-MIXER_FRAC_BITS))-1; \
-	\
-	i = (i << MIXER_FRAC_BITS) | (pos ^ MIXER_FRAC_MASK); \
-	samplesToMix = ((int64_t)i * v->SFrqRev) >> 32; \
-	samplesToMix++; \
-	\
-	if (samplesToMix > CDA_BytesLeft) \
-		samplesToMix = CDA_BytesLeft; \
-
-#define START_BIDI \
-	if (v->backwards) \
-	{ \
-		delta = 0 - SFrq; \
-		assert(realPos >= v->SRepS && realPos < v->SLen); \
-		realPos = ~realPos; \
-		smpPtr = CDA_LinAdrRev + realPos; \
-		pos ^= MIXER_FRAC_MASK; \
-	} \
-	else \
-	{ \
-		delta = SFrq; \
-		assert(realPos >= 0 && realPos < v->SLen); \
-		smpPtr = CDA_LinearAdr + realPos; \
-	} \
-	\
-	const int32_t CDA_IPValH = (int32_t)delta >> MIXER_FRAC_BITS; \
-	const uint32_t CDA_IPValL = delta & MIXER_FRAC_MASK; \
-
-#endif
+	const int32_t deltaHi = (int64_t)tmpDelta >> MIXER_FRAC_BITS; \
+	const uint32_t deltaLo = tmpDelta & MIXER_FRAC_MASK; \
 
 #define LIMIT_MIX_NUM_RAMP \
-	if (v->SVolIPLen == 0) \
+	if (v->volRampSamples == 0) \
 	{ \
-		CDA_LVolIP = 0; \
-		CDA_RVolIP = 0; \
+		fVolLDelta = 0; \
+		fVolRDelta = 0; \
 		\
 		if (v->isFadeOutVoice) \
 		{ \
@@ -310,16 +233,16 @@
 	} \
 	else \
 	{ \
-		if (samplesToMix > v->SVolIPLen) \
-			samplesToMix = v->SVolIPLen; \
+		if (samplesToMix > v->volRampSamples) \
+			samplesToMix = v->volRampSamples; \
 		\
-		v->SVolIPLen -= samplesToMix; \
+		v->volRampSamples -= samplesToMix; \
 	} \
 
 #define LIMIT_MIX_NUM_MONO_RAMP \
-	if (v->SVolIPLen == 0) \
+	if (v->volRampSamples == 0) \
 	{ \
-		CDA_LVolIP = 0; \
+		fVolLDelta = 0; \
 		if (v->isFadeOutVoice) \
 		{ \
 			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \
@@ -328,41 +251,41 @@
 	} \
 	else \
 	{ \
-		if (samplesToMix > v->SVolIPLen) \
-			samplesToMix = v->SVolIPLen; \
+		if (samplesToMix > v->volRampSamples) \
+			samplesToMix = v->volRampSamples; \
 		\
-		v->SVolIPLen -= samplesToMix; \
+		v->volRampSamples -= samplesToMix; \
 	} \
 
 #define HANDLE_SAMPLE_END \
-	realPos = (int32_t)(smpPtr - CDA_LinearAdr); \
-	if (realPos >= v->SLen) \
+	pos = (int32_t)(smpPtr - base); \
+	if (pos >= v->end) \
 	{ \
 		v->active = false; \
 		return; \
 	} \
 
 #define WRAP_LOOP \
-	realPos = (int32_t)(smpPtr - CDA_LinearAdr); \
-	while (realPos >= v->SLen) \
-		realPos -= v->SRepL; \
-	smpPtr = CDA_LinearAdr + realPos; \
+	pos = (int32_t)(smpPtr - base); \
+	while (pos >= v->end) \
+		pos -= v->loopLength; \
+	smpPtr = base + pos; \
 
 #define WRAP_BIDI_LOOP \
-	while (realPos >= v->SLen) \
+	while (pos >= v->end) \
 	{ \
-		realPos -= v->SRepL; \
+		pos -= v->loopLength; \
 		v->backwards ^= 1; \
 	} \
 
 #define END_BIDI \
 	if (v->backwards) \
 	{ \
-		pos ^= MIXER_FRAC_MASK; \
-		realPos = ~(int32_t)(smpPtr - CDA_LinAdrRev); \
+		posFrac ^= MIXER_FRAC_MASK; \
+		pos = ~(int32_t)(smpPtr - revBase); \
 	} \
 	else \
 	{ \
-		realPos = (int32_t)(smpPtr - CDA_LinearAdr); \
+		pos = (int32_t)(smpPtr - base); \
 	} \
 

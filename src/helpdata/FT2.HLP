@@ -781,13 +781,6 @@ Enables the anti-click system in the audio mixer (FT2.08+).
 Please note that original FT2 can't load this config entry,
 clone only.
 
->@X040@C001Dithering:
->@X060@C002
-Works for 16-bit audio mode only.
-Applies random scaled values to the mixed samples before truncating to 16-bit.
-This should in theory lower the quantization noise.
-Also applies for WAV rendering.
-
 >@X040@C001Amplification:
 >@X060@C002
 Amplifies the volume when mixing. If you set this one too high, you'll

@@ -68,7 +68,7 @@ void usleep(uint32_t usec)
 	else
 	{
 		// this prevents a 64-bit MUL (will not overflow with the ranges we use anyway)
-		lpDueTime.HighPart = 0xFFFFFFFF;
+		lpDueTime.HighPart = UINT32_MAX;
 		lpDueTime.LowPart = (DWORD)(-10 * (int32_t)usec);
 
 		NtDelayExecution(false, &lpDueTime);

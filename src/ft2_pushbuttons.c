@@ -363,7 +363,7 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{  70,  87, 58, 16, 0, 0, "Set path",        NULL,    NULL,             pbDiskOpSetPath },
 	{  70, 104, 58, 16, 0, 0, "Show all",        NULL,    NULL,             pbDiskOpShowAll },
 	{  70, 121, 58, 19, 0, 0, "Exit",            NULL,    NULL,             pbDiskOpExit },
-#ifdef _WIN32
+#ifdef _WIN32 // partition letters
 	{ 134,   2, 31, 13, 0, 0, ".\001",           NULL,    NULL,             pbDiskOpParent },
 	{ 134,  16, 31, 12, 0, 0, "\\",              NULL,    NULL,             pbDiskOpRoot },
 	{ 134,  29, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive1 },
@@ -383,7 +383,7 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 
 	// ------ WAV RENDERER PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,         funcOnUp
-	{   3, 111, 73, 43, 0, 0, "RECORD",          NULL,    NULL,               pbWavRender },
+	{   3, 111, 73, 43, 0, 0, "Export",          NULL,    NULL,               pbWavRender },
 	{   3, 155, 73, 16, 0, 0, "Exit",            NULL,    NULL,               pbWavExit },
 	{ 253, 114, 18, 13, 1, 6, ARROW_UP_STRING,   NULL,    pbWavFreqUp,        NULL },
 	{ 270, 114, 18, 13, 1, 6, ARROW_DOWN_STRING, NULL,    pbWavFreqDown,      NULL },

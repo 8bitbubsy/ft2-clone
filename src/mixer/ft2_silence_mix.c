@@ -4,28 +4,24 @@
 
 void silenceMixRoutine(voice_t *v, int32_t numSamples)
 {
-	int32_t realPos;
-#if defined _WIN64 || defined __amd64__
-	uint64_t pos;
-#else
-	uint32_t pos;
-#endif
+	int32_t pos;
+	uint64_t posFrac;
 
 	SILENCE_MIX_INC_POS
 
-	if (v->SLoopType == 0)
+	if (v->loopType == LOOP_DISABLED)
 	{
 		SILENCE_MIX_NO_LOOP
 	}
-	else if (v->SLoopType == 1)
+	else if (v->loopType == LOOP_FORWARD)
 	{
 		SILENCE_MIX_LOOP
 	}
-	else
+	else // pingpong loop
 	{
 		SILENCE_MIX_BIDI_LOOP
 	}
 
-	v->SPosDec = pos;
-	v->SPos = realPos;
+	v->posFrac = posFrac;
+	v->pos = pos;
 }

@@ -153,13 +153,8 @@ static void loadConfigFromBuffer(void)
 		config.recQuantRes = 16;
 	}
 
-#if defined __amd64__ || defined _WIN64
 	if (config.audioFreq != 44100 && config.audioFreq != 48000 && config.audioFreq != 96000 && config.audioFreq != 192000)
 		config.audioFreq = 48000;
-#else
-	if (config.audioFreq != 44100 && config.audioFreq != 48000)
-		config.audioFreq = 48000;
-#endif
 
 	if (config.audioInputFreq <= 1) // default value from FT2 (this was cdr_Sync) - set defaults
 		config.audioInputFreq = INPUT_FREQ_48KHZ;
@@ -838,10 +833,8 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	{
 		         case 44100:  tmpID = RB_CONFIG_AUDIO_44KHZ;  break;
 		default: case 48000:  tmpID = RB_CONFIG_AUDIO_48KHZ;  break;
-#if defined __amd64__ || defined _WIN64
 		         case 96000:  tmpID = RB_CONFIG_AUDIO_96KHZ;  break;
 		         case 192000: tmpID = RB_CONFIG_AUDIO_192KHZ; break;
-#endif
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -873,11 +866,9 @@ static void setConfigIOCheckButtonStates(void)
 {
 	checkBoxes[CB_CONF_INTERPOLATION].checked = config.interpolation;
 	checkBoxes[CB_CONF_VOL_RAMP].checked = (config.specialFlags & NO_VOLRAMP_FLAG) ? false : true;
-	checkBoxes[CB_CONF_DITHER].checked = (config.specialFlags2 & DITHERED_AUDIO) ? true : false;
 
 	showCheckBox(CB_CONF_INTERPOLATION);
 	showCheckBox(CB_CONF_VOL_RAMP);
-	showCheckBox(CB_CONF_DITHER);
 }
 
 static void setConfigLayoutCheckButtonStates(void)
@@ -1162,18 +1153,16 @@ void showConfigScreen(void)
 			textOutShadow(406,  90, PAL_FORGRND, PAL_DSKTOP2, "16-bit (default)");
 			textOutShadow(406, 104, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
 
-			textOutShadow(390, 120, PAL_FORGRND, PAL_DSKTOP2, "Mixing device ctrl.:");
+			textOutShadow(390, 120, PAL_FORGRND, PAL_DSKTOP2, "Mixer settings:");
 			textOutShadow(406, 134, PAL_FORGRND, PAL_DSKTOP2, "Interpolation");
 			textOutShadow(406, 147, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
-			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "Dithering");
 
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Mixing frequency:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
 			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz (default)");
-#if defined __amd64__ || defined _WIN64
 			textOutShadow(525,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
 			textOutShadow(525,  59, PAL_FORGRND, PAL_DSKTOP2, "192000Hz");
-#endif
+
 			textOutShadow(509,  76, PAL_FORGRND, PAL_DSKTOP2, "Frequency table:");
 			textOutShadow(525,  90, PAL_FORGRND, PAL_DSKTOP2, "Amiga freq. table");
 			textOutShadow(525, 104, PAL_FORGRND, PAL_DSKTOP2, "Linear freq. table");
@@ -1414,7 +1403,6 @@ void hideConfigScreen(void)
 	hideRadioButtonGroup(RB_GROUP_CONFIG_FREQ_TABLE);
 	hideCheckBox(CB_CONF_INTERPOLATION);
 	hideCheckBox(CB_CONF_VOL_RAMP);
-	hideCheckBox(CB_CONF_DITHER);
 	hidePushButton(PB_CONFIG_AUDIO_RESCAN);
 	hidePushButton(PB_CONFIG_AUDIO_OUTPUT_DOWN);
 	hidePushButton(PB_CONFIG_AUDIO_OUTPUT_UP);
@@ -1600,10 +1588,6 @@ void rbConfigAudio24bit(void)
 	config.specialFlags &= ~BITDEPTH_16;
 	config.specialFlags |=  BITDEPTH_32;
 
-	checkBoxes[CB_CONF_DITHER].checked = false;
-	if (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
-		drawCheckBox(CB_CONF_DITHER);
-
 	setNewAudioSettings();
 }
 
@@ -1678,12 +1662,6 @@ void cbConfigVolRamp(void)
 {
 	config.specialFlags ^= NO_VOLRAMP_FLAG;
 	audioSetVolRamp((config.specialFlags & NO_VOLRAMP_FLAG) ? false : true);
-}
-
-void cbConfigDithering(void)
-{
-	config.specialFlags2 ^= DITHERED_AUDIO;
-	updateSendAudSamplesRoutine(true);
 }
 
 // CONFIG LAYOUT

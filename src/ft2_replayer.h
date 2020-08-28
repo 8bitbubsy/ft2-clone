@@ -13,6 +13,10 @@ enum
 	IS_Pan = 8, // set panning
 	IS_QuickVol = 16, // 5ms volramp instead of tick ms
 
+	LOOP_DISABLED = 0,
+	LOOP_FORWARD = 1,
+	LOOP_PINGPONG = 2,
+
 	// tracker playback modes
 	PLAYMODE_IDLE = 0,
 	PLAYMODE_EDIT = 1,
@@ -204,7 +208,7 @@ typedef struct stmTyp_t
 	uint16_t outPeriod, realPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
 	uint16_t envVCnt, envVAmp, envPCnt, envPAmp, eVibAmp, eVibSweep;
 	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;
-	uint32_t finalVol;
+	float fFinalVol;
 	int32_t smpStartPos;
 	sampleTyp *smpPtr;
 	instrTyp *instrSeg;
@@ -234,7 +238,7 @@ typedef struct syncedChannel_t // used for audio/video sync queue
 	uint8_t status, sampleNr, instrNr;
 	uint16_t finalPeriod;
 	int32_t smpStartPos;
-	uint32_t finalVol;
+	float fFinalVol;
 } syncedChannel_t;
 
 void fixSongName(void); // removes spaces from right side of song name
@@ -242,14 +246,12 @@ void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp nam
 void calcReplayRate(int32_t rate);
 void tuneSample(sampleTyp *s, int32_t midCFreq);
 
+void calcRevMixDeltaTable(void);
 void calcReplayerLogTab(void);
 double dPeriod2Hz(uint16_t period);
 
-#if defined _WIN64 || defined __amd64__
 int64_t getMixerDelta(uint16_t period);
-#else
-int32_t getMixerDelta(uint16_t period);
-#endif
+uint32_t getRevMixerDelta(uint16_t period);
 
 int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote); // for piano in Instr. Ed.
 
@@ -281,7 +283,7 @@ void delta2Samp(int8_t *p, int32_t len, uint8_t typ);
 void samp2Delta(int8_t *p, int32_t len, uint8_t typ);
 void setPatternLen(uint16_t nr, int16_t len);
 void setFrqTab(bool linear);
-void mainPlayer(void); // periodically called from audio callback
+void tickReplayer(void); // periodically called from audio callback
 void resetChannels(void);
 bool patternEmpty(uint16_t nr);
 int16_t getUsedSamples(int16_t nr);

@@ -23,27 +23,12 @@
 #include "ft2_tables.h"
 #include "ft2_structs.h"
 
-enum
-{
-	LOOP_NONE = 0,
-	LOOP_FORWARD = 1,
-	LOOP_PINGPONG = 2
-};
-
 #define SCOPE_HEIGHT 36
-
-// data to be read from main update thread during sample trigger
-typedef struct scopeState_t
-{
-	int8_t *pek;
-	uint8_t typ;
-	int32_t len, repS, repL, playOffset;
-} scopeState_t;
 
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
 static int32_t oldPeriod;
-static uint32_t oldDFrq, scopeTimeLen, scopeTimeLenFrac;
-static uint64_t oldSFrq, timeNext64, timeNext64Frac;
+static uint32_t oldDrawDelta, scopeTimeLen, scopeTimeLenFrac;
+static uint64_t oldDelta, timeNext64, timeNext64Frac;
 static volatile scope_t scope[MAX_VOICES];
 static SDL_Thread *scopeThread;
 
@@ -52,14 +37,14 @@ lastChInstr_t lastChInstr[MAX_VOICES]; // global
 void resetCachedScopeVars(void)
 {
 	oldPeriod = -1;
-	oldSFrq = 0;
-	oldDFrq = 0;
+	oldDelta = 0;
+	oldDrawDelta = 0;
 }
 
 int32_t getSamplePosition(uint8_t ch)
 {
 	volatile bool active, sampleIs16Bit;
-	volatile int32_t pos, len;
+	volatile int32_t pos, end;
 	volatile scope_t *sc;
 
 	if (ch >= song.antChn)
@@ -69,14 +54,14 @@ int32_t getSamplePosition(uint8_t ch)
 
 	// cache some stuff
 	active = sc->active;
-	pos = sc->SPos;
-	len = sc->SLen;
+	pos = sc->pos;
+	end = sc->end;
 	sampleIs16Bit = sc->sampleIs16Bit;
 
-	if (!active || len == 0)
+	if (!active || end == 0)
 		return -1;
 
-	if (pos >= 0 && pos < len)
+	if (pos >= 0 && pos < end)
 	{
 		if (sampleIs16Bit)
 			pos <<= 1;
@@ -114,7 +99,7 @@ static void setChannel(int32_t nr, bool on)
 		ch->realVol = 0;
 		ch->outVol = 0;
 		ch->oldVol = 0;
-		ch->finalVol = 0;
+		ch->fFinalVol = 0.0f;
 		ch->outPan = 128;
 		ch->oldPan = 128;
 		ch->finalPan = 128;
@@ -320,27 +305,30 @@ static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 {
 	bool sampleIs16Bit;
 	uint8_t loopType;
-	int32_t length, loopBegin, loopLength;
+	int32_t length, loopStart, loopLength, loopEnd;
 	volatile scope_t *sc;
 	scope_t tempState;
 
 	sc = &scope[ch];
 
 	length = s->len;
-	loopBegin = s->repS;
+	loopStart = s->repS;
 	loopLength = s->repL;
+	loopEnd = s->repS + s->repL;
 	loopType = s->typ & 3;
 	sampleIs16Bit = (s->typ >> 4) & 1;
 
 	if (sampleIs16Bit)
 	{
 		assert(!(length & 1));
-		assert(!(loopBegin & 1));
+		assert(!(loopStart & 1));
 		assert(!(loopLength & 1));
+		assert(!(loopEnd & 1));
 
 		length >>= 1;
-		loopBegin >>= 1;
+		loopStart >>= 1;
 		loopLength >>= 1;
+		loopEnd >>= 1;
 	}
 
 	if (s->pek == NULL || length < 1)
@@ -353,22 +341,22 @@ static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 		loopType = 0;
 
 	if (sampleIs16Bit)
-		tempState.sampleData16 = (const int16_t *)s->pek;
+		tempState.base16 = (const int16_t *)s->pek;
 	else
-		tempState.sampleData8 = (const int8_t *)s->pek;
+		tempState.base8 = s->pek;
 
 	tempState.sampleIs16Bit = sampleIs16Bit;
 	tempState.loopType = loopType;
 
-	tempState.backwards = false;
-	tempState.SLen = (loopType > 0) ? (loopBegin + loopLength) : length;
-	tempState.SRepS = loopBegin;
-	tempState.SRepL = loopLength;
-	tempState.SPos = playOffset;
-	tempState.SPosDec = 0; // position fraction
+	tempState.direction = 1; // forwards
+	tempState.end = (loopType > 0) ? loopEnd : length;
+	tempState.loopStart = loopStart;
+	tempState.loopLength = loopLength;
+	tempState.pos = playOffset;
+	tempState.posFrac = 0;
 	
-	// if 9xx position overflows, shut down scopes
-	if (tempState.SPos >= tempState.SLen)
+	// if position overflows (f.ex. through 9xx command), shut down scopes
+	if (tempState.pos >= tempState.end)
 	{
 		sc->active = false;
 		return;
@@ -376,9 +364,9 @@ static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 
 	// these has to be read
 	tempState.wasCleared = sc->wasCleared;
-	tempState.SFrq = sc->SFrq;
-	tempState.DFrq = sc->DFrq;
-	tempState.SVol = sc->SVol;
+	tempState.delta = sc->delta;
+	tempState.drawDelta = sc->drawDelta;
+	tempState.vol = sc->vol;
 
 	tempState.active = true;
 
@@ -400,59 +388,54 @@ static void updateScopes(void)
 	volatile scope_t *sc = scope;
 	for (int32_t i = 0; i < song.antChn; i++, sc++)
 	{
-		scope_t tempState = *sc; // cache it
-		if (!tempState.active)
+		scope_t s = *sc; // cache it
+		if (!s.active)
 			continue; // scope is not active, no need
 
 		// scope position update
 
-		tempState.SPosDec += tempState.SFrq;
-		const uint32_t posAdd = tempState.SPosDec >> SCOPE_FRAC_BITS;
-		tempState.SPosDec &= SCOPE_FRAC_MASK;
-
-		if (tempState.backwards)
-			tempState.SPos -= posAdd;
-		else
-			tempState.SPos += posAdd;
+		s.posFrac += s.delta;
+		s.pos += (int32_t)(s.posFrac >> SCOPE_FRAC_BITS) * s.direction;
+		s.posFrac &= SCOPE_FRAC_MASK;
 
 		// handle loop wrapping or sample end
-		if (tempState.backwards && tempState.SPos < tempState.SRepS) // sampling backwards (definitely pingpong loop)
+		if (s.direction == -1 && s.pos < s.loopStart) // sampling backwards (definitely pingpong loop)
 		{
-			tempState.backwards = false; // change direction to forwards
+			s.direction = 1; // change direction to forwards
 
-			if (tempState.SRepL >= 2)
-				tempState.SPos = tempState.SRepS + ((tempState.SRepS - tempState.SPos - 1) % tempState.SRepL);
+			if (s.loopLength >= 2)
+				s.pos = s.loopStart + ((s.loopStart - s.pos - 1) % s.loopLength);
 			else
-				tempState.SPos = tempState.SRepS;
+				s.pos = s.loopStart;
 
-			assert(tempState.SPos >= tempState.SRepS && tempState.SPos < tempState.SLen);
+			assert(s.pos >= s.loopStart && s.pos < s.end);
 		}
-		else if (tempState.SPos >= tempState.SLen)
+		else if (s.pos >= s.end)
 		{
-			if (tempState.SRepL >= 2)
-				loopOverflowVal = (tempState.SPos - tempState.SLen) % tempState.SRepL;
+			if (s.loopLength >= 2)
+				loopOverflowVal = (s.pos - s.end) % s.loopLength;
 			else
 				loopOverflowVal = 0;
 
-			if (tempState.loopType == LOOP_NONE)
+			if (s.loopType == LOOP_DISABLED)
 			{
-				tempState.active = false;
+				s.active = false;
 			}
-			else if (tempState.loopType == LOOP_FORWARD)
+			else if (s.loopType == LOOP_FORWARD)
 			{
-				tempState.SPos = tempState.SRepS + loopOverflowVal;
-				assert(tempState.SPos >= tempState.SRepS && tempState.SPos < tempState.SLen);
+				s.pos = s.loopStart + loopOverflowVal;
+				assert(s.pos >= s.loopStart && s.pos < s.end);
 			}
 			else // pingpong loop
 			{
-				tempState.backwards = true; // change direction to backwards
-				tempState.SPos = (tempState.SLen - 1) - loopOverflowVal;
-				assert(tempState.SPos >= tempState.SRepS && tempState.SPos < tempState.SLen);
+				s.direction = -1; // change direction to backwards
+				s.pos = (s.end - 1) - loopOverflowVal;
+				assert(s.pos >= s.loopStart && s.pos < s.end);
 			}
 		}
-		assert(tempState.SPos >= 0);
+		assert(s.pos >= 0);
 
-		*sc = tempState; // update scope state
+		*sc = s; // update scope state
 	}
 	scopesUpdatingFlag = false;
 }
@@ -490,7 +473,7 @@ void drawScopes(void)
 		}
 
 		const scope_t s = scope[i]; // cache scope to lower thread race condition issues
-		if (s.active && s.SVol > 0 && !audio.locked)
+		if (s.active && s.vol > 0 && !audio.locked)
 		{
 			// scope is active
 			scope[i].wasCleared = false;
@@ -550,7 +533,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 		status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
-			sc->SVol = (int8_t)((((ch->finalVol >> 6) * SCOPE_HEIGHT)) >> 24); // rounded
+			sc->vol = (int32_t)((ch->fFinalVol * SCOPE_HEIGHT) + 0.5f); // rounded
 
 		if (status & IS_Period)
 		{
@@ -563,14 +546,14 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 				const double dHz = dPeriod2Hz(period);
 
 				const double dScopeRateFactor = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-				oldSFrq = (int64_t)((dHz * dScopeRateFactor) + 0.5); // Hz -> rounded fixed-point delta
+				oldDelta = (int64_t)((dHz * dScopeRateFactor) + 0.5); // Hz -> rounded fixed-point delta
 
 				const double dRelativeHz = dHz * (1.0 / (8363.0 / 2.0));
-				oldDFrq = (int32_t)((dRelativeHz * SCOPE_DRAW_FRAC_SCALE) + 0.5); // Hz -> rounded fixed-point draw delta
+				oldDrawDelta = (int32_t)((dRelativeHz * SCOPE_DRAW_FRAC_SCALE) + 0.5); // Hz -> rounded fixed-point draw delta
 			}
 
-			sc->SFrq = oldSFrq;
-			sc->DFrq = oldDFrq;
+			sc->delta = oldDelta;
+			sc->drawDelta = oldDrawDelta;
 		}
 
 		if (status & IS_NyTon)
@@ -626,9 +609,9 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 		// update next tick time
 		timeNext64 += scopeTimeLen;
 		timeNext64Frac += scopeTimeLenFrac;
-		if (timeNext64Frac > 0xFFFFFFFF)
+		if (timeNext64Frac > UINT32_MAX)
 		{
-			timeNext64Frac &= 0xFFFFFFFF;
+			timeNext64Frac &= UINT32_MAX;
 			timeNext64++;
 		}
 	}

@@ -693,9 +693,9 @@ void initializeScrollBars(void)
 {
 	for (int32_t i = 0; i < NUM_SCROLLBARS; i++)
 	{
-		scrollBars[i].oldEnd = 0xFFFFFFFF;
-		scrollBars[i].oldPage = 0xFFFFFFFF;
-		scrollBars[i].oldPos = 0xFFFFFFFF;
+		scrollBars[i].oldEnd = UINT32_MAX;
+		scrollBars[i].oldPage = UINT32_MAX;
+		scrollBars[i].oldPos = UINT32_MAX;
 	}
 
 	// pattern editor

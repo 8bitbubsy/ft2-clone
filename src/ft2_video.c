@@ -764,9 +764,9 @@ void waitVBL(void)
 	// update next frame time
 	timeNext64 += video.vblankTimeLen;
 	timeNext64Frac += video.vblankTimeLenFrac;
-	if (timeNext64Frac > 0xFFFFFFFF)
+	if (timeNext64Frac > UINT32_MAX)
 	{
-		timeNext64Frac &= 0xFFFFFFFF;
+		timeNext64Frac &= UINT32_MAX;
 		timeNext64++;
 	}
 }

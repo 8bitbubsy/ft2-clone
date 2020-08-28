@@ -11,14 +11,6 @@ enum
 	FREQ_TABLE_AMIGA = 1,
 };
 
-/* Use 16 on non-x86_64 platforms so that we can avoid a
-** 64-bit division in the outside mixer loop. x86_64 users
-** are lucky and will get double the fractional delta precision.
-** This is beneficial in 96kHz/192kHz mode, where deltas are
-** lower in value.
-*/
-#if defined _WIN64 || defined __amd64__
-
 #define MIN_AUDIO_FREQ 44100
 #define MAX_AUDIO_FREQ 192000
 
@@ -26,20 +18,9 @@ enum
 #define MIXER_FRAC_SCALE (1ULL << MIXER_FRAC_BITS)
 #define MIXER_FRAC_MASK (MIXER_FRAC_SCALE-1)
 
-#else
-
-#define MIN_AUDIO_FREQ 44100
-#define MAX_AUDIO_FREQ 48000
-
-#define MIXER_FRAC_BITS 16
-#define MIXER_FRAC_SCALE (1UL << MIXER_FRAC_BITS)
-#define MIXER_FRAC_MASK (MIXER_FRAC_SCALE-1)
-
-#endif
-
 #define MAX_AUDIO_DEVICES 99
 
-// for audio/video sync queue. (2^n-1 - don't change this! Queue buffer is already ~2.7MB in size)
+// for audio/video sync queue. (2^n-1 - don't change this! Queue buffer is already BIG in size)
 #define SYNC_QUEUE_LEN 4095
 
 typedef struct audio_t
@@ -48,32 +29,27 @@ typedef struct audio_t
 	char *inputDeviceNames[MAX_AUDIO_DEVICES], *outputDeviceNames[MAX_AUDIO_DEVICES];
 	volatile bool locked, resetSyncTickTimeFlag, volumeRampingFlag, interpolationFlag;
 	bool linearFreqTable, rescanAudioDevicesSupported;
-	int32_t inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
-	int32_t quickVolSizeVal, *mixBufferL, *mixBufferR, *mixBufferLUnaligned, *mixBufferRUnaligned;
-	int32_t rampQuickVolMul, rampSpeedValMul, rampSpeedValMulTab[MAX_BPM+1];
-	uint32_t freq;
-	uint32_t audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;
+	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
+	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;
 	uint64_t tickTime64, tickTime64Frac, tickTimeLengthTab[MAX_BPM+1];
-	double dAudioLatencyMs, dSamplesPerTick, dTickSampleCounter, dSpeedValTab[MAX_BPM+1];
+	float fRampQuickVolMul, fRampTickMul, fRampTickMulTab[MAX_BPM+1];
+	float *fMixBufferL, *fMixBufferR, *fMixBufferLUnaligned, *fMixBufferRUnaligned;
+	double dAudioLatencyMs, dSamplesPerTick, dTickSampleCounter, dSamplesPerTickTab[MAX_BPM+1];
+
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
 } audio_t;
 
 typedef struct
 {
-	const int8_t *SBase8, *SRevBase8;
-	const int16_t *SBase16, *SRevBase16;
+	const int8_t *base8, *revBase8;
+	const int16_t *base16, *revBase16;
 	bool active, backwards, isFadeOutVoice;
-	uint8_t mixFuncOffset, SPan, SLoopType;
-	int32_t SLVol1, SRVol1, SLVol2, SRVol2, SLVolIP, SRVolIP;
-	int32_t SVol, SPos, SLen, SRepS, SRepL;
-	uint32_t SVolIPLen, SFrqRev;
-
-#if defined _WIN64 || defined __amd64__
-	uint64_t SPosDec, SFrq;
-#else
-	uint32_t SPosDec, SFrq;
-#endif
+	uint8_t mixFuncOffset, pan, loopType;
+	int32_t pos, end, loopStart, loopLength;
+	uint32_t volRampSamples, revDelta;
+	uint64_t posFrac, delta;
+	float fVol, fDestVolL, fDestVolR, fVolL, fVolR, fVolDeltaL, fVolDeltaR;
 } voice_t;
 
 typedef struct pattSyncData_t
@@ -86,7 +62,7 @@ typedef struct pattSyncData_t
 typedef struct pattSync_t
 {
 	volatile int32_t readPos, writePos;
-	pattSyncData_t data[SYNC_QUEUE_LEN + 1];
+	pattSyncData_t data[SYNC_QUEUE_LEN+1];
 } pattSync_t;
 
 typedef struct chSyncData_t
@@ -98,7 +74,7 @@ typedef struct chSyncData_t
 typedef struct chSync_t
 {
 	volatile int32_t readPos, writePos;
-	chSyncData_t data[SYNC_QUEUE_LEN + 1];
+	chSyncData_t data[SYNC_QUEUE_LEN+1];
 } chSync_t;
 
 void resetCachedMixerVars(void);
@@ -135,8 +111,8 @@ void unlockAudio(void);
 void lockMixerCallback(void);
 void unlockMixerCallback(void);
 void updateSendAudSamplesRoutine(bool lockMixer);
-void mix_SaveIPVolumes(void);
-void mix_UpdateChannelVolPanFrq(void);
+void resetRampVolumes(void);
+void updateVoices(void);
 void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bitDepth);
 
 // in ft2_audio.c

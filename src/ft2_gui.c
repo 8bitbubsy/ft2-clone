@@ -218,7 +218,6 @@ bool setupGUI(void)
 	}
 
 	setPal16(palTable[config.cfg_StdPalNr], false);
-
 	seedAboutScreenRandom((uint32_t)time(NULL));
 	setupInitialTextBoxPointers();
 	setInitialTrimFlags();

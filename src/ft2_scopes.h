@@ -27,14 +27,13 @@ bool initScopes(void);
 typedef struct scope_t
 {
 	volatile bool active;
-	const int8_t *sampleData8;
-	const int16_t *sampleData16;
-	int8_t SVol;
-	bool wasCleared, sampleIs16Bit, backwards;
+	const int8_t *base8;
+	const int16_t *base16;
+	bool wasCleared, sampleIs16Bit;
 	uint8_t loopType;
-	int32_t SRepS, SRepL, SLen, SPos;
-	uint32_t DFrq;
-	uint64_t SFrq, SPosDec;
+	int32_t vol, loopStart, loopLength, end, pos, direction;
+	uint32_t drawDelta;
+	uint64_t delta, posFrac;
 } scope_t;
 
 typedef struct lastChInstr_t

@@ -17,7 +17,7 @@ extern const uint8_t ft2ByBadgesBMP[1916];
 extern const uint8_t ft2LogoBadgesBMP[6260];
 
 // ft2_bmp_mouse.c
-extern const uint8_t mouseCursorsBMP[3592];
+extern const uint8_t mouseCursorsBMP[3444];
 extern const uint8_t mouseCursorBusyClockBMP[1728];
 extern const uint8_t mouseCursorBusyGlassBMP[6136];
 

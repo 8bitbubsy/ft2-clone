@@ -25,7 +25,6 @@ extern const uint8_t font2Widths[128];
 extern pal16 palTable[12][16];
 extern const uint16_t chanWidths[6];
 extern const pattCoordsMouse_t pattCoordMouseTable[2][2][2];
-extern const int16_t sinusTables[256 * 5]; // for 3D stars in About screen
 extern const uint8_t noteTab1[96];
 extern const uint8_t noteTab2[96];
 extern const uint8_t hex2Dec[256];
