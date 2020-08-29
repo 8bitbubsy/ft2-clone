@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include "../ft2_audio.h"
+#include "ft2_cubic.h"
 
 /* ----------------------------------------------------------------------- */
 /*                          GENERAL MIXER MACROS                           */
@@ -118,18 +119,12 @@
 	*fMixBufferL++ += fSample; \
 	*fMixBufferR++ += fSample; \
 
-// 4-tap cubic spline interpolation
+// 4-tap cubic spline interpolation through LUT (mixer/ft2_cubic.c)
 
-#define INTERPOLATE8(s0, s1, s2, s3, f) \
+#define INTERPOLATE(LUT, s0, s1, s2, s3, f) \
 { \
-	const float *t = (float *)fCubicSplineTable + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
-	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) * (1.0f / 128.0f); \
-} \
-
-#define INTERPOLATE16(s0, s1, s2, s3, f) \
-{ \
-	const float *t = (float *)fCubicSplineTable + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
-	s0 = ((s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3])) * (1.0f / 32768.0f); \
+	const float *t = (const float *)LUT + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
+	s0 = (s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3]); \
 } \
 
 /* 8bitbubsy: It may look like we are potentially going out of bounds by looking up sample point
@@ -148,7 +143,7 @@
 	fSample2 = smpPtr[0]; \
 	fSample3 = smpPtr[1]; \
 	fSample4 = smpPtr[2]; \
-	INTERPOLATE8(fSample, fSample2, fSample3, fSample4, posFrac) \
+	INTERPOLATE(fCubicLUT8, fSample, fSample2, fSample3, fSample4, posFrac) \
 	*fMixBufferL++ += fSample * fVolL; \
 	*fMixBufferR++ += fSample * fVolR; \
 
@@ -158,7 +153,7 @@
 	fSample2 = smpPtr[0]; \
 	fSample3 = smpPtr[1]; \
 	fSample4 = smpPtr[2]; \
-	INTERPOLATE8(fSample, fSample2, fSample3, fSample4, posFrac) \
+	INTERPOLATE(fCubicLUT8, fSample, fSample2, fSample3, fSample4, posFrac) \
 	fSample *= fVolL; \
 	*fMixBufferL++ += fSample; \
 	*fMixBufferR++ += fSample; \
@@ -169,7 +164,7 @@
 	fSample2 = smpPtr[0]; \
 	fSample3 = smpPtr[1]; \
 	fSample4 = smpPtr[2]; \
-	INTERPOLATE16(fSample, fSample2, fSample3, fSample4, posFrac) \
+	INTERPOLATE(fCubicLUT16, fSample, fSample2, fSample3, fSample4, posFrac) \
 	*fMixBufferL++ += fSample * fVolL; \
 	*fMixBufferR++ += fSample * fVolR; \
 
@@ -179,7 +174,7 @@
 	fSample2 = smpPtr[0]; \
 	fSample3 = smpPtr[1]; \
 	fSample4 = smpPtr[2]; \
-	INTERPOLATE16(fSample, fSample2, fSample3, fSample4, posFrac) \
+	INTERPOLATE(fCubicLUT16, fSample, fSample2, fSample3, fSample4, posFrac) \
 	fSample *= fVolL; \
 	*fMixBufferL++ += fSample; \
 	*fMixBufferR++ += fSample; \

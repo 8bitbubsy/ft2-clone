@@ -20,6 +20,7 @@
 #include "ft2_sample_loader.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
+#include "mixer/ft2_cubic.h"
 
 /* This is a mess, directly ported from the original FT2 code (with some modifications).
 ** You will experience a lot of headaches if you dig into it...
@@ -409,7 +410,11 @@ double dPeriod2Hz(uint16_t period)
 
 int64_t getMixerDelta(uint16_t period)
 {
-	return (int64_t)((dPeriod2Hz(period) * dHz2MixDeltaMul) + 0.5); // Hz -> rounded fixed-point mixer delta
+	/* Precision has been tested for most extreme case (Amiga period 1, 44100Hz),
+	** and there is no precision loss using 64-bit double-precision here, even
+	** though we can get very big numbers.
+	*/
+	return (int64_t)((dPeriod2Hz(period) * dHz2MixDeltaMul) + 0.5); // Hz -> rounded 32.32 fixed-point mixer delta
 }
 
 uint32_t getRevMixerDelta(uint16_t period)
@@ -2738,6 +2743,7 @@ bool setupReplayer(void)
 	audio.linearFreqTable = true;
 	note2Period = linearPeriods;
 
+	calcCubicTable();
 	calcPeriod2HzTable();
 	calcRevMixDeltaTable();
 	calcPanningTable();

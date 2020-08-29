@@ -1,7 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_mix_macros.h"
-#include "ft2_intrp_table.h"
 
 /* Check out ft2_mix.c for comments on how this works.
 ** These are duplicates for center-mixing (slightly faster when it can be used).
