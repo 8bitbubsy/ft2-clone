@@ -1072,7 +1072,7 @@ static void checkEffects(stmTyp *ch)
 	checkMoreEffects(ch);
 }
 
-static void fixTonePorta(stmTyp *ch, tonTyp *p, uint8_t inst)
+static void fixTonePorta(stmTyp *ch, const tonTyp *p, uint8_t inst)
 {
 	uint16_t portaTmp;
 
@@ -1105,7 +1105,7 @@ static void fixTonePorta(stmTyp *ch, tonTyp *p, uint8_t inst)
 	}
 }
 
-static void getNewNote(stmTyp *ch, tonTyp *p)
+static void getNewNote(stmTyp *ch, const tonTyp *p)
 {
 	uint8_t inst;
 	bool checkEfx;
@@ -2094,68 +2094,65 @@ void resumeMusic(void) // starts reading pattern data
 	musicPaused = false;
 }
 
-static void noNewAllChannels(void)
-{
-	for (int32_t i = 0; i < song.antChn; i++)
-	{
-		doEffects(&stm[i]);
-		fixaEnvelopeVibrato(&stm[i]);
-	}
-}
 
 void tickReplayer(void) // periodically called from audio callback
 {
-	bool readNewNote;
 	int32_t i;
+	stmTyp *c;
 
 	if (musicPaused || !songPlaying)
 	{
-		for (i = 0; i < song.antChn; i++)
-			fixaEnvelopeVibrato(&stm[i]);
+		c = stm;
+		for (i = 0; i < song.antChn; i++, c++)
+			fixaEnvelopeVibrato(c);
 
 		return;
 	}
 
+	// for song playback counter (hh:mm:ss)
 	if (song.speed >= MIN_BPM && song.speed <= MAX_BPM)
-		song.musicTime64 += musicTimeTab64[song.speed]; // for song playback counter (hh:mm:ss)
+		song.musicTime64 += musicTimeTab64[song.speed];
 
-	readNewNote = false;
-
-	song.timer--;
-	if (song.timer == 0)
+	bool tickZero = false;
+	if (--song.timer == 0)
 	{
 		song.timer = song.tempo;
-		readNewNote = true;
+		tickZero = true;
 	}
-
+	
 	// for visuals
 	song.curReplayerTimer = (uint8_t)song.timer;
 	song.curReplayerPattPos = (uint8_t)song.pattPos;
 	song.curReplayerPattNr = (uint8_t)song.pattNr;
 	song.curReplayerSongPos = (uint8_t)song.songPos;
 
+	const bool readNewNote = tickZero && song.pattDelTime2 == 0;
 	if (readNewNote)
 	{
-		if (song.pattDelTime2 == 0)
+		const tonTyp *pattPtr = &nilPatternLine;
+		if (patt[song.pattNr] != NULL)
 		{
-			for (i = 0; i < song.antChn; i++)
-			{
-				if (patt[song.pattNr] == NULL)
-					getNewNote(&stm[i], &nilPatternLine);
-				else
-					getNewNote(&stm[i], &patt[song.pattNr][(song.pattPos * MAX_VOICES) + i]);
+			assert(song.pattNr  >= 0 && song.pattNr  < MAX_PATTERNS &&
+				   song.pattPos >= 0 && song.pattPos < MAX_PATT_LEN);
 
-				fixaEnvelopeVibrato(&stm[i]);
-			}
+			pattPtr = &patt[song.pattNr][song.pattPos * MAX_VOICES];
 		}
-		else
+
+		c = stm;
+		for (i = 0; i < song.antChn; i++, c++, pattPtr++)
 		{
-			noNewAllChannels();
+			getNewNote(c, pattPtr);
+			fixaEnvelopeVibrato(c);
 		}
 	}
 	else
 	{
-		noNewAllChannels();
+		c = stm;
+		for (i = 0; i < song.antChn; i++, c++)
+		{
+			doEffects(c);
+			fixaEnvelopeVibrato(c);
+		}
 	}
 
 	getNextPos();

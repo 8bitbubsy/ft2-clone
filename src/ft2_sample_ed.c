@@ -129,6 +129,8 @@ void fixSample(sampleTyp *s)
 			ptr16[loopEnd+0] = ptr16[loopStart+0];
 			if (loopStart == 0 && loopEnd > 0)
 				ptr16[-1] = ptr16[loopEnd-1];
+			else
+				ptr16[-1] = 0;
 
 			ptr16[loopEnd+1] = ptr16[loopStart+1];
 		}
@@ -151,6 +153,8 @@ void fixSample(sampleTyp *s)
 			s->pek[loopEnd+0] = s->pek[loopStart+0];
 			if (loopStart == 0 && loopEnd > 0)
 				s->pek[-1] = s->pek[loopEnd-1];
+			else
+				s->pek[-1] = 0;
 
 			s->pek[loopEnd+1] = s->pek[loopStart+1];
 		}
@@ -181,6 +185,8 @@ void fixSample(sampleTyp *s)
 			ptr16[loopEnd+0] = ptr16[loopEnd-1];
 			if (loopStart == 0)
 				ptr16[-1] = ptr16[0];
+			else
+				ptr16[-1] = 0;
 
 			if (loopLen >= 2)
 				ptr16[loopEnd+1] = ptr16[loopEnd-2];
@@ -208,6 +214,8 @@ void fixSample(sampleTyp *s)
 			s->pek[loopEnd+0] = s->pek[loopEnd-1];
 			if (loopStart == 0)
 				s->pek[-1] = s->pek[0];
+			else
+				s->pek[-1] = 0;
 
 			if (loopLen >= 2)
 				s->pek[loopEnd+1] = s->pek[loopEnd-2];

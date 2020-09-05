@@ -4,7 +4,7 @@
 #include "../ft2_audio.h" // MIXER_FRAC_BITS definition
 
 // if you change this, also change CUBIC_PHASES_BITS
-#define CUBIC_PHASES 4095
+#define CUBIC_PHASES 4096
 #define CUBIC_PHASES_BITS 12 /* log2(CUBIC_PHASES) */
 
 // don't change these!
