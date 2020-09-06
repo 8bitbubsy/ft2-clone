@@ -30,9 +30,8 @@
 // non-FT2 precalced stuff
 static double dPeriod2HzTab[65536], dLogTab[768], dHz2MixDeltaMul;
 static uint32_t revMixDeltaTab[65536];
-
 static bool bxxOverflow;
-static tonTyp nilPatternLine;
+static tonTyp nilPatternLine[MAX_VOICES];
 
 // globally accessed
 
@@ -2129,11 +2128,11 @@ void tickReplayer(void) // periodically called from audio callback
 	const bool readNewNote = tickZero && song.pattDelTime2 == 0;
 	if (readNewNote)
 	{
-		const tonTyp *pattPtr = &nilPatternLine;
+		const tonTyp *pattPtr = nilPatternLine;
 		if (patt[song.pattNr] != NULL)
 		{
 			assert(song.pattNr  >= 0 && song.pattNr  < MAX_PATTERNS &&
-				   song.pattPos >= 0 && song.pattPos < MAX_PATT_LEN);
+			       song.pattPos >= 0 && song.pattPos < MAX_PATT_LEN);
 
 			pattPtr = &patt[song.pattNr][song.pattPos * MAX_VOICES];
 		}
