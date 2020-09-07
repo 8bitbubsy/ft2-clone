@@ -376,7 +376,12 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 #ifdef __APPLE__
 		case SDLK_LGUI: // fall-through for Apple keyboards
 #endif
-		case SDLK_RALT: startPlaying(PLAYMODE_PATT, 0); break;
+		case SDLK_RALT:
+		{
+			if (!keyb.leftCtrlPressed) // kludge for Mac (toggle fullscreen)
+				startPlaying(PLAYMODE_PATT, 0);
+		}
+		break;
 
 		case SDLK_SPACE:
 		{
