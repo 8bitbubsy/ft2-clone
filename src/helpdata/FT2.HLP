@@ -376,7 +376,7 @@ END
 >@X020@C002
 >If you have an ambition to create music efficiently we strongly recommend
 that you learn ALL the keyboard functions. Many of them are the same
-from Fasttracker 1 and Protracker to ensure that you feel comfortable
+from Fasttracker 1 and ProTracker to ensure that you feel comfortable
 using this program from the very first minute.
 >
 >@X020@C001
@@ -439,6 +439,12 @@ Right ctrl.  @T160Play song.
 >Sh+Right @T160Decrease song position.
 >Ctrl+Left @T160Increase pattern number.
 >Ctrl+Right @T160Decrease pattern number.
+
+@X040@C001Miscellaneous (on a Mac keyboard):
+>@X060@C002
+Right command  @T240Play song.
+>Right alt (or left command)    @T240Play pattern.
+>Right shift  @T240Record pattern.
 
 @X040@C001Window switching:
 >@X060@C002
@@ -511,6 +517,11 @@ Alt/Ctrl+A @T160Range all.
 >Alt/Ctrl+V @T160Paste.
 >Alt+R @T160Crop.
 >Mouse wheel @T160Zoom sample data in/out.
+
+@X040@C001Note for Mac keyboards:
+>@X060@C002
+Use left ctrl. for A/X/C/V (mark all/cut/copy/paste) keys.
+>This applies to the sample editor (A/C/V only) and text marking in the UI.
 
 END
 ;***************************************************************************
