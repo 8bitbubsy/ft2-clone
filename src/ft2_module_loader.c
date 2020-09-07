@@ -1697,8 +1697,10 @@ bool doLoadMusic(bool fromExternalThread)
 	{
 		fclose(f);
 
-		sprintf(tmpText, "Error loading .xm: Unsupported XM version (v%1d.%1d%1d)",
-			'0' + (((h.ver >> 8) & 0x0F) % 10), '0' + (((h.ver >> 4) & 0x0F)) % 10, '0' + ((h.ver & 0x0F)) % 10);
+		const int32_t major = (h.ver >> 8) & 0x0F;
+		const int32_t minor = h.ver & 0xFF;
+
+		sprintf(tmpText, "Error loading .xm: Unsupported file version (v%01X.%02X)", major, minor);
 		showMsg(0, "System message", tmpText);
 
 		moduleFailedToLoad = true;
