@@ -855,7 +855,7 @@ void handleTextEditControl(SDL_Keycode keycode)
 		case SDLK_a:
 		{
 			// CTRL+A - mark all text
-			if (keyb.ctrlPressed || keyb.commandPressed)
+			if (keyb.leftCtrlPressed)
 			{
 				// count number of chars and get full text width
 				textWidth = 0;
@@ -883,7 +883,7 @@ void handleTextEditControl(SDL_Keycode keycode)
 		case SDLK_x:
 		{
 			// CTRL+X - cut marked text
-			if (keyb.ctrlPressed || keyb.commandPressed)
+			if (keyb.leftCtrlPressed)
 				cutMarkedText(t);
 		}
 		break;
@@ -891,7 +891,7 @@ void handleTextEditControl(SDL_Keycode keycode)
 		case SDLK_c:
 		{
 			// CTRL+C - copy marked text
-			if (keyb.ctrlPressed || keyb.commandPressed)
+			if (keyb.leftCtrlPressed)
 				copyMarkedText(t);
 		}
 		break;
@@ -899,7 +899,7 @@ void handleTextEditControl(SDL_Keycode keycode)
 		case SDLK_v:
 		{
 			// CTRL+V - paste text
-			if (keyb.ctrlPressed || keyb.commandPressed)
+			if (keyb.leftCtrlPressed)
 				pasteText(t);
 		}
 		break;

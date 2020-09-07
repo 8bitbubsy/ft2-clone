@@ -60,16 +60,12 @@ int8_t scancodeKeyToNote(SDL_Scancode scancode)
 
 void readKeyModifiers(void)
 {
-	SDL_Keymod modState;
+	const SDL_Keymod modState = SDL_GetModState();
 
-	modState = SDL_GetModState();
-
-	keyb.ctrlPressed = (modState & (KMOD_LCTRL | KMOD_RCTRL)) ? true : false;
 	keyb.leftCtrlPressed = (modState & KMOD_LCTRL) ? true : false;
 	keyb.leftAltPressed = (modState & KMOD_LALT) ? true : false;
 	keyb.leftShiftPressed = (modState & KMOD_LSHIFT) ? true : false;
 #ifdef __APPLE__
-	keyb.commandPressed = (modState & (KMOD_LGUI | KMOD_RGUI)) ? true : false;
 	keyb.leftCommandPressed = (modState & KMOD_LGUI) ? true : false;
 #endif
 	keyb.keyModifierDown = (modState & (KMOD_LSHIFT | KMOD_LCTRL | KMOD_LALT | KMOD_LGUI)) ? true : false;
@@ -360,13 +356,13 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		}
 		break;
 
-		// This is maybe not ideal to implement...
+		// This is maybe not an ideal key for this anymore...
 		//case SDLK_PRINTSCREEN: togglePatternEditorExtended(); break;
 
 		// EDIT/PLAY KEYS
 
-		// record song
-		case SDLK_RSHIFT: startPlaying(PLAYMODE_RECSONG, 0); break;
+		// record pattern
+		case SDLK_RSHIFT: startPlaying(PLAYMODE_RECPATT, 0); break;
 
 		// play song
 #ifdef __APPLE__
@@ -377,6 +373,9 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		break;
 
 		// play pattern
+#ifdef __APPLE__
+		case SDLK_LGUI: // fall-through for Apple keyboards
+#endif
 		case SDLK_RALT: startPlaying(PLAYMODE_PATT, 0); break;
 
 		case SDLK_SPACE:
@@ -755,7 +754,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			break;
 
 		case SDLK_a:
-			if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
+			if (keyb.leftCtrlPressed)
 			{
 				if (ui.sampleEditorShown)
 					rangeAll();
@@ -805,7 +804,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			else if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
+			else if (keyb.leftCtrlPressed)
 			{
 				if (ui.sampleEditorShown)
 					sampCopy();
@@ -1038,7 +1037,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			else if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
+			else if (keyb.leftCtrlPressed)
 			{
 				if (ui.sampleEditorShown)
 					sampPaste();
@@ -1075,7 +1074,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			else if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
+			else if (keyb.leftCtrlPressed)
 			{
 				if (ui.extended)
 					exitPatternEditorExtended();

@@ -8,8 +8,8 @@ typedef struct keyb_t
 {
 	uint8_t keyRepeat, keyPressed;
 	bool ignoreCurrKeyUp, ignoreTextEditKey, numPadPlusPressed;
-	bool keyModifierDown, commandPressed, leftCommandPressed;
-	bool leftShiftPressed, leftCtrlPressed, ctrlPressed, leftAltPressed;
+	bool keyModifierDown, leftCommandPressed;
+	bool leftShiftPressed, leftCtrlPressed, leftAltPressed;
 } keyb_t;
 
 extern keyb_t keyb; // ft2_keyboard.c
