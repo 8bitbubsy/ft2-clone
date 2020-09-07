@@ -389,6 +389,8 @@ Sh = shift key.
 @X040@C001Video:
 >@X060@C002
 Alt+Enter @T160Toggle fullscreen mode
+>
+>(Or "Left Ctrl + Left Command + F" on Macs)
 
 @X040@C001Cursor moves:
 >@X060@C002
