@@ -3183,12 +3183,6 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 			ih.mute = false;
 		}
 
-		if (ih.antSamp > MAX_SMP_PER_INST)
-		{
-			okBoxThreadSafe(0, "System message", "Incompatible instrument!");
-			goto loadDone;
-		}
-
 		memcpy(song.instrName[editor.curInstr], ih.name, 22);
 		song.instrName[editor.curInstr][22] = '\0';
 
@@ -3244,8 +3238,8 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 
 			for (i = 0; i < 96; i++)
 			{
-				if (ins->ta[i] > 15)
-					ins->ta[i] = 15;
+				if (ins->ta[i] >= MAX_SMP_PER_INST)
+					ins->ta[i] = MAX_SMP_PER_INST-1;
 			}
 
 			if (ins->envVPAnt > 12) ins->envVPAnt = 12;
@@ -3266,7 +3260,11 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 				
 			}
 
-			if (fread(ih.samp, sizeof (sampleHeaderTyp) * ih.antSamp, 1, f) != 1)
+			int32_t sampleHeadersToRead = ih.antSamp;
+			if (sampleHeadersToRead > MAX_SMP_PER_INST)
+				sampleHeadersToRead = MAX_SMP_PER_INST;
+
+			if (fread(ih.samp, sampleHeadersToRead * sizeof (sampleHeaderTyp), 1, f) != 1)
 			{
 				freeInstr(editor.curInstr);
 				resumeAudio();
@@ -3274,7 +3272,13 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 				goto loadDone;
 			}
 
-			for (i = 0; i < ih.antSamp; i++)
+			if (ih.antSamp > MAX_SMP_PER_INST)
+			{
+				const int32_t sampleHeadersToSkip = ih.antSamp - MAX_SMP_PER_INST;
+				fseek(f, sampleHeadersToSkip * sizeof (sampleHeaderTyp), SEEK_CUR);
+			}
+
+			for (i = 0; i < sampleHeadersToRead; i++)
 			{
 				s = &instr[editor.curInstr]->samp[i];
 				src = &ih.samp[i];
@@ -3519,8 +3523,11 @@ loadDone:
 	fixSampleName(editor.curInstr);
 	editor.updateCurInstr = true; // setMouseBusy(false) is called in the input/video thread when done
 
+	if (ih.antSamp > MAX_SMP_PER_INST)
+		okBoxThreadSafe(0, "System message", "Warning: The instrument contained >16 samples. The extra samples were discarded!");
+
 	if (stereoWarning)
-		okBoxThreadSafe(0, "System message", "The instrument contains stereo samples! They were mixed to mono.");
+		okBoxThreadSafe(0, "System message", "Warning: The instrument contained stereo sample(s). They were mixed to mono!");
 
 	return true;
 }
