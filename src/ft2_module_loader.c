@@ -136,17 +136,18 @@ static SDL_Thread *thread;
 
 // these temporarily read to, then copied to real struct if load was OK (should not need to be volatile'd)
 static int16_t pattLensTmp[MAX_PATTERNS];
+static uint32_t extraSampleLengths[32-MAX_SMP_PER_INST]; // ModPlug Tracker & OpenMPT supports up to 32 samples per instrument in .XM
 static tonTyp *pattTmp[MAX_PATTERNS];
-static instrTyp *instrTmp[1 + MAX_INST];
+static instrTyp *instrTmp[1+MAX_INST];
 static songTyp songTmp;
 
 static void setupLoadedModule(void);
 static void freeTmpModule(void);
-static bool loadInstrHeader(FILE *f, uint16_t i);
-static bool loadInstrSample(FILE *f, uint16_t i);
+static bool loadInstrHeader(FILE *f, uint16_t i, bool externalThreadFlag);
+static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag);
 void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn);
 static bool tmpPatternEmpty(uint16_t nr);
-static bool loadPatterns(FILE *f, uint16_t antPtn);
+static bool loadPatterns(FILE *f, uint16_t antPtn, bool externalThreadFlag);
 
 void checkSampleRepeat(sampleTyp *s);
 
@@ -160,13 +161,11 @@ static bool allocateTmpInstr(int16_t nr)
 	if (instrTmp[nr] != NULL)
 		return false; // already allocated
 
-	p = (instrTyp *)malloc(sizeof (instrTyp));
+	p = (instrTyp *)calloc(1, sizeof (instrTyp));
 	if (p == NULL)
 		return false;
 
-	memset(p, 0, sizeof (instrTyp));
-
-	for (int8_t i = 0; i < 16; i++) // set standard sample pan/vol
+	for (int8_t i = 0; i < MAX_SMP_PER_INST; i++) // set standard sample pan/vol
 	{
 		p->samp[i].pan = 128;
 		p->samp[i].vol = 64;
@@ -213,7 +212,7 @@ static uint8_t getModType(uint8_t *numChannels, const char *id)
 	return modFormat;
 }
 
-static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
+static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool externalThreadFlag)
 {
 	char ID[16];
 	bool mightBeSTK, lateSTKVerFlag, veryLateSTKVerFlag;
@@ -226,7 +225,7 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 	songMOD15HeaderTyp h_MOD15;
 	int16_t (*showMsg)(int16_t, const char *, const char *);
 
-	showMsg = fromExternalThread ? okBoxThreadSafe : okBox;
+	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
 	veryLateSTKVerFlag = false; // "DFJ SoundTracker III" nad later
 	lateSTKVerFlag = false; // "TJC SoundTracker II" and later
@@ -318,7 +317,7 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool fromExternalThread)
 	}
 
 	if (modFormat == FORMAT_MK && songTmp.len == 129)
-		songTmp.len = 127; // fixes a specific copy of beatwave.mod
+		songTmp.len = 127; // fixes a specific copy of beatwave.mod (FIXME: Do we want to keep this digsuting hack?)
 
 	if (songTmp.antChn == 0 || songTmp.len < 1 || songTmp.len > 128 || (mightBeSTK && songTmp.repS > 220))
 	{
@@ -735,7 +734,7 @@ static uint8_t stmTempoToBPM(uint8_t tempo) // ported from original ST2.3 replay
 	return (uint8_t)CLAMP(bpm, 32, 255); // result can be slightly off, but close enough...
 }
 
-static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
+static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool externalThreadFlag)
 {
 	uint8_t typ, tempo;
 	int16_t i, j, k, ap, tmp;
@@ -745,19 +744,19 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool fromExternalThread)
 	songSTMHeaderTyp h_STM;
 	int16_t (*showMsg)(int16_t, const char *, const char *);
 
-	showMsg = fromExternalThread ? okBoxThreadSafe : okBox;
+	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
 	rewind(f);
 
 	// start loading STM
 
 	if (fread(&h_STM, 1, sizeof (h_STM), f) != sizeof (h_STM))
-		return loadMusicMOD(f, fileLength, fromExternalThread); // file is not a .stm, try to load as .mod
+		return loadMusicMOD(f, fileLength, externalThreadFlag); // file is not a .stm, try to load as .mod
 
 	if (memcmp(h_STM.sig, "!Scream!", 8) && memcmp(h_STM.sig, "BMOD2STM", 8) &&
 		memcmp(h_STM.sig, "WUZAMOD!", 8) && memcmp(h_STM.sig, "SWavePro", 8))
 	{
-		return loadMusicMOD(f, fileLength, fromExternalThread); // file is not a .stm, try to load as .mod
+		return loadMusicMOD(f, fileLength, externalThreadFlag); // file is not a .stm, try to load as .mod
 	}
 
 	loadedFormat = FORMAT_STM;
@@ -1007,7 +1006,7 @@ static int8_t countS3MChannels(uint16_t antPtn)
 	return channels;
 }
 
-static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
+static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool externalThreadFlag)
 {
 	int8_t *tmpSmp;
 	uint8_t ha[2048];
@@ -1022,17 +1021,17 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool fromExternalThread)
 	songS3MinstrHeaderTyp h_S3MInstr;
 	int16_t (*showMsg)(int16_t, const char *, const char *);
 
-	showMsg = fromExternalThread ? okBoxThreadSafe : okBox;
+	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
 	rewind(f);
 
 	// start loading S3M
 
 	if (fread(&h_S3M, 1, sizeof (h_S3M), f) != sizeof (h_S3M))
-		return loadMusicSTM(f, dataLength, fromExternalThread); // not a .s3m, try loading as .stm
+		return loadMusicSTM(f, dataLength, externalThreadFlag); // not a .s3m, try loading as .stm
 
 	if (memcmp(h_S3M.id, "SCRM", 4))
-		return loadMusicSTM(f, dataLength, fromExternalThread); // not a .s3m, try loading as .stm
+		return loadMusicSTM(f, dataLength, externalThreadFlag); // not a .s3m, try loading as .stm
 
 	loadedFormat = FORMAT_S3M;
 
@@ -1651,7 +1650,7 @@ s3mLoadError:
 	return false;
 }
 
-bool doLoadMusic(bool fromExternalThread)
+bool doLoadMusic(bool externalThreadFlag)
 {
 	char tmpText[128];
 	int16_t k;
@@ -1661,7 +1660,7 @@ bool doLoadMusic(bool fromExternalThread)
 	FILE *f;
 	int16_t (*showMsg)(int16_t, const char *, const char *);
 
-	showMsg = fromExternalThread ? okBoxThreadSafe : okBox;
+	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
 	linearFreqTable = false;
 
@@ -1686,10 +1685,10 @@ bool doLoadMusic(bool fromExternalThread)
 
 	// start loading
 	if (fread(&h, 1, sizeof (h), f) != sizeof (h))
-		return loadMusicS3M(f, filelength, fromExternalThread); // not a .xm file, try to load as .s3m
+		return loadMusicS3M(f, filelength, externalThreadFlag); // not a .xm file, try to load as .s3m
 
 	if (memcmp(h.sig, "Extended Module: ", 17))
-		return loadMusicS3M(f, filelength, fromExternalThread); // not a .xm file, try to load as .s3m
+		return loadMusicS3M(f, filelength, externalThreadFlag); // not a .xm file, try to load as .s3m
 
 	loadedFormat = FORMAT_XM;
 
@@ -1700,7 +1699,7 @@ bool doLoadMusic(bool fromExternalThread)
 		const int32_t major = (h.ver >> 8) & 0x0F;
 		const int32_t minor = h.ver & 0xFF;
 
-		sprintf(tmpText, "Error loading .xm: Unsupported file version (v%01X.%02X)", major, minor);
+		sprintf(tmpText, "Error loading XM: Unsupported file version (v%01X.%02X).", major, minor);
 		showMsg(0, "System message", tmpText);
 
 		moduleFailedToLoad = true;
@@ -1709,29 +1708,26 @@ bool doLoadMusic(bool fromExternalThread)
 
 	if (h.len > MAX_ORDERS)
 	{
-		showMsg(0, "System message", "Error loading .xm: The song has more than 256 orders!");
+		showMsg(0, "System message", "Error loading XM: The song has more than 256 orders!");
 		goto xmLoadError;
 	}
 
 	if (h.antPtn > MAX_PATTERNS)
 	{
-		showMsg(0, "System message", "Error loading .xm: The song has more than 256 patterns!");
+		showMsg(0, "System message", "Error loading XM: The song has more than 256 patterns!");
 		goto xmLoadError;
 	}
 
-	if (h.antChn == 0 || h.antChn > MAX_VOICES)
+	if (h.antChn == 0)
 	{
-		showMsg(0, "System message", "Error loading .xm: Incompatible amount of channels!");
+		showMsg(0, "System message", "Error loading XM: This file is corrupt.");
 		goto xmLoadError;
 	}
-
-	if (h.antInstrs > MAX_INST)
-		showMsg(0, "System message", "This module has over 128 instruments! Only the first 128 will be loaded.");
 
 	fseek(f, 60 + h.headerSize, SEEK_SET);
 	if (filelength != 336 && feof(f)) // 336 in length at this point = empty XM
 	{
-		showMsg(0, "System message", "Error loading .xm: The module is empty!");
+		showMsg(0, "System message", "Error loading XM: The module is empty!");
 		goto xmLoadError;
 	}
 
@@ -1768,61 +1764,80 @@ bool doLoadMusic(bool fromExternalThread)
 	else
 		memcpy(songTmp.songTab, h.songTab, songTmp.len);
 
+	// some strange XMs have the order list padded with 0xFF, remove them!
+	for (int16_t j = 255; j >= 0; j--)
+	{
+		if (songTmp.songTab[j] != 0xFF)
+			break;
+
+		if (songTmp.len > j)
+			songTmp.len = j;
+	}
+
+	// even though XM supports 256 orders, FT2 supports only 255...
+	if (songTmp.len > 0xFF)
+		songTmp.len = 0xFF;
+
 	if (songTmp.ver < 0x0104)
 	{
-		// old FT2 format
+		// XM v1.02 and XM v1.03
 
 		for (i = 1; i <= h.antInstrs; i++)
 		{
-			if (!loadInstrHeader(f, i))
-			{
-				showMsg(0, "System message", "Error loading .xm: Either a corrupt or a non-supported module!");
+			if (!loadInstrHeader(f, i, externalThreadFlag))
 				goto xmLoadError;
-			}
 		}
 
-		if (!loadPatterns(f, h.antPtn))
-		{
-			// error message is shown inside loadPattern()
+		if (!loadPatterns(f, h.antPtn, externalThreadFlag))
 			goto xmLoadError;
-		}
 
 		for (i = 1; i <= h.antInstrs; i++)
 		{
-			if (!loadInstrSample(f, i))
-			{
-				showMsg(0, "System message", "Not enough memory!");
+			if (!loadInstrSample(f, i, externalThreadFlag))
 				goto xmLoadError;
-			}
 		}
 	}
 	else
 	{
-		// current FT2 format
+		// XM v1.04 (latest version)
 
-		if (!loadPatterns(f, h.antPtn))
-		{
-			// error message is shown inside loadPattern()
+		if (!loadPatterns(f, h.antPtn, externalThreadFlag))
 			goto xmLoadError;
-		}
 
 		for (i = 1; i <= h.antInstrs; i++)
 		{
-			if (!loadInstrHeader(f, i))
-			{
-				showMsg(0, "System message", "Error loading .xm: Either a corrupt or a non-supported module!");
-				goto xmLoadError;
-			}
-
-			if (!loadInstrSample(f, i))
-			{
-				showMsg(0, "System message", "Not enough memory!");
-				goto xmLoadError;
-			}
+			if (!loadInstrHeader(f, i, externalThreadFlag)) goto xmLoadError;
+			if (!loadInstrSample(f, i, externalThreadFlag)) goto xmLoadError;
 		}
 	}
 
 	fclose(f);
+
+	/* We support loading XMs with up to 32 samples per instrument (ModPlug/OpenMPT),
+	** but only the first 16 will be loaded. Now make sure we set the number of samples
+	** back to max 16 in the headers before loading is done.
+	*/
+	bool instrHasMoreThan16Samples = false;
+	for (i = 1; i <= MAX_INST; i++)
+	{
+		if (instrTmp[i] != NULL && instrTmp[i]->antSamp > MAX_SMP_PER_INST)
+		{
+			instrHasMoreThan16Samples = true;
+			instrTmp[i]->antSamp = MAX_SMP_PER_INST;
+		}
+	}
+
+	if (songTmp.antChn > MAX_VOICES)
+	{
+		songTmp.antChn = MAX_VOICES;
+		showMsg(0, "System message", "Warning: This XM contains >32 channels. The extra channels will be discarded!");
+	}
+
+	if (h.antInstrs > MAX_INST)
+		showMsg(0, "System message", "Warning: This XM contains >128 instruments. The extra instruments will be discarded!");
+
+	if (instrHasMoreThan16Samples)
+		showMsg(0, "System message", "Warning: This XM contains instrument(s) with >16 samples. The extra samples will be discarded!");
 
 	moduleLoaded = true;
 	return true;
@@ -1908,9 +1923,9 @@ bool loadMusicUnthreaded(UNICHAR *filenameU, bool autoPlay)
 	return false;
 }
 
-static void freeTmpModule(void)
+static void freeTmpModule(void) // called on module load error
 {
-	uint16_t i;
+	int32_t i, j;
 
 	// free all patterns
 	for (i = 0; i < MAX_PATTERNS; i++)
@@ -1927,10 +1942,10 @@ static void freeTmpModule(void)
 	{
 		if (instrTmp[i] != NULL)
 		{
-			for (uint8_t j = 0; j < MAX_SMP_PER_INST; j++)
+			for (j = 0; j < MAX_SMP_PER_INST; j++)
 			{
-				if (instrTmp[i]->samp[j].pek != NULL)
-					free(instrTmp[i]->samp[j].pek);
+				if (instrTmp[i]->samp[j].origPek != NULL)
+					free(instrTmp[i]->samp[j].origPek);
 			}
 
 			free(instrTmp[i]);
@@ -1939,7 +1954,7 @@ static void freeTmpModule(void)
 	}
 }
 
-static bool loadInstrHeader(FILE *f, uint16_t i)
+static bool loadInstrHeader(FILE *f, uint16_t i, bool externalThreadFlag)
 {
 	int8_t k;
 	uint8_t j;
@@ -1948,24 +1963,38 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 	instrTyp *ins;
 	sampleHeaderTyp *src;
 	sampleTyp *s;
+	int16_t (*showMsg)(int16_t, const char *, const char *);
 
-	memset(&ih, 0, INSTR_HEADER_SIZE);
+	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
+	memset(extraSampleLengths, 0, sizeof (extraSampleLengths));
+	memset(&ih, 0, sizeof (ih));
 	fread(&ih.instrSize, 4, 1, f);
 
 	readSize = ih.instrSize;
-	if (readSize < 4 || readSize > INSTR_HEADER_SIZE)
+
+	// yes, some XMs can have a header size of 0, and it usually means 263 bytes (INSTR_HEADER_SIZE)
+	if (readSize == 0 || readSize > INSTR_HEADER_SIZE)
 		readSize = INSTR_HEADER_SIZE;
+
+	if (readSize < 4)
+	{
+		showMsg(0, "System message", "Error loading XM: This file is corrupt (or not supported)!");
+		return false;
+	}
 
 	// load instrument data into temp buffer
 	fread(ih.name, readSize-4, 1, f); // -4 = skip ih.instrSize
 
 	// FT2 bugfix: skip instrument header data if instrSize is above INSTR_HEADER_SIZE
 	if (ih.instrSize > INSTR_HEADER_SIZE)
-		fseek(f, ih.instrSize - INSTR_HEADER_SIZE, SEEK_CUR);
+		fseek(f, ih.instrSize-INSTR_HEADER_SIZE, SEEK_CUR);
 
-	if (ih.antSamp > MAX_SMP_PER_INST)
+	if (ih.antSamp < 0 || ih.antSamp > 32)
+	{
+		showMsg(0, "System message", "Error loading XM: This file is corrupt (or not supported)!");
 		return false;
+	}
 
 	if (i <= MAX_INST)
 	{
@@ -1987,7 +2016,10 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 		if (i <= MAX_INST)
 		{
 			if (!allocateTmpInstr(i))
+			{
+				showMsg(0, "System message", "Not enough memory!");
 				return false;
+			}
 
 			// copy instrument header elements to our instrument struct
 
@@ -2028,8 +2060,8 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 
 			for (j = 0; j < 96; j++)
 			{
-				if (ins->ta[j] > 15)
-					ins->ta[j] = 15;
+				if (ins->ta[j] >= MAX_SMP_PER_INST)
+					ins->ta[j] = MAX_SMP_PER_INST-1;
 			}
 
 			if (ins->envVPAnt > 12) ins->envVPAnt = 12;
@@ -2050,12 +2082,30 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 			}
 		}
 
-		if (fread(ih.samp, ih.antSamp * sizeof (sampleHeaderTyp), 1, f) != 1)
+		int32_t sampleHeadersToRead = ih.antSamp;
+		if (sampleHeadersToRead > MAX_SMP_PER_INST)
+			sampleHeadersToRead = MAX_SMP_PER_INST;
+
+		if (fread(ih.samp, sampleHeadersToRead * sizeof (sampleHeaderTyp), 1, f) != 1)
+		{
+			showMsg(0, "System message", "General I/O error during loading!");
 			return false;
+		}
+
+		// if instrument contains more than 16 sample headers (unsupported), skip them
+		if (ih.antSamp > MAX_SMP_PER_INST) // can only be 0..32 at this point
+		{
+			const int32_t samplesToSkip = ih.antSamp-MAX_SMP_PER_INST;
+			for (j = 0; j < samplesToSkip; j++)
+			{
+				fread(&extraSampleLengths[j], 4, 1, f); // used for skipping data in loadInstrSample()
+				fseek(f, sizeof (sampleHeaderTyp)-4, SEEK_CUR);
+			}
+		}
 
 		if (i <= MAX_INST)
 		{
-			for (j = 0; j < ih.antSamp; j++)
+			for (j = 0; j < sampleHeadersToRead; j++)
 			{
 				s = &instrTmp[i]->samp[j];
 				src = &ih.samp[j];
@@ -2105,17 +2155,23 @@ void checkSampleRepeat(sampleTyp *s)
 	if (s->repL == 0) s->typ &= ~3; // non-FT2 fix: force loop off if looplen is 0
 }
 
-static bool loadInstrSample(FILE *f, uint16_t i)
+static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag)
 {
 	int8_t *newPtr;
 	uint16_t j, k;
 	int32_t l, bytesToSkip;
 	sampleTyp *s;
+	int16_t (*showMsg)(int16_t, const char *, const char *);
+
+	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
 	if (i > MAX_INST || instrTmp[i] == NULL)
 		return true; // yes, let's just pretend they got loaded
 
 	k = instrTmp[i]->antSamp;
+	if (k > MAX_SMP_PER_INST)
+		k = MAX_SMP_PER_INST;
+
 	for (j = 0; j < k; j++)
 	{
 		s = &instrTmp[i]->samp[j];
@@ -2147,14 +2203,17 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 			s->pek = NULL;
 			s->origPek = (int8_t *)malloc(l + LOOP_FIX_LEN);
 			if (s->origPek == NULL)
+			{
+				showMsg(0, "System message", "Not enough memory!");
 				return false;
+			}
 
 			s->pek = s->origPek + SMP_DAT_OFFSET;
 
-			int32_t bytesRead = (int32_t)fread(s->pek, 1, l, f);
+			const int32_t bytesRead = (int32_t)fread(s->pek, 1, l, f);
 			if (bytesRead < l)
 			{
-				int32_t bytesToClear = l - bytesRead;
+				const int32_t bytesToClear = l - bytesRead;
 				memset(&s->pek[bytesRead], 0, bytesToClear);
 			}
 
@@ -2192,23 +2251,37 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 		fixSample(s);
 	}
 
+	if (instrTmp[i]->antSamp > MAX_SMP_PER_INST)
+	{
+		const int32_t samplesToSkip = instrTmp[i]->antSamp-MAX_SMP_PER_INST;
+		for (i = 0; i < samplesToSkip; i++)
+		{
+			if (extraSampleLengths[i] > 0)
+				fseek(f, extraSampleLengths[i], SEEK_CUR); 
+		}
+	}
+
 	return true;
 }
 
 void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 {
 	uint8_t note, data;
-	int32_t srcEnd, srcIdx;
+	int32_t srcEnd, srcIdx, j;
 
 	if (dst == NULL)
 		return;
 
-	srcEnd = len * TRACK_WIDTH;
+	srcEnd = len * (sizeof (tonTyp) * antChn);
 	srcIdx = 0;
+
+	int32_t numChannels = antChn;
+	if (numChannels > MAX_VOICES)
+		numChannels = MAX_VOICES;
 
 	for (int32_t i = 0; i < len; i++)
 	{
-		for (int32_t j = 0; j < antChn; j++)
+		for (j = 0; j < numChannels; j++)
 		{
 			if (srcIdx >= srcEnd)
 				return; // error!
@@ -2245,8 +2318,35 @@ void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 			srcIdx += sizeof (tonTyp);
 		}
 
-		// skip unused channels
-		dst += sizeof (tonTyp) * (MAX_VOICES - antChn);
+		// if more than 32 channels, skip rest of the channels for this row
+		for (; j < antChn; j++)
+		{
+			if (srcIdx >= srcEnd)
+				return; // error!
+
+			note = *src++;
+			if (note & 0x80)
+			{
+				if (note & 0x01) src++;
+				if (note & 0x02) src++;
+				if (note & 0x04) src++;
+				if (note & 0x08) src++;
+				if (note & 0x10) src++;
+			}
+			else
+			{
+				src++;
+				src++;
+				src++;
+				src++;
+			}
+
+			srcIdx += sizeof (tonTyp);
+		}
+
+		// if song has <32 channels, align pointer to next row (skip unused channels)
+		if (antChn < MAX_VOICES)
+			dst += sizeof (tonTyp) * (MAX_VOICES - antChn);
 	}
 }
 
@@ -2279,15 +2379,17 @@ void clearUnusedChannels(tonTyp *p, int16_t pattLen, int32_t antChn)
 		memset(&p[(i * MAX_VOICES) + antChn], 0, sizeof (tonTyp) * (MAX_VOICES - antChn));
 }
 
-static bool loadPatterns(FILE *f, uint16_t antPtn)
+static bool loadPatterns(FILE *f, uint16_t antPtn, bool externalThreadFlag)
 {
 	bool pattLenWarn;
 	uint8_t tmpLen;
 	uint16_t i;
 	patternHeaderTyp ph;
+	int16_t (*showMsg)(int16_t, const char *, const char *);
+
+	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
 	pattLenWarn = false;
-
 	for (i = 0; i < antPtn; i++)
 	{
 		if (fread(&ph.patternHeaderSize, 4, 1, f) != 1)
@@ -2337,7 +2439,7 @@ static bool loadPatterns(FILE *f, uint16_t antPtn)
 			pattTmp[i] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
 			if (pattTmp[i] == NULL)
 			{
-				okBoxThreadSafe(0, "System message", "Not enough memory!");
+				showMsg(0, "System message", "Not enough memory!");
 				return false;
 			}
 
@@ -2345,7 +2447,6 @@ static bool loadPatterns(FILE *f, uint16_t antPtn)
 				goto pattCorrupt;
 
 			unpackPatt((uint8_t *)pattTmp[i], packedPattData, pattLensTmp[i], songTmp.antChn);
-
 			clearUnusedChannels(pattTmp[i], pattLensTmp[i], songTmp.antChn);
 		}
 
@@ -2362,12 +2463,12 @@ static bool loadPatterns(FILE *f, uint16_t antPtn)
 	}
 
 	if (pattLenWarn)
-		okBoxThreadSafe(0, "System message", "This module contains pattern(s) with a length above 256! They will be truncated.");
+		showMsg(0, "System message", "This module contains pattern(s) with a length above 256! They will be truncated.");
 
 	return true;
 
 pattCorrupt:
-	okBoxThreadSafe(0, "System message", "Error loading .xm: Either a corrupt or a non-supported module!");
+	showMsg(0, "System message", "Error loading XM: This file is corrupt!");
 	return false;
 }
 
