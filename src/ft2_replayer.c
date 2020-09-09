@@ -2386,7 +2386,6 @@ void freeInstr(int32_t nr)
 	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++) // free sample data
 	{
 		sampleTyp *s = &instr[nr]->samp[i];
-
 		if (s->origPek != NULL)
 			free(s->origPek);
 	}
@@ -2407,7 +2406,6 @@ void freeAllInstr(void)
 			for (int8_t j = 0; j < MAX_SMP_PER_INST; j++) // free sample data
 			{
 				sampleTyp *s = &instr[i]->samp[j];
-
 				if (s->origPek != NULL)
 					free(s->origPek);
 			}
@@ -2692,6 +2690,8 @@ void closeReplayer(void)
 {
 	freeAllInstr();
 	freeAllPatterns();
+
+	// free reserved instruments
 
 	if (instr[0] != NULL)
 	{
