@@ -92,7 +92,7 @@
       <Optimization>MaxSpeed</Optimization>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>__WINDOWS_MM__;NDEBUG;WIN32;_CRT_SECURE_NO_WARNINGS;_USE_MATH_DEFINES;HAVE_M_PI;HAS_MIDI</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__WINDOWS_MM__;NDEBUG;WIN32;_CRT_SECURE_NO_WARNINGS;HAS_MIDI</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <StringPooling>true</StringPooling>
@@ -142,7 +142,7 @@
       <Optimization>MaxSpeed</Optimization>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>__WINDOWS_MM__;NDEBUG;WIN32;_CRT_SECURE_NO_WARNINGS;_USE_MATH_DEFINES;HAVE_M_PI;HAS_MIDI</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__WINDOWS_MM__;NDEBUG;WIN32;_CRT_SECURE_NO_WARNINGS;HAS_MIDI</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <StringPooling>true</StringPooling>
@@ -199,7 +199,7 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>__WINDOWS_MM__;_CRTDBG_MAP_ALLOC;DEBUG;_DEBUG;WIN32;_CRT_SECURE_NO_WARNINGS;_USE_MATH_DEFINES;HAVE_M_PI;HAS_MIDI</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__WINDOWS_MM__;_CRTDBG_MAP_ALLOC;DEBUG;_DEBUG;WIN32;_CRT_SECURE_NO_WARNINGS;HAS_MIDI</PreprocessorDefinitions>
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
@@ -237,7 +237,7 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>__WINDOWS_MM__;_CRTDBG_MAP_ALLOC;DEBUG;_DEBUG;WIN32;_CRT_SECURE_NO_WARNINGS;_USE_MATH_DEFINES;HAVE_M_PI;HAS_MIDI</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__WINDOWS_MM__;_CRTDBG_MAP_ALLOC;DEBUG;_DEBUG;WIN32;_CRT_SECURE_NO_WARNINGS;HAS_MIDI</PreprocessorDefinitions>
       <FloatingPointModel>Fast</FloatingPointModel>
       <StringPooling>
       </StringPooling>
@@ -336,7 +336,7 @@
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_instr.c" />
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_looppins.c" />
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_scopes.c" />
-    <ClCompile Include="..\..\src\mixer\ft2_cubic.c" />
+    <ClCompile Include="..\..\src\mixer\ft2_cubicspline.c" />
     <ClCompile Include="..\..\src\mixer\ft2_mix.c" />
     <ClCompile Include="..\..\src\mixer\ft2_center_mix.c" />
     <ClCompile Include="..\..\src\mixer\ft2_silence_mix.c" />
@@ -400,7 +400,7 @@
     <ClInclude Include="..\..\src\ft2_unicode.h" />
     <ClInclude Include="..\..\src\ft2_video.h" />
     <ClInclude Include="..\..\src\ft2_wav_renderer.h" />
-    <ClInclude Include="..\..\src\mixer\ft2_cubic.h" />
+    <ClInclude Include="..\..\src\mixer\ft2_cubicspline.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix_macros.h" />
     <ClInclude Include="..\..\src\mixer\ft2_center_mix.h" />

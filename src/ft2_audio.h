@@ -11,6 +11,8 @@ enum
 	FREQ_TABLE_AMIGA = 1,
 };
 
+#define NUM_FIXED_TAP_SAMPLES 2
+
 #define MIN_AUDIO_FREQ 44100
 #define MAX_AUDIO_FREQ 192000
 
@@ -27,8 +29,9 @@ typedef struct audio_t
 {
 	char *currInputDevice, *currOutputDevice, *lastWorkingAudioDeviceName;
 	char *inputDeviceNames[MAX_AUDIO_DEVICES], *outputDeviceNames[MAX_AUDIO_DEVICES];
-	volatile bool locked, resetSyncTickTimeFlag, volumeRampingFlag, interpolationFlag;
+	volatile bool locked, resetSyncTickTimeFlag, volumeRampingFlag;
 	bool linearFreqTable, rescanAudioDevicesSupported;
+	volatile uint8_t interpolationType;
 	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
 	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;
 	uint64_t tickTime64, tickTime64Frac, tickTimeLengthTab[MAX_BPM+1];
@@ -44,11 +47,12 @@ typedef struct
 {
 	const int8_t *base8, *revBase8;
 	const int16_t *base16, *revBase16;
-	bool active, backwards, isFadeOutVoice;
+	bool active, backwards, isFadeOutVoice, hasLooped;
 	uint8_t mixFuncOffset, pan, loopType;
 	int32_t pos, end, loopStart, loopLength;
 	uint32_t volRampSamples, revDelta;
 	uint64_t posFrac, delta;
+	float fTapFixSample; // if (loopStart > 0 && pos == loopStart) useThisForFirstTap();
 	float fVol, fDestVolL, fDestVolR, fVolL, fVolR, fVolDeltaL, fVolDeltaR;
 } voice_t;
 
@@ -98,7 +102,7 @@ void setNewAudioFreq(uint32_t freq);
 void setBackOldAudioFreq(void);
 void setSpeed(uint16_t bpm);
 void audioSetVolRamp(bool volRamp);
-void audioSetInterpolation(bool interpolation);
+void audioSetInterpolationType(uint8_t interpolationType);
 void stopVoice(int32_t i);
 bool setupAudio(bool showErrorMsg);
 void closeAudio(void);

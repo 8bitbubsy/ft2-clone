@@ -18,6 +18,10 @@ enum
 	CONFIG_HIDE_ERRORS = 0,
 	CONFIG_SHOW_ERRORS = 1,
 
+	INTERPOLATION_NONE = 0,
+	INTERPOLATION_CUBIC = 1,
+	INTERPOLATION_LINEAR = 2,
+
 	MOUSE_IDLE_SHAPE_NICE = 0,
 	MOUSE_IDLE_SHAPE_UGLY = 1,
 	MOUSE_IDLE_SHAPE_AWFUL = 2,
@@ -205,6 +209,9 @@ void rbConfigSbs1024(void);
 void rbConfigSbs2048(void);
 void rbConfigAudio16bit(void);
 void rbConfigAudio24bit(void);
+void rbConfigAudioIntrpNone(void);
+void rbConfigAudioIntrpLinear(void);
+void rbConfigAudioIntrpCubic(void);
 void rbConfigAudio44kHz(void);
 void rbConfigAudio48kHz(void);
 void rbConfigAudio96kHz(void);
@@ -238,7 +245,6 @@ void rbWinSize2x(void);
 void rbWinSize3x(void);
 void rbWinSize4x(void);
 void cbToggleAutoSaveConfig(void);
-void cbConfigInterpolation(void);
 void cbConfigVolRamp(void);
 void cbConfigPattStretch(void);
 void cbConfigHexCount(void);

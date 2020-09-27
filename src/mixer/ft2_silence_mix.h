@@ -27,6 +27,8 @@
 			pos = v->loopStart + ((pos - v->end) % v->loopLength); \
 		else \
 			pos = v->loopStart; \
+		\
+		v->hasLooped = true; \
 	} \
 
 #define SILENCE_MIX_BIDI_LOOP \
@@ -45,6 +47,7 @@
 		{ \
 			pos = v->loopStart; \
 		} \
+		v->hasLooped = true; \
 	} \
 
 void silenceMixRoutine(voice_t *v, int32_t numSamples);

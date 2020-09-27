@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include "ft2_unicode.h"
 
+// cubic spline requires 2 extra samples in the future to be read
+#define NUM_FIXED_TAP_SAMPLES 2
+
 enum
 {
 	// voice flags
@@ -172,7 +175,7 @@ typedef struct sampleTyp_t
 	bool fixed;
 	int8_t fine, relTon, *pek, *origPek;
 	uint8_t vol, typ, pan;
-	int16_t fixedSmp1, fixedSmp2;
+	int16_t fixedSmp[NUM_FIXED_TAP_SAMPLES];
 	int32_t fixedPos, len, repS, repL;
 } sampleTyp;
 

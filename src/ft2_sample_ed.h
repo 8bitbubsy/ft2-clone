@@ -8,8 +8,8 @@
 #define SAMPLE_AREA_Y_CENTER 250
 
 sampleTyp *getCurSample(void);
-void fixSample(sampleTyp *s); // adds wrapped sample after loop/end (for branchless mixer interpolation)
-void restoreSample(sampleTyp *s); // reverts wrapped sample after loop/end (for branchless mixer interpolation)
+void fixSample(sampleTyp *s); // modifies samples before index 0, and after loop/end (for branchless mixer interpolation)
+void restoreSample(sampleTyp *s); // restores samples after loop/end
 void clearSample(void);
 void clearCopyBuffer(void);
 int32_t getSampleMiddleCRate(sampleTyp *s);

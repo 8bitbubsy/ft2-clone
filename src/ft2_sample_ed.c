@@ -10,7 +10,7 @@
 #ifndef _WIN32
 #include <unistd.h> // chdir() in UNICHAR_CHDIR()
 #endif
-#if defined __APPLE__ || defined _WIN32 || defined __amd64__ || (defined __i386__ && defined __SSE2__)
+#if defined _WIN32 || defined __amd64__ || (defined __i386__ && defined __SSE2__)
 #include <emmintrin.h>
 #endif
 #include "ft2_header.h"
@@ -54,215 +54,172 @@ sampleTyp *getCurSample(void)
 	return &instr[editor.curInstr]->samp[editor.curSmp];
 }
 
-// adds wrapped samples after loop/end (for branchless mixer interpolation)
+// modifies samples before index 0, and after loop/end (for branchless mixer interpolation (kinda))
 void fixSample(sampleTyp *s)
 {
-	uint8_t loopType;
-	int16_t *ptr16;
-	int32_t loopStart, loopLen, loopEnd, len;
-
 	assert(s != NULL);
-	if (s->origPek == NULL)
+	if (s->origPek == NULL || s->pek == NULL)
+	{
+		s->fixed = false;
+		s->fixedPos = 0;
 		return; // empty sample
+	}
 
-	assert(s->pek != NULL);
+	const bool sample16Bit = (s->typ & 16) ? true : false;
+	int16_t *ptr16 = (int16_t *)s->pek;
+	uint8_t loopType = s->typ & 3;
+	int32_t len = s->len;
+	int32_t loopStart = s->repS;
+	int32_t loopLen = s->repL;
+	int32_t loopEnd = s->repS + s->repL;
 
-	loopType = s->typ & 3;
+	if (sample16Bit)
+	{
+		len >>= 1;
+		loopStart >>= 1;
+		loopLen >>= 1;
+		loopEnd >>= 1;
+	}
+
+	if (len < 1)
+	{
+		s->fixed = false;
+		s->fixedPos = 0;
+		return; // empty sample
+	}
+
+	// disable loop if loopLen == 0 (FT2 does this)
+	if (loopType != 0 && loopLen == 0)
+	{
+		loopType = 0;
+		loopStart = loopLen = loopEnd = 0;
+	}
+
+	/* The first and second tap (-1, 0) should be the same at sampling position #0
+	** (at sample trigger), until an eventual loop cycle, where the -1 tap has a
+	** special case in the mixer.
+	*/
+	if (sample16Bit)
+		ptr16[-1] = ptr16[0];
+	else
+		s->pek[-1] = s->pek[0];
+
 	if (loopType == 0)
 	{
-		len = s->len;
-
-		// no loop (don't mess with fixed, fixSpar of fixedPos)
-
-		if (s->typ & 16)
+		// no loop
+		if (sample16Bit)
 		{
-			if (len < 2)
-				return;
-
-			len >>= 1;
-			ptr16 = (int16_t *)s->pek;
-
-			// write new values
-			ptr16[-1] = 0;
-			ptr16[len+0] = 0;
-			ptr16[len+1] = 0;
+			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+				ptr16[len+i] = ptr16[len-1];
 		}
 		else
 		{
-			if (len < 1)
-				return;
-
-			// write new values
-			s->pek[-1] = 0;
-			s->pek[len+0] = 0;
-			s->pek[len+1] = 0;
+			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+				s->pek[len+i] = s->pek[len-1];
 		}
 
+		s->fixedPos = 0;
+		s->fixed = false; // no fixed samples inside actual sample data
 		return;
 	}
 
 	if (s->fixed)
 		return; // already fixed
 
-	if (loopType == 1)
+	s->fixedPos = loopStart + loopLen;
+
+	if (loopLen == 1) // too short for interpolation kernel size, fix in a different way
 	{
-		// forward loop
-
-		if (s->typ & 16)
+		if (sample16Bit)
 		{
-			// 16-bit sample
-
-			if (s->repL < 2)
-				return;
-
-			loopStart = s->repS >> 1;
-			loopEnd = (s->repS + s->repL) >> 1;
-
-			ptr16 = (int16_t *)s->pek;
-
-			// store old fix position and old values
-			s->fixedPos = s->repS + s->repL;
-			s->fixedSmp1 = ptr16[loopEnd+0];
-			s->fixedSmp2 = ptr16[loopEnd+1];
-
-			// write new values
-			ptr16[loopEnd+0] = ptr16[loopStart+0];
-			if (loopStart == 0 && loopEnd > 0)
-				ptr16[-1] = ptr16[loopEnd-1];
-			else
-				ptr16[-1] = 0;
-
-			ptr16[loopEnd+1] = ptr16[loopStart+1];
+			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			{
+				s->fixedSmp[i] = ptr16[loopEnd+i];
+				ptr16[loopEnd+i] = ptr16[loopStart];
+			}
 		}
 		else
 		{
-			// 8-bit sample
+			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			{
+				s->fixedSmp[i] = s->pek[loopEnd+i];
+				s->pek[loopEnd+i] = s->pek[loopStart];
+			}
+		}
 
-			if (s->repL < 1)
-				return;
+		s->fixed = true;
+		return;
+	}
 
-			loopStart = s->repS;
-			loopEnd = s->repS + s->repL;
-
-			// store old fix position and old values
-			s->fixedPos = loopEnd;
-			s->fixedSmp1 = s->pek[loopEnd+0];
-			s->fixedSmp2 = s->pek[loopEnd+1];
-
-			// write new values
-			s->pek[loopEnd+0] = s->pek[loopStart+0];
-			if (loopStart == 0 && loopEnd > 0)
-				s->pek[-1] = s->pek[loopEnd-1];
-			else
-				s->pek[-1] = 0;
-
-			s->pek[loopEnd+1] = s->pek[loopStart+1];
+	if (loopType == 1)
+	{
+		// forward loop
+		if (sample16Bit)
+		{
+			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			{
+				s->fixedSmp[i] = ptr16[loopEnd+i];
+				ptr16[loopEnd+i] = ptr16[loopStart+i];
+			}
+		}
+		else
+		{
+			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			{
+				s->fixedSmp[i] = s->pek[loopEnd+i];
+				s->pek[loopEnd+i] = s->pek[loopStart+i];
+			}
 		}
 	}
 	else
 	{
 		// pingpong loop
-
-		if (s->typ & 16)
+		if (sample16Bit)
 		{
-			// 16-bit sample
-
-			if (s->repL < 2)
-				return;
-
-			loopStart = s->repS >> 1;
-			loopLen = s->repL >> 1;
-
-			loopEnd = loopStart + loopLen;
-			ptr16 = (int16_t *)s->pek;
-
-			// store old fix position and old values
-			s->fixedPos = s->repS + s->repL;
-			s->fixedSmp1 = ptr16[loopEnd+0];
-			s->fixedSmp2 = ptr16[loopEnd+1];
-
-			// write new values
-			ptr16[loopEnd+0] = ptr16[loopEnd-1];
-			if (loopStart == 0)
-				ptr16[-1] = ptr16[0];
-			else
-				ptr16[-1] = 0;
-
-			if (loopLen >= 2)
-				ptr16[loopEnd+1] = ptr16[loopEnd-2];
-			else
-				ptr16[loopEnd+1] = ptr16[loopStart+0];
+			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			{
+				s->fixedSmp[i] = ptr16[loopEnd+i];
+				ptr16[loopEnd+i] = ptr16[loopEnd-1-i];
+			}
 		}
 		else
 		{
-			// 8-bit sample
-
-			if (s->repL < 1)
-				return;
-
-			loopStart = s->repS;
-			loopLen = s->repL;
-
-			loopEnd = loopStart + loopLen;
-
-			// store old fix position and old values
-			s->fixedPos = loopEnd;
-			s->fixedSmp1 = s->pek[loopEnd+0];
-			s->fixedSmp2 = s->pek[loopEnd+1];
-
-			// write new values
-			s->pek[loopEnd+0] = s->pek[loopEnd-1];
-			if (loopStart == 0)
-				s->pek[-1] = s->pek[0];
-			else
-				s->pek[-1] = 0;
-
-			if (loopLen >= 2)
-				s->pek[loopEnd+1] = s->pek[loopEnd-2];
-			else
-				s->pek[loopEnd+1] = s->pek[loopStart+0];
+			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			{
+				s->fixedSmp[i] = s->pek[loopEnd+i];
+				s->pek[loopEnd+i] = s->pek[loopEnd-1-i];
+			}
 		}
 	}
+
+	// -1 tap (right before loopStart) on forward/pingpong loops are handled in the mixer
 
 	s->fixed = true;
 }
 
-// reverts wrapped samples after loop/end (for branchless mixer interpolation)
+// restores interpolation tap samples after loop/end
 void restoreSample(sampleTyp *s)
 {
-	int16_t *ptr16;
-	int32_t fixedPos16;
-
 	assert(s != NULL);
-	if (s->origPek == NULL || s->len == 0 || (s->typ & 3) == 0 || !s->fixed)
-		return; // empty sample, no loop or not fixed
-
-	assert(s->pek != NULL);
-	s->fixed = false;
-
-	// clear pre-start bytes (this is safe, we have allocated room on the left for this)
-	s->pek[-4] = 0;
-	s->pek[-3] = 0;
-	s->pek[-2] = 0;
-	s->pek[-1] = 0;
+	if (s->origPek == NULL || s->pek == NULL || !s->fixed)
+		return; // empty sample or not fixed (f.ex. no loop)
 
 	if (s->typ & 16)
 	{
 		// 16-bit sample
-
-		ptr16 = (int16_t *)s->pek;
-		fixedPos16 = s->fixedPos >> 1;
-
-		ptr16[fixedPos16+0] = s->fixedSmp1;
-		ptr16[fixedPos16+1] = s->fixedSmp2;
+		int16_t *ptr16 = (int16_t *)s->pek + s->fixedPos;
+		for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			ptr16[i] = s->fixedSmp[i];
 	}
 	else
 	{
 		// 8-bit sample
-
-		s->pek[s->fixedPos+0] = (int8_t)s->fixedSmp1;
-		s->pek[s->fixedPos+1] = (int8_t)s->fixedSmp2;
+		int8_t *ptr8 = s->pek + s->fixedPos;
+		for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			ptr8[i] = (int8_t)s->fixedSmp[i];
 	}
+
+	s->fixed = false;
 }
 
 int16_t getSampleValue(int8_t *ptr, uint8_t typ, int32_t pos)
@@ -317,7 +274,7 @@ int32_t getSampleMiddleCRate(sampleTyp *s)
 	double dFTune = realFineTune * (1.0 / 16.0); // new range is -16..15
 
 	double dFreq = 8363.0 * exp2((s->relTon + dFTune) * (1.0 / 12.0));
-	return (int32_t)(dFreq + 0.5);
+	return (int32_t)(dFreq + 0.5); // rounded
 }
 
 int32_t getSampleRangeStart(void)
@@ -618,56 +575,39 @@ static void writeRange(void)
 	}
 }
 
-static int8_t getScaledSample(sampleTyp *s, int32_t index)
+static int8_t getScaledSample(sampleTyp *s, int32_t index) // for drawing sample waveform in zoomed-in mode
 {
-	int8_t *ptr8, sample;
+	int8_t sample;
 	int16_t *ptr16;
 	int32_t tmp32;
 
+	const int32_t loopEnd = s->repS + s->repL;
+
 	if (s->pek == NULL || index < 0 || index >= s->len)
-		return 0; // return center value if overflown (e.g. sample is shorter than screen width)
+		return 0;
 
 	if (s->typ & 16)
 	{
+		assert(!(index & 1));
+		index >>= 1;
+
 		ptr16 = (int16_t *)s->pek;
 
-		assert(!(index & 1));
-
-		// restore fixed mixer interpolation sample(s)
-		if (s->fixed)
-		{
-			if (index == s->fixedPos)
-				tmp32 = s->fixedSmp1;
-			else if (index == s->fixedPos+2)
-				tmp32 = s->fixedSmp2;
-			else
-				tmp32 = ptr16[index >> 1];
-		}
+		// don't read fixed mixer interpolation samples, read the prestine ones instead
+		if (index >= s->fixedPos && index < s->fixedPos+NUM_FIXED_TAP_SAMPLES && s->len > loopEnd && s->fixed)
+			tmp32 = s->fixedSmp[index-s->fixedPos];
 		else
-		{
-			tmp32 = ptr16[index >> 1];
-		}
+			tmp32 = ptr16[index];
 
 		sample = (int8_t)((tmp32 * SAMPLE_AREA_HEIGHT) >> 16);
 	}
 	else
 	{
-		ptr8 = s->pek;
-
-		// restore fixed mixer interpolation sample(s)
-		if (s->fixed)
-		{
-			if (index == s->fixedPos)
-				tmp32 = s->fixedSmp1;
-			else if (index == s->fixedPos+1)
-				tmp32 = s->fixedSmp2;
-			else
-				tmp32 = ptr8[index];
-		}
+		// don't read fixed mixer interpolation samples, read the prestine ones instead
+		if (index >= s->fixedPos && index < s->fixedPos+NUM_FIXED_TAP_SAMPLES && s->len > loopEnd && s->fixed)
+			tmp32 = s->fixedSmp[index-s->fixedPos];
 		else
-		{
-			tmp32 = ptr8[index];
-		}
+			tmp32 = s->pek[index];
 
 		sample = (int8_t)((tmp32 * SAMPLE_AREA_HEIGHT) >> 8);
 	}
@@ -762,7 +702,7 @@ static void sampleLine(int16_t x1, int16_t x2, int16_t y1, int16_t y2)
 
 static void getMinMax16(const void *p, uint32_t scanLen, int16_t *min16, int16_t *max16)
 {
-#if defined __APPLE__ || defined _WIN32 || defined __amd64__ || (defined __i386__ && defined __SSE2__)
+#if defined _WIN32 || defined __amd64__ || (defined __i386__ && defined __SSE2__)
 	if (cpu.hasSSE2)
 	{
 		/* Taken with permission from the OpenMPT project (and slightly modified).
@@ -827,16 +767,14 @@ static void getMinMax16(const void *p, uint32_t scanLen, int16_t *min16, int16_t
 	else
 #endif
 	{
-		// non-SSE version (really slow for big samples, especially when scrolling!)
-		int16_t smp16, minVal, maxVal, *ptr16;
+		// non-SSE version (really slow for big samples while zoomed out)
+		int16_t minVal =  32767;
+		int16_t maxVal = -32768;
 
-		minVal = 32767;
-		maxVal = -32768;
-
-		ptr16 = (int16_t *)p;
+		const int16_t *ptr16 = (const int16_t *)p;
 		for (uint32_t i = 0; i < scanLen; i++)
 		{
-			smp16 = ptr16[i];
+			const int16_t smp16 = ptr16[i];
 			if (smp16 < minVal) minVal = smp16;
 			if (smp16 > maxVal) maxVal = smp16;
 		}
@@ -848,7 +786,7 @@ static void getMinMax16(const void *p, uint32_t scanLen, int16_t *min16, int16_t
 
 static void getMinMax8(const void *p, uint32_t scanLen, int8_t *min8, int8_t *max8)
 {
-#if defined __APPLE__ || defined _WIN32 || defined __amd64__ || (defined __i386__ && defined __SSE2__)
+#if defined _WIN32 || defined __amd64__ || (defined __i386__ && defined __SSE2__)
 	if (cpu.hasSSE2)
 	{
 		/* Taken with permission from the OpenMPT project (and slightly modified).
@@ -924,16 +862,14 @@ static void getMinMax8(const void *p, uint32_t scanLen, int8_t *min8, int8_t *ma
 	else
 #endif
 	{
-		// non-SSE version (really slow for big samples, especially when scrolling!)
-		int8_t smp8, minVal, maxVal, *ptr8;
+		// non-SSE version (really slow for big samples while zoomed out)
+		int8_t minVal =  127;
+		int8_t maxVal = -128;
 
-		minVal = 127;
-		maxVal = -128;
-
-		ptr8 = (int8_t *)p;
+		const int8_t *ptr8 = (const int8_t *)p;
 		for (uint32_t i = 0; i < scanLen; i++)
 		{
-			smp8 = ptr8[i];
+			const int8_t smp8 = ptr8[i];
 			if (smp8 < minVal) minVal = smp8;
 			if (smp8 > maxVal) maxVal = smp8;
 		}
@@ -943,12 +879,96 @@ static void getMinMax8(const void *p, uint32_t scanLen, int8_t *min8, int8_t *ma
 	}
 }
 
-static void getSampleDataPeak(sampleTyp *s, int32_t index, int32_t numBytes, int16_t *outMin, int16_t *outMax)
+// for scanning sample data peak where loopEnd+NUM_FIXED_TAP_SAMPLES is within scan range (fixed interpolation tap samples)
+static void getSpecialMinMax16(sampleTyp *s, int32_t index, int32_t scanEnd, int16_t *min16, int16_t *max16)
+{
+	int16_t minVal, maxVal, minVal2, maxVal2;
+
+	const int16_t *ptr16 = (const int16_t *)s->pek;
+
+	minVal =  32767;
+	maxVal = -32768;
+
+	// read peak samples before fixed samples
+	if (index < s->fixedPos)
+	{
+		getMinMax16(&ptr16[index], s->fixedPos-index, &minVal, &maxVal);
+		index += s->fixedPos-index;
+	}
+
+	// read fixed samples
+	int32_t tmpScanEnd = index+NUM_FIXED_TAP_SAMPLES;
+	if (tmpScanEnd > scanEnd)
+		tmpScanEnd = scanEnd;
+
+	const int16_t *smpReadPtr = s->fixedSmp;
+	for (; index < tmpScanEnd; index++)
+	{
+		const int16_t smp16 = *smpReadPtr++;
+		if (smp16 < minVal) minVal = smp16;
+		if (smp16 > maxVal) maxVal = smp16;
+	}
+
+	// read peak samples after fixed samples
+	if (index < scanEnd)
+	{
+		getMinMax16(&ptr16[index], scanEnd-index, &minVal2, &maxVal2);
+		if (minVal2 < minVal) minVal = minVal2;
+		if (maxVal2 > maxVal) maxVal = maxVal2;
+	}
+
+	*min16 = minVal;
+	*max16 = maxVal;
+}
+
+// for scanning sample data peak where loopEnd+NUM_FIXED_TAP_SAMPLES is within scan range (fixed interpolation tap samples)
+static void getSpecialMinMax8(sampleTyp *s, int32_t index, int32_t scanEnd, int8_t *min8, int8_t *max8)
+{
+	int8_t minVal, maxVal, minVal2, maxVal2;
+
+	const int8_t *ptr8 = (const int8_t *)s->pek;
+
+	minVal =  127;
+	maxVal = -128;
+
+	// read peak samples before fixed samples
+	if (index < s->fixedPos)
+	{
+		getMinMax8(&ptr8[index], s->fixedPos-index, &minVal, &maxVal);
+		index += s->fixedPos-index;
+	}
+
+	// read fixed samples
+	int32_t tmpScanEnd = index+NUM_FIXED_TAP_SAMPLES;
+	if (tmpScanEnd > scanEnd)
+		tmpScanEnd = scanEnd;
+
+	const int16_t *smpReadPtr = (const int16_t *)s->fixedSmp;
+	for (; index < tmpScanEnd; index++)
+	{
+		const int8_t smp8 = (int8_t)(*smpReadPtr++);
+		if (smp8 < minVal) minVal = smp8;
+		if (smp8 > maxVal) maxVal = smp8;
+	}
+
+	// read peak samples after fixed samples
+	if (index < scanEnd)
+	{
+		getMinMax8(&ptr8[index], scanEnd-index, &minVal2, &maxVal2);
+		if (minVal2 < minVal) minVal = minVal2;
+		if (maxVal2 > maxVal) maxVal = maxVal2;
+	}
+
+	*min8 = minVal;
+	*max8 = maxVal;
+}
+
+static void getSampleDataPeak(sampleTyp *s, int32_t index, int32_t numSamples, int16_t *outMin, int16_t *outMax)
 {
 	int8_t min8, max8;
 	int16_t min16, max16;
 
-	if (numBytes == 0 || s->pek == NULL || s->len <= 0)
+	if (numSamples == 0 || s->pek == NULL || s->len <= 0)
 	{
 		*outMin = SAMPLE_AREA_Y_CENTER;
 		*outMax = SAMPLE_AREA_Y_CENTER;
@@ -957,21 +977,52 @@ static void getSampleDataPeak(sampleTyp *s, int32_t index, int32_t numBytes, int
 
 	if (s->typ & 16)
 	{
-		// 16-bit sample
-
 		assert(!(index & 1));
+		index >>= 1;
+		numSamples >>= 1;
+	}
 
-		getMinMax16((int16_t *)&s->pek[index], numBytes >> 1, &min16, &max16);
+	if (s->fixed && s->len > s->repL+s->repS)
+	{
+		const int32_t scanEnd = index + numSamples;
 
+		/* If the scan area is including the fixed samples (for branchless mixer interpolation),
+		** do a special procedure to scan the original non-touched samples when needed.
+		*/
+		const bool insideRange = index >= s->fixedPos && index < s->fixedPos+NUM_FIXED_TAP_SAMPLES;
+		if (insideRange || (index < s->fixedPos && scanEnd >= s->fixedPos))
+		{
+			if (s->typ & 16)
+			{
+				// 16-bit sample
+				getSpecialMinMax16(s, index, scanEnd, &min16, &max16);
+				*outMin = SAMPLE_AREA_Y_CENTER - ((min16 * SAMPLE_AREA_HEIGHT) >> 16);
+				*outMax = SAMPLE_AREA_Y_CENTER - ((max16 * SAMPLE_AREA_HEIGHT) >> 16);
+			}
+			else
+			{
+				// 8-bit sample
+				getSpecialMinMax8(s, index, scanEnd, &min8, &max8);
+				*outMin = SAMPLE_AREA_Y_CENTER - ((min8 * SAMPLE_AREA_HEIGHT) >> 8);
+				*outMax = SAMPLE_AREA_Y_CENTER - ((max8 * SAMPLE_AREA_HEIGHT) >> 8);
+			}
+
+			return;
+		}
+	}
+
+	if (s->typ & 16)
+	{
+		// 16-bit sample
+		const int16_t *smpPtr16 = (int16_t *)s->pek;
+		getMinMax16(&smpPtr16[index], numSamples, &min16, &max16);
 		*outMin = SAMPLE_AREA_Y_CENTER - ((min16 * SAMPLE_AREA_HEIGHT) >> 16);
 		*outMax = SAMPLE_AREA_Y_CENTER - ((max16 * SAMPLE_AREA_HEIGHT) >> 16);
 	}
 	else
 	{
 		// 8-bit sample
-
-		getMinMax8(&s->pek[index], numBytes, &min8, &max8);
-
+		getMinMax8(&s->pek[index], numSamples, &min8, &max8);
 		*outMin = SAMPLE_AREA_Y_CENTER - ((min8 * SAMPLE_AREA_HEIGHT) >> 8);
 		*outMax = SAMPLE_AREA_Y_CENTER - ((max8 * SAMPLE_AREA_HEIGHT) >> 8);
 	}
@@ -2675,7 +2726,7 @@ void sampMin(void)
 	if (okBox(1, "System request", "Minimize sample?") != 1)
 		return;
 
-	bool hasLoop = s->typ & 3;
+	const bool hasLoop = s->typ & 3;
 	if (hasLoop && s->len > s->repS+s->repL && s->repL < s->len)
 	{
 		lockMixerCallback();

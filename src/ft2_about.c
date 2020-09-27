@@ -37,6 +37,7 @@ static const uint8_t starColConv[24] = { 2,2,2,2,2,2,2,2, 2,2,2,1,1,1,3,3, 3,3,3
 static int16_t hastighet;
 static int32_t lastStarScreenPos[NUM_STARS];
 static uint32_t randSeed;
+static double pi;
 static vector_t starcrd[NUM_STARS];
 static rotate_t star_a;
 static matrix_t starmat;
@@ -62,12 +63,12 @@ static void fixaMatris(rotate_t a, matrix_t *mat)
 	int32_t sa, sb, sc, ca, cb, cc;
 
 	// original code used a cos/sin table, but this only runs once per frame, no need...
-	sa = (int32_t)round(32767.0 * sin(a.x * (2.0 * M_PI / 65536.0)));
-	ca = (int32_t)round(32767.0 * cos(a.x * (2.0 * M_PI / 65536.0)));
-	sb = (int32_t)round(32767.0 * sin(a.y * (2.0 * M_PI / 65536.0)));
-	cb = (int32_t)round(32767.0 * cos(a.y * (2.0 * M_PI / 65536.0)));
-	sc = (int32_t)round(32767.0 * sin(a.z * (2.0 * M_PI / 65536.0)));
-	cc = (int32_t)round(32767.0 * cos(a.z * (2.0 * M_PI / 65536.0)));
+	sa = (int32_t)round(32767.0 * sin(a.x * (2.0 * pi / 65536.0)));
+	ca = (int32_t)round(32767.0 * cos(a.x * (2.0 * pi / 65536.0)));
+	sb = (int32_t)round(32767.0 * sin(a.y * (2.0 * pi / 65536.0)));
+	cb = (int32_t)round(32767.0 * cos(a.y * (2.0 * pi / 65536.0)));
+	sc = (int32_t)round(32767.0 * sin(a.z * (2.0 * pi / 65536.0)));
+	cc = (int32_t)round(32767.0 * cos(a.z * (2.0 * pi / 65536.0)));
 
 	mat->x.x = (int16_t)(((ca * cc) >> 16) + ((sc * ((sa * sb) >> 16)) >> (16-1)));
 	mat->y.x = (int16_t)((sa * cb) >> 16);
@@ -93,6 +94,8 @@ static void aboutInit(void)
 	int16_t i;
 	int32_t r, n, w, h;
 	double ww;
+
+	pi = 4.0 * atan(1.0); // M_PI can not be trusted
 
 	type = (uint8_t)random32(4);
 	switch (type)
@@ -125,7 +128,7 @@ static void aboutInit(void)
 					r = random32(30000);
 					n = random32(5);
 					w = ((2 * random32(2)) - 1) * sqr(random32(1000));
-					ww = (((M_PI * 2.0) / 5.0) * n) + (r / 12000.0) + (w / 3000000.0);
+					ww = (((pi * 2.0) / 5.0) * n) + (r / 12000.0) + (w / 3000000.0);
 					h = ((sqr(r) / 30000) * (random32(10000) - 5000)) / 12000;
 
 					starcrd[i].x = (int16_t)(r * cos(ww));
@@ -146,9 +149,9 @@ static void aboutInit(void)
 				w = random32(3000);
 				ww = ((w * 8) + r) / 16.0;
 
-				const int32_t z = (int32_t)round(32767.0 * cos(w * (2.0 * M_PI / 1024.0)));
-				const int32_t y = (int32_t)round(32767.0 * sin(w * (2.0 * M_PI / 1024.0)));
-				const int32_t x = (int32_t)round(32767.0 * cos(ww * (2.0 * M_PI / 1024.0))) / 4;
+				const int32_t z = (int32_t)round(32767.0 * cos(w * (2.0 * pi / 1024.0)));
+				const int32_t y = (int32_t)round(32767.0 * sin(w * (2.0 * pi / 1024.0)));
+				const int32_t x = (int32_t)round(32767.0 * cos(ww * (2.0 * pi / 1024.0))) / 4;
 
 				starcrd[i].z = (int16_t)((z * (w + r)) / 3500);
 				starcrd[i].y = (int16_t)((y * (w + r)) / 3500);
@@ -233,8 +236,6 @@ void aboutFrame(void)
 	fixaMatris(star_a, &starmat);
 	realStars();
 }
-
-extern uint32_t *unpackedData;
 
 void showAboutScreen(void) // called once when About screen is opened
 {

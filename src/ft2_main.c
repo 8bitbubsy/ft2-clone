@@ -33,7 +33,6 @@
 #include "ft2_events.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
-#include "mixer/ft2_cubic.h"
 
 #ifdef HAS_MIDI
 static SDL_Thread *initMidiThread;
@@ -334,7 +333,6 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	closeAudio();
 	closeReplayer();
 	closeVideo();
-	freeCubicTable();
 	freeSprites();
 	freeDiskOp();
 	clearCopyBuffer();

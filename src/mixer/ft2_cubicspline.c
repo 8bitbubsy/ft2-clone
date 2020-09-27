@@ -1,10 +1,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "ft2_cubic.h"
+#include "ft2_cubicspline.h"
 
-float *fCubicLUT8 = NULL;
-float *fCubicLUT16 = NULL;
+float *fCubicSplineLUT8 = NULL;
+float *fCubicSplineLUT16 = NULL;
 
 /* 4-tap cubic spline interpolation (Horner's method)
 **
@@ -29,31 +29,31 @@ static void calcCubicLUT(float *fLUTPtr, const double dSale)
 
 bool calcCubicTable(void)
 {
-	fCubicLUT8 = (float *)malloc(CUBIC_LUT_LEN * sizeof (float));
-	if (fCubicLUT8 == NULL)
+	fCubicSplineLUT8 = (float *)malloc(CUBIC_LUT_LEN * sizeof (float));
+	if (fCubicSplineLUT8 == NULL)
 		return false;
 
-	fCubicLUT16 = (float *)malloc(CUBIC_LUT_LEN * sizeof (float));
-	if (fCubicLUT16 == NULL)
+	fCubicSplineLUT16 = (float *)malloc(CUBIC_LUT_LEN * sizeof (float));
+	if (fCubicSplineLUT16 == NULL)
 		return false;
 
-	calcCubicLUT(fCubicLUT8, 1.0 / 128.0); // for 8-bit samples
-	calcCubicLUT(fCubicLUT16, 1.0 / 32768.0); // for 16-bit samples
+	calcCubicLUT(fCubicSplineLUT8, 1.0 / 128.0); // for 8-bit samples
+	calcCubicLUT(fCubicSplineLUT16, 1.0 / 32768.0); // for 16-bit samples
 
 	return true;
 }
 
 void freeCubicTable(void)
 {
-	if (fCubicLUT8 != NULL)
+	if (fCubicSplineLUT8 != NULL)
 	{
-		free(fCubicLUT8);
-		fCubicLUT8 = NULL;
+		free(fCubicSplineLUT8);
+		fCubicSplineLUT8 = NULL;
 	}
 
-	if (fCubicLUT16 != NULL)
+	if (fCubicSplineLUT16 != NULL)
 	{
-		free(fCubicLUT16);
-		fCubicLUT16 = NULL;
+		free(fCubicSplineLUT16);
+		fCubicSplineLUT16 = NULL;
 	}
 }

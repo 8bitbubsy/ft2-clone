@@ -45,87 +45,68 @@ typedef struct mptExtraChunk_t
 	uint8_t vibratoType, vibratoSweep, vibratoDepth, vibratoRate;
 } mptExtraChunk_t;
 
-static const char rangedDataStr[] = "Ranged data from FT2";
+static const char *rangedDataStr = "Ranged data from FT2";
 
 // thread data
 static bool saveRangeFlag;
 static SDL_Thread *thread;
 
-// used to restore mixer interpolation fix .RAW/.IFF/.WAV files after save
-static bool fileRestoreSampleData(UNICHAR *filenameU, int32_t sampleDataOffset, sampleTyp *smp)
+// restores modified interpolation tap samples after loopEnd (for .RAW/.IFF/.WAV samples after save)
+static void fileRestoreFixedSampleData(UNICHAR *filenameU, uint32_t sampleDataOffset, sampleTyp *s)
 {
-	int8_t fixedSmp;
-	FILE *f;
+	if (!s->fixed)
+		return; // nothing to restore
 
-	if (!smp->fixed)
-		return false; // nothing to fix
-
-	f = UNICHAR_FOPEN(filenameU, "r+"); // open in read+update mode
+	FILE *f = UNICHAR_FOPEN(filenameU, "r+"); // open in read+update mode
 	if (f == NULL)
-		return false;
+		return;
 
-	if (smp->typ & 16)
+	const bool sample16Bit = (s->typ & 16) ? true : false;
+
+	uint32_t fixedPos = s->fixedPos;
+	if (sample16Bit)
+		fixedPos *= 2;
+
+	if (fixedPos >= (uint32_t)s->len)
+		return;
+
+	uint32_t bytesToWrite = NUM_FIXED_TAP_SAMPLES * (sample16Bit+1);
+	if (fixedPos+bytesToWrite > (uint32_t)s->len)
+		bytesToWrite = s->len - fixedPos;
+
+	fseek(f, sampleDataOffset+fixedPos, SEEK_SET);
+	if (sample16Bit)
 	{
-		// 16-bit sample
-		if (smp->fixedPos < smp->len)
-		{
-			fseek(f, sampleDataOffset + smp->fixedPos, SEEK_SET);
-			fwrite(&smp->fixedSmp1, sizeof (int16_t), 1, f);
-		}
-
-		if (smp->fixedPos+2 < smp->len)
-		{
-			fseek(f, sampleDataOffset + (smp->fixedPos + 2), SEEK_SET);
-			fwrite(&smp->fixedSmp2, sizeof (int16_t), 1, f);
-		}
+		fwrite(s->fixedSmp, sizeof (int16_t), bytesToWrite / 2, f);
 	}
 	else
 	{
-		// 8-bit sample
-		if (smp->fixedPos < smp->len)
+		for (uint32_t i = 0; i < bytesToWrite; i++)
 		{
-			fseek(f, sampleDataOffset + smp->fixedPos, SEEK_SET);
-
-			fixedSmp = (int8_t)smp->fixedSmp1;
+			int8_t fixedSmp = (int8_t)s->fixedSmp[i];
 			if (editor.sampleSaveMode == SMP_SAVE_MODE_WAV) // on 8-bit WAVs the sample data is unsigned
-				fixedSmp ^= 0x80;
-
-			fwrite(&fixedSmp, sizeof (int8_t), 1, f);
-		}
-
-		if (smp->fixedPos+1 < smp->len)
-		{
-			fseek(f, sampleDataOffset + (smp->fixedPos + 1), SEEK_SET);
-
-			fixedSmp = (int8_t)smp->fixedSmp2;
-			if (editor.sampleSaveMode == SMP_SAVE_MODE_WAV) // on 8-bit WAVs the sample data is unsigned
-				fixedSmp ^= 0x80;
+				fixedSmp ^= 0x80; // signed -> unsigned
 
 			fwrite(&fixedSmp, sizeof (int8_t), 1, f);
 		}
 	}
 
 	fclose(f);
-	return true;
 }
 
 static bool saveRawSample(UNICHAR *filenameU, bool saveRangedData)
 {
 	int8_t *samplePtr;
 	uint32_t sampleLen;
-	FILE *f;
-	sampleTyp *smp;
 
-	if (instr[editor.curInstr] == NULL ||
-		instr[editor.curInstr]->samp[editor.curSmp].pek == NULL ||
-		instr[editor.curInstr]->samp[editor.curSmp].len == 0)
+	instrTyp *ins = instr[editor.curInstr];
+	if (ins == NULL || ins->samp[editor.curSmp].pek == NULL || ins->samp[editor.curSmp].len == 0)
 	{
-		okBoxThreadSafe(0, "System message", "Error saving sample: The sample is empty!");
+		okBoxThreadSafe(0, "System message", "The sample is empty!");
 		return false;
 	}
 
-	smp = &instr[editor.curInstr]->samp[editor.curSmp];
-
+	sampleTyp *smp = &instr[editor.curInstr]->samp[editor.curSmp];
 	if (saveRangedData)
 	{
 		samplePtr = &smp->pek[getSampleRangeStart()];
@@ -137,7 +118,7 @@ static bool saveRawSample(UNICHAR *filenameU, bool saveRangedData)
 		samplePtr = smp->pek;
 	}
 
-	f = UNICHAR_FOPEN(filenameU, "wb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?");
@@ -153,8 +134,10 @@ static bool saveRawSample(UNICHAR *filenameU, bool saveRangedData)
 
 	fclose(f);
 
-	// restore mixer interpolation fix
-	fileRestoreSampleData(filenameU, 0, smp);
+	// restore modified interpolation tap samples after loopEnd
+	const bool loopEnabled = (smp->typ & 3) ? true : false;
+	if (loopEnabled && smp->len > smp->repS+smp->repL)
+		fileRestoreFixedSampleData(filenameU, 0, smp);
 
 	editor.diskOpReadDir = true; // force diskop re-read
 
@@ -196,21 +179,18 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 {
 	char *smpNamePtr;
 	int8_t *samplePtr;
-	uint32_t sampleLen, smpNameLen, chunkLen, tmp32, sampleDataPos;
-	FILE *f;
-	sampleTyp *smp;
+	uint32_t sampleLen, smpNameLen, chunkLen;
 
-	if (instr[editor.curInstr] == NULL ||
-		instr[editor.curInstr]->samp[editor.curSmp].pek == NULL ||
-		instr[editor.curInstr]->samp[editor.curSmp].len == 0)
+	instrTyp *ins = instr[editor.curInstr];
+	if (ins == NULL || ins->samp[editor.curSmp].pek == NULL || ins->samp[editor.curSmp].len == 0)
 	{
-		okBoxThreadSafe(0, "System message", "Error saving sample: The sample is empty!");
+		okBoxThreadSafe(0, "System message", "The sample is empty!");
 		return false;
 	}
 
-	smp = &instr[editor.curInstr]->samp[editor.curSmp];
+	sampleTyp *smp = &instr[editor.curInstr]->samp[editor.curSmp];
 
-	f = UNICHAR_FOPEN(filenameU, "wb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?");
@@ -249,7 +229,7 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 	iffWriteUint32(f, 0); // samplesPerHiCycle
 
 	// samplesPerSec
-	tmp32 = getSampleMiddleCRate(smp);
+	uint32_t tmp32 = getSampleMiddleCRate(smp);
 	if (tmp32 == 0 || tmp32 > 65535) tmp32 = 16726;
 	iffWriteUint16(f, (uint16_t)tmp32);
 
@@ -294,7 +274,7 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 	// "BODY" chunk
 	chunkLen = sampleLen;
 	iffWriteChunkHeader(f, "BODY", chunkLen);
-	sampleDataPos = ftell(f);
+	const uint32_t sampleDataPos = ftell(f);
 	iffWriteChunkData(f, samplePtr, chunkLen);
 
 	// go back and fill in "FORM" chunk size
@@ -304,8 +284,10 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 
 	fclose(f);
 
-	// restore interpolation sample fix (was used for audio mixer)
-	fileRestoreSampleData(filenameU, sampleDataPos, smp);
+	// restore modified interpolation tap samples after loopEnd
+	const bool loopEnabled = (smp->typ & 3) ? true : false;
+	if (loopEnabled && smp->len > smp->repS+smp->repL)
+		fileRestoreFixedSampleData(filenameU, sampleDataPos, smp);
 
 	editor.diskOpReadDir = true; // force diskop re-read
 
@@ -317,30 +299,21 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 {
 	char *smpNamePtr;
 	int8_t *samplePtr;
-	uint8_t sampleBitDepth;
-	uint32_t i, sampleLen, riffChunkSize, smpNameLen, tmpLen, progNameLen, sampleDataPos;
-	FILE *f;
-	sampleTyp *smp;
-	instrTyp *ins;
+	uint32_t i, sampleLen, riffChunkSize, smpNameLen, tmpLen;
 	wavHeader_t wavHeader;
 	samplerChunk_t samplerChunk;
 	mptExtraChunk_t mptExtraChunk;
 
-	ins = instr[editor.curInstr];
-	if (ins == NULL)
+	instrTyp *ins = instr[editor.curInstr];
+	if (ins == NULL || ins->samp[editor.curSmp].pek == NULL || ins->samp[editor.curSmp].len == 0)
 	{
-		okBoxThreadSafe(0, "System message", "Error saving sample: The sample is empty!");
+		okBoxThreadSafe(0, "System message", "The sample is empty!");
 		return false;
 	}
 
-	smp = &ins->samp[editor.curSmp];
-	if (smp->pek == NULL || smp->len == 0)
-	{
-		okBoxThreadSafe(0, "System message", "Error saving sample: The sample is empty!");
-		return false;
-	}
+	sampleTyp *smp = &ins->samp[editor.curSmp];
 
-	f = UNICHAR_FOPEN(filenameU, "wb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?");
@@ -358,7 +331,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 		samplePtr = smp->pek;
 	}
 
-	sampleBitDepth = (smp->typ & 16) ? 16 : 8;
+	const uint8_t sampleBitDepth = (smp->typ & 16) ? 16 : 8;
 
 	wavHeader.chunkID = 0x46464952; // "RIFF"
 	wavHeader.chunkSize = 0; // is filled later
@@ -378,7 +351,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 	fwrite(&wavHeader, sizeof (wavHeader_t), 1, f);
 
 	// write sample data
-	sampleDataPos = ftell(f);
+	const uint32_t sampleDataPos = ftell(f);
 	if (sampleBitDepth == 16)
 	{
 		fwrite((int16_t *)samplePtr, sizeof (int16_t), sampleLen / 2, f);
@@ -464,7 +437,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 		}
 	}
 
-	progNameLen = sizeof (PROG_NAME_STR) - 1;
+	const uint32_t progNameLen = sizeof (PROG_NAME_STR) - 1;
 
 	tmpLen = 4 + (4 + 4) + (progNameLen + 1 + ((progNameLen + 1) & 1));
 	if (smpNameLen > 0)
@@ -500,8 +473,10 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 
 	fclose(f);
 
-	// restore mixer interpolation fix
-	fileRestoreSampleData(filenameU, sampleDataPos, smp);
+	// restore modified interpolation tap samples after loopEnd
+	const bool loopEnabled = (smp->typ & 3) ? true : false;
+	if (loopEnabled && smp->len > smp->repS+smp->repL)
+		fileRestoreFixedSampleData(filenameU, sampleDataPos, smp);
 
 	editor.diskOpReadDir = true; // force diskop re-read
 
@@ -511,17 +486,13 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 
 static int32_t SDLCALL saveSampleThread(void *ptr)
 {
-	const UNICHAR *oldPathU;
-
-	(void)ptr;
-
 	if (editor.tmpFilenameU == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?");
 		return false;
 	}
 
-	oldPathU = getDiskOpCurPath();
+	const UNICHAR *oldPathU = getDiskOpCurPath();
 
 	// in "save range mode", we must enter the sample directory
 	if (saveRangeFlag)
@@ -538,6 +509,7 @@ static int32_t SDLCALL saveSampleThread(void *ptr)
 	if (saveRangeFlag)
 		UNICHAR_CHDIR(oldPathU);
 
+	(void)ptr;
 	return true;
 }
 

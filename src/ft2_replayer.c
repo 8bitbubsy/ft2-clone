@@ -20,14 +20,14 @@
 #include "ft2_sample_loader.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
-#include "mixer/ft2_cubic.h"
+#include "mixer/ft2_cubicspline.h"
 
 /* This is a mess, directly ported from the original FT2 code (with some modifications).
 ** You will experience a lot of headaches if you dig into it...
 ** If something looks to be off, it probably isn't!
 */
 
-// non-FT2 precalced stuff
+// non-FT2 precalced stuff (these are kinda big...)
 static double dPeriod2HzTab[65536], dLogTab[768], dHz2MixDeltaMul;
 static uint32_t revMixDeltaTab[65536];
 static bool bxxOverflow;
@@ -2710,6 +2710,8 @@ void closeReplayer(void)
 		free(instr[131]);
 		instr[131] = NULL;
 	}
+
+	freeCubicTable();
 }
 
 bool setupReplayer(void)

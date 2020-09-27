@@ -186,10 +186,10 @@ void audioSetVolRamp(bool volRamp)
 	unlockMixerCallback();
 }
 
-void audioSetInterpolation(bool interpolation)
+void audioSetInterpolationType(uint8_t interpolationType)
 {
 	lockMixerCallback();
-	audio.interpolationFlag = interpolation;
+	audio.interpolationType = interpolationType;
 	unlockMixerCallback();
 }
 
@@ -321,12 +321,26 @@ static void voiceTrigger(int32_t i, sampleTyp *s, int32_t position)
 	{
 		v->base16 = (const int16_t *)s->pek;
 		v->revBase16 = &v->base16[loopStart + loopEnd]; // for pingpong loops
+
+		// first tap [-1] sample for special case: if (hasLooped && pos == loopStart)
+		if (loopType == 1)
+			v->fTapFixSample = v->base16[loopEnd-1];
+		else if (loopType == 2)
+			v->fTapFixSample = v->base16[loopStart];
 	}
 	else
 	{
 		v->base8 = s->pek;
 		v->revBase8 = &v->base8[loopStart + loopEnd]; // for pingpong loops
+
+		// first tap [-1] sample for special case: if (hasLooped && pos == loopStart)
+		if (loopType == 1)
+			v->fTapFixSample = v->base8[loopEnd-1];
+		else if (loopType == 2)
+			v->fTapFixSample = v->base8[loopStart];
 	}
+
+	v->hasLooped = false; // for cubic interpolation special case (read fTapFixSample comment above)
 
 	v->backwards = false;
 	v->loopType = loopType;
@@ -343,7 +357,7 @@ static void voiceTrigger(int32_t i, sampleTyp *s, int32_t position)
 		return;
 	}
 
-	v->mixFuncOffset = (sampleIs16Bit * 6) + (audio.interpolationFlag * 3) + loopType;
+	v->mixFuncOffset = (sampleIs16Bit * 9) + (audio.interpolationType * 3) + loopType;
 	v->active = true;
 }
 
@@ -548,13 +562,13 @@ static void doChannelMixing(int32_t samplesToMix)
 				centerMixFlag = v->fVolL == v->fVolR;
 			}
 
-			mixFuncTab[(centerMixFlag * 24) + (volRampFlag * 12) + v->mixFuncOffset](v, samplesToMix);
+			mixFuncTab[(centerMixFlag * 36) + (volRampFlag * 18) + v->mixFuncOffset](v, samplesToMix);
 		}
 
 		if (r->active) // volume ramp fadeout-voice
 		{
 			const bool centerMixFlag = (r->fDestVolL == r->fDestVolR) && (r->fVolDeltaL == r->fVolDeltaR);
-			mixFuncTab[(centerMixFlag * 24) + 12 + r->mixFuncOffset](r, samplesToMix);
+			mixFuncTab[(centerMixFlag * 36) + 18 + r->mixFuncOffset](r, samplesToMix);
 		}
 	}
 }

@@ -528,7 +528,7 @@ Use left ctrl. for A/X/C/V (mark all/cut/copy/paste) keys.
 END
 ;***************************************************************************
 ;***************************************************************************
-@LHow to use Fasttracker 2.0
+@LHow to use Fasttracker II
 >@X040@C002
 >All "not-too-trivial" functions are presented below (ordered in
 windows) with a short description.
@@ -782,11 +782,12 @@ you exit the program.
 >
 >@X040@C001Interpolation:
 >@X060@C002
-The mixing routine interpolates the sample value between the
-sample points to remove unwanted noise in the sound. Real FT2 uses
-2-tap linear interpolation, while this clone uses 4-tap cubic spline 
-interpolation for improved high frequencies. Turning it off will make
-the audio sharper, but it will also be noisier.
+Selects what type of resampling interpolation to use.
+"None" uses no interpolation (nearest neighbor), which will result in
+aliasing (noise) in the sound. "Linear" is what real FT2 uses, which is a
+mediocre interpolation type. "Cubic spline" is the recommended setting
+for the best audio quality, although it may sometimes sound too filtered
+on low-quality samples (f.ex. Amiga MODs).
 
 >@X040@C001Volume ramping:
 >@X060@C002
@@ -894,20 +895,12 @@ one and not attempt to create config dirs for the OS user. (portable mode)
 >@C002A: This is normal. This is a limitation in the nature of scaling.
 >@X020
 >@C001Q: I found a bug!
->@C002A: Please send a mail to olav.sorensen@live.no and try to explain it.
+>@C002A: Please send me a mail (found at 16-bits.org) and try to explain it.
 
 END
 ;***************************************************************************
 ;***************************************************************************
 @LKnown bugs
->@X010
->@C001Sample editor:
->@C002
->@X010- When a looped sample is zoomed out in the sample editor, you could see
->@X021unexpected sample data at the loop-end point. This is because of a kludge
-for the resampling interpolation to work faster in the audio mixer, and the
-original FT2 has the same problem. I have made it so that if you zoom in to
-see the individual sample points, it will look like normal.
 >@X010
 >@C001Mouse / keyboard:
 >

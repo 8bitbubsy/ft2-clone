@@ -15,8 +15,8 @@
 #define CUBIC_FSHIFT (MIXER_FRAC_BITS-(CUBIC_PHASES_BITS+CUBIC_WIDTH_BITS))
 #define CUBIC_FMASK ((CUBIC_WIDTH*CUBIC_PHASES)-CUBIC_WIDTH)
 
-extern float *fCubicLUT8;
-extern float *fCubicLUT16;
+extern float *fCubicSplineLUT8;
+extern float *fCubicSplineLUT16;
 
 bool calcCubicTable(void);
 void freeCubicTable(void);

@@ -84,7 +84,7 @@
     <ClCompile Include="..\..\src\mixer\ft2_silence_mix.c">
       <Filter>mixer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\mixer\ft2_cubic.c">
+    <ClCompile Include="..\..\src\mixer\ft2_cubicspline.c">
       <Filter>mixer</Filter>
     </ClCompile>
   </ItemGroup>
@@ -233,7 +233,7 @@
     <ClInclude Include="..\..\src\mixer\ft2_silence_mix.h">
       <Filter>mixer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\mixer\ft2_cubic.h">
+    <ClInclude Include="..\..\src\mixer\ft2_cubicspline.h">
       <Filter>mixer</Filter>
     </ClInclude>
   </ItemGroup>

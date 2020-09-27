@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include "../ft2_audio.h"
-#include "ft2_cubic.h"
+#include "ft2_cubicspline.h"
 
 /* ----------------------------------------------------------------------- */
 /*                          GENERAL MIXER MACROS                           */
@@ -52,6 +52,14 @@
 	fVolLDelta = v->fVolDeltaL; \
 	pos = v->pos; \
 	posFrac = v->posFrac; \
+
+#define PREPARE_TAP_FIX8 \
+	const int8_t *loopStartPtr = &v->base8[v->loopStart]; \
+	const float fTapFixSample = v->fTapFixSample; \
+
+#define PREPARE_TAP_FIX16 \
+	const int16_t *loopStartPtr = &v->base16[v->loopStart]; \
+	const float fTapFixSample = v->fTapFixSample; \
 
 #define SET_BASE8 \
 	base = v->base8; \
@@ -119,62 +127,132 @@
 	*fMixBufferL++ += fSample; \
 	*fMixBufferR++ += fSample; \
 
-// 4-tap cubic spline interpolation through LUT (mixer/ft2_cubic.c)
+// 2-tap linear interpolation (like FT2)
 
-#define INTERPOLATE(LUT, s0, s1, s2, s3, f) \
+#define LINEAR_INTERPOLATION16(s, f) \
 { \
-	const float *t = (const float *)LUT + ((f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
-	s0 = (s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3]); \
+	const float fFrac = (const float)((uint32_t)f * (1.0f / (UINT32_MAX+1.0f))); /* 0.0 .. 0.999f */ \
+	fSample = ((s[0] + (s[1]-s[0]) * fFrac)) * (1.0f / 32768.0f); \
 } \
 
-/* 8bitbubsy: It may look like we are potentially going out of bounds by looking up sample point
-** -1, 1 and 2, but the sample data is actually padded on both the left (negative) and right side,
-** where correct samples are stored according to loop mode (or no loop).
-**
-** The only issue is that the -1 look-up gets wrong information if loopStart>0 on looped-samples,
-** and the sample-position is at loopStart. The spline will get ever so slighty wrong because of this,
-** but it's barely audible anyway. Doing it elsewise would require a refactoring of how the audio mixer
-** works!
-*/
+#define LINEAR_INTERPOLATION8(s, f) \
+{ \
+	const float fFrac = (const float)((uint32_t)f * (1.0f / (UINT32_MAX+1.0f))); /* 0.0f .. 0.999f */ \
+	fSample = ((s[0] + (s[1]-s[0]) * fFrac)) * (1.0f / 128.0f); \
+} \
 
-#define RENDER_8BIT_SMP_INTRP \
+#define RENDER_8BIT_SMP_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	fSample = smpPtr[-1]; \
-	fSample2 = smpPtr[0]; \
-	fSample3 = smpPtr[1]; \
-	fSample4 = smpPtr[2]; \
-	INTERPOLATE(fCubicLUT8, fSample, fSample2, fSample3, fSample4, posFrac) \
+	LINEAR_INTERPOLATION8(smpPtr, posFrac) \
 	*fMixBufferL++ += fSample * fVolL; \
 	*fMixBufferR++ += fSample * fVolR; \
 
-#define RENDER_8BIT_SMP_MONO_INTRP \
+#define RENDER_8BIT_SMP_MONO_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	fSample = smpPtr[-1]; \
-	fSample2 = smpPtr[0]; \
-	fSample3 = smpPtr[1]; \
-	fSample4 = smpPtr[2]; \
-	INTERPOLATE(fCubicLUT8, fSample, fSample2, fSample3, fSample4, posFrac) \
+	LINEAR_INTERPOLATION8(smpPtr, posFrac) \
 	fSample *= fVolL; \
 	*fMixBufferL++ += fSample; \
 	*fMixBufferR++ += fSample; \
 
-#define RENDER_16BIT_SMP_INTRP \
+#define RENDER_16BIT_SMP_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	fSample = smpPtr[-1]; \
-	fSample2 = smpPtr[0]; \
-	fSample3 = smpPtr[1]; \
-	fSample4 = smpPtr[2]; \
-	INTERPOLATE(fCubicLUT16, fSample, fSample2, fSample3, fSample4, posFrac) \
+	LINEAR_INTERPOLATION16(smpPtr, posFrac) \
 	*fMixBufferL++ += fSample * fVolL; \
 	*fMixBufferR++ += fSample * fVolR; \
 
-#define RENDER_16BIT_SMP_MONO_INTRP \
+#define RENDER_16BIT_SMP_MONO_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	fSample = smpPtr[-1]; \
-	fSample2 = smpPtr[0]; \
-	fSample3 = smpPtr[1]; \
-	fSample4 = smpPtr[2]; \
-	INTERPOLATE(fCubicLUT16, fSample, fSample2, fSample3, fSample4, posFrac) \
+	LINEAR_INTERPOLATION16(smpPtr, posFrac) \
+	fSample *= fVolL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample; \
+
+// 4-tap cubic spline interpolation (better quality, through LUT: mixer/ft2_cubicspline.c)
+
+/* 8bitbubsy: It may look like we are potentially going out of bounds while looking up the sample points,
+** but the sample data is actually padded on both the left (negative) and right side, where correct tap
+** samples are stored according to loop mode (or no loop).
+**
+** The mixer is also reading the correct sample on the -1 tap after the sample has looped at least once.
+**
+*/
+
+#define CUBICSPLINE_INTERPOLATION(LUT, s, f) \
+{ \
+	const float *t = (const float *)LUT + (((uint32_t)f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
+	fSample = (s[-1] * t[0]) + (s[0] * t[1]) + (s[1] * t[2]) + (s[2] * t[3]); \
+} \
+
+#define CUBICSPLINE_INTERPOLATION_CUSTOM(LUT, f) \
+{ \
+	const float *t = (const float *)LUT + (((uint32_t)f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
+	fSample = (s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3]); \
+} \
+
+#define RENDER_8BIT_SMP_CINTRP \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	CUBICSPLINE_INTERPOLATION(fCubicSplineLUT8, smpPtr, posFrac) \
+	*fMixBufferL++ += fSample * fVolL; \
+	*fMixBufferR++ += fSample * fVolR; \
+
+#define RENDER_8BIT_SMP_MONO_CINTRP \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	CUBICSPLINE_INTERPOLATION(fCubicSplineLUT8, smpPtr, posFrac) \
+	fSample *= fVolL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample; \
+
+#define RENDER_16BIT_SMP_CINTRP \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	CUBICSPLINE_INTERPOLATION(fCubicSplineLUT16, smpPtr, posFrac) \
+	*fMixBufferL++ += fSample * fVolL; \
+	*fMixBufferR++ += fSample * fVolR; \
+
+#define RENDER_16BIT_SMP_MONO_CINTRP \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	CUBICSPLINE_INTERPOLATION(fCubicSplineLUT16, smpPtr, posFrac) \
+	fSample *= fVolL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample; \
+
+#define RENDER_8BIT_SMP_CINTRP_TAP_FIX  \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	s0 = (smpPtr != loopStartPtr) ? smpPtr[-1] : fTapFixSample; \
+	s1 = smpPtr[0]; \
+	s2 = smpPtr[1]; \
+	s3 = smpPtr[2]; \
+	CUBICSPLINE_INTERPOLATION_CUSTOM(fCubicSplineLUT8, posFrac) \
+	*fMixBufferL++ += fSample * fVolL; \
+	*fMixBufferR++ += fSample * fVolR; \
+
+#define RENDER_8BIT_SMP_MONO_CINTRP_TAP_FIX \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	s0 = (smpPtr != loopStartPtr) ? smpPtr[-1] : fTapFixSample; \
+	s1 = smpPtr[0]; \
+	s2 = smpPtr[1]; \
+	s3 = smpPtr[2]; \
+	CUBICSPLINE_INTERPOLATION_CUSTOM(fCubicSplineLUT8, posFrac) \
+	fSample *= fVolL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample; \
+
+#define RENDER_16BIT_SMP_CINTRP_TAP_FIX \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	s0 = (smpPtr != loopStartPtr) ? smpPtr[-1] : fTapFixSample; \
+	s1 = smpPtr[0]; \
+	s2 = smpPtr[1]; \
+	s3 = smpPtr[2]; \
+	CUBICSPLINE_INTERPOLATION_CUSTOM(fCubicSplineLUT16, posFrac) \
+	*fMixBufferL++ += fSample * fVolL; \
+	*fMixBufferR++ += fSample * fVolR; \
+
+#define RENDER_16BIT_SMP_MONO_CINTRP_TAP_FIX \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	s0 = (smpPtr != loopStartPtr) ? smpPtr[-1] : fTapFixSample; \
+	s1 = smpPtr[0]; \
+	s2 = smpPtr[1]; \
+	s3 = smpPtr[2]; \
+	CUBICSPLINE_INTERPOLATION_CUSTOM(fCubicSplineLUT16, posFrac) \
 	fSample *= fVolL; \
 	*fMixBufferL++ += fSample; \
 	*fMixBufferR++ += fSample; \
@@ -262,15 +340,27 @@
 
 #define WRAP_LOOP \
 	pos = (int32_t)(smpPtr - base); \
-	while (pos >= v->end) \
-		pos -= v->loopLength; \
+	if (pos >= v->end) \
+	{ \
+		do \
+		{ \
+			pos -= v->loopLength; \
+		} \
+		while (pos >= v->end); \
+		v->hasLooped = true; \
+	} \
 	smpPtr = base + pos; \
 
 #define WRAP_BIDI_LOOP \
-	while (pos >= v->end) \
+	if (pos >= v->end) \
 	{ \
-		pos -= v->loopLength; \
-		v->backwards ^= 1; \
+		do \
+		{ \
+			pos -= v->loopLength; \
+			v->backwards ^= 1; \
+		} \
+		while (pos >= v->end); \
+		v->hasLooped = true; \
 	} \
 
 #define END_BIDI \

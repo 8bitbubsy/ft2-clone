@@ -47,7 +47,7 @@ uint8_t configBuffer[CONFIG_FILE_SIZE];
 static void xorConfigBuffer(uint8_t *ptr8)
 {
 	for (int32_t i = 0; i < CONFIG_FILE_SIZE; i++)
-		ptr8[i] ^= (uint8_t)(i * 7);
+		ptr8[i] ^= i*7;
 }
 
 static int32_t calcChecksum(uint8_t *p, uint16_t len) // for nibbles highscore data
@@ -141,6 +141,8 @@ static void loadConfigFromBuffer(void)
 	config.recMIDIVolSens = CLAMP(config.recMIDIVolSens, 0, 200);
 	config.recMIDIChn  = CLAMP(config.recMIDIChn, 1, 16);
 
+	config.interpolation &= 3; // one extra bit used in FT2 clone (off, cubic, linear)
+
 	if (config.recTrueInsert > 1)
 		config.recTrueInsert = 1;
 
@@ -179,7 +181,7 @@ static void loadConfigFromBuffer(void)
 	if (audio.dev != 0)
 		setNewAudioSettings();
 
-	audioSetInterpolation(config.interpolation ? true : false);
+	audioSetInterpolationType(config.interpolation);
 	audioSetVolRamp((config.specialFlags & NO_VOLRAMP_FLAG) ? false : true);
 	setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
 	setMouseShape(config.mouseType);
@@ -827,6 +829,18 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
+	// AUDIO INTERPOLATION
+	uncheckRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INTERPOLATION);
+
+	if (config.interpolation == INTERPOLATION_NONE)
+		tmpID = RB_CONFIG_AUDIO_INTRP_NONE;
+	else if (config.interpolation == INTERPOLATION_LINEAR)
+		tmpID = RB_CONFIG_AUDIO_INTRP_LINEAR;
+	else
+		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC;
+
+	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
+
 	// AUDIO FREQUENCY
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	switch (config.audioFreq)
@@ -857,6 +871,7 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 
 	showRadioButtonGroup(RB_GROUP_CONFIG_SOUND_BUFF_SIZE);
 	showRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_BIT_DEPTH);
+	showRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INTERPOLATION);
 	showRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	showRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INPUT_FREQ);
 	showRadioButtonGroup(RB_GROUP_CONFIG_FREQ_TABLE);
@@ -864,10 +879,7 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 
 static void setConfigIOCheckButtonStates(void)
 {
-	checkBoxes[CB_CONF_INTERPOLATION].checked = config.interpolation;
 	checkBoxes[CB_CONF_VOL_RAMP].checked = (config.specialFlags & NO_VOLRAMP_FLAG) ? false : true;
-
-	showCheckBox(CB_CONF_INTERPOLATION);
 	showCheckBox(CB_CONF_VOL_RAMP);
 }
 
@@ -1110,9 +1122,9 @@ void showConfigScreen(void)
 			drawFramework(110,   0, 276, 87, FRAMEWORK_TYPE1);
 			drawFramework(110,  87, 276, 86, FRAMEWORK_TYPE1);
 
-			drawFramework(386,   0, 119,  73, FRAMEWORK_TYPE1);
-			drawFramework(386,  73, 119,  44, FRAMEWORK_TYPE1);
-			drawFramework(386, 117, 119,  56, FRAMEWORK_TYPE1);
+			drawFramework(386,   0, 119,  58, FRAMEWORK_TYPE1);
+			drawFramework(386,  58, 119,  44, FRAMEWORK_TYPE1);
+			drawFramework(386, 102, 119,  71, FRAMEWORK_TYPE1);
 
 			drawFramework(505,   0, 127,  73, FRAMEWORK_TYPE1);
 			drawFramework(505, 117, 127,  56, FRAMEWORK_TYPE1);
@@ -1149,13 +1161,15 @@ void showConfigScreen(void)
 			textOutShadow(406,  31, PAL_FORGRND, PAL_DSKTOP2, "Medium (default)");
 			textOutShadow(406,  45, PAL_FORGRND, PAL_DSKTOP2, "Large");
 
-			textOutShadow(390,  76, PAL_FORGRND, PAL_DSKTOP2, "Audio bit depth:");
-			textOutShadow(406,  90, PAL_FORGRND, PAL_DSKTOP2, "16-bit (default)");
-			textOutShadow(406, 104, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
+			textOutShadow(390,  61, PAL_FORGRND, PAL_DSKTOP2, "Audio bit depth:");
+			textOutShadow(406,  75, PAL_FORGRND, PAL_DSKTOP2, "16-bit (default)");
+			textOutShadow(406,  89, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
 
-			textOutShadow(390, 120, PAL_FORGRND, PAL_DSKTOP2, "Mixer settings:");
-			textOutShadow(406, 134, PAL_FORGRND, PAL_DSKTOP2, "Interpolation");
-			textOutShadow(406, 147, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
+			textOutShadow(390, 105, PAL_FORGRND, PAL_DSKTOP2, "Interpolation:");
+			textOutShadow(406, 118, PAL_FORGRND, PAL_DSKTOP2, "None");
+			textOutShadow(406, 132, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
+			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
+			textOutShadow(406, 161, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
 
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Mixing frequency:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
@@ -1398,10 +1412,10 @@ void hideConfigScreen(void)
 	// CONFIG AUDIO
 	hideRadioButtonGroup(RB_GROUP_CONFIG_SOUND_BUFF_SIZE);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_BIT_DEPTH);
+	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INTERPOLATION);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INPUT_FREQ);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_FREQ_TABLE);
-	hideCheckBox(CB_CONF_INTERPOLATION);
 	hideCheckBox(CB_CONF_VOL_RAMP);
 	hidePushButton(PB_CONFIG_AUDIO_RESCAN);
 	hidePushButton(PB_CONFIG_AUDIO_OUTPUT_DOWN);
@@ -1591,6 +1605,27 @@ void rbConfigAudio24bit(void)
 	setNewAudioSettings();
 }
 
+void rbConfigAudioIntrpNone(void)
+{
+	config.interpolation = INTERPOLATION_NONE;
+	audioSetInterpolationType(config.interpolation);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_NONE);
+}
+
+void rbConfigAudioIntrpLinear(void)
+{
+	config.interpolation = INTERPOLATION_LINEAR;
+	audioSetInterpolationType(config.interpolation);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_LINEAR);
+}
+
+void rbConfigAudioIntrpCubic(void)
+{
+	config.interpolation = INTERPOLATION_CUBIC;
+	audioSetInterpolationType(config.interpolation);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_CUBIC);
+}
+
 void rbConfigAudio44kHz(void)
 {
 	config.audioFreq = 44100;
@@ -1651,13 +1686,6 @@ void cbToggleAutoSaveConfig(void)
 {
 	config.cfg_AutoSave ^= 1;
 }
-
-void cbConfigInterpolation(void)
-{
-	config.interpolation ^= 1;
-	audioSetInterpolation(config.interpolation);
-}
-
 void cbConfigVolRamp(void)
 {
 	config.specialFlags ^= NO_VOLRAMP_FLAG;
