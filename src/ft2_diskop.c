@@ -624,14 +624,14 @@ void sanitizeFilename(const char *src)
 
 void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 {
-	char *ansiPath, *filename;
-
-	ansiPath = unicharToCp437(pathU, true);
+	char *ansiPath = unicharToCp437(pathU, true);
 	if (ansiPath == NULL)
 		return;
 
-	filename = getFilenameFromPath(ansiPath);
-	if (strlen(filename) > PATH_MAX-1)
+	char *filename = getFilenameFromPath(ansiPath);
+	uint32_t filenameLen = (uint32_t)strlen(filename);
+
+	if (filenameLen > PATH_MAX-1)
 	{
 		free(ansiPath);
 		return; // filename is too long, don't bother to copy it over
@@ -645,8 +645,15 @@ void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 		case DISKOP_ITEM_MODULE:
 		{
 			strcpy(modTmpFName, filename);
-
 			updateCurrSongFilename(); // for window title
+
+			if (editor.moduleSaveMode == MOD_SAVE_MODE_MOD)
+				changeFilenameExt(modTmpFName, ".mod", PATH_MAX);
+			else if (editor.moduleSaveMode == MOD_SAVE_MODE_XM)
+				changeFilenameExt(modTmpFName, ".xm", PATH_MAX);
+			else if (editor.moduleSaveMode == MOD_SAVE_MODE_WAV)
+				changeFilenameExt(modTmpFName, ".wav", PATH_MAX);
+
 			updateWindowTitle(true);
 		}
 		break;
@@ -656,7 +663,16 @@ void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 		break;
 
 		case DISKOP_ITEM_SAMPLE:
+		{
 			strcpy(smpTmpFName, filename);
+
+			if (editor.sampleSaveMode == SMP_SAVE_MODE_RAW)
+				changeFilenameExt(smpTmpFName, ".raw", PATH_MAX);
+			else if (editor.sampleSaveMode == SMP_SAVE_MODE_IFF)
+				changeFilenameExt(smpTmpFName, ".iff", PATH_MAX);
+			else if (editor.sampleSaveMode == SMP_SAVE_MODE_WAV)
+				changeFilenameExt(smpTmpFName, ".wav", PATH_MAX);
+		}
 		break;
 
 		case DISKOP_ITEM_PATTERN:
@@ -742,36 +758,32 @@ static void openFile(UNICHAR *filenameU, bool songModifiedCheck)
 
 static void removeFilenameExt(char *name)
 {
-	int32_t extOffset, len;
-
 	if (name == NULL || *name == '\0')
 		return;
 
-	len = (int32_t)strlen(name);
+	int32_t len = (int32_t)strlen(name);
 
-	extOffset = getExtOffset(name, len);
+	int32_t extOffset = getExtOffset(name, len);
 	if (extOffset != -1)
 		name[extOffset] = '\0';
 }
 
 void changeFilenameExt(char *name, char *ext, int32_t nameMaxLen)
 {
-	int32_t len, extLen;
+	if (name == NULL || name[0] == '\0' || ext == NULL)
+		return;
 
-	 if (name == NULL || name[0] == '\0' || ext == NULL)
-		 return;
+	removeFilenameExt(name);
 
-	 removeFilenameExt(name);
+	int32_t len = (int32_t)strlen(name);
+	int32_t extLen = (int32_t)strlen(ext);
 
-	 len    = (int32_t)strlen(name);
-	 extLen = (int32_t)strlen(ext);
+	if (len+extLen > nameMaxLen)
+		extLen = nameMaxLen-len;
 
-	 if (len + extLen > nameMaxLen-1)
-		 name[(nameMaxLen-1) - extLen] = '\0';
+	strncat(name, ext, extLen);
 
-	 strcat(name, ext);
-
-	 if (ui.diskOpShown)
+	if (ui.diskOpShown)
 		diskOp_DrawDirectory();
 }
 

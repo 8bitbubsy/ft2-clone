@@ -347,9 +347,11 @@
 			pos -= v->loopLength; \
 		} \
 		while (pos >= v->end); \
+		\
+		smpPtr = base + pos; \
+		\
 		v->hasLooped = true; \
 	} \
-	smpPtr = base + pos; \
 
 #define WRAP_BIDI_LOOP \
 	if (pos >= v->end) \

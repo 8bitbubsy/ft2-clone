@@ -348,6 +348,40 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	}
 }
 
+static void charOutFade(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, int32_t fade)
+{
+	const uint8_t *srcPtr;
+	uint32_t *dstPtr, pixVal;
+
+	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+
+	chr &= 0x7F; // this is important to get the nordic glyphs in the font
+	if (chr == ' ')
+		return;
+
+	pixVal = video.palette[paletteIndex];
+	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
+	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+
+	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
+	{
+		for (uint32_t x = 0; x < FONT1_CHAR_W; x++)
+		{
+			if (srcPtr[x] != 0)
+			{
+				int32_t r = (RGB32_R(pixVal) * fade) >> 8;
+				int32_t g = (RGB32_G(pixVal) * fade) >> 8;
+				int32_t b = (RGB32_B(pixVal) * fade) >> 8;
+
+				dstPtr[x] = RGB32(r, g, b) | 0xFF000000;
+			}
+		}
+
+		srcPtr += FONT1_WIDTH;
+		dstPtr += SCREEN_W;
+	}
+}
+
 void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, char chr)
 {
 	const uint8_t *srcPtr;
@@ -580,6 +614,26 @@ void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 			break;
 
 		charOut(currX, y, paletteIndex, chr);
+		currX += charWidth(chr);
+	}
+}
+
+// for about screen
+void textOutFade(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, int32_t fade)
+{
+	char chr;
+	uint16_t currX;
+
+	assert(textPtr != NULL);
+
+	currX = x;
+	while (true)
+	{
+		chr = *textPtr++;
+		if (chr == '\0')
+			break;
+
+		charOutFade(currX, y, paletteIndex, chr, fade);
 		currX += charWidth(chr);
 	}
 }
@@ -819,6 +873,34 @@ void blit32(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, ui
 		{
 			if (srcPtr[x] != 0x00FF00)
 				dstPtr[x] = srcPtr[x] | 0xFF000000; // most significant 8 bits = palette number. 0xFF because no true palette
+		}
+
+		srcPtr += w;
+		dstPtr += SCREEN_W;
+	}
+}
+
+// for about screen
+void blit32Fade(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h, int32_t fade)
+{
+	uint32_t* dstPtr;
+
+	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+
+	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (uint32_t y = 0; y < h; y++)
+	{
+		for (uint32_t x = 0; x < w; x++)
+		{
+			if (srcPtr[x] != 0x00FF00)
+			{
+				const uint32_t pixel = srcPtr[x];
+				int32_t r = (RGB32_R(pixel) * fade) >> 8;
+				int32_t g = (RGB32_G(pixel) * fade) >> 8;
+				int32_t b = (RGB32_B(pixel) * fade) >> 8;
+
+				dstPtr[x] = RGB32(r, g, b) | 0xFF000000;
+			}
 		}
 
 		srcPtr += w;

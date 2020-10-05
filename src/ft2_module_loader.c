@@ -1158,11 +1158,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool externalThreadFlag)
 			}
 
 			pattLensTmp[i] = 64;
-			if (fread(pattBuff, j, 1, f) != 1)
-			{
-				showMsg(0, "System message", "General I/O error during loading! Is the file in use?");
-				goto s3mLoadError;
-			}
+			fread(pattBuff, j, 1, f);
 
 			k = 0;
 			kk = 0;
@@ -1478,6 +1474,8 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool externalThreadFlag)
 
 	// *** SAMPLES ***
 
+	bool adlibInsWarn = false;
+
 	memcpy(ptnOfs, ha, 512);
 	for (i = 0; i < ai; i++)
 	{
@@ -1501,10 +1499,9 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool externalThreadFlag)
 		memcpy(songTmp.instrName[1+i], h_S3MInstr.name, 22);
 		songTmp.instrName[1+i][22] = '\0';
 
-		if (h_S3MInstr.typ > 1)
+		if (h_S3MInstr.typ == 2)
 		{
-			showMsg(0, "System message", "Error loading .s3m: Incompatible module!");
-			goto s3mLoadError;
+			adlibInsWarn = true;
 		}
 		else if (h_S3MInstr.typ == 1)
 		{
@@ -1636,6 +1633,9 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool externalThreadFlag)
 	fclose(f);
 
 	songTmp.antChn = countS3MChannels(ap);
+
+	if (adlibInsWarn)
+		showMsg(0, "System message", "Warning: The module contains unsupported AdLib instruments!");
 
 	if (!(config.dontShowAgainFlags & DONT_SHOW_S3M_LOAD_WARNING_FLAG))
 		showMsg(6, "System message", "Warning: S3M channel panning is ignored because it's not compatible with FT2.");
@@ -2534,7 +2534,7 @@ static void setupLoadedModule(void)
 
 	resetChannels();
 	setPos(0, 0, true);
-	setSpeed(song.speed);
+	P_SetSpeed(song.speed);
 
 	editor.tmpPattern = editor.editPattern; // set kludge variable
 	editor.speed = song.speed;

@@ -125,7 +125,7 @@ void drawWavRenderer(void)
 void resetWavRenderer(void)
 {
 	WDStartPos = 0;
-	WDStopPos  = (uint8_t)song.len - 1;
+	WDStopPos = (uint8_t)song.len - 1;
 
 	if (ui.wavRendererShown)
 		updateWavRenderer();
@@ -197,7 +197,7 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 
 	stopVoices();
 	song.globVol = 64;
-	setSpeed(song.speed);
+	P_SetSpeed(song.speed);
 
 	resetPlaybackTime();
 	return true;
@@ -257,16 +257,20 @@ static void dump_Close(FILE *f, uint32_t totalSamples)
 		song.tempo = 6;
 
 	setBackOldAudioFreq();
-	setSpeed(song.speed);
+	P_SetSpeed(song.speed);
 	setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
 	editor.wavIsRendering = false;
 
 	setMouseBusy(false);
 }
 
-static bool dump_EndOfTune(int16_t endSongPos) // exactly the same as in real FT2
+static bool dump_EndOfTune(int16_t endSongPos)
 {
 	bool returnValue = (editor.wavReachedEndFlag && song.pattPos == 0 && song.timer == 1) || (song.tempo == 0);
+
+	// 8bitbubsy: FT2 bugfix for EEx (pattern delay) on first row of a pattern
+	if (song.pattDelTime2 > 0)
+		returnValue = false;
 
 	if (song.songPos == endSongPos && song.pattPos == 0 && song.timer == 1)
 		editor.wavReachedEndFlag = true;
@@ -305,14 +309,12 @@ static void updateVisuals(void)
 	ui.drawSpeedFlag = true;
 	ui.drawGlobVolFlag = true;
 	ui.updatePatternEditor = true;
-
-	drawPlaybackTime();
 }
 
 static int32_t SDLCALL renderWavThread(void *ptr)
 {
 	bool renderDone;
-	uint8_t *ptr8, loopCounter;
+	uint8_t *ptr8, tickCounter;
 	uint32_t samplesInChunk, sampleCounter;
 	FILE *f;
 
@@ -332,7 +334,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 
 	sampleCounter = 0;
 	renderDone = false;
-	loopCounter = 8;
+	tickCounter = 4;
 
 	double dTickSamples = audio.dSamplesPerTick;
 
@@ -367,9 +369,9 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 			else
 				ptr8 += tickSamples * sizeof (float);
 
-			if (++loopCounter >= 8)
+			if (++tickCounter >= 4)
 			{
-				loopCounter = 0;
+				tickCounter = 0;
 				updateVisuals();
 			}
 		}
@@ -385,6 +387,8 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	}
 
 	updateVisuals();
+	drawPlaybackTime(); // this is needed after the song stopped
+
 	dump_Close(f, sampleCounter);
 	resumeAudio();
 

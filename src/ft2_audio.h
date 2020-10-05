@@ -34,7 +34,7 @@ typedef struct audio_t
 	volatile uint8_t interpolationType;
 	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
 	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;
-	uint64_t tickTime64, tickTime64Frac, tickTimeLengthTab[MAX_BPM+1];
+	uint64_t tickTime64, tickTime64Frac, tickTimeTab[MAX_BPM+1];
 	float fRampQuickVolMul, fRampTickMul, fRampTickMulTab[MAX_BPM+1];
 	float *fMixBufferL, *fMixBufferR, *fMixBufferLUnaligned, *fMixBufferRUnaligned;
 	double dAudioLatencyMs, dSamplesPerTick, dTickSampleCounter, dSamplesPerTickTab[MAX_BPM+1];
@@ -100,7 +100,7 @@ void calcPanningTable(void);
 void setAudioAmp(int16_t amp, int16_t masterVol, bool bitDepth32Flag);
 void setNewAudioFreq(uint32_t freq);
 void setBackOldAudioFreq(void);
-void setSpeed(uint16_t bpm);
+void P_SetSpeed(uint16_t bpm);
 void audioSetVolRamp(bool volRamp);
 void audioSetInterpolationType(uint8_t interpolationType);
 void stopVoice(int32_t i);

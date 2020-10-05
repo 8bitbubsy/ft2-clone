@@ -1535,7 +1535,7 @@ void sbPosEdPos(uint32_t pos)
 		lockAudio();
 
 	if (song.songPos != (int16_t)pos)
-		setPos((int16_t)pos, 0, true);
+		setNewSongPos((int16_t)pos);
 
 	if (audioWasntLocked)
 		unlockAudio();
@@ -1543,28 +1543,12 @@ void sbPosEdPos(uint32_t pos)
 
 void pbPosEdPosUp(void)
 {
-	const bool audioWasntLocked = !audio.locked;
-	if (audioWasntLocked)
-		lockAudio();
-
-	if (song.songPos < song.len-1)
-		setPos(song.songPos + 1, 0, true);
-
-	if (audioWasntLocked)
-		unlockAudio();
+	incSongPos();
 }
 
 void pbPosEdPosDown(void)
 {
-	const bool audioWasntLocked = !audio.locked;
-	if (audioWasntLocked)
-		lockAudio();
-
-	if (song.songPos > 0)
-		setPos(song.songPos - 1, 0, true);
-
-	if (audioWasntLocked)
-		unlockAudio();
+	decSongPos();
 }
 
 void pbPosEdIns(void)
@@ -1753,7 +1737,7 @@ void pbBPMUp(void)
 	if (song.speed < 255)
 	{
 		song.speed++;
-		setSpeed(song.speed);
+		P_SetSpeed(song.speed);
 
 		// if song is playing, the update is handled in the audio/video sync queue
 		if (!songPlaying)
@@ -1779,7 +1763,7 @@ void pbBPMDown(void)
 	if (song.speed > 32)
 	{
 		song.speed--;
-		setSpeed(song.speed);
+		P_SetSpeed(song.speed);
 
 		// if song is playing, the update is handled in the audio/video sync queue
 		if (!songPlaying)
@@ -2685,7 +2669,7 @@ static void zapSong(void)
 	song.pattLen = pattLens[song.pattNr];
 
 	resetMusic();
-	setSpeed(song.speed);
+	P_SetSpeed(song.speed);
 
 	editor.songPos = song.songPos;
 	editor.editPattern = song.pattNr;

@@ -244,6 +244,9 @@ typedef struct syncedChannel_t // used for audio/video sync queue
 	float fFinalVol;
 } syncedChannel_t;
 
+void setNewSongPos(int32_t pos);
+void resetReplayerState(void);
+
 void fixSongName(void); // removes spaces from right side of song name
 void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
 void calcReplayRate(int32_t rate);

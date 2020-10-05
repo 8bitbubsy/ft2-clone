@@ -12,7 +12,7 @@ extern const uint8_t font7BMP[472];
 extern const uint8_t font8BMP[368];
 
 // ft2_bmp_logo.c
-extern const uint8_t ft2AboutLogoBMP[27204];
+extern const uint8_t ft2AboutLogoBMP[27494];
 extern const uint8_t ft2ByBadgesBMP[1916];
 extern const uint8_t ft2LogoBadgesBMP[6260];
 

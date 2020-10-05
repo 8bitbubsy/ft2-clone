@@ -115,3 +115,7 @@ void hideTopLeftScreen(void);
 void hideTopScreen(void);
 void showTopScreen(bool restoreScreens);
 void showBottomScreen(void);
+
+// for about screen
+void textOutFade(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, int32_t fade);
+void blit32Fade(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h, int32_t fade);

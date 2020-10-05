@@ -902,6 +902,12 @@ END
 ;***************************************************************************
 @LKnown bugs
 >@X010
+>@C001WAV exporting (rendering song to WAV):
+>
+>@C002- Songs that jump back to a previous pattern will render forever and ever,
+and you need to press a key or click the mouse to abort the render when you want
+it to.
+>@X010
 >@C001Mouse / keyboard:
 >
 >@C002- Linux: The mouse cursor graphics can be glitchy at times...
@@ -910,13 +916,9 @@ END
 >@C002
 >@X010- Fullscreen mode can be unbearably slow on a Raspberry Pi (even on RPi 4)
 >
->@X010- The scopes can mildly flicker depending on the waveform and pitch.
->@X021This is because their frequency is not clocked to exactly the same rate
->at which the scopes are rendered. It's close, which causes a flicker effect.
->
 >@X010- Not a bug, but if your monitor's refresh rate is not set to 60Hz (or 59Hz)
 >@X021you may experience visual stuttering because VSync will not be used then.
-I highly recommend running your monitor at 60Hz if you're a hardcore user
-of this program.
+I highly recommend running your monitor at 60Hz if you're a hardcore user of this
+program.
 
 END

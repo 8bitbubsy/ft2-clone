@@ -158,7 +158,7 @@ void setBackOldAudioFreq(void) // for song-to-WAV rendering
 	}
 }
 
-void setSpeed(uint16_t bpm)
+void P_SetSpeed(uint16_t bpm)
 {
 	if (bpm == 0)
 		return;
@@ -171,7 +171,7 @@ void setSpeed(uint16_t bpm)
 	audio.samplesPerTick = (int32_t)(audio.dSamplesPerTick + 0.5);
 
 	// get tick time length for audio/video sync timestamp
-	const uint64_t tickTimeLen64 = audio.tickTimeLengthTab[bpm];
+	const uint64_t tickTimeLen64 = audio.tickTimeTab[bpm];
 	tickTimeLen = tickTimeLen64 >> 32;
 	tickTimeLenFrac = tickTimeLen64 & UINT32_MAX;
 
@@ -197,7 +197,7 @@ void calcPanningTable(void)
 {
 	// same formula as FT2's panning table (with 0.0f..1.0f range)
 	for (int32_t i = 0; i <= 256; i++)
-		fPanningTab[i] = sqrtf(i * (1.0f / 256.0f)); // i / 256.0f
+		fPanningTab[i] = sqrtf(i / 256.0f);
 }
 
 static void voiceUpdateVolumes(int32_t i, uint8_t status)
@@ -399,7 +399,6 @@ void updateVoices(void)
 		if (status & IS_Period)
 		{
 			// use cached values if possible
-
 			const uint16_t period = ch->finalPeriod;
 			if (period != oldPeriod)
 			{
@@ -1194,7 +1193,7 @@ bool setupAudio(bool showErrorMsg)
 	if (song.speed == 0)
 		song.speed = 125;
 
-	setSpeed(song.speed); // this is important
+	P_SetSpeed(song.speed); // this is important
 
 	updateSendAudSamplesRoutine(false);
 	audio.resetSyncTickTimeFlag = true;
