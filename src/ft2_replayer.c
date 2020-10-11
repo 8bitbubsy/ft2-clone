@@ -924,9 +924,22 @@ static void handleMoreEffects_TickZero(stmTyp *ch) // called even if channel is 
 	JumpTab_TickZero[ch->effTyp](ch, ch->eff);
 }
 
+/* -- tick-zero volume column effects --
+** 2nd parameter is used for a volume column quirk with the Rxy command (multiretrig)
+*/
+
+static void v_SetVibSpeed(stmTyp *ch, uint8_t *volKol)
+{
+	*volKol = (ch->volKolVol & 0x0F) << 2;
+	if (*volKol != 0)
+		ch->vibSpeed = *volKol;
+}
+
 static void v_Volume(stmTyp *ch, uint8_t *volKol)
 {
 	*volKol -= 16;
+	if (*volKol > 64) // no idea why FT2 has this check...
+		*volKol = 64;
 
 	ch->outVol = ch->realVol = *volKol;
 	ch->status |= IS_Vol + IS_QuickVol;
@@ -934,37 +947,22 @@ static void v_Volume(stmTyp *ch, uint8_t *volKol)
 
 static void v_FineSlideDown(stmTyp *ch, uint8_t *volKol)
 {
-	*volKol = ch->volKolVol & 0x0F;
+	*volKol = (uint8_t)(0 - (ch->volKolVol & 0x0F)) + ch->realVol;
+	if ((int8_t)*volKol < 0)
+		*volKol = 0;
 
-	uint8_t newVol = ch->realVol;
-
-	newVol -= *volKol;
-	if ((int8_t)newVol < 0)
-		newVol = 0;
-
-	ch->outVol = ch->realVol = newVol;
+	ch->outVol = ch->realVol = *volKol;
 	ch->status |= IS_Vol;
 }
 
 static void v_FineSlideUp(stmTyp *ch, uint8_t *volKol)
 {
-	*volKol = ch->volKolVol & 0x0F;
+	*volKol = (ch->volKolVol & 0x0F) + ch->realVol;
+	if (*volKol > 64)
+		*volKol = 64;
 
-	uint8_t newVol = ch->realVol;
-
-	newVol += *volKol;
-	if (newVol > 64)
-		newVol = 64;
-
-	ch->outVol = ch->realVol = newVol;
+	ch->outVol = ch->realVol = *volKol;
 	ch->status |= IS_Vol;
-}
-
-static void v_SetVibSpeed(stmTyp *ch, uint8_t *volKol)
-{
-	*volKol = (ch->volKolVol & 0x0F) << 2;
-	if (*volKol != 0)
-		ch->vibSpeed = *volKol;
 }
 
 static void v_SetPan(stmTyp *ch, uint8_t *volKol)
@@ -975,11 +973,11 @@ static void v_SetPan(stmTyp *ch, uint8_t *volKol)
 	ch->status |= IS_Pan;
 }
 
+// -- non-tick-zero volume column effects --
+
 static void v_SlideDown(stmTyp *ch)
 {
-	uint8_t newVol = ch->realVol;
-
-	newVol -= ch->volKolVol & 0x0F;
+	uint8_t newVol = (uint8_t)(0 - (ch->volKolVol & 0x0F)) + ch->realVol;
 	if ((int8_t)newVol < 0)
 		newVol = 0;
 
@@ -989,9 +987,7 @@ static void v_SlideDown(stmTyp *ch)
 
 static void v_SlideUp(stmTyp *ch)
 {
-	uint8_t newVol = ch->realVol;
-
-	newVol += ch->volKolVol & 0x0F;
+	uint8_t newVol = (ch->volKolVol & 0x0F) + ch->realVol;
 	if (newVol > 64)
 		newVol = 64;
 
@@ -1363,7 +1359,6 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 	instrTyp *ins;
 
 	ins = ch->instrSeg;
-
 	assert(ins != NULL);
 
 	// *** FADEOUT ***
@@ -1899,22 +1894,23 @@ static void volume(stmTyp *ch, uint8_t param) // actually volume slide
 
 	ch->volSlideSpeed = param;
 
+	uint8_t newVol = ch->realVol;
 	if ((param & 0xF0) == 0)
 	{
-		ch->realVol -= param;
-		if ((int8_t)ch->realVol < 0)
-			ch->realVol = 0;
+		newVol -= param;
+		if ((int8_t)newVol < 0)
+			newVol = 0;
 	}
 	else
 	{
 		param >>= 4;
 
-		ch->realVol += param;
-		if (ch->realVol > 64)
-			ch->realVol = 64;
+		newVol += param;
+		if (newVol > 64)
+			newVol = 64;
 	}
 
-	ch->outVol = ch->realVol;
+	ch->outVol = ch->realVol = newVol;
 	ch->status |= IS_Vol;
 }
 
@@ -1925,24 +1921,23 @@ static void globalVolSlide(stmTyp *ch, uint8_t param)
 
 	ch->globVolSlideSpeed = param;
 
-	uint8_t newVolume = (uint8_t)song.globVol;
-
+	uint8_t newVol = (uint8_t)song.globVol;
 	if ((param & 0xF0) == 0)
 	{
-		newVolume -= param;
-		if ((int8_t)newVolume < 0)
-			newVolume = 0;
+		newVol -= param;
+		if ((int8_t)newVol < 0)
+			newVol = 0;
 	}
 	else
 	{
 		param >>= 4;
 
-		newVolume += param;
-		if (newVolume > 64)
-			newVolume = 64;
+		newVol += param;
+		if (newVol > 64)
+			newVol = 64;
 	}
 
-	song.globVol = newVolume;
+	song.globVol = newVol;
 
 	stmTyp *c = stm;
 	for (int32_t i = 0; i < song.antChn; i++, c++) // update all voice volumes
@@ -1957,29 +1952,28 @@ static void keyOffCmd(stmTyp *ch, uint8_t param)
 
 static void panningSlide(stmTyp *ch, uint8_t param)
 {
-	int16_t tmp16;
-
 	if (param == 0)
 		param = ch->panningSlideSpeed;
 
 	ch->panningSlideSpeed = param;
 
+	int16_t newPan = (int16_t)ch->outPan;
 	if ((param & 0xF0) == 0)
 	{
-		tmp16 = (int16_t)ch->outPan - param;
-		if (tmp16 < 0)
-			tmp16 = 0;
+		newPan -= param;
+		if (newPan < 0)
+			newPan = 0;
 	}
 	else
 	{
 		param >>= 4;
 
-		tmp16 = (int16_t)ch->outPan + param;
-		if (tmp16 > 255)
-			tmp16 = 255;
+		newPan += param;
+		if (newPan > 255)
+			newPan = 255;
 	}
 
-	ch->outPan = (uint8_t)tmp16;
+	ch->outPan = (uint8_t)newPan;
 	ch->status |= IS_Pan;
 }
 
@@ -2228,7 +2222,7 @@ void tickReplayer(void) // periodically called from audio callback
 
 	song.curReplayerTimer = (uint8_t)song.timer; // for audio/video syncing (and recording)
 
-	const bool readNewNote = tickZero && song.pattDelTime2 == 0;
+	const bool readNewNote = tickZero && (song.pattDelTime2 == 0);
 	if (readNewNote)
 	{
 		// set audio/video syncing variables

@@ -3224,7 +3224,7 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 			ins->midiChannel = ih.midiChannel;
 			ins->midiProgram = ih.midiProgram;
 			ins->midiBend = ih.midiBend;
-			ins->mute = (ih.mute == 1) ? true : false;
+			ins->mute = (ih.mute == 1) ? true : false; // correct logic! Don't mess with this
 			ins->antSamp = ih.antSamp; // used in loadInstrSample()
 
 			// sanitize stuff for broken/unsupported instruments
