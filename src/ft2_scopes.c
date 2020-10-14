@@ -570,6 +570,13 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 				lastChInstr[i].instrNr = ch->instrNr;
 				lastChInstr[i].sampleNr = ch->sampleNr;
 			}
+			else
+			{
+				// empty instrument, shut down scope
+				scope[i].active = false;
+				lastChInstr[i].instrNr = 255;
+				lastChInstr[i].sampleNr = 255;
+			}
 		}
 	}
 }
