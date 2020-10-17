@@ -284,6 +284,7 @@ static void updateRenderSizeVars(void)
 void enterFullscreen(void)
 {
 	SDL_DisplayMode dm;
+	int width;
 
 	strcpy(ui.fullscreenButtonText, "Go windowed");
 	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MISCELLANEOUS)
@@ -292,7 +293,9 @@ void enterFullscreen(void)
 	if (config.windowFlags & FILTERING)
 	{
 		SDL_GetDesktopDisplayMode(0, &dm);
-		SDL_RenderSetLogicalSize(video.renderer, dm.w, dm.h);
+		width = round(dm.h * 1.58);
+		SDL_RenderSetLogicalSize(video.renderer, width, dm.h);
+		SDL_SetWindowPosition(video.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 	}
 	else
 	{
