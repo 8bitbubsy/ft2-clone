@@ -2,64 +2,64 @@
 
 #include <assert.h>
 #include "../ft2_audio.h"
-#include "ft2_cubicspline.h"
+#include "ft2_windowed_sinc.h"
 
 /* ----------------------------------------------------------------------- */
 /*                          GENERAL MIXER MACROS                           */
 /* ----------------------------------------------------------------------- */
 
 #define GET_VOL \
-	const float fVolL = v->fVolL; \
-	const float fVolR = v->fVolR; \
+	const double dVolL = v->dVolL; \
+	const double dVolR = v->dVolR; \
 
 #define GET_VOL_MONO \
-	const float fVolL = v->fVolL; \
+	const double dVolL = v->dVolL; \
 
 #define GET_VOL_RAMP \
-	fVolL = v->fVolL; \
-	fVolR = v->fVolR; \
+	dVolL = v->dVolL; \
+	dVolR = v->dVolR; \
 
 #define GET_VOL_MONO_RAMP \
-	fVolL = v->fVolL; \
+	dVolL = v->dVolL; \
 
 #define SET_VOL_BACK \
-	v->fVolL = fVolL; \
-	v->fVolR = fVolR; \
+	v->dVolL = dVolL; \
+	v->dVolR = dVolR; \
 
 #define SET_VOL_BACK_MONO \
-	v->fVolL = v->fVolR = fVolL; \
+	v->dVolL = v->dVolR = dVolL; \
 
 #define GET_MIXER_VARS \
 	const uint64_t delta = v->delta; \
-	fMixBufferL = audio.fMixBufferL; \
-	fMixBufferR = audio.fMixBufferR; \
+	dMixBufferL = audio.dMixBufferL; \
+	dMixBufferR = audio.dMixBufferR; \
 	pos = v->pos; \
 	posFrac = v->posFrac; \
 
 #define GET_MIXER_VARS_RAMP \
 	const uint64_t delta = v->delta; \
-	fMixBufferL = audio.fMixBufferL; \
-	fMixBufferR = audio.fMixBufferR; \
-	fVolLDelta = v->fVolDeltaL; \
-	fVolRDelta = v->fVolDeltaR; \
+	dMixBufferL = audio.dMixBufferL; \
+	dMixBufferR = audio.dMixBufferR; \
+	dVolLDelta = v->dVolDeltaL; \
+	dVolRDelta = v->dVolDeltaR; \
 	pos = v->pos; \
 	posFrac = v->posFrac; \
 
 #define GET_MIXER_VARS_MONO_RAMP \
 	const uint64_t delta = v->delta; \
-	fMixBufferL = audio.fMixBufferL; \
-	fMixBufferR = audio.fMixBufferR; \
-	fVolLDelta = v->fVolDeltaL; \
+	dMixBufferL = audio.dMixBufferL; \
+	dMixBufferR = audio.dMixBufferR; \
+	dVolLDelta = v->dVolDeltaL; \
 	pos = v->pos; \
 	posFrac = v->posFrac; \
 
 #define PREPARE_TAP_FIX8 \
 	const int8_t *loopStartPtr = &v->base8[v->loopStart]; \
-	const float fTapFixSample = v->fTapFixSample; \
+	const int8_t *leftEdgePtr = loopStartPtr+SINC_LEFT_TAPS; \
 
 #define PREPARE_TAP_FIX16 \
 	const int16_t *loopStartPtr = &v->base16[v->loopStart]; \
-	const float fTapFixSample = v->fTapFixSample; \
+	const int16_t *leftEdgePtr = loopStartPtr+SINC_LEFT_TAPS; \
 
 #define SET_BASE8 \
 	base = v->base8; \
@@ -97,77 +97,77 @@
 /* ----------------------------------------------------------------------- */
 
 #define VOLUME_RAMPING \
-	fVolL += fVolLDelta; \
-	fVolR += fVolRDelta; \
+	dVolL += dVolLDelta; \
+	dVolR += dVolRDelta; \
 
 #define VOLUME_RAMPING_MONO \
-	fVolL += fVolLDelta; \
+	dVolL += dVolLDelta; \
 
 #define RENDER_8BIT_SMP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	fSample = *smpPtr * (1.0f / 128.0f); \
-	*fMixBufferL++ += fSample * fVolL; \
-	*fMixBufferR++ += fSample * fVolR; \
+	dSample = *smpPtr * (1.0 / 128.0); \
+	*dMixBufferL++ += dSample * dVolL; \
+	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_8BIT_SMP_MONO \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	fSample = (*smpPtr * (1.0f / 128.0f)) * fVolL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample; \
+	dSample = (*smpPtr * (1.0 / 128.0)) * dVolL; \
+	*dMixBufferL++ += dSample; \
+	*dMixBufferR++ += dSample; \
 
 #define RENDER_16BIT_SMP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	fSample = *smpPtr * (1.0f / 32768.0f); \
-	*fMixBufferL++ += fSample * fVolL; \
-	*fMixBufferR++ += fSample * fVolR; \
+	dSample = *smpPtr * (1.0 / 32768.0); \
+	*dMixBufferL++ += dSample * dVolL; \
+	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_16BIT_SMP_MONO \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	fSample = (*smpPtr * (1.0f / 32768.0f)) * fVolL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample; \
+	dSample = (*smpPtr * (1.0 / 32768.0)) * dVolL; \
+	*dMixBufferL++ += dSample; \
+	*dMixBufferR++ += dSample; \
 
 // 2-tap linear interpolation (like FT2)
 
-#define LINEAR_INTERPOLATION16(s, f) \
-{ \
-	const float fFrac = (const float)((uint32_t)f * (1.0f / (UINT32_MAX+1.0f))); /* 0.0 .. 0.999f */ \
-	fSample = ((s[0] + (s[1]-s[0]) * fFrac)) * (1.0f / 32768.0f); \
-} \
-
 #define LINEAR_INTERPOLATION8(s, f) \
 { \
-	const float fFrac = (const float)((uint32_t)f * (1.0f / (UINT32_MAX+1.0f))); /* 0.0f .. 0.999f */ \
-	fSample = ((s[0] + (s[1]-s[0]) * fFrac)) * (1.0f / 128.0f); \
+	const double dFrac = (const double)((uint32_t)f * (1.0 / (UINT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
+	dSample = ((s[0] + (s[1]-s[0]) * dFrac)) * (1.0 / 128.0); \
+} \
+
+#define LINEAR_INTERPOLATION16(s, f) \
+{ \
+	const double dFrac = (const double)((uint32_t)f * (1.0 / (UINT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
+	dSample = ((s[0] + (s[1]-s[0]) * dFrac)) * (1.0 / 32768.0); \
 } \
 
 #define RENDER_8BIT_SMP_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
 	LINEAR_INTERPOLATION8(smpPtr, posFrac) \
-	*fMixBufferL++ += fSample * fVolL; \
-	*fMixBufferR++ += fSample * fVolR; \
+	*dMixBufferL++ += dSample * dVolL; \
+	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_8BIT_SMP_MONO_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
 	LINEAR_INTERPOLATION8(smpPtr, posFrac) \
-	fSample *= fVolL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample; \
+	dSample *= dVolL; \
+	*dMixBufferL++ += dSample; \
+	*dMixBufferR++ += dSample; \
 
 #define RENDER_16BIT_SMP_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
 	LINEAR_INTERPOLATION16(smpPtr, posFrac) \
-	*fMixBufferL++ += fSample * fVolL; \
-	*fMixBufferR++ += fSample * fVolR; \
+	*dMixBufferL++ += dSample * dVolL; \
+	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_16BIT_SMP_MONO_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
 	LINEAR_INTERPOLATION16(smpPtr, posFrac) \
-	fSample *= fVolL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample; \
+	dSample *= dVolL; \
+	*dMixBufferL++ += dSample; \
+	*dMixBufferR++ += dSample; \
 
-// 4-tap cubic spline interpolation (better quality, through LUT: mixer/ft2_cubicspline.c)
+// 8-tap windowed-sinc interpolation (better quality, through LUT: mixer/ft2_windowed_sinc.c)
 
 /* 8bitbubsy: It may look like we are potentially going out of bounds while looking up the sample points,
 ** but the sample data is actually padded on both the left (negative) and right side, where correct tap
@@ -177,85 +177,119 @@
 **
 */
 
-#define CUBICSPLINE_INTERPOLATION(LUT, s, f) \
+#define WINDOWED_SINC_INTERPOLATION8(s, f) \
 { \
-	const float *t = (const float *)LUT + (((uint32_t)f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
-	fSample = (s[-1] * t[0]) + (s[0] * t[1]) + (s[1] * t[2]) + (s[2] * t[3]); \
+	const double *t = v->dSincLUT + (((uint32_t)f >> SINC_FSHIFT) & SINC_FMASK); \
+	dSample = ((s[-3] * t[0]) + \
+	           (s[-2] * t[1]) + \
+	           (s[-1] * t[2]) + \
+	           ( s[0] * t[3]) + \
+	           ( s[1] * t[4]) + \
+	           ( s[2] * t[5]) + \
+	           ( s[3] * t[6]) + \
+	           ( s[4] * t[7])) * (1.0 / 128.0); \
 } \
 
-#define CUBICSPLINE_INTERPOLATION_CUSTOM(LUT, f) \
+#define WINDOWED_SINC_INTERPOLATION16(s, f) \
 { \
-	const float *t = (const float *)LUT + (((uint32_t)f >> CUBIC_FSHIFT) & CUBIC_FMASK); \
-	fSample = (s0 * t[0]) + (s1 * t[1]) + (s2 * t[2]) + (s3 * t[3]); \
+	const double *t = v->dSincLUT + (((uint32_t)f >> SINC_FSHIFT) & SINC_FMASK); \
+	dSample = ((s[-3] * t[0]) + \
+	           (s[-2] * t[1]) + \
+	           (s[-1] * t[2]) + \
+	           ( s[0] * t[3]) + \
+	           ( s[1] * t[4]) + \
+	           ( s[2] * t[5]) + \
+	           ( s[3] * t[6]) + \
+	           ( s[4] * t[7])) * (1.0 / 32768.0); \
 } \
 
-#define RENDER_8BIT_SMP_CINTRP \
+#define RENDER_8BIT_SMP_SINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	CUBICSPLINE_INTERPOLATION(fCubicSplineLUT8, smpPtr, posFrac) \
-	*fMixBufferL++ += fSample * fVolL; \
-	*fMixBufferR++ += fSample * fVolR; \
+	WINDOWED_SINC_INTERPOLATION8(smpPtr, posFrac) \
+	*dMixBufferL++ += dSample * dVolL; \
+	*dMixBufferR++ += dSample * dVolR; \
 
-#define RENDER_8BIT_SMP_MONO_CINTRP \
+#define RENDER_8BIT_SMP_MONO_SINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	CUBICSPLINE_INTERPOLATION(fCubicSplineLUT8, smpPtr, posFrac) \
-	fSample *= fVolL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample; \
+	WINDOWED_SINC_INTERPOLATION8(smpPtr, posFrac) \
+	dSample *= dVolL; \
+	*dMixBufferL++ += dSample; \
+	*dMixBufferR++ += dSample; \
 
-#define RENDER_16BIT_SMP_CINTRP \
+#define RENDER_16BIT_SMP_SINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	CUBICSPLINE_INTERPOLATION(fCubicSplineLUT16, smpPtr, posFrac) \
-	*fMixBufferL++ += fSample * fVolL; \
-	*fMixBufferR++ += fSample * fVolR; \
+	WINDOWED_SINC_INTERPOLATION16(smpPtr, posFrac) \
+	*dMixBufferL++ += dSample * dVolL; \
+	*dMixBufferR++ += dSample * dVolR; \
 
-#define RENDER_16BIT_SMP_MONO_CINTRP \
+#define RENDER_16BIT_SMP_MONO_SINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	CUBICSPLINE_INTERPOLATION(fCubicSplineLUT16, smpPtr, posFrac) \
-	fSample *= fVolL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample; \
+	WINDOWED_SINC_INTERPOLATION16(smpPtr, posFrac) \
+	dSample *= dVolL; \
+	*dMixBufferL++ += dSample; \
+	*dMixBufferR++ += dSample; \
 
-#define RENDER_8BIT_SMP_CINTRP_TAP_FIX  \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	s0 = (smpPtr != loopStartPtr) ? smpPtr[-1] : fTapFixSample; \
-	s1 = smpPtr[0]; \
-	s2 = smpPtr[1]; \
-	s3 = smpPtr[2]; \
-	CUBICSPLINE_INTERPOLATION_CUSTOM(fCubicSplineLUT8, posFrac) \
-	*fMixBufferL++ += fSample * fVolL; \
-	*fMixBufferR++ += fSample * fVolR; \
+/* Special left-edge case mixers to get proper tap data after one loop cycle.
+** These are only used with sinc interpolation on looped samples.
+*/
 
-#define RENDER_8BIT_SMP_MONO_CINTRP_TAP_FIX \
+#define RENDER_8BIT_SMP_SINTRP_TAP_FIX  \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	s0 = (smpPtr != loopStartPtr) ? smpPtr[-1] : fTapFixSample; \
-	s1 = smpPtr[0]; \
-	s2 = smpPtr[1]; \
-	s3 = smpPtr[2]; \
-	CUBICSPLINE_INTERPOLATION_CUSTOM(fCubicSplineLUT8, posFrac) \
-	fSample *= fVolL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample; \
+	if (smpPtr <= leftEdgePtr) \
+	{ \
+		const double *tapData = &v->dLeftEdgeTaps[(int32_t)(smpPtr - loopStartPtr)]; \
+		WINDOWED_SINC_INTERPOLATION8(tapData, posFrac) \
+	} \
+	else \
+	{ \
+		WINDOWED_SINC_INTERPOLATION8(smpPtr, posFrac) \
+	} \
+	*dMixBufferL++ += dSample * dVolL; \
+	*dMixBufferR++ += dSample * dVolR; \
 
-#define RENDER_16BIT_SMP_CINTRP_TAP_FIX \
+#define RENDER_8BIT_SMP_MONO_SINTRP_TAP_FIX \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	s0 = (smpPtr != loopStartPtr) ? smpPtr[-1] : fTapFixSample; \
-	s1 = smpPtr[0]; \
-	s2 = smpPtr[1]; \
-	s3 = smpPtr[2]; \
-	CUBICSPLINE_INTERPOLATION_CUSTOM(fCubicSplineLUT16, posFrac) \
-	*fMixBufferL++ += fSample * fVolL; \
-	*fMixBufferR++ += fSample * fVolR; \
+	if (smpPtr <= leftEdgePtr) \
+	{ \
+		const double *tapData = &v->dLeftEdgeTaps[(int32_t)(smpPtr - loopStartPtr)]; \
+		WINDOWED_SINC_INTERPOLATION8(tapData, posFrac) \
+	} \
+	else \
+	{ \
+		WINDOWED_SINC_INTERPOLATION8(smpPtr, posFrac) \
+	} \
+	dSample *= dVolL; \
+	*dMixBufferL++ += dSample; \
+	*dMixBufferR++ += dSample; \
 
-#define RENDER_16BIT_SMP_MONO_CINTRP_TAP_FIX \
+#define RENDER_16BIT_SMP_SINTRP_TAP_FIX \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	s0 = (smpPtr != loopStartPtr) ? smpPtr[-1] : fTapFixSample; \
-	s1 = smpPtr[0]; \
-	s2 = smpPtr[1]; \
-	s3 = smpPtr[2]; \
-	CUBICSPLINE_INTERPOLATION_CUSTOM(fCubicSplineLUT16, posFrac) \
-	fSample *= fVolL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample; \
+	if (smpPtr <= leftEdgePtr) \
+	{ \
+		const double *tapData = &v->dLeftEdgeTaps[(int32_t)(smpPtr - loopStartPtr)]; \
+		WINDOWED_SINC_INTERPOLATION16(tapData, posFrac) \
+	} \
+	else \
+	{ \
+		WINDOWED_SINC_INTERPOLATION16(smpPtr, posFrac) \
+	} \
+	*dMixBufferL++ += dSample * dVolL; \
+	*dMixBufferR++ += dSample * dVolR; \
+
+#define RENDER_16BIT_SMP_MONO_SINTRP_TAP_FIX \
+	assert(smpPtr >= base && smpPtr < base+v->end); \
+	if (smpPtr <= leftEdgePtr) \
+	{ \
+		const double *tapData = &v->dLeftEdgeTaps[(int32_t)(smpPtr - loopStartPtr)]; \
+		WINDOWED_SINC_INTERPOLATION16(tapData, posFrac) \
+	} \
+	else \
+	{ \
+		WINDOWED_SINC_INTERPOLATION16(smpPtr, posFrac) \
+	} \
+	dSample *= dVolL; \
+	*dMixBufferL++ += dSample; \
+	*dMixBufferR++ += dSample; \
 
 /* ----------------------------------------------------------------------- */
 /*                      SAMPLES-TO-MIX LIMITING MACROS                     */
@@ -267,6 +301,11 @@
 		i = 65535; \
 	\
 	i = (i << 16) | ((uint32_t)(posFrac >> 16) ^ 0xFFFF); \
+	\
+	/* This is hackish, but fast. This is sometimes off by one (-1), so */ \
+	/* we need to do another cycle to reach the end of the sample. The */ \
+	/* error is never +1, it's always below (safe). */ \
+	\
 	samplesToMix = ((int64_t)i * v->revDelta) >> 32; \
 	samplesToMix++; \
 	\
@@ -295,8 +334,8 @@
 #define LIMIT_MIX_NUM_RAMP \
 	if (v->volRampSamples == 0) \
 	{ \
-		fVolLDelta = 0; \
-		fVolRDelta = 0; \
+		dVolLDelta = 0.0; \
+		dVolRDelta = 0.0; \
 		\
 		if (v->isFadeOutVoice) \
 		{ \
@@ -315,7 +354,7 @@
 #define LIMIT_MIX_NUM_MONO_RAMP \
 	if (v->volRampSamples == 0) \
 	{ \
-		fVolLDelta = 0; \
+		dVolLDelta = 0.0; \
 		if (v->isFadeOutVoice) \
 		{ \
 			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \

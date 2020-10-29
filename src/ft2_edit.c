@@ -963,7 +963,7 @@ void doTranspose(void)
 	countOverflowingNotes(lastInsMode, lastTranspMode, lastTranspVal);
 	if (transpDelNotes > 0)
 	{
-		sprintf(text, "%d note(s) will be erased! Proceed?", transpDelNotes);
+		sprintf(text, "%d note(s) will be erased! Proceed?", (int32_t)transpDelNotes);
 		if (okBox(2, "System request", text) != 1)
 			return;
 	}

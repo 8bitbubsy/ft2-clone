@@ -110,19 +110,22 @@ static void starfield(void)
 		*/
 
 		const float z = (matrix.x.z * star->x) + (matrix.y.z * star->y) + (matrix.z.z * star->z) + 0.5f;
-		if (z <= 0.0f) continue;
+		if (z <= 0.0f)
+			continue;
 
 		float y = (((matrix.x.y * star->x) + (matrix.y.y * star->y) + (matrix.z.y * star->z)) / z) * 400.0f;
 		y += 2.0f + (ABOUT_SCREEN_H/2.0f);
 
 		const int32_t outY = (int32_t)(y + 0.5f); // rounded
-		if ((uint32_t)outY > 2+ABOUT_SCREEN_H) continue;
+		if ((uint32_t)outY > 2+ABOUT_SCREEN_H)
+			continue;
 
 		float x = (((matrix.x.x * star->x) + (matrix.y.x * star->y) + (matrix.z.x * star->z)) / z) * 400.0f;
 		x += 2.0f + (ABOUT_SCREEN_W/2.0f);
 
 		const int32_t outX = (int32_t)(x + 0.5f); // rounded
-		if ((uint32_t)outX > 2+ABOUT_SCREEN_W) continue;
+		if ((uint32_t)outX > 2+ABOUT_SCREEN_W)
+			continue;
 
 		// render star pixel if the pixel under it is the background key
 		screenBufferPos = ((uint32_t)outY * SCREEN_W) + (uint32_t)outX;
@@ -131,17 +134,23 @@ static void starfield(void)
 			int32_t d = (int32_t)((255.0f - (z * 235.0f)) + 0.5f);
 
 			d = (d * starfieldFade) >> 8;
-			if (d <= 0) continue;
-			if (d > 255) d = 255;
+			if (d <= 0)
+				continue;
 
-			int32_t r = d - 40;
-			if (r < 0) r = 0;
+			if (d > 255)
+				d = 255;
+
+			int32_t r = d - 48;
+			if (r < 0)
+				r = 0;
 
 			int32_t g = d - 14;
-			if (g < 0) g = 0;
+			if (g < 0)
+				g = 0;
 
-			int32_t b = d + 69; // nice
-			if (b > 255) b = 255;
+			int32_t b = d + 72;
+			if (b > 255)
+				b = 255;
 
 			video.frameBuffer[screenBufferPos] = RGB32(r, g, b);
 			lastStarScreenPos[i] = screenBufferPos;

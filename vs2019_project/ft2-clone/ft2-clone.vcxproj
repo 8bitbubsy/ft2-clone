@@ -336,7 +336,7 @@
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_instr.c" />
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_looppins.c" />
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_scopes.c" />
-    <ClCompile Include="..\..\src\mixer\ft2_cubicspline.c" />
+    <ClCompile Include="..\..\src\mixer\ft2_windowed_sinc.c" />
     <ClCompile Include="..\..\src\mixer\ft2_mix.c" />
     <ClCompile Include="..\..\src\mixer\ft2_center_mix.c" />
     <ClCompile Include="..\..\src\mixer\ft2_silence_mix.c" />
@@ -400,7 +400,7 @@
     <ClInclude Include="..\..\src\ft2_unicode.h" />
     <ClInclude Include="..\..\src\ft2_video.h" />
     <ClInclude Include="..\..\src\ft2_wav_renderer.h" />
-    <ClInclude Include="..\..\src\mixer\ft2_cubicspline.h" />
+    <ClInclude Include="..\..\src\mixer\ft2_windowed_sinc.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix_macros.h" />
     <ClInclude Include="..\..\src\mixer\ft2_center_mix.h" />

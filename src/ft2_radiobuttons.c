@@ -74,21 +74,21 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	// ------ CONFIG AUDIO ------
 
 	// audio buffer size
-	//x,   y,   w,   group,                           funcOnUp
+	//x,   y,   w,  group,                           funcOnUp
 	{ 390, 16,  46, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigSbs512  },
 	{ 390, 30, 113, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigSbs1024 },
 	{ 390, 44,  50, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigSbs2048 },
 
 	// audio bit depth
-	//x,   y,   w,   group,                           funcOnUp
+	//x,   y,   w,  group,                           funcOnUp
 	{ 390, 74, 107, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio16bit },
 	{ 390, 88,  83, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio24bit },
 
 	// audio interpolation
-	//x,   y,   w,   group,                              funcOnUp
-	{ 390, 117, 46, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpNone },
-	{ 390, 131, 91, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpLinear },
-	{ 390, 145, 86, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpCubic },
+	//x,   y,   w,   group,                               funcOnUp
+	{ 390, 117,  46, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpNone },
+	{ 390, 131,  91, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpLinear },
+	{ 390, 145, 103, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpSinc },
 
 	// audio output frequency
 	//x,   y,   w,  group,                      funcOnUp

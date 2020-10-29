@@ -311,7 +311,7 @@ static LONG WINAPI exceptionHandler(EXCEPTION_POINTERS *ptr)
 			// find a free filename
 			for (i = 1; i < 1000; i++)
 			{
-				sprintf(fileName, "backup%03d.xm", i);
+				sprintf(fileName, "backup%03d.xm", (int32_t)i);
 				if (stat(fileName, &statBuffer) != 0)
 					break; // filename OK
 			}

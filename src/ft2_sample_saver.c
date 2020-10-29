@@ -70,7 +70,7 @@ static void fileRestoreFixedSampleData(UNICHAR *filenameU, uint32_t sampleDataOf
 	if (fixedPos >= (uint32_t)s->len)
 		return;
 
-	uint32_t bytesToWrite = NUM_FIXED_TAP_SAMPLES * (sample16Bit+1);
+	uint32_t bytesToWrite = SINC_RIGHT_TAPS * (sample16Bit+1);
 	if (fixedPos+bytesToWrite > (uint32_t)s->len)
 		bytesToWrite = s->len - fixedPos;
 

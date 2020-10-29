@@ -12,7 +12,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.36"
+#define PROG_VER_STR "1.37"
 
 // do NOT change these! It will only mess things up...
 
@@ -33,8 +33,8 @@
 ** branchless in the inner channel mixer loop.
 ** Warning: Do not change this!
 */
-#define LOOP_FIX_LEN 8
-#define SMP_DAT_OFFSET 4
+#define LOOP_FIX_LEN 32
+#define SMP_DAT_OFFSET 8
 
 #ifndef _WIN32
 #define _stricmp strcasecmp

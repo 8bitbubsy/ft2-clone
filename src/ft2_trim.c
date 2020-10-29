@@ -256,7 +256,7 @@ static void wipeInstrUnused(bool testWipeSize, int16_t *ai, int32_t ap, int32_t 
 	memcpy(tmpInst, &instr[1], MAX_INST * sizeof (instr[0]));
 
 	memset(&instr[1], 0, numInsts * sizeof (instr[0]));
-	memset(song.instrName[1], 0, numInsts * sizeof (song.instrName[0]));
+	memset(song.instrName[1], 0, numInsts * sizeof (song.instrName[0])); // XXX: Is this safe?
 
 	for (i = 0; i < numInsts; i++)
 	{

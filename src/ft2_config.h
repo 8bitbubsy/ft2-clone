@@ -19,7 +19,7 @@ enum
 	CONFIG_SHOW_ERRORS = 1,
 
 	INTERPOLATION_NONE = 0,
-	INTERPOLATION_CUBIC = 1,
+	INTERPOLATION_SINC = 1,
 	INTERPOLATION_LINEAR = 2,
 
 	MOUSE_IDLE_SHAPE_NICE = 0,
@@ -211,7 +211,7 @@ void rbConfigAudio16bit(void);
 void rbConfigAudio24bit(void);
 void rbConfigAudioIntrpNone(void);
 void rbConfigAudioIntrpLinear(void);
-void rbConfigAudioIntrpCubic(void);
+void rbConfigAudioIntrpSinc(void);
 void rbConfigAudio44kHz(void);
 void rbConfigAudio48kHz(void);
 void rbConfigAudio96kHz(void);

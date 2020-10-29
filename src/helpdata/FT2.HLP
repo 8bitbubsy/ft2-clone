@@ -785,7 +785,7 @@ you exit the program.
 Selects what type of resampling interpolation to use.
 "None" uses no interpolation (nearest neighbor), which will result in
 aliasing (noise) in the sound. "Linear" is what real FT2 uses, which is a
-mediocre interpolation type. "Cubic spline" is the recommended setting
+mediocre interpolation type. "Windowed-sinc" is the recommended setting
 for the best audio quality, although it may sometimes sound too filtered
 on low-quality samples (f.ex. Amiga MODs).
 

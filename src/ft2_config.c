@@ -141,7 +141,7 @@ static void loadConfigFromBuffer(void)
 	config.recMIDIVolSens = CLAMP(config.recMIDIVolSens, 0, 200);
 	config.recMIDIChn  = CLAMP(config.recMIDIChn, 1, 16);
 
-	config.interpolation &= 3; // one extra bit used in FT2 clone (off, cubic, linear)
+	config.interpolation &= 3; // one extra bit used in FT2 clone (off, sinc, linear)
 
 	if (config.recTrueInsert > 1)
 		config.recTrueInsert = 1;
@@ -837,7 +837,7 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	else if (config.interpolation == INTERPOLATION_LINEAR)
 		tmpID = RB_CONFIG_AUDIO_INTRP_LINEAR;
 	else
-		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC;
+		tmpID = RB_CONFIG_AUDIO_INTRP_SINC;
 
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -1168,7 +1168,7 @@ void showConfigScreen(void)
 			textOutShadow(390, 105, PAL_FORGRND, PAL_DSKTOP2, "Interpolation:");
 			textOutShadow(406, 118, PAL_FORGRND, PAL_DSKTOP2, "None");
 			textOutShadow(406, 132, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
-			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
+			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Windowed-sinc");
 			textOutShadow(406, 161, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
 
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Mixing frequency:");
@@ -1619,11 +1619,11 @@ void rbConfigAudioIntrpLinear(void)
 	checkRadioButton(RB_CONFIG_AUDIO_INTRP_LINEAR);
 }
 
-void rbConfigAudioIntrpCubic(void)
+void rbConfigAudioIntrpSinc(void)
 {
-	config.interpolation = INTERPOLATION_CUBIC;
+	config.interpolation = INTERPOLATION_SINC;
 	audioSetInterpolationType(config.interpolation);
-	checkRadioButton(RB_CONFIG_AUDIO_INTRP_CUBIC);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_SINC);
 }
 
 void rbConfigAudio44kHz(void)

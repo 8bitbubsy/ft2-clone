@@ -99,7 +99,7 @@ static void setChannel(int32_t nr, bool on)
 		ch->realVol = 0;
 		ch->outVol = 0;
 		ch->oldVol = 0;
-		ch->fFinalVol = 0.0f;
+		ch->dFinalVol = 0.0;
 		ch->outPan = 128;
 		ch->oldPan = 128;
 		ch->finalPan = 128;
@@ -533,7 +533,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 		status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
-			sc->vol = (int32_t)((ch->fFinalVol * SCOPE_HEIGHT) + 0.5f); // rounded
+			sc->vol = (int32_t)((ch->dFinalVol * SCOPE_HEIGHT) + 0.5); // rounded
 
 		if (status & IS_Period)
 		{

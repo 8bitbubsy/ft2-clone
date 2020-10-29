@@ -94,9 +94,8 @@ bool loadBMPs(void)
 	bmp.checkboxGfx = loadBMPTo4BitPal(checkboxGfxBMP);
 
 	if (bmp.ft2AboutLogo == NULL || bmp.font1 == NULL || bmp.font2 == NULL ||
-		bmp.font3 == NULL || bmp.font4 == NULL || bmp.font6 == NULL ||
-		bmp.font6 == NULL || bmp.font7 == NULL || bmp.font8 == NULL ||
-		bmp.ft2LogoBadges == NULL || bmp.ft2ByBadges == NULL ||
+		bmp.font3 == NULL || bmp.font4 == NULL || bmp.font6 == NULL || bmp.font7 == NULL ||
+		bmp.font8 == NULL || bmp.ft2LogoBadges == NULL || bmp.ft2ByBadges == NULL ||
 		bmp.midiLogo == NULL || bmp.nibblesLogo == NULL || bmp.nibblesStages == NULL ||
 		bmp.loopPins == NULL || bmp.mouseCursors == NULL || bmp.mouseCursorBusyClock == NULL ||
 		bmp.mouseCursorBusyGlass == NULL || bmp.whitePianoKeys == NULL || bmp.blackPianoKeys == NULL ||

@@ -5,17 +5,17 @@
 #include "ft2_center_mix.h"
 
 /*
-** -------------------- floating point audio channel mixer ---------------------
+** -------------------- doubleing point audio channel mixer ---------------------
 **            (Note: Mixing macros can be found in ft2_mix_macros.h)
 **
 ** Specifications:
-** - Either no interpolation, 2-tap linear interpolation (FT2) or 4-tap cubic interpolation
+** - Either no interpolation, 2-tap linear interpolation (FT2) or 8-tap windowed-sinc interpolation
 ** - Linear volume ramping, matching FT2 (can be turned off)
 ** - 32.32 fixed-point logic for resampling delta
-** - 32-bit single-precision float logic for mixing and interpolation
+** - 64-bit doube-precision logic for mixing and interpolation
 **
 ** This file has separate routines for EVERY possible sampling variation:
-** Interpolation none/cubic/linear, volumeramp on/off, 8-bit, 16-bit, no loop, loop, bidi.
+** Interpolation none/sinc/linear, volumeramp on/off, 8-bit, 16-bit, no loop, loop, bidi.
 ** (36 mixing routines in total + another 36 for center-mixing)
 **
 ** Every voice has a function pointer set to the according mixing routine on
@@ -34,7 +34,7 @@
 static void mix8bNoLoop(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -76,7 +76,7 @@ static void mix8bNoLoop(voice_t *v, uint32_t numSamples)
 static void mix8bLoop(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -118,7 +118,7 @@ static void mix8bLoop(voice_t *v, uint32_t numSamples)
 static void mix8bBidiLoop(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
@@ -158,10 +158,10 @@ static void mix8bBidiLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix8bNoLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix8bNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -178,19 +178,19 @@ static void mix8bNoLoopCIntrp(voice_t *v, uint32_t numSamples)
 
 		for (i = 0; i < (samplesToMix & 3); i++)
 		{
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			INC_POS
 		}
 		samplesToMix >>= 2;
 		for (i = 0; i < samplesToMix; i++)
 		{
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			INC_POS
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			INC_POS
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			INC_POS
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			INC_POS
 		}
 
@@ -200,10 +200,10 @@ static void mix8bNoLoopCIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix8bLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix8bLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float s0, s1, s2, s3, fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -223,19 +223,19 @@ static void mix8bLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
 			}
 		}
@@ -243,19 +243,19 @@ static void mix8bLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS
 			}
 		}
@@ -266,10 +266,10 @@ static void mix8bLoopCIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix8bBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix8bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
-	float s0, s1, s2, s3, fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
@@ -290,19 +290,19 @@ static void mix8bBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
 			}
 		}
@@ -310,19 +310,19 @@ static void mix8bBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS_BIDI
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				INC_POS_BIDI
 			}
 		}
@@ -337,7 +337,7 @@ static void mix8bBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -379,7 +379,7 @@ static void mix8bNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -421,7 +421,7 @@ static void mix8bLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
@@ -465,9 +465,9 @@ static void mix8bBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bRampNoLoop(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -515,9 +515,9 @@ static void mix8bRampNoLoop(voice_t *v, uint32_t numSamples)
 static void mix8bRampLoop(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -565,9 +565,9 @@ static void mix8bRampLoop(voice_t *v, uint32_t numSamples)
 static void mix8bRampBidiLoop(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
 
@@ -614,12 +614,12 @@ static void mix8bRampBidiLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix8bRampNoLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix8bRampNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -636,23 +636,23 @@ static void mix8bRampNoLoopCIntrp(voice_t *v, uint32_t numSamples)
 
 		for (i = 0; i < (samplesToMix & 3); i++)
 		{
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
 		}
 		samplesToMix >>= 2;
 		for (i = 0; i < samplesToMix; i++)
 		{
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
-			RENDER_8BIT_SMP_CINTRP
+			RENDER_8BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
 		}
@@ -664,12 +664,12 @@ static void mix8bRampNoLoopCIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix8bRampLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix8bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float s0, s1, s2, s3, fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -689,23 +689,23 @@ static void mix8bRampLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
 			}
@@ -714,23 +714,23 @@ static void mix8bRampLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
 			}
@@ -743,12 +743,12 @@ static void mix8bRampLoopCIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix8bRampBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix8bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
-	float s0, s1, s2, s3, fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
 
@@ -769,23 +769,23 @@ static void mix8bRampBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				RENDER_8BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
 			}
@@ -794,23 +794,23 @@ static void mix8bRampBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_8BIT_SMP_CINTRP
+				RENDER_8BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
 			}
@@ -827,9 +827,9 @@ static void mix8bRampBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bRampNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -877,9 +877,9 @@ static void mix8bRampNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bRampLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -927,9 +927,9 @@ static void mix8bRampLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bRampBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
 
@@ -983,7 +983,7 @@ static void mix8bRampBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bNoLoop(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -1025,7 +1025,7 @@ static void mix16bNoLoop(voice_t *v, uint32_t numSamples)
 static void mix16bLoop(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -1067,7 +1067,7 @@ static void mix16bLoop(voice_t *v, uint32_t numSamples)
 static void mix16bBidiLoop(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
@@ -1108,10 +1108,10 @@ static void mix16bBidiLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix16bNoLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix16bNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -1128,19 +1128,19 @@ static void mix16bNoLoopCIntrp(voice_t *v, uint32_t numSamples)
 
 		for (i = 0; i < (samplesToMix & 3); i++)
 		{
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			INC_POS
 		}
 		samplesToMix >>= 2;
 		for (i = 0; i < samplesToMix; i++)
 		{
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			INC_POS
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			INC_POS
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			INC_POS
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			INC_POS
 		}
 
@@ -1150,10 +1150,10 @@ static void mix16bNoLoopCIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix16bLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix16bLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float s0, s1, s2, s3, fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -1173,19 +1173,19 @@ static void mix16bLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS
 			}
 		}
@@ -1193,19 +1193,19 @@ static void mix16bLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS
 			}
 		}
@@ -1216,10 +1216,10 @@ static void mix16bLoopCIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix16bBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix16bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
-	float s0, s1, s2, s3, fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
@@ -1240,19 +1240,19 @@ static void mix16bBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				INC_POS_BIDI
 			}
 		}
@@ -1260,19 +1260,19 @@ static void mix16bBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS_BIDI
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				INC_POS_BIDI
 			}
 		}
@@ -1287,7 +1287,7 @@ static void mix16bBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -1329,7 +1329,7 @@ static void mix16bNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
@@ -1371,7 +1371,7 @@ static void mix16bLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
@@ -1415,9 +1415,9 @@ static void mix16bBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bRampNoLoop(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -1465,9 +1465,9 @@ static void mix16bRampNoLoop(voice_t *v, uint32_t numSamples)
 static void mix16bRampLoop(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -1515,9 +1515,9 @@ static void mix16bRampLoop(voice_t *v, uint32_t numSamples)
 static void mix16bRampBidiLoop(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
 
@@ -1564,12 +1564,12 @@ static void mix16bRampBidiLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix16bRampNoLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix16bRampNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -1586,23 +1586,23 @@ static void mix16bRampNoLoopCIntrp(voice_t *v, uint32_t numSamples)
 
 		for (i = 0; i < (samplesToMix & 3); i++)
 		{
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
 		}
 		samplesToMix >>= 2;
 		for (i = 0; i < samplesToMix; i++)
 		{
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
-			RENDER_16BIT_SMP_CINTRP
+			RENDER_16BIT_SMP_SINTRP
 			VOLUME_RAMPING
 			INC_POS
 		}
@@ -1614,12 +1614,12 @@ static void mix16bRampNoLoopCIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix16bRampLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix16bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float s0, s1, s2, s3, fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -1639,23 +1639,23 @@ static void mix16bRampLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS
 			}
@@ -1664,23 +1664,23 @@ static void mix16bRampLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS
 			}
@@ -1693,12 +1693,12 @@ static void mix16bRampLoopCIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-static void mix16bRampBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
+static void mix16bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
-	float s0, s1, s2, s3, fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
 
@@ -1719,23 +1719,23 @@ static void mix16bRampBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				RENDER_16BIT_SMP_SINTRP_TAP_FIX
 				VOLUME_RAMPING
 				INC_POS_BIDI
 			}
@@ -1744,23 +1744,23 @@ static void mix16bRampBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
 			}
 			samplesToMix >>= 2;
 			for (i = 0; i < samplesToMix; i++)
 			{
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
-				RENDER_16BIT_SMP_CINTRP
+				RENDER_16BIT_SMP_SINTRP
 				VOLUME_RAMPING
 				INC_POS_BIDI
 			}
@@ -1777,9 +1777,9 @@ static void mix16bRampBidiLoopCIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bRampNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -1827,9 +1827,9 @@ static void mix16bRampNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bRampLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac;
 
@@ -1877,9 +1877,9 @@ static void mix16bRampLoopLIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bRampBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
-	float fSample, *fMixBufferL, *fMixBufferR;
+	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
-	float fVolLDelta, fVolRDelta, fVolL, fVolR;
+	double dVolLDelta, dVolRDelta, dVolL, dVolR;
 	uint32_t i, samplesToMix, samplesLeft;
 	uint64_t posFrac, tmpDelta;
 
@@ -1942,9 +1942,9 @@ const mixFunc mixFuncTab[72] =
 	(mixFunc)mix8bNoLoop,
 	(mixFunc)mix8bLoop,
 	(mixFunc)mix8bBidiLoop,
-	(mixFunc)mix8bNoLoopCIntrp,
-	(mixFunc)mix8bLoopCIntrp,
-	(mixFunc)mix8bBidiLoopCIntrp,
+	(mixFunc)mix8bNoLoopSIntrp,
+	(mixFunc)mix8bLoopSIntrp,
+	(mixFunc)mix8bBidiLoopSIntrp,
 	(mixFunc)mix8bNoLoopLIntrp,
 	(mixFunc)mix8bLoopLIntrp,
 	(mixFunc)mix8bBidiLoopLIntrp,
@@ -1953,9 +1953,9 @@ const mixFunc mixFuncTab[72] =
 	(mixFunc)mix16bNoLoop,
 	(mixFunc)mix16bLoop,
 	(mixFunc)mix16bBidiLoop,
-	(mixFunc)mix16bNoLoopCIntrp,
-	(mixFunc)mix16bLoopCIntrp,
-	(mixFunc)mix16bBidiLoopCIntrp,
+	(mixFunc)mix16bNoLoopSIntrp,
+	(mixFunc)mix16bLoopSIntrp,
+	(mixFunc)mix16bBidiLoopSIntrp,
 	(mixFunc)mix16bNoLoopLIntrp,
 	(mixFunc)mix16bLoopLIntrp,
 	(mixFunc)mix16bBidiLoopLIntrp,
@@ -1966,9 +1966,9 @@ const mixFunc mixFuncTab[72] =
 	(mixFunc)mix8bRampNoLoop,
 	(mixFunc)mix8bRampLoop,
 	(mixFunc)mix8bRampBidiLoop,
-	(mixFunc)mix8bRampNoLoopCIntrp,
-	(mixFunc)mix8bRampLoopCIntrp,
-	(mixFunc)mix8bRampBidiLoopCIntrp,
+	(mixFunc)mix8bRampNoLoopSIntrp,
+	(mixFunc)mix8bRampLoopSIntrp,
+	(mixFunc)mix8bRampBidiLoopSIntrp,
 	(mixFunc)mix8bRampNoLoopLIntrp,
 	(mixFunc)mix8bRampLoopLIntrp,
 	(mixFunc)mix8bRampBidiLoopLIntrp,
@@ -1977,9 +1977,9 @@ const mixFunc mixFuncTab[72] =
 	(mixFunc)mix16bRampNoLoop,
 	(mixFunc)mix16bRampLoop,
 	(mixFunc)mix16bRampBidiLoop,
-	(mixFunc)mix16bRampNoLoopCIntrp,
-	(mixFunc)mix16bRampLoopCIntrp,
-	(mixFunc)mix16bRampBidiLoopCIntrp,
+	(mixFunc)mix16bRampNoLoopSIntrp,
+	(mixFunc)mix16bRampLoopSIntrp,
+	(mixFunc)mix16bRampBidiLoopSIntrp,
 	(mixFunc)mix16bRampNoLoopLIntrp,
 	(mixFunc)mix16bRampLoopLIntrp,
 	(mixFunc)mix16bRampBidiLoopLIntrp,
@@ -1996,9 +1996,9 @@ const mixFunc mixFuncTab[72] =
 	(mixFunc)centerMix8bNoLoop,
 	(mixFunc)centerMix8bLoop,
 	(mixFunc)centerMix8bBidiLoop,
-	(mixFunc)centerMix8bNoLoopCIntrp,
-	(mixFunc)centerMix8bLoopCIntrp,
-	(mixFunc)centerMix8bBidiLoopCIntrp,
+	(mixFunc)centerMix8bNoLoopSIntrp,
+	(mixFunc)centerMix8bLoopSIntrp,
+	(mixFunc)centerMix8bBidiLoopSIntrp,
 	(mixFunc)centerMix8bNoLoopLIntrp,
 	(mixFunc)centerMix8bLoopLIntrp,
 	(mixFunc)centerMix8bBidiLoopLIntrp,
@@ -2007,9 +2007,9 @@ const mixFunc mixFuncTab[72] =
 	(mixFunc)centerMix16bNoLoop,
 	(mixFunc)centerMix16bLoop,
 	(mixFunc)centerMix16bBidiLoop,
-	(mixFunc)centerMix16bNoLoopCIntrp,
-	(mixFunc)centerMix16bLoopCIntrp,
-	(mixFunc)centerMix16bBidiLoopCIntrp,
+	(mixFunc)centerMix16bNoLoopSIntrp,
+	(mixFunc)centerMix16bLoopSIntrp,
+	(mixFunc)centerMix16bBidiLoopSIntrp,
 	(mixFunc)centerMix16bNoLoopLIntrp,
 	(mixFunc)centerMix16bLoopLIntrp,
 	(mixFunc)centerMix16bBidiLoopLIntrp,
@@ -2020,9 +2020,9 @@ const mixFunc mixFuncTab[72] =
 	(mixFunc)centerMix8bRampNoLoop,
 	(mixFunc)centerMix8bRampLoop,
 	(mixFunc)centerMix8bRampBidiLoop,
-	(mixFunc)centerMix8bRampNoLoopCIntrp,
-	(mixFunc)centerMix8bRampLoopCIntrp,
-	(mixFunc)centerMix8bRampBidiLoopCIntrp,
+	(mixFunc)centerMix8bRampNoLoopSIntrp,
+	(mixFunc)centerMix8bRampLoopSIntrp,
+	(mixFunc)centerMix8bRampBidiLoopSIntrp,
 	(mixFunc)centerMix8bRampNoLoopLIntrp,
 	(mixFunc)centerMix8bRampLoopLIntrp,
 	(mixFunc)centerMix8bRampBidiLoopLIntrp,
@@ -2031,9 +2031,9 @@ const mixFunc mixFuncTab[72] =
 	(mixFunc)centerMix16bRampNoLoop,
 	(mixFunc)centerMix16bRampLoop,
 	(mixFunc)centerMix16bRampBidiLoop,
-	(mixFunc)centerMix16bRampNoLoopCIntrp,
-	(mixFunc)centerMix16bRampLoopCIntrp,
-	(mixFunc)centerMix16bRampBidiLoopCIntrp,
+	(mixFunc)centerMix16bRampNoLoopSIntrp,
+	(mixFunc)centerMix16bRampLoopSIntrp,
+	(mixFunc)centerMix16bRampBidiLoopSIntrp,
 	(mixFunc)centerMix16bRampNoLoopLIntrp,
 	(mixFunc)centerMix16bRampLoopLIntrp,
 	(mixFunc)centerMix16bRampBidiLoopLIntrp

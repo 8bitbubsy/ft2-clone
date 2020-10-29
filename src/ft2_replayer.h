@@ -3,9 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_unicode.h"
-
-// cubic spline requires 2 extra samples in the future to be read
-#define NUM_FIXED_TAP_SAMPLES 2
+#include "mixer/ft2_windowed_sinc.h"
 
 enum
 {
@@ -175,7 +173,8 @@ typedef struct sampleTyp_t
 	bool fixed;
 	int8_t fine, relTon, *pek, *origPek;
 	uint8_t vol, typ, pan;
-	int16_t fixedSmp[NUM_FIXED_TAP_SAMPLES];
+	double dLeftEdgeTapSamples[8+3];
+	int16_t fixedSmp[SINC_RIGHT_TAPS];
 	int32_t fixedPos, len, repS, repL;
 } sampleTyp;
 
@@ -207,14 +206,14 @@ typedef struct stmTyp_t
 	uint8_t portaUpSpeed, portaDownSpeed, retrigSpeed, retrigCnt, retrigVol;
 	uint8_t volKolVol, tonNr, envPPos, eVibPos, envVPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
-	int16_t midiPitch, envVIPValue, envPIPValue;
+	int16_t midiPitch;
 	uint16_t outPeriod, realPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
-	uint16_t envVCnt, envVAmp, envPCnt, envPAmp, eVibAmp, eVibSweep;
+	uint16_t envVCnt, envPCnt, eVibAmp, eVibSweep;
 	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;
-	float fFinalVol;
-	int32_t smpStartPos;
+	double dEnvVIPValue, dEnvPIPValue, dEnvVAmp, dEnvPAmp, dFinalVol;
+	int32_t oldFinalPeriod, smpStartPos;
 	sampleTyp *smpPtr;
-	instrTyp *instrSeg;
+	instrTyp *instrPtr;
 } stmTyp;
 
 typedef struct songTyp_t
@@ -241,7 +240,7 @@ typedef struct syncedChannel_t // used for audio/video sync queue
 	uint8_t status, sampleNr, instrNr;
 	uint16_t finalPeriod;
 	int32_t smpStartPos;
-	float fFinalVol;
+	double dFinalVol;
 } syncedChannel_t;
 
 void setNewSongPos(int32_t pos);

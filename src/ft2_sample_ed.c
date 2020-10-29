@@ -27,6 +27,7 @@
 #include "ft2_diskop.h"
 #include "ft2_keyboard.h"
 #include "ft2_structs.h"
+#include "mixer/ft2_windowed_sinc.h" // SINC_TAPS, SINC_NEGATIVE_TAPS
 
 static const char sharpNote1Char[12] = { 'C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B' };
 static const char sharpNote2Char[12] = { '-', '#', '-', '#', '-', '-', '#', '-', '#', '-', '#', '-' };
@@ -57,6 +58,9 @@ sampleTyp *getCurSample(void)
 // modifies samples before index 0, and after loop/end (for branchless mixer interpolation (kinda))
 void fixSample(sampleTyp *s)
 {
+	int32_t pos;
+	bool backwards;
+
 	assert(s != NULL);
 	if (s->origPek == NULL || s->pek == NULL)
 	{
@@ -88,37 +92,46 @@ void fixSample(sampleTyp *s)
 		return; // empty sample
 	}
 
-	// disable loop if loopLen == 0 (FT2 does this)
-	if (loopType != 0 && loopLen == 0)
+	// treat loop as disabled if loopLen == 0 (FT2 does this)
+	if (loopType != 0 && loopLen <= 0)
 	{
 		loopType = 0;
 		loopStart = loopLen = loopEnd = 0;
 	}
 
-	/* The first and second tap (-1, 0) should be the same at sampling position #0
-	** (at sample trigger), until an eventual loop cycle, where the -1 tap has a
-	** special case in the mixer.
+	/* All negative taps should be equal to the first sample point when at sampling
+	** position #0 (on sample trigger), until an eventual loop cycle, where we do
+	** a special left edge case with replaced tap data.
+	** The sample pointer is offset and has allocated data before it, so this is
+	** safe.
 	*/
 	if (sample16Bit)
-		ptr16[-1] = ptr16[0];
+	{
+		for (int32_t i = 0; i < SINC_LEFT_TAPS; i++)
+			ptr16[i-SINC_LEFT_TAPS] = ptr16[0];
+	}
 	else
-		s->pek[-1] = s->pek[0];
+	{
+		for (int32_t i = 0; i < SINC_LEFT_TAPS; i++)
+			s->pek[i-SINC_LEFT_TAPS] = s->pek[0];
+	}
 
+	// no loop
 	if (loopType == 0)
 	{
-		// no loop
 		if (sample16Bit)
 		{
-			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 				ptr16[len+i] = ptr16[len-1];
 		}
 		else
 		{
-			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 				s->pek[len+i] = s->pek[len-1];
 		}
 
-		s->fixedPos = 0;
+		s->fixedPos = 0; // this value is not used for non-looping samples, set to zero
+
 		s->fixed = false; // no fixed samples inside actual sample data
 		return;
 	}
@@ -126,13 +139,18 @@ void fixSample(sampleTyp *s)
 	if (s->fixed)
 		return; // already fixed
 
-	s->fixedPos = loopStart + loopLen;
+	s->fixedPos = loopEnd;
+	s->fixed = true;
 
-	if (loopLen == 1) // too short for interpolation kernel size, fix in a different way
+	// special-case for loop-lengt of 1
+	if (loopLen == 1)
 	{
 		if (sample16Bit)
 		{
-			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			for (int32_t i = 0; i < SINC_TAPS+SINC_LEFT_TAPS; i++)
+				s->dLeftEdgeTapSamples[i] = ptr16[loopStart];
+
+			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			{
 				s->fixedSmp[i] = ptr16[loopEnd+i];
 				ptr16[loopEnd+i] = ptr16[loopStart];
@@ -140,14 +158,16 @@ void fixSample(sampleTyp *s)
 		}
 		else
 		{
-			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			for (int32_t i = 0; i < SINC_TAPS+SINC_LEFT_TAPS; i++)
+				s->dLeftEdgeTapSamples[i] = s->pek[loopStart];
+
+			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			{
 				s->fixedSmp[i] = s->pek[loopEnd+i];
 				s->pek[loopEnd+i] = s->pek[loopStart];
 			}
 		}
 
-		s->fixed = true;
 		return;
 	}
 
@@ -156,18 +176,54 @@ void fixSample(sampleTyp *s)
 		// forward loop
 		if (sample16Bit)
 		{
-			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			// left edge (we need SINC_LEFT_TAPS amount of extra unrolled samples)
+			for (int32_t i = 0; i < SINC_TAPS+SINC_LEFT_TAPS; i++)
+			{
+				if (i < SINC_LEFT_TAPS) // negative taps
+				{
+					pos = loopEnd-i;
+					if (pos <= loopStart) // XXX: Correct?
+						pos += loopLen;
+				}
+				else // positive taps
+				{
+					pos = loopStart + ((i-SINC_LEFT_TAPS) % loopLen);
+				}
+
+				s->dLeftEdgeTapSamples[i] = ptr16[pos];
+			}
+
+			// right edge (change actual sample data since data after loop is never used)
+			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			{
 				s->fixedSmp[i] = ptr16[loopEnd+i];
-				ptr16[loopEnd+i] = ptr16[loopStart+i];
+				ptr16[loopEnd+i] = ptr16[loopStart + (i % loopLen)];
 			}
 		}
 		else
 		{
-			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			// left edge (we need SINC_LEFT_TAPS amount of extra unrolled samples)
+			for (int32_t i = 0; i < SINC_TAPS+SINC_LEFT_TAPS; i++)
+			{
+				if (i < SINC_LEFT_TAPS) // negative taps
+				{
+					pos = loopEnd-i;
+					if (pos <= loopStart) // XXX: Correct?
+						pos += loopLen;
+				}
+				else // positive taps
+				{
+					pos = loopStart + ((i-SINC_LEFT_TAPS) % loopLen);
+				}
+
+				s->dLeftEdgeTapSamples[i] = s->pek[pos];
+			}
+
+			// right edge (change actual sample data since data after loop is never used)
+			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			{
 				s->fixedSmp[i] = s->pek[loopEnd+i];
-				s->pek[loopEnd+i] = s->pek[loopStart+i];
+				s->pek[loopEnd+i] = s->pek[loopStart + (i % loopLen)];
 			}
 		}
 	}
@@ -176,25 +232,159 @@ void fixSample(sampleTyp *s)
 		// pingpong loop
 		if (sample16Bit)
 		{
-			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			// left edge (we need SINC_LEFT_TAPS amount of extra unrolled samples)
+			pos = loopStart;
+			backwards = false;
+			for (int32_t i = 0; i < SINC_LEFT_TAPS; i++)
+			{
+				if (backwards)
+				{
+					if (--pos < loopStart)
+					{
+						pos = loopStart;
+						backwards = false;
+					}
+				}
+				else
+				{
+					if (++pos >= loopEnd)
+					{
+						pos = loopEnd-1;
+						backwards = true;
+					}
+				}
+
+				s->dLeftEdgeTapSamples[3-i] = ptr16[pos];
+			}
+
+			pos = loopStart;
+			backwards = true;
+			for (int32_t i = 3; i < SINC_TAPS+SINC_LEFT_TAPS; i++)
+			{
+				if (backwards)
+				{
+					if (--pos < loopStart)
+					{
+						pos = loopStart;
+						backwards = false;
+					}
+				}
+				else
+				{
+					if (++pos >= loopEnd)
+					{
+						pos = loopEnd-1;
+						backwards = true;
+					}
+				}
+				
+				s->dLeftEdgeTapSamples[i] = ptr16[pos];
+			}
+
+			// right edge (change actual sample data since data after loop is never used)
+			pos = loopEnd-1;
+			backwards = true;
+			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			{
 				s->fixedSmp[i] = ptr16[loopEnd+i];
-				ptr16[loopEnd+i] = ptr16[loopEnd-1-i];
+
+				ptr16[loopEnd+i] = ptr16[pos];
+				if (backwards)
+				{
+					if (--pos < loopStart)
+					{
+						pos = loopStart;
+						backwards = false;
+					}
+				}
+				else
+				{
+					if (++pos >= loopEnd)
+					{
+						pos = loopEnd-1;
+						backwards = true;
+					}
+				}
 			}
 		}
 		else
 		{
-			for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+			// left edge (we need SINC_LEFT_TAPS amount of extra unrolled samples)
+			pos = loopStart;
+			backwards = false;
+			for (int32_t i = 0; i < SINC_LEFT_TAPS; i++)
+			{
+				if (backwards)
+				{
+					if (--pos < loopStart)
+					{
+						pos = loopStart;
+						backwards = false;
+					}
+				}
+				else
+				{
+					if (++pos >= loopEnd)
+					{
+						pos = loopEnd-1;
+						backwards = true;
+					}
+				}
+
+				s->dLeftEdgeTapSamples[3-i] = s->pek[pos];
+			}
+
+			pos = loopStart;
+			backwards = true;
+			for (int32_t i = 3; i < SINC_TAPS+SINC_LEFT_TAPS; i++)
+			{
+				if (backwards)
+				{
+					if (--pos < loopStart)
+					{
+						pos = loopStart;
+						backwards = false;
+					}
+				}
+				else
+				{
+					if (++pos >= loopEnd)
+					{
+						pos = loopEnd-1;
+						backwards = true;
+					}
+				}
+				
+				s->dLeftEdgeTapSamples[i] = s->pek[pos];
+			}
+
+			// right edge (change actual sample data since data after loop is never used)
+			pos = loopEnd-1;
+			backwards = true;
+			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			{
 				s->fixedSmp[i] = s->pek[loopEnd+i];
-				s->pek[loopEnd+i] = s->pek[loopEnd-1-i];
+
+				s->pek[loopEnd+i] = s->pek[pos];
+				if (backwards)
+				{
+					if (--pos < loopStart)
+					{
+						pos = loopStart;
+						backwards = false;
+					}
+				}
+				else
+				{
+					if (++pos >= loopEnd)
+					{
+						pos = loopEnd-1;
+						backwards = true;
+					}
+				}
 			}
 		}
 	}
-
-	// -1 tap (right before loopStart) on forward/pingpong loops are handled in the mixer
-
-	s->fixed = true;
 }
 
 // restores interpolation tap samples after loop/end
@@ -208,14 +398,14 @@ void restoreSample(sampleTyp *s)
 	{
 		// 16-bit sample
 		int16_t *ptr16 = (int16_t *)s->pek + s->fixedPos;
-		for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+		for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			ptr16[i] = s->fixedSmp[i];
 	}
 	else
 	{
 		// 8-bit sample
 		int8_t *ptr8 = s->pek + s->fixedPos;
-		for (int32_t i = 0; i < NUM_FIXED_TAP_SAMPLES; i++)
+		for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			ptr8[i] = (int8_t)s->fixedSmp[i];
 	}
 
@@ -594,7 +784,7 @@ static int8_t getScaledSample(sampleTyp *s, int32_t index) // for drawing sample
 		ptr16 = (int16_t *)s->pek;
 
 		// don't read fixed mixer interpolation samples, read the prestine ones instead
-		if (index >= s->fixedPos && index < s->fixedPos+NUM_FIXED_TAP_SAMPLES && s->len > loopEnd && s->fixed)
+		if (index >= s->fixedPos && index < s->fixedPos+SINC_RIGHT_TAPS && s->len > loopEnd && s->fixed)
 			tmp32 = s->fixedSmp[index-s->fixedPos];
 		else
 			tmp32 = ptr16[index];
@@ -604,7 +794,7 @@ static int8_t getScaledSample(sampleTyp *s, int32_t index) // for drawing sample
 	else
 	{
 		// don't read fixed mixer interpolation samples, read the prestine ones instead
-		if (index >= s->fixedPos && index < s->fixedPos+NUM_FIXED_TAP_SAMPLES && s->len > loopEnd && s->fixed)
+		if (index >= s->fixedPos && index < s->fixedPos+SINC_RIGHT_TAPS && s->len > loopEnd && s->fixed)
 			tmp32 = s->fixedSmp[index-s->fixedPos];
 		else
 			tmp32 = s->pek[index];
@@ -897,7 +1087,7 @@ static void getSpecialMinMax16(sampleTyp *s, int32_t index, int32_t scanEnd, int
 	}
 
 	// read fixed samples
-	int32_t tmpScanEnd = index+NUM_FIXED_TAP_SAMPLES;
+	int32_t tmpScanEnd = index+SINC_RIGHT_TAPS;
 	if (tmpScanEnd > scanEnd)
 		tmpScanEnd = scanEnd;
 
@@ -939,7 +1129,7 @@ static void getSpecialMinMax8(sampleTyp *s, int32_t index, int32_t scanEnd, int8
 	}
 
 	// read fixed samples
-	int32_t tmpScanEnd = index+NUM_FIXED_TAP_SAMPLES;
+	int32_t tmpScanEnd = index+SINC_RIGHT_TAPS;
 	if (tmpScanEnd > scanEnd)
 		tmpScanEnd = scanEnd;
 
@@ -989,7 +1179,7 @@ static void getSampleDataPeak(sampleTyp *s, int32_t index, int32_t numSamples, i
 		/* If the scan area is including the fixed samples (for branchless mixer interpolation),
 		** do a special procedure to scan the original non-touched samples when needed.
 		*/
-		const bool insideRange = index >= s->fixedPos && index < s->fixedPos+NUM_FIXED_TAP_SAMPLES;
+		const bool insideRange = index >= s->fixedPos && index < s->fixedPos+SINC_RIGHT_TAPS;
 		if (insideRange || (index < s->fixedPos && scanEnd >= s->fixedPos))
 		{
 			if (s->typ & 16)

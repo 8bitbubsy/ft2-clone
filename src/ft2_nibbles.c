@@ -362,7 +362,14 @@ static void nibblesGenNewNumber(void)
 		x = rand() % 51;
 		y = rand() % 23;
 
-		if (NI_Screen[x][y] == 0 && NI_Screen[x][y+1] == 0)
+		bool blockIsSuitable;
+
+		if (y < 22)
+			blockIsSuitable = NI_Screen[x][y] == 0 && NI_Screen[x][y+1] == 0;
+		else
+			blockIsSuitable = NI_Screen[x][y] == 0; // FT2 bugfix: prevent look-up overflow
+
+		if (blockIsSuitable)
 		{
 			NI_Number++;
 			NI_Screen[x][y] = (uint8_t)(16 + NI_Number);
