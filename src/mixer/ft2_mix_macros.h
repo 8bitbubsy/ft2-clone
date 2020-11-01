@@ -235,58 +235,30 @@
 
 #define RENDER_8BIT_SMP_SINTRP_TAP_FIX  \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	if (smpPtr <= leftEdgePtr) \
-	{ \
-		const double *tapData = &v->dLeftEdgeTaps[(int32_t)(smpPtr - loopStartPtr)]; \
-		WINDOWED_SINC_INTERPOLATION8(tapData, posFrac) \
-	} \
-	else \
-	{ \
-		WINDOWED_SINC_INTERPOLATION8(smpPtr, posFrac) \
-	} \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
+	WINDOWED_SINC_INTERPOLATION8(smpTapPtr, posFrac) \
 	*dMixBufferL++ += dSample * dVolL; \
 	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_8BIT_SMP_MONO_SINTRP_TAP_FIX \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	if (smpPtr <= leftEdgePtr) \
-	{ \
-		const double *tapData = &v->dLeftEdgeTaps[(int32_t)(smpPtr - loopStartPtr)]; \
-		WINDOWED_SINC_INTERPOLATION8(tapData, posFrac) \
-	} \
-	else \
-	{ \
-		WINDOWED_SINC_INTERPOLATION8(smpPtr, posFrac) \
-	} \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
+	WINDOWED_SINC_INTERPOLATION8(smpTapPtr, posFrac) \
 	dSample *= dVolL; \
 	*dMixBufferL++ += dSample; \
 	*dMixBufferR++ += dSample; \
 
 #define RENDER_16BIT_SMP_SINTRP_TAP_FIX \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	if (smpPtr <= leftEdgePtr) \
-	{ \
-		const double *tapData = &v->dLeftEdgeTaps[(int32_t)(smpPtr - loopStartPtr)]; \
-		WINDOWED_SINC_INTERPOLATION16(tapData, posFrac) \
-	} \
-	else \
-	{ \
-		WINDOWED_SINC_INTERPOLATION16(smpPtr, posFrac) \
-	} \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
+	WINDOWED_SINC_INTERPOLATION16(smpTapPtr, posFrac) \
 	*dMixBufferL++ += dSample * dVolL; \
 	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_16BIT_SMP_MONO_SINTRP_TAP_FIX \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	if (smpPtr <= leftEdgePtr) \
-	{ \
-		const double *tapData = &v->dLeftEdgeTaps[(int32_t)(smpPtr - loopStartPtr)]; \
-		WINDOWED_SINC_INTERPOLATION16(tapData, posFrac) \
-	} \
-	else \
-	{ \
-		WINDOWED_SINC_INTERPOLATION16(smpPtr, posFrac) \
-	} \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
+	WINDOWED_SINC_INTERPOLATION16(smpTapPtr, posFrac) \
 	dSample *= dVolL; \
 	*dMixBufferL++ += dSample; \
 	*dMixBufferR++ += dSample; \

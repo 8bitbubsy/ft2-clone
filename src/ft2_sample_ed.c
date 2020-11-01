@@ -148,7 +148,7 @@ void fixSample(sampleTyp *s)
 		if (sample16Bit)
 		{
 			for (int32_t i = 0; i < SINC_TAPS+SINC_LEFT_TAPS; i++)
-				s->dLeftEdgeTapSamples[i] = ptr16[loopStart];
+				s->leftEdgeTapSamples16[i] = ptr16[loopStart];
 
 			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			{
@@ -159,7 +159,7 @@ void fixSample(sampleTyp *s)
 		else
 		{
 			for (int32_t i = 0; i < SINC_TAPS+SINC_LEFT_TAPS; i++)
-				s->dLeftEdgeTapSamples[i] = s->pek[loopStart];
+				s->leftEdgeTapSamples8[i] = s->pek[loopStart];
 
 			for (int32_t i = 0; i < SINC_RIGHT_TAPS; i++)
 			{
@@ -190,7 +190,7 @@ void fixSample(sampleTyp *s)
 					pos = loopStart + ((i-SINC_LEFT_TAPS) % loopLen);
 				}
 
-				s->dLeftEdgeTapSamples[i] = ptr16[pos];
+				s->leftEdgeTapSamples16[i] = ptr16[pos];
 			}
 
 			// right edge (change actual sample data since data after loop is never used)
@@ -216,7 +216,7 @@ void fixSample(sampleTyp *s)
 					pos = loopStart + ((i-SINC_LEFT_TAPS) % loopLen);
 				}
 
-				s->dLeftEdgeTapSamples[i] = s->pek[pos];
+				s->leftEdgeTapSamples8[i] = s->pek[pos];
 			}
 
 			// right edge (change actual sample data since data after loop is never used)
@@ -254,7 +254,7 @@ void fixSample(sampleTyp *s)
 					}
 				}
 
-				s->dLeftEdgeTapSamples[3-i] = ptr16[pos];
+				s->leftEdgeTapSamples16[3-i] = ptr16[pos];
 			}
 
 			pos = loopStart;
@@ -278,7 +278,7 @@ void fixSample(sampleTyp *s)
 					}
 				}
 				
-				s->dLeftEdgeTapSamples[i] = ptr16[pos];
+				s->leftEdgeTapSamples16[i] = ptr16[pos];
 			}
 
 			// right edge (change actual sample data since data after loop is never used)
@@ -331,7 +331,7 @@ void fixSample(sampleTyp *s)
 					}
 				}
 
-				s->dLeftEdgeTapSamples[3-i] = s->pek[pos];
+				s->leftEdgeTapSamples8[3-i] = s->pek[pos];
 			}
 
 			pos = loopStart;
@@ -355,7 +355,7 @@ void fixSample(sampleTyp *s)
 					}
 				}
 				
-				s->dLeftEdgeTapSamples[i] = s->pek[pos];
+				s->leftEdgeTapSamples8[i] = s->pek[pos];
 			}
 
 			// right edge (change actual sample data since data after loop is never used)

@@ -50,8 +50,12 @@ typedef struct
 	int32_t pos, end, loopStart, loopLength;
 	uint32_t volRampSamples, revDelta, oldRevDelta;
 	uint64_t posFrac, delta, oldDelta;
+
+	// if (loopStart > 0 && pos <= loopStart+3) useTheseTaps();
+	const int8_t *leftEdgeTaps8;
+	const int16_t *leftEdgeTaps16;
+
 	const double *dSincLUT;
-	double *dLeftEdgeTaps; // if (loopStart > 0 && pos <= loopStart+3) useTheseTaps();
 	double dVol, dDestVolL, dDestVolR, dVolL, dVolR, dVolDeltaL, dVolDeltaR;
 } voice_t;
 
@@ -94,6 +98,7 @@ bool chQueuePush(chSyncData_t t);
 bool chQueuePop(void);
 chSyncData_t *chQueuePeek(void);
 uint64_t getChQueueTimestamp(void);
+void resetSyncQueues(void);
 
 void calcPanningTable(void);
 void setAudioAmp(int16_t amp, int16_t masterVol, bool bitDepth32Flag);

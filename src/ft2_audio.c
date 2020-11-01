@@ -324,16 +324,18 @@ static void voiceTrigger(int32_t ch, sampleTyp *s, int32_t position)
 	{
 		v->base16 = (const int16_t *)s->pek;
 		v->revBase16 = &v->base16[loopStart + loopEnd]; // for pingpong loops
+
+		v->leftEdgeTaps16 = s->leftEdgeTapSamples16 + 3;
 	}
 	else
 	{
 		v->base8 = s->pek;
 		v->revBase8 = &v->base8[loopStart + loopEnd]; // for pingpong loops
+		v->leftEdgeTaps8 = s->leftEdgeTapSamples8 + 3;
+
 	}
 
-	v->dLeftEdgeTaps = s->dLeftEdgeTapSamples + 3;
 	v->hasLooped = false; // for sinc interpolation special case
-
 	v->backwards = false;
 	v->loopType = loopType;
 	v->end = (loopType > 0) ? loopEnd : length;
@@ -801,7 +803,7 @@ void unlockAudio(void)
 	audio.locked = false;
 }
 
-static void resetSyncQueues(void)
+void resetSyncQueues(void)
 {
 	pattSync.data[0].timestamp = 0;
 	pattSync.readPos = 0;

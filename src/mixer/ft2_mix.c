@@ -203,6 +203,7 @@ static void mix8bNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
+	int8_t *smpTapPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
@@ -269,6 +270,7 @@ static void mix8bLoopSIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
+	int8_t *smpTapPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
@@ -667,6 +669,7 @@ static void mix8bRampNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
+	int8_t *smpTapPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	double dVolLDelta, dVolRDelta, dVolL, dVolR;
@@ -746,6 +749,7 @@ static void mix8bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 static void mix8bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
+	int8_t *smpTapPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	double dVolLDelta, dVolRDelta, dVolL, dVolR;
@@ -1153,6 +1157,7 @@ static void mix16bNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
+	int16_t *smpTapPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
@@ -1219,6 +1224,7 @@ static void mix16bLoopSIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
+	int16_t *smpTapPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	uint32_t i, samplesToMix, samplesLeft;
@@ -1617,6 +1623,7 @@ static void mix16bRampNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
+	int16_t *smpTapPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	double dVolLDelta, dVolRDelta, dVolL, dVolR;
@@ -1696,6 +1703,7 @@ static void mix16bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 static void mix16bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
+	int16_t *smpTapPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
 	int32_t pos;
 	double dVolLDelta, dVolRDelta, dVolL, dVolR;

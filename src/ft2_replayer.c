@@ -2294,7 +2294,7 @@ void setPos(int16_t songPos, int16_t pattPos, bool resetTimer)
 	{
 		song.pattPos = pattPos;
 		if (song.pattPos >= song.pattLen)
-			song.pattPos = song.pattLen - 1;
+			song.pattPos = song.pattLen-1;
 	}
 
 	// if not playing, update local position variables

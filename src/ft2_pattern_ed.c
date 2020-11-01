@@ -1614,11 +1614,22 @@ void pbPosEdPattUp(void)
 	{
 		song.songTab[song.songPos]++;
 		song.pattNr = song.songTab[song.songPos];
-		editor.editPattern = (uint8_t)song.pattNr;
-		song.pattLen = pattLens[editor.editPattern];
 
+		song.pattLen = pattLens[song.pattNr];
+		if (song.pattPos >= song.pattLen)
+		{
+			song.pattPos = song.pattLen-1;
+			if (!songPlaying)
+				editor.pattPos = song.pattPos;
+		}
+
+		if (!songPlaying)
+			editor.editPattern = (uint8_t)song.pattNr;
+
+		checkMarkLimits();
 		ui.updatePatternEditor = true;
 		ui.updatePosSections = true;
+
 		setSongModifiedFlag();
 	}
 	unlockMixerCallback();
@@ -1634,11 +1645,22 @@ void pbPosEdPattDown(void)
 	{
 		song.songTab[song.songPos]--;
 		song.pattNr = song.songTab[song.songPos];
-		editor.editPattern = (uint8_t)song.pattNr;
-		song.pattLen = pattLens[editor.editPattern];
 
+		song.pattLen = pattLens[song.pattNr];
+		if (song.pattPos >= song.pattLen)
+		{
+			song.pattPos = song.pattLen-1;
+			if (!songPlaying)
+				editor.pattPos = song.pattPos;
+		}
+
+		if (!songPlaying)
+			editor.editPattern = (uint8_t)song.pattNr;
+
+		checkMarkLimits();
 		ui.updatePatternEditor = true;
 		ui.updatePosSections = true;
+
 		setSongModifiedFlag();
 	}
 	unlockMixerCallback();
@@ -1888,49 +1910,30 @@ void pbSubChan(void)
 	unlockMixerCallback();
 }
 
-static void updatePtnLen(void)
-{
-	uint16_t len = pattLens[editor.editPattern];
-
-	song.pattLen = len;
-	if (song.pattPos >= len)
-	{
-		song.pattPos = len - 1;
-		editor.pattPos = song.pattPos;
-	}
-
-	checkMarkLimits();
-}
-
 void pbEditPattUp(void)
 {
 	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
 		lockAudio();
 
-	if (songPlaying)
+	if (song.pattNr < 255)
 	{
-		if (song.pattNr < 255)
+		song.pattNr++;
+
+		song.pattLen = pattLens[song.pattNr];
+		if (song.pattPos >= song.pattLen)
 		{
-			song.pattNr++;
-			updatePtnLen();
-
-			ui.updatePatternEditor = true;
-			ui.updatePosSections = true;
+			song.pattPos = song.pattLen-1;
+			if (!songPlaying)
+				editor.pattPos = song.pattPos;
 		}
-	}
-	else
-	{
-		if (editor.editPattern < 255)
-		{
-			editor.editPattern++;
 
-			song.pattNr = editor.editPattern;
-			updatePtnLen();
+		if (!songPlaying)
+			editor.editPattern = (uint8_t)song.pattNr;
 
-			ui.updatePatternEditor = true;
-			ui.updatePosSections = true;
-		}
+		checkMarkLimits();
+		ui.updatePatternEditor = true;
+		ui.updatePosSections = true;
 	}
 
 	if (audioWasntLocked)
@@ -1943,29 +1946,24 @@ void pbEditPattDown(void)
 	if (audioWasntLocked)
 		lockAudio();
 
-	if (songPlaying)
+	if (song.pattNr > 0)
 	{
-		if (song.pattNr > 0)
+		song.pattNr--;
+
+		song.pattLen = pattLens[song.pattNr];
+		if (song.pattPos >= song.pattLen)
 		{
-			song.pattNr--;
-			updatePtnLen();
-
-			ui.updatePatternEditor = true;
-			ui.updatePosSections = true;
+			song.pattPos = song.pattLen-1;
+			if (!songPlaying)
+				editor.pattPos = song.pattPos;
 		}
-	}
-	else
-	{
-		if (editor.editPattern > 0)
-		{
-			editor.editPattern--;
 
-			song.pattNr = editor.editPattern;
-			updatePtnLen();
+		if (!songPlaying)
+			editor.editPattern = (uint8_t)song.pattNr;
 
-			ui.updatePatternEditor = true;
-			ui.updatePosSections = true;
-		}
+		checkMarkLimits();
+		ui.updatePatternEditor = true;
+		ui.updatePosSections = true;
 	}
 
 	if (audioWasntLocked)

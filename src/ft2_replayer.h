@@ -173,9 +173,13 @@ typedef struct sampleTyp_t
 	bool fixed;
 	int8_t fine, relTon, *pek, *origPek;
 	uint8_t vol, typ, pan;
-	double dLeftEdgeTapSamples[8+3];
+	int32_t len, repS, repL;
+
+	// fix for resampling interpolation taps
+	int8_t leftEdgeTapSamples8[SINC_TAPS+SINC_LEFT_TAPS];
+	int16_t leftEdgeTapSamples16[SINC_TAPS+SINC_LEFT_TAPS];
 	int16_t fixedSmp[SINC_RIGHT_TAPS];
-	int32_t fixedPos, len, repS, repL;
+	int32_t fixedPos;
 } sampleTyp;
 
 typedef struct instrTyp_t
