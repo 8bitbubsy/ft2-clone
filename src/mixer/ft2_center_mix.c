@@ -200,7 +200,7 @@ void centerMix8bLoopSIntrp(voice_t *v, uint32_t numSamples)
 		LIMIT_MIX_NUM
 		samplesLeft -= samplesToMix;
 
-		if (v->hasLooped) // the interpolation's -1 tap needs a special case from now on
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
@@ -268,7 +268,7 @@ void centerMix8bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 		samplesLeft -= samplesToMix;
 
 		START_BIDI
-		if (v->hasLooped) // the interpolation's -1 tap needs a special case from now on
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
@@ -669,7 +669,7 @@ void centerMix8bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 		LIMIT_MIX_NUM_MONO_RAMP
 		samplesLeft -= samplesToMix;
 
-		if (v->hasLooped) // the interpolation's -1 tap needs a special case from now on
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
@@ -750,7 +750,7 @@ void centerMix8bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 		samplesLeft -= samplesToMix;
 
 		START_BIDI
-		if (v->hasLooped) // the interpolation's -1 tap needs a special case from now on
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
@@ -1155,7 +1155,7 @@ void centerMix16bLoopSIntrp(voice_t *v, uint32_t numSamples)
 		LIMIT_MIX_NUM
 		samplesLeft -= samplesToMix;
 
-		if (v->hasLooped) // the interpolation's -1 tap needs a special case from now on
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
@@ -1223,7 +1223,7 @@ void centerMix16bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 		samplesLeft -= samplesToMix;
 
 		START_BIDI
-		if (v->hasLooped) // the interpolation's -1 tap needs a special case from now on
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
@@ -1624,7 +1624,7 @@ void centerMix16bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 		LIMIT_MIX_NUM_MONO_RAMP
 		samplesLeft -= samplesToMix;
 
-		if (v->hasLooped) // the interpolation's -1 tap needs a special case from now on
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{
@@ -1705,7 +1705,7 @@ void centerMix16bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 		samplesLeft -= samplesToMix;
 
 		START_BIDI
-		if (v->hasLooped) // the interpolation's -1 tap needs a special case from now on
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
 		{
 			for (i = 0; i < (samplesToMix & 3); i++)
 			{

@@ -173,7 +173,7 @@
 ** but the sample data is actually padded on both the left (negative) and right side, where correct tap
 ** samples are stored according to loop mode (or no loop).
 **
-** The mixer is also reading the correct sample on the -1 tap after the sample has looped at least once.
+** There is also a second special case for the left edge (negative taps) after the sample has looped once.
 **
 */
 
