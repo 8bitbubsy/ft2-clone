@@ -51,7 +51,7 @@ typedef struct
 	uint32_t volRampSamples, revDelta, oldRevDelta;
 	uint64_t posFrac, delta, oldDelta;
 
-	// if (loopStart > 0 && pos <= loopStart+3) useTheseTaps();
+	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;
 	const int16_t *leftEdgeTaps16;
 
