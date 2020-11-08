@@ -31,15 +31,15 @@
 
 #define GET_MIXER_VARS \
 	const uint64_t delta = v->delta; \
-	dMixBufferL = audio.dMixBufferL; \
-	dMixBufferR = audio.dMixBufferR; \
+	dMixBufferL = audio.dMixBufferL + bufferPos; \
+	dMixBufferR = audio.dMixBufferR + bufferPos; \
 	pos = v->pos; \
 	posFrac = v->posFrac; \
 
 #define GET_MIXER_VARS_RAMP \
 	const uint64_t delta = v->delta; \
-	dMixBufferL = audio.dMixBufferL; \
-	dMixBufferR = audio.dMixBufferR; \
+	dMixBufferL = audio.dMixBufferL + bufferPos; \
+	dMixBufferR = audio.dMixBufferR + bufferPos; \
 	dVolLDelta = v->dVolDeltaL; \
 	dVolRDelta = v->dVolDeltaR; \
 	pos = v->pos; \
@@ -47,8 +47,8 @@
 
 #define GET_MIXER_VARS_MONO_RAMP \
 	const uint64_t delta = v->delta; \
-	dMixBufferL = audio.dMixBufferL; \
-	dMixBufferR = audio.dMixBufferR; \
+	dMixBufferL = audio.dMixBufferL + bufferPos; \
+	dMixBufferR = audio.dMixBufferR + bufferPos; \
 	dVolLDelta = v->dVolDeltaL; \
 	pos = v->pos; \
 	posFrac = v->posFrac; \

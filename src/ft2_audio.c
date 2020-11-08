@@ -545,7 +545,7 @@ static void sendSamples32BitMultiChan(uint8_t *stream, uint32_t sampleBlockLengt
 	}
 }
 
-static void doChannelMixing(int32_t samplesToMix)
+static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 {
 	voice_t *v = voice; // normal voices
 	voice_t *r = &voice[MAX_VOICES]; // volume ramp fadeout-voices
@@ -572,27 +572,15 @@ static void doChannelMixing(int32_t samplesToMix)
 				centerMixFlag = v->dVolL == v->dVolR;
 			}
 
-			mixFuncTab[(centerMixFlag * 36) + (volRampFlag * 18) + v->mixFuncOffset](v, samplesToMix);
+			mixFuncTab[(centerMixFlag * 36) + (volRampFlag * 18) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
 		}
 
 		if (r->active) // volume ramp fadeout-voice
 		{
 			const bool centerMixFlag = (r->dDestVolL == r->dDestVolR) && (r->dVolDeltaL == r->dVolDeltaR);
-			mixFuncTab[(centerMixFlag * 36) + 18 + r->mixFuncOffset](r, samplesToMix);
+			mixFuncTab[(centerMixFlag * 36) + 18 + r->mixFuncOffset](r, bufferPosition, samplesToMix);
 		}
 	}
-}
-
-static void mixAudio(uint8_t *stream, uint32_t sampleBlockLength, uint8_t numAudioChannels)
-{
-	assert(sampleBlockLength <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
-	memset(audio.dMixBufferL, 0, sampleBlockLength * sizeof (double));
-	memset(audio.dMixBufferR, 0, sampleBlockLength * sizeof (double));
-
-	doChannelMixing(sampleBlockLength);
-
-	// normalize mix buffer and send to audio stream
-	sendAudSamplesFunc(stream, sampleBlockLength, numAudioChannels);
 }
 
 // used for song-to-WAV renderer
@@ -602,7 +590,7 @@ void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bit
 	memset(audio.dMixBufferL, 0, samplesToMix * sizeof (double));
 	memset(audio.dMixBufferR, 0, samplesToMix * sizeof (double));
 
-	doChannelMixing(samplesToMix);
+	doChannelMixing(0, samplesToMix);
 
 	// normalize mix buffer and send to audio stream
 	if (bitDepth == 16)
@@ -932,10 +920,17 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 	if (editor.wavIsRendering)
 		return;
 
-	int32_t samplesLeft = len / pmpCountDiv;
-	if (samplesLeft <= 0)
+	len /= pmpCountDiv; // bytes -> samples
+	if (len <= 0)
 		return;
 
+	assert(len <= MAX_WAV_RENDER_SAMPLES_PER_TICK);
+	memset(audio.dMixBufferL, 0, len * sizeof (double));
+	memset(audio.dMixBufferR, 0, len * sizeof (double));
+
+	int32_t bufferPosition = 0;
+
+	int32_t samplesLeft = len;
 	while (samplesLeft > 0)
 	{
 		if (audio.dTickSampleCounter <= 0.0)
@@ -962,12 +957,15 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 		if (samplesToMix > remainingTick)
 			samplesToMix = remainingTick;
 
-		mixAudio(stream, samplesToMix, pmpChannels);
-		stream += samplesToMix * pmpCountDiv;
+		doChannelMixing(bufferPosition, samplesToMix);
 
+		bufferPosition += samplesToMix;
 		samplesLeft -= samplesToMix;
 		audio.dTickSampleCounter -= samplesToMix;
 	}
+
+	// normalize mix buffer and send to audio stream
+	sendAudSamplesFunc(stream, len, pmpChannels);
 
 	(void)userdata; // make compiler not complain
 }

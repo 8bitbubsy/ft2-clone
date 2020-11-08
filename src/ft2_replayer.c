@@ -2943,7 +2943,7 @@ void playTone(uint8_t stmm, uint8_t inst, uint8_t ton, int8_t vol, uint16_t midi
 	if (ins == NULL)
 		return;
 
-	assert(stmm < MAX_VOICES && inst < MAX_INST && ton <= 97);
+	assert(stmm < MAX_VOICES && inst <= MAX_INST && ton <= 97);
 	ch = &stm[stmm];
 
 	// FT2 bugfix: Don't play tone if certain requirements are not met
@@ -3010,7 +3010,7 @@ void playSample(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t
 	editor.curPlayInstr = 255;
 	editor.curPlaySmp = 255;
 
-	assert(stmm < MAX_VOICES && inst < MAX_INST && smpNr < MAX_SMP_PER_INST && ton <= 97);
+	assert(stmm < MAX_VOICES && inst <= MAX_INST && smpNr < MAX_SMP_PER_INST && ton <= 97);
 	ch = &stm[stmm];
 
 	memcpy(&instr[130]->samp[0], &instr[inst]->samp[smpNr], sizeof (sampleTyp));
@@ -3066,7 +3066,7 @@ void playRange(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t 
 	editor.curPlayInstr = 255;
 	editor.curPlaySmp = 255;
 
-	assert(stmm < MAX_VOICES && inst < MAX_INST && smpNr < MAX_SMP_PER_INST && ton <= 97);
+	assert(stmm < MAX_VOICES && inst <= MAX_INST && smpNr < MAX_SMP_PER_INST && ton <= 97);
 
 	ch = &stm[stmm];
 	s = &instr[130]->samp[0];

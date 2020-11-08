@@ -10,7 +10,7 @@
 /*                      8-BIT CENTER MIXING ROUTINES                       */
 /* ----------------------------------------------------------------------- */
 
-void centerMix8bNoLoop(voice_t *v, uint32_t numSamples)
+void centerMix8bNoLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -52,7 +52,7 @@ void centerMix8bNoLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bLoop(voice_t *v, uint32_t numSamples)
+void centerMix8bLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -94,7 +94,7 @@ void centerMix8bLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bBidiLoop(voice_t *v, uint32_t numSamples)
+void centerMix8bBidiLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -138,7 +138,7 @@ void centerMix8bBidiLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bNoLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bNoLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -180,7 +180,7 @@ void centerMix8bNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	int8_t *smpTapPtr;
@@ -247,7 +247,7 @@ void centerMix8bLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bBidiLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
 	int8_t *smpTapPtr;
@@ -317,7 +317,7 @@ void centerMix8bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bNoLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bNoLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -359,7 +359,7 @@ void centerMix8bNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -401,7 +401,7 @@ void centerMix8bLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bBidiLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -445,7 +445,7 @@ void centerMix8bBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampNoLoop(voice_t *v, uint32_t numSamples)
+void centerMix8bRampNoLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -495,7 +495,7 @@ void centerMix8bRampNoLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampLoop(voice_t *v, uint32_t numSamples)
+void centerMix8bRampLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -545,7 +545,7 @@ void centerMix8bRampLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampBidiLoop(voice_t *v, uint32_t numSamples)
+void centerMix8bRampBidiLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -597,7 +597,7 @@ void centerMix8bRampBidiLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampNoLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bRampNoLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -647,7 +647,7 @@ void centerMix8bRampNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bRampLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	int8_t *smpTapPtr;
@@ -727,7 +727,7 @@ void centerMix8bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bRampBidiLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
 	int8_t *smpTapPtr;
@@ -809,7 +809,7 @@ void centerMix8bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampNoLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bRampNoLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -859,7 +859,7 @@ void centerMix8bRampNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bRampLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -909,7 +909,7 @@ void centerMix8bRampLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix8bRampBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix8bRampBidiLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int8_t *base, *revBase, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -965,7 +965,7 @@ void centerMix8bRampBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 /*                      16-BIT CENTER MIXING ROUTINES                      */
 /* ----------------------------------------------------------------------- */
 
-void centerMix16bNoLoop(voice_t *v, uint32_t numSamples)
+void centerMix16bNoLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1007,7 +1007,7 @@ void centerMix16bNoLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bLoop(voice_t *v, uint32_t numSamples)
+void centerMix16bLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1049,7 +1049,7 @@ void centerMix16bLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bBidiLoop(voice_t *v, uint32_t numSamples)
+void centerMix16bBidiLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1093,7 +1093,7 @@ void centerMix16bBidiLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bNoLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bNoLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1135,7 +1135,7 @@ void centerMix16bNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	int16_t *smpTapPtr;
@@ -1202,7 +1202,7 @@ void centerMix16bLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bBidiLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
 	int16_t *smpTapPtr;
@@ -1271,7 +1271,7 @@ void centerMix16bBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bNoLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bNoLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1313,7 +1313,7 @@ void centerMix16bNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1355,7 +1355,7 @@ void centerMix16bLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bBidiLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1400,7 +1400,7 @@ void centerMix16bBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
 }
 
 
-void centerMix16bRampNoLoop(voice_t *v, uint32_t numSamples)
+void centerMix16bRampNoLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1450,7 +1450,7 @@ void centerMix16bRampNoLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bRampLoop(voice_t *v, uint32_t numSamples)
+void centerMix16bRampLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1500,7 +1500,7 @@ void centerMix16bRampLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bRampBidiLoop(voice_t *v, uint32_t numSamples)
+void centerMix16bRampBidiLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1552,7 +1552,7 @@ void centerMix16bRampBidiLoop(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bRampNoLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bRampNoLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1602,7 +1602,7 @@ void centerMix16bRampNoLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bRampLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	int16_t *smpTapPtr;
@@ -1682,7 +1682,7 @@ void centerMix16bRampLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bRampBidiLoopSIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
 	int16_t *smpTapPtr;
@@ -1764,7 +1764,7 @@ void centerMix16bRampBidiLoopSIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bRampNoLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bRampNoLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1814,7 +1814,7 @@ void centerMix16bRampNoLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bRampLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bRampLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;
@@ -1864,7 +1864,7 @@ void centerMix16bRampLoopLIntrp(voice_t *v, uint32_t numSamples)
 	SET_BACK_MIXER_POS
 }
 
-void centerMix16bRampBidiLoopLIntrp(voice_t *v, uint32_t numSamples)
+void centerMix16bRampBidiLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
 {
 	const int16_t *base, *revBase, *smpPtr;
 	double dSample, *dMixBufferL, *dMixBufferR;

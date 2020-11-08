@@ -1069,7 +1069,7 @@ static void getMinMax8(const void *p, uint32_t scanLen, int8_t *min8, int8_t *ma
 	}
 }
 
-// for scanning sample data peak where loopEnd+NUM_FIXED_TAP_SAMPLES is within scan range (fixed interpolation tap samples)
+// for scanning sample data peak where loopEnd+SINC_RIGHT_TAPS is within scan range (fixed interpolation tap samples)
 static void getSpecialMinMax16(sampleTyp *s, int32_t index, int32_t scanEnd, int16_t *min16, int16_t *max16)
 {
 	int16_t minVal, maxVal, minVal2, maxVal2;
@@ -1079,19 +1079,22 @@ static void getSpecialMinMax16(sampleTyp *s, int32_t index, int32_t scanEnd, int
 	minVal =  32767;
 	maxVal = -32768;
 
-	// read peak samples before fixed samples
+	// read samples before fixed samples (if needed)
 	if (index < s->fixedPos)
 	{
 		getMinMax16(&ptr16[index], s->fixedPos-index, &minVal, &maxVal);
-		index += s->fixedPos-index;
+		index = s->fixedPos;
 	}
 
-	// read fixed samples
-	int32_t tmpScanEnd = index+SINC_RIGHT_TAPS;
+	// read fixed samples (we are guaranteed to be within the fixed samples here)
+	const int32_t tapIndex = index-s->fixedPos;
+	const int32_t scanLength = SINC_RIGHT_TAPS-tapIndex;
+
+	int32_t tmpScanEnd = index+scanLength;
 	if (tmpScanEnd > scanEnd)
 		tmpScanEnd = scanEnd;
 
-	const int16_t *smpReadPtr = s->fixedSmp;
+	const int16_t *smpReadPtr = s->fixedSmp + tapIndex;
 	for (; index < tmpScanEnd; index++)
 	{
 		const int16_t smp16 = *smpReadPtr++;
@@ -1099,7 +1102,7 @@ static void getSpecialMinMax16(sampleTyp *s, int32_t index, int32_t scanEnd, int
 		if (smp16 > maxVal) maxVal = smp16;
 	}
 
-	// read peak samples after fixed samples
+	// read samples after fixed samples (if needed)
 	if (index < scanEnd)
 	{
 		getMinMax16(&ptr16[index], scanEnd-index, &minVal2, &maxVal2);
@@ -1111,7 +1114,7 @@ static void getSpecialMinMax16(sampleTyp *s, int32_t index, int32_t scanEnd, int
 	*max16 = maxVal;
 }
 
-// for scanning sample data peak where loopEnd+NUM_FIXED_TAP_SAMPLES is within scan range (fixed interpolation tap samples)
+// for scanning sample data peak where loopEnd+SINC_RIGHT_TAPS is within scan range (fixed interpolation tap samples)
 static void getSpecialMinMax8(sampleTyp *s, int32_t index, int32_t scanEnd, int8_t *min8, int8_t *max8)
 {
 	int8_t minVal, maxVal, minVal2, maxVal2;
@@ -1121,19 +1124,22 @@ static void getSpecialMinMax8(sampleTyp *s, int32_t index, int32_t scanEnd, int8
 	minVal =  127;
 	maxVal = -128;
 
-	// read peak samples before fixed samples
+	// read samples before fixed samples (if needed)
 	if (index < s->fixedPos)
 	{
 		getMinMax8(&ptr8[index], s->fixedPos-index, &minVal, &maxVal);
-		index += s->fixedPos-index;
+		index = s->fixedPos;
 	}
 
-	// read fixed samples
-	int32_t tmpScanEnd = index+SINC_RIGHT_TAPS;
+	// read fixed samples (we are guaranteed to be within the fixed samples here)
+	const int32_t tapIndex = index-s->fixedPos;
+	const int32_t scanLength = SINC_RIGHT_TAPS-tapIndex;
+
+	int32_t tmpScanEnd = index+scanLength;
 	if (tmpScanEnd > scanEnd)
 		tmpScanEnd = scanEnd;
 
-	const int16_t *smpReadPtr = (const int16_t *)s->fixedSmp;
+	const int16_t *smpReadPtr = (const int16_t *)s->fixedSmp + tapIndex;
 	for (; index < tmpScanEnd; index++)
 	{
 		const int8_t smp8 = (int8_t)(*smpReadPtr++);
@@ -1141,7 +1147,7 @@ static void getSpecialMinMax8(sampleTyp *s, int32_t index, int32_t scanEnd, int8
 		if (smp8 > maxVal) maxVal = smp8;
 	}
 
-	// read peak samples after fixed samples
+	// read samples after fixed samples (if needed)
 	if (index < scanEnd)
 	{
 		getMinMax8(&ptr8[index], scanEnd-index, &minVal2, &maxVal2);

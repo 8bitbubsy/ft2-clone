@@ -153,6 +153,8 @@ static void redrawScope(int32_t ch)
 	chanLookup = chansPerRow - 1;
 	scopeLens = scopeLenTab[chanLookup];
 
+	// get x,y,len for scope according to channel (we must do it this way since 'len' can differ!)
+
 	x = 2;
 	y = 94;
 

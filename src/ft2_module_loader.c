@@ -138,7 +138,7 @@ static SDL_Thread *thread;
 static int16_t pattLensTmp[MAX_PATTERNS];
 static uint32_t extraSampleLengths[32-MAX_SMP_PER_INST]; // ModPlug Tracker & OpenMPT supports up to 32 samples per instrument in .XM
 static tonTyp *pattTmp[MAX_PATTERNS];
-static instrTyp *instrTmp[1+MAX_INST];
+static instrTyp *instrTmp[1+256];
 static songTyp songTmp;
 
 static void setupLoadedModule(void);
@@ -1724,6 +1724,12 @@ bool doLoadMusic(bool externalThreadFlag)
 		goto xmLoadError;
 	}
 
+	if (h.antInstrs > 256) // if >128 instruments, we fake-load up to 128 extra instruments and discard them
+	{
+		showMsg(0, "System message", "Error loading XM: This file is corrupt.");
+		goto xmLoadError;
+	}
+
 	fseek(f, 60 + h.headerSize, SEEK_SET);
 	if (filelength != 336 && feof(f)) // 336 in length at this point = empty XM
 	{
@@ -1806,8 +1812,24 @@ bool doLoadMusic(bool externalThreadFlag)
 
 		for (i = 1; i <= h.antInstrs; i++)
 		{
-			if (!loadInstrHeader(f, i, externalThreadFlag)) goto xmLoadError;
-			if (!loadInstrSample(f, i, externalThreadFlag)) goto xmLoadError;
+			if (!loadInstrHeader(f, i, externalThreadFlag))
+				goto xmLoadError;
+
+			if (!loadInstrSample(f, i, externalThreadFlag))
+				goto xmLoadError;
+		}
+	}
+
+	// if we temporarily loaded more than 128 instruments, clear the extra allocated memory
+	if (h.antInstrs > MAX_INST)
+	{
+		for (i = MAX_INST+1; i <= h.antInstrs; i++)
+		{
+			if (instrTmp[i] != NULL)
+			{
+				free(instrTmp[i]);
+				instrTmp[i] = NULL;
+			}
 		}
 	}
 
@@ -1937,8 +1959,8 @@ static void freeTmpModule(void) // called on module load error
 		}
 	}
 
-	// free all samples
-	for (i = 1; i <= MAX_INST; i++)
+	// free all instruments and samples
+	for (i = 1; i <= 256; i++) // if >128 instruments, we fake-load up to 128 extra (and discard them later)
 	{
 		if (instrTmp[i] != NULL)
 		{
@@ -1996,7 +2018,7 @@ static bool loadInstrHeader(FILE *f, uint16_t i, bool externalThreadFlag)
 		return false;
 	}
 
-	if (i <= MAX_INST)
+	if (i <= MAX_INST) // copy over instrument names
 	{
 		// trim off spaces at end of name
 		for (k = 21; k >= 0; k--)
@@ -2013,73 +2035,70 @@ static bool loadInstrHeader(FILE *f, uint16_t i, bool externalThreadFlag)
 
 	if (ih.antSamp > 0)
 	{
-		if (i <= MAX_INST)
+		if (!allocateTmpInstr(i))
 		{
-			if (!allocateTmpInstr(i))
-			{
-				showMsg(0, "System message", "Not enough memory!");
-				return false;
-			}
+			showMsg(0, "System message", "Not enough memory!");
+			return false;
+		}
 
-			// copy instrument header elements to our instrument struct
+		// copy instrument header elements to our instrument struct
 
-			ins = instrTmp[i];
-			memcpy(ins->ta, ih.ta, 96);
-			memcpy(ins->envVP, ih.envVP, 12*2*sizeof(int16_t));
-			memcpy(ins->envPP, ih.envPP, 12*2*sizeof(int16_t));
-			ins->envVPAnt = ih.envVPAnt;
-			ins->envPPAnt = ih.envPPAnt;
-			ins->envVSust = ih.envVSust;
-			ins->envVRepS = ih.envVRepS;
-			ins->envVRepE = ih.envVRepE;
-			ins->envPSust = ih.envPSust;
-			ins->envPRepS = ih.envPRepS;
-			ins->envPRepE = ih.envPRepE;
-			ins->envVTyp = ih.envVTyp;
-			ins->envPTyp = ih.envPTyp;
-			ins->vibTyp = ih.vibTyp;
-			ins->vibSweep = ih.vibSweep;
-			ins->vibDepth = ih.vibDepth;
-			ins->vibRate = ih.vibRate;
-			ins->fadeOut = ih.fadeOut;
-			ins->midiOn = (ih.midiOn == 1) ? true : false;
-			ins->midiChannel = ih.midiChannel;
-			ins->midiProgram = ih.midiProgram;
-			ins->midiBend = ih.midiBend;
-			ins->mute = (ih.mute == 1) ? true : false;
-			ins->antSamp = ih.antSamp; // used in loadInstrSample()
+		ins = instrTmp[i];
+		memcpy(ins->ta, ih.ta, 96);
+		memcpy(ins->envVP, ih.envVP, 12*2*sizeof(int16_t));
+		memcpy(ins->envPP, ih.envPP, 12*2*sizeof(int16_t));
+		ins->envVPAnt = ih.envVPAnt;
+		ins->envPPAnt = ih.envPPAnt;
+		ins->envVSust = ih.envVSust;
+		ins->envVRepS = ih.envVRepS;
+		ins->envVRepE = ih.envVRepE;
+		ins->envPSust = ih.envPSust;
+		ins->envPRepS = ih.envPRepS;
+		ins->envPRepE = ih.envPRepE;
+		ins->envVTyp = ih.envVTyp;
+		ins->envPTyp = ih.envPTyp;
+		ins->vibTyp = ih.vibTyp;
+		ins->vibSweep = ih.vibSweep;
+		ins->vibDepth = ih.vibDepth;
+		ins->vibRate = ih.vibRate;
+		ins->fadeOut = ih.fadeOut;
+		ins->midiOn = (ih.midiOn == 1) ? true : false;
+		ins->midiChannel = ih.midiChannel;
+		ins->midiProgram = ih.midiProgram;
+		ins->midiBend = ih.midiBend;
+		ins->mute = (ih.mute == 1) ? true : false;
+		ins->antSamp = ih.antSamp; // used in loadInstrSample()
 
-			// sanitize stuff for broken/unsupported instruments
-			ins->midiProgram = CLAMP(ins->midiProgram, 0, 127);
-			ins->midiBend = CLAMP(ins->midiBend, 0, 36);
+		// sanitize stuff for broken/unsupported instruments
+		ins->midiProgram = CLAMP(ins->midiProgram, 0, 127);
+		ins->midiBend = CLAMP(ins->midiBend, 0, 36);
 
-			if (ins->midiChannel > 15) ins->midiChannel = 15;
-			if (ins->vibDepth > 0x0F) ins->vibDepth = 0x0F;
-			if (ins->vibRate > 0x3F) ins->vibRate = 0x3F;
-			if (ins->vibTyp > 3) ins->vibTyp = 0;
+		if (ins->midiChannel > 15) ins->midiChannel = 15;
+		if (ins->vibDepth > 0x0F) ins->vibDepth = 0x0F;
+		if (ins->vibRate > 0x3F) ins->vibRate = 0x3F;
+		if (ins->vibTyp > 3) ins->vibTyp = 0;
 
-			for (j = 0; j < 96; j++)
-			{
-				if (ins->ta[j] >= MAX_SMP_PER_INST)
-					ins->ta[j] = MAX_SMP_PER_INST-1;
-			}
+		for (j = 0; j < 96; j++)
+		{
+			if (ins->ta[j] >= MAX_SMP_PER_INST)
+				ins->ta[j] = MAX_SMP_PER_INST-1;
+		}
 
-			if (ins->envVPAnt > 12) ins->envVPAnt = 12;
-			if (ins->envVRepS > 11) ins->envVRepS = 11;
-			if (ins->envVRepE > 11) ins->envVRepE = 11;
-			if (ins->envVSust > 11) ins->envVSust = 11;
-			if (ins->envPPAnt > 12) ins->envPPAnt = 12;
-			if (ins->envPRepS > 11) ins->envPRepS = 11;
-			if (ins->envPRepE > 11) ins->envPRepE = 11;
-			if (ins->envPSust > 11) ins->envPSust = 11;
+		if (ins->envVPAnt > 12) ins->envVPAnt = 12;
+		if (ins->envVRepS > 11) ins->envVRepS = 11;
+		if (ins->envVRepE > 11) ins->envVRepE = 11;
+		if (ins->envVSust > 11) ins->envVSust = 11;
+		if (ins->envPPAnt > 12) ins->envPPAnt = 12;
+		if (ins->envPRepS > 11) ins->envPRepS = 11;
+		if (ins->envPRepE > 11) ins->envPRepE = 11;
+		if (ins->envPSust > 11) ins->envPSust = 11;
 
-			for (j = 0; j < 12; j++)
-			{
-				if ((uint16_t)ins->envVP[j][0] > 32767) ins->envVP[j][0] = 32767;
-				if ((uint16_t)ins->envPP[j][0] > 32767) ins->envPP[j][0] = 32767;
-				if ((uint16_t)ins->envVP[j][1] > 64) ins->envVP[j][1] = 64;
-				if ((uint16_t)ins->envPP[j][1] > 63) ins->envPP[j][1] = 63;
-			}
+		for (j = 0; j < 12; j++)
+		{
+			if ((uint16_t)ins->envVP[j][0] > 32767) ins->envVP[j][0] = 32767;
+			if ((uint16_t)ins->envPP[j][0] > 32767) ins->envPP[j][0] = 32767;
+			if ((uint16_t)ins->envVP[j][1] > 64) ins->envVP[j][1] = 64;
+			if ((uint16_t)ins->envPP[j][1] > 63) ins->envPP[j][1] = 63;
 		}
 
 		int32_t sampleHeadersToRead = ih.antSamp;
@@ -2103,43 +2122,40 @@ static bool loadInstrHeader(FILE *f, uint16_t i, bool externalThreadFlag)
 			}
 		}
 
-		if (i <= MAX_INST)
+		for (j = 0; j < sampleHeadersToRead; j++)
 		{
-			for (j = 0; j < sampleHeadersToRead; j++)
+			s = &instrTmp[i]->samp[j];
+			src = &ih.samp[j];
+
+			// copy sample header elements to our sample struct
+
+			s->len = src->len;
+			s->repS = src->repS;
+			s->repL = src->repL;
+			s->vol = src->vol;
+			s->fine = src->fine;
+			s->typ = src->typ;
+			s->pan = src->pan;
+			s->relTon = src->relTon;
+			memcpy(s->name, src->name, 22);
+			s->name[22] = '\0';
+
+			// dst->pek is set up later
+
+			// trim off spaces at end of name
+			for (k = 21; k >= 0; k--)
 			{
-				s = &instrTmp[i]->samp[j];
-				src = &ih.samp[j];
-
-				// copy sample header elements to our sample struct
-
-				s->len = src->len;
-				s->repS = src->repS;
-				s->repL = src->repL;
-				s->vol = src->vol;
-				s->fine = src->fine;
-				s->typ = src->typ;
-				s->pan = src->pan;
-				s->relTon = src->relTon;
-				memcpy(s->name, src->name, 22);
-				s->name[22] = '\0';
-
-				// dst->pek is set up later
-
-				// trim off spaces at end of name
-				for (k = 21; k >= 0; k--)
-				{
-					if (s->name[k] == ' ' || s->name[k] == 0x1A)
-						s->name[k] = '\0';
-					else
-						break;
-				}
-
-				// sanitize stuff broken/unsupported samples
-				if (s->vol > 64)
-					s->vol = 64;
-
-				s->relTon = CLAMP(s->relTon, -48, 71);
+				if (s->name[k] == ' ' || s->name[k] == 0x1A)
+					s->name[k] = '\0';
+				else
+					break;
 			}
+
+			// sanitize stuff broken/unsupported samples
+			if (s->vol > 64)
+				s->vol = 64;
+
+			s->relTon = CLAMP(s->relTon, -48, 71);
 		}
 	}
 
@@ -2165,90 +2181,102 @@ static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag)
 
 	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
-	if (i > MAX_INST || instrTmp[i] == NULL)
-		return true; // yes, let's just pretend they got loaded
+	if (instrTmp[i] == NULL)
+		return true; // empty instrument, let's just pretend it got loaded successfully
 
 	k = instrTmp[i]->antSamp;
 	if (k > MAX_SMP_PER_INST)
 		k = MAX_SMP_PER_INST;
 
-	for (j = 0; j < k; j++)
+	if (i > MAX_INST) // insNum > 128, just skip sample data
 	{
-		s = &instrTmp[i]->samp[j];
-
-		// if a sample has both forward loop and pingpong loop set, make it pingpong loop only (FT2 mixer behavior)
-		if ((s->typ & 3) == 3)
-			s->typ &= 0xFE;
-
-		l = s->len;
-		if (l <= 0)
+		for (j = 0; j < k; j++)
 		{
-			s->pek = NULL;
-			s->len = 0;
-			s->repL = 0;
-			s->repS = 0;
-
-			if (s->typ & 32)
-				s->typ &= ~32; // remove stereo flag
+			s = &instrTmp[i]->samp[j];
+			if (s->len > 0)
+				fseek(f, s->len, SEEK_CUR);
 		}
-		else
+	}
+	else
+	{
+		for (j = 0; j < k; j++)
 		{
-			bytesToSkip = 0;
-			if (l > MAX_SAMPLE_LEN)
+			s = &instrTmp[i]->samp[j];
+
+			// if a sample has both forward loop and pingpong loop set, make it pingpong loop only (FT2 mixer behavior)
+			if ((s->typ & 3) == 3)
+				s->typ &= 0xFE;
+
+			l = s->len;
+			if (l <= 0)
 			{
-				bytesToSkip = l - MAX_SAMPLE_LEN;
-				l = MAX_SAMPLE_LEN;
+				s->pek = NULL;
+				s->len = 0;
+				s->repL = 0;
+				s->repS = 0;
+
+				if (s->typ & 32)
+					s->typ &= ~32; // remove stereo flag
 			}
-
-			s->pek = NULL;
-			s->origPek = (int8_t *)malloc(l + LOOP_FIX_LEN);
-			if (s->origPek == NULL)
+			else
 			{
-				showMsg(0, "System message", "Not enough memory!");
-				return false;
-			}
-
-			s->pek = s->origPek + SMP_DAT_OFFSET;
-
-			const int32_t bytesRead = (int32_t)fread(s->pek, 1, l, f);
-			if (bytesRead < l)
-			{
-				const int32_t bytesToClear = l - bytesRead;
-				memset(&s->pek[bytesRead], 0, bytesToClear);
-			}
-
-			if (bytesToSkip > 0)
-				fseek(f, bytesToSkip, SEEK_CUR);
-
-			delta2Samp(s->pek, l, s->typ);
-
-			if (s->typ & 32) // stereo sample - already downmixed to mono in delta2samp()
-			{
-				s->typ &= ~32; // remove stereo flag
-
-				s->len >>= 1;
-				s->repL >>= 1;
-				s->repS >>= 1;
-
-				newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
-				if (newPtr != NULL)
+				bytesToSkip = 0;
+				if (l > MAX_SAMPLE_LEN)
 				{
-					s->origPek = newPtr;
-					s->pek = s->origPek + SMP_DAT_OFFSET;
+					bytesToSkip = l - MAX_SAMPLE_LEN;
+					l = MAX_SAMPLE_LEN;
+				}
+
+				s->pek = NULL;
+				s->origPek = (int8_t *)malloc(l + LOOP_FIX_LEN);
+				if (s->origPek == NULL)
+				{
+					showMsg(0, "System message", "Not enough memory!");
+					return false;
+				}
+
+				s->pek = s->origPek + SMP_DAT_OFFSET;
+
+				const int32_t bytesRead = (int32_t)fread(s->pek, 1, l, f);
+				if (bytesRead < l)
+				{
+					const int32_t bytesToClear = l - bytesRead;
+					memset(&s->pek[bytesRead], 0, bytesToClear);
+				}
+
+				if (bytesToSkip > 0)
+					fseek(f, bytesToSkip, SEEK_CUR);
+
+				delta2Samp(s->pek, l, s->typ);
+
+				if (s->typ & 32) // stereo sample - already downmixed to mono in delta2samp()
+				{
+					s->typ &= ~32; // remove stereo flag
+
+					s->len >>= 1;
+					s->repL >>= 1;
+					s->repS >>= 1;
+
+					newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
+					if (newPtr != NULL)
+					{
+						s->origPek = newPtr;
+						s->pek = s->origPek + SMP_DAT_OFFSET;
+					}
 				}
 			}
-		}
 
-		// NON-FT2 FIX: Align to 2-byte if 16-bit sample
-		if (s->typ & 16)
-		{
-			s->repL &= 0xFFFFFFFE;
-			s->repS &= 0xFFFFFFFE;
-			s->len &= 0xFFFFFFFE;
-		}
+			// NON-FT2 FIX: Align to 2-byte if 16-bit sample
+			if (s->typ & 16)
+			{
+				s->repL &= 0xFFFFFFFE;
+				s->repS &= 0xFFFFFFFE;
+				s->len &= 0xFFFFFFFE;
+			}
 
-		checkSampleRepeat(s);
-		fixSample(s);
+			checkSampleRepeat(s);
+			fixSample(s);
+		}
 	}
 
 	if (instrTmp[i]->antSamp > MAX_SMP_PER_INST)
