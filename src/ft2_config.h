@@ -75,11 +75,13 @@ enum
 	BUFFSIZE_512 = 8,
 	BUFFSIZE_1024 = 16,
 	BUFFSIZE_2048 = 32,
+	// 64 is free for use
 	LINED_SCOPES = 128,
 
 	// specialFlags2
 	DITHERED_AUDIO = 1, /* DEPRECATED */
 	HARDWARE_MOUSE = 2,
+	STRETCH_IMAGE = 4,
 
 	// windowFlags
 	WINSIZE_AUTO = 1,
@@ -87,7 +89,7 @@ enum
 	WINSIZE_2X = 4,
 	WINSIZE_3X = 8,
 	WINSIZE_4X = 16,
-	FILTERING = 32,
+	PIXEL_FILTER = 32,
 	FORCE_VSYNC_OFF = 64,
 	START_IN_FULLSCR = 128,
 };
@@ -274,6 +276,7 @@ void cbMIDIRecAftert(void);
 void cbVsyncOff(void);
 void cbFullScreen(void);
 void cbPixelFilter(void);
+void cbStretchImage(void);
 void sbAmp(uint32_t pos);
 void sbMasterVol(uint32_t pos);
 void sbMIDISens(uint32_t pos);

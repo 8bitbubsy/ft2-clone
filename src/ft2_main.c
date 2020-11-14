@@ -282,8 +282,6 @@ static void initializeVars(void)
 	audio.locked = true;
 	audio.rescanAudioDevicesSupported = true;
 
-	strcpy(ui.fullscreenButtonText, "Go fullscreen");
-
 	// set non-zero values
 
 	editor.moduleSaveMode = MOD_SAVE_MODE_XM;

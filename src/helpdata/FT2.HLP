@@ -827,12 +827,17 @@ Tells the program to not use VSync for video. If your monitor's
 refresh rate is not 60Hz (or 59Hz), then VSync is always off for
 this program. Not having VSync will result in less input/video delay,
 but also potential stuttering.
+
+>@X040@C001Stretched:
+>@X060@C002
+Makes fullscreen mode completely stretch out the image. This can result in
+aliasing (uneven pixel widths) if the aspect ratio of the screen is not 16:10.
+The "Pixel filter" setting can help with this, but it makes the image look blurry.
  
 >@X040@C001Pixel filter:
 >@X060@C002
-Applies a subpixel filter that is used when the window is upscaled.
-This also makes fullscreen mode completely stretch out if it didn't
-already. Please keep in mind that this will make pixels look blurry.
+Applies an anti-aliasing subpixel filter that is used when the window is upscaled.
+Please keep in mind that this will make pixels look blurry.
 
 @X020@C001Advanced edit functions: 
 >
@@ -860,14 +865,18 @@ END
 ;***************************************************************************
 @LProblems/FAQ
 >@X020
->@C001Q: Can I make fullscreen mode stretch out the whole screen?
->@C002A: Enable "Pixel filter" in Config -> Miscellaneous.
->@X035It won't look pretty, but to some people it's much better than nothing.
+>@C001Q: How can I toggle fullscreen mode?
+>@C002A: Press Alt+Enter (Ctrl+Cmd+F also works on Mac)
 >@X020
->@C001Q: I can't use ALT+F4 and ALT+F5!
+>@C001Q: How can I make fullscreen mode stretch out the whole screen?
+>@C002A: Enable "Stretched" in Config -> Miscellaneous.
+>@X035This will result in uneven pixel widths. If you want to fix this, enable
+"Pixel filter" (though this will make the image look blurry).
+>@X020
+>@C001Q: I can't use Alt+F4 and Alt+F5!
 >@C002A: Windows: If you have GeForce Experience installed, you need to change
 >@X035the keybindings in its settings page.
-macOS/OS X: Change ALT+F4/ALT+F5 keys in the OS to something else. Also for GNU/Linux.
+>macOS/OS X: Change Alt+F4/Alt+F5 keys in the OS to something else. Also for GNU/Linux.
 >@X020
 >@C001Q: The mouse cursor is delayed/laggy!
 >@C002A: Make sure "Software mouse" is disabled in Config -> Layout.

@@ -41,7 +41,6 @@ typedef struct ui_t
 {
 	volatile bool setMouseBusy, setMouseIdle;
 	bool sysReqEnterPressed;
-	char fullscreenButtonText[24];
 
 	// all screens
 	bool extended, sysReqShown;

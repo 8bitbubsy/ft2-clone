@@ -335,16 +335,15 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 606, 71, 23, 13, 1, 4, ARROW_RIGHT_STRING, NULL,    configPalContUp,   NULL },
 
 	// ------ CONFIG MISCELLANEOUS PUSHBUTTONS ------
-	//x,   y,   w,  h,  p, d, text #1,                         text #2, funcOnDown,          funcOnUp
-	{ 113, 155, 93, 16, 0, 0, ui.fullscreenButtonText,  NULL,    NULL,                toggleFullScreen },
-	{ 370, 121, 18, 13, 1, 4, ARROW_UP_STRING,                 NULL,    configQuantizeUp,    NULL },
-	{ 387, 121, 18, 13, 1, 4, ARROW_DOWN_STRING,               NULL,    configQuantizeDown,  NULL },
-	{ 594, 106, 18, 13, 1, 4, ARROW_UP_STRING,                 NULL,    configMIDIChnUp,     NULL },
-	{ 611, 106, 18, 13, 1, 4, ARROW_DOWN_STRING,               NULL,    configMIDIChnDown,   NULL },
-	{ 594, 120, 18, 13, 1, 4, ARROW_UP_STRING,                 NULL,    configMIDITransUp,   NULL },
-	{ 611, 120, 18, 13, 1, 4, ARROW_DOWN_STRING,               NULL,    configMIDITransDown, NULL },
-	{ 556, 158, 22, 13, 1, 4, ARROW_LEFT_STRING,               NULL,    configMIDISensDown,  NULL },
-	{ 607, 158, 22, 13, 1, 4, ARROW_RIGHT_STRING,              NULL,    configMIDISensUp,    NULL },
+	//x,   y,   w,  h,  p, d, text #1,            text #2, funcOnDown,          funcOnUp
+	{ 370, 121, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    configQuantizeUp,    NULL },
+	{ 387, 121, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    configQuantizeDown,  NULL },
+	{ 594, 106, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    configMIDIChnUp,     NULL },
+	{ 611, 106, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    configMIDIChnDown,   NULL },
+	{ 594, 120, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    configMIDITransUp,   NULL },
+	{ 611, 120, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    configMIDITransDown, NULL },
+	{ 556, 158, 22, 13, 1, 4, ARROW_LEFT_STRING,  NULL,    configMIDISensDown,  NULL },
+	{ 607, 158, 22, 13, 1, 4, ARROW_RIGHT_STRING, NULL,    configMIDISensUp,    NULL },
 
 #ifdef HAS_MIDI
 	// ------ CONFIG MIDI PUSHBUTTONS ------

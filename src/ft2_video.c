@@ -238,7 +238,7 @@ static void updateRenderSizeVars(void)
 
 	if (video.fullscreen)
 	{
-		if (config.windowFlags & FILTERING)
+		if (config.specialFlags2 & STRETCH_IMAGE)
 		{
 			video.renderW = video.displayW;
 			video.renderH = video.displayH;
@@ -285,11 +285,7 @@ void enterFullscreen(void)
 {
 	SDL_DisplayMode dm;
 
-	strcpy(ui.fullscreenButtonText, "Go windowed");
-	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MISCELLANEOUS)
-		showConfigScreen(); // redraw so that we can see the new button text
-
-	if (config.windowFlags & FILTERING)
+	if (config.specialFlags2 & STRETCH_IMAGE)
 	{
 		SDL_GetDesktopDisplayMode(0, &dm);
 		SDL_RenderSetLogicalSize(video.renderer, dm.w, dm.h);
@@ -310,10 +306,6 @@ void enterFullscreen(void)
 
 void leaveFullScreen(void)
 {
-	strcpy(ui.fullscreenButtonText, "Go fullscreen");
-	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MISCELLANEOUS)
-		showConfigScreen(); // redraw so that we can see the new button text
-
 	SDL_SetWindowFullscreen(video.window, 0);
 	SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
 
@@ -903,7 +895,7 @@ bool recreateTexture(void)
 		video.texture = NULL;
 	}
 
-	if (config.windowFlags & FILTERING)
+	if (config.windowFlags & PIXEL_FILTER)
 		SDL_SetHint("SDL_RENDER_SCALE_QUALITY", "best");
 	else
 		SDL_SetHint("SDL_RENDER_SCALE_QUALITY", "nearest");

@@ -229,7 +229,7 @@ void resetConfig(void)
 	setWindowSizeFromConfig(true);
 
 	// handle pixel filter change
-	if ((oldWindowFlags & FILTERING) != (config.windowFlags & FILTERING))
+	if ((oldWindowFlags & PIXEL_FILTER) != (config.windowFlags & PIXEL_FILTER))
 	{
 		recreateTexture();
 		if (video.fullscreen)
@@ -361,7 +361,7 @@ void loadConfig2(void) // called by "Load config" button
 	showBottomScreen();
 
 	// handle pixel filter change
-	if ((oldWindowFlags & FILTERING) != (config.windowFlags & FILTERING))
+	if ((oldWindowFlags & PIXEL_FILTER) != (config.windowFlags & PIXEL_FILTER))
 	{
 		recreateTexture();
 		if (video.fullscreen)
@@ -1031,7 +1031,8 @@ static void setConfigMiscCheckButtonStates(void)
 	checkBoxes[CB_CONF_MIDI_REC_AFTERTOUCH].checked = config.recMIDIAftert;
 	checkBoxes[CB_CONF_FORCE_VSYNC_OFF].checked = (config.windowFlags & FORCE_VSYNC_OFF) ? true : false;
 	checkBoxes[CB_CONF_START_IN_FULLSCREEN].checked = (config.windowFlags & START_IN_FULLSCR) ? true : false;
-	checkBoxes[CB_CONF_FILTERING].checked = (config.windowFlags & FILTERING) ? true : false;
+	checkBoxes[CB_CONF_PIXEL_FILTER].checked = (config.windowFlags & PIXEL_FILTER) ? true : false;
+	checkBoxes[CB_CONF_STRETCH_IMAGE].checked = (config.specialFlags2 & STRETCH_IMAGE) ? true : false;
 
 	showCheckBox(CB_CONF_SAMP_CUT_TO_BUF);
 	showCheckBox(CB_CONF_PATT_CUT_TO_BUF);
@@ -1051,7 +1052,8 @@ static void setConfigMiscCheckButtonStates(void)
 	showCheckBox(CB_CONF_MIDI_REC_AFTERTOUCH);
 	showCheckBox(CB_CONF_FORCE_VSYNC_OFF);
 	showCheckBox(CB_CONF_START_IN_FULLSCREEN);
-	showCheckBox(CB_CONF_FILTERING);
+	showCheckBox(CB_CONF_PIXEL_FILTER);
+	showCheckBox(CB_CONF_STRETCH_IMAGE);
 }
 
 static void setConfigMiscRadioButtonStates(void)
@@ -1320,7 +1322,8 @@ void showConfigScreen(void)
 			textOutShadow(114, 103, PAL_FORGRND, PAL_DSKTOP2, "Video settings:");
 			textOutShadow(130, 117, PAL_FORGRND, PAL_DSKTOP2, "VSync off");
 			textOutShadow(130, 130, PAL_FORGRND, PAL_DSKTOP2, "Fullscreen");
-			textOutShadow(130, 143, PAL_FORGRND, PAL_DSKTOP2, "Pixel filter");
+			textOutShadow(130, 143, PAL_FORGRND, PAL_DSKTOP2, "Stretched");
+			textOutShadow(130, 156, PAL_FORGRND, PAL_DSKTOP2, "Pixel filter");
 
 			textOutShadow(213,  58, PAL_FORGRND, PAL_DSKTOP2, "Rec./Edit/Play:");
 			textOutShadow(228,  71, PAL_FORGRND, PAL_DSKTOP2, "Multichannel record");
@@ -1351,7 +1354,6 @@ void showConfigScreen(void)
 			drawMIDITransp();
 			drawMIDISens();
 
-			showPushButton(PB_CONFIG_TOGGLE_FULLSCREEN);
 			showPushButton(PB_CONFIG_QUANTIZE_UP);
 			showPushButton(PB_CONFIG_QUANTIZE_DOWN);
 			showPushButton(PB_CONFIG_MIDICHN_UP);
@@ -1464,7 +1466,6 @@ void hideConfigScreen(void)
 	// CONFIG MISCELLANEOUS
 	hideRadioButtonGroup(RB_GROUP_CONFIG_FILESORT);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_WIN_SIZE);
-	hidePushButton(PB_CONFIG_TOGGLE_FULLSCREEN);
 	hidePushButton(PB_CONFIG_QUANTIZE_UP);
 	hidePushButton(PB_CONFIG_QUANTIZE_DOWN);
 	hidePushButton(PB_CONFIG_MIDICHN_UP);
@@ -1475,7 +1476,8 @@ void hideConfigScreen(void)
 	hidePushButton(PB_CONFIG_MIDISENS_UP);
 	hideCheckBox(CB_CONF_FORCE_VSYNC_OFF);
 	hideCheckBox(CB_CONF_START_IN_FULLSCREEN);
-	hideCheckBox(CB_CONF_FILTERING);
+	hideCheckBox(CB_CONF_PIXEL_FILTER);
+	hideCheckBox(CB_CONF_STRETCH_IMAGE);
 	hideCheckBox(CB_CONF_SAMP_CUT_TO_BUF);
 	hideCheckBox(CB_CONF_PATT_CUT_TO_BUF);
 	hideCheckBox(CB_CONF_KILL_NOTES_AT_STOP);
@@ -2092,8 +2094,19 @@ void cbFullScreen(void)
 
 void cbPixelFilter(void)
 {
-	config.windowFlags ^= FILTERING;
+	config.windowFlags ^= PIXEL_FILTER;
+
 	recreateTexture();
+	if (video.fullscreen)
+	{
+		leaveFullScreen();
+		enterFullscreen();
+	}
+}
+
+void cbStretchImage(void)
+{
+	config.specialFlags2 ^= STRETCH_IMAGE;
 
 	if (video.fullscreen)
 	{

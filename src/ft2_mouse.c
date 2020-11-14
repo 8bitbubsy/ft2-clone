@@ -814,7 +814,7 @@ void readMouseXY(void)
 		** need to translate coords in that mode.
 		*/
 
-		if (!(config.windowFlags & FILTERING))
+		if (!(config.specialFlags2 & STRETCH_IMAGE))
 		{
 			if (!(config.specialFlags2 & HARDWARE_MOUSE))
 			{

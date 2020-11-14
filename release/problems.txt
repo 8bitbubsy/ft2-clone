@@ -6,5 +6,7 @@ https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-d
 If you have any problems, read Help -> "Problems/FAQ" inside the program.
 Also read "Known bugs".
 
-If you selected a big window size by accident and can't go back, press
-ALT+ENTER to enter fullscreen, then you go to Config and reset the config.
+To toggle fullscreen mode, press Alt+Enter (Ctrl+Cmd+F also works on Mac).
+
+If you selected a way too big window size by accident and can't go back, press
+Alt+Enter to enter fullscreen mode, then you go to Config and press Reset Config.

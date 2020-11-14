@@ -110,7 +110,8 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 411, 145, 124, 12, cbMIDIRecAftert },
 	{ 113, 115,  74, 12, cbVsyncOff },
 	{ 113, 128,  78, 12, cbFullScreen },
-	{ 113, 141,  78, 12, cbPixelFilter }
+	{ 113, 141,  75, 12, cbStretchImage },
+	{ 113, 154,  78, 12, cbPixelFilter }
 };
 
 void drawCheckBox(uint16_t checkBoxID)
