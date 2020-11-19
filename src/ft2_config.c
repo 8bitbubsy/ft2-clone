@@ -633,7 +633,7 @@ static void setConfigFileLocation(void) // kinda hackish
 	{
 		if (chdir(getenv("HOME")) == 0)
 		{
-			result = chdir(".config");
+			int32_t result = chdir(".config");
 			if (result != 0)
 			{
 				mkdir(".config", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
