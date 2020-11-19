@@ -51,15 +51,13 @@ static void addText(helpRec *t, int16_t xPos, uint8_t color, char *text)
 
 static bool getLine(char *output)
 {
-	uint8_t strLen;
-
 	if (helpBufferPos >= (int32_t)sizeof (helpData))
 	{
 		*output = '\0';
 		return false;
 	}
 
-	strLen = helpData[helpBufferPos++];
+	const uint8_t strLen = helpData[helpBufferPos++];
 	memcpy(output, &helpData[helpBufferPos], strLen);
 	output[strLen] = '\0';
 
@@ -85,12 +83,10 @@ static char *ltrim(char *s)
 
 static char *rtrim(char *s)
 {
-	int32_t i;
-
 	if (*s == '\0')
 		return (s);
 
-	i = (int32_t)strlen(s) - 1;
+	int32_t i = (int32_t)strlen(s) - 1;
 	while (i >= 0)
 	{
 		if (s[i] != ' ')
@@ -107,12 +103,10 @@ static char *rtrim(char *s)
 
 static void readHelp(void) // this is really messy, directly ported from Pascal code...
 {
-	char text[256], text2[256], *s, *sEnd, *s2, *s3;
-	uint8_t currColor;
-	int16_t a, b, i, k, currKol, strLen;
-	helpRec *tempText, *t;
+	char text[256], text2[256], *s, *sEnd, *s3;
+	int16_t a, b, i, k;
 
-	tempText = (helpRec *)malloc(HELP_SIZE * MAX_HELP_LINES);
+	helpRec *tempText = (helpRec *)malloc(HELP_SIZE * MAX_HELP_LINES);
 	if (tempText == NULL)
 	{
 		okBox(0, "System message", "Not enough memory!");
@@ -122,14 +116,14 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 	text[0] = '\0';
 	text2[0] = '\0';
 
-	s2 = text2;
+	char *s2 = text2;
 
 	helpBufferPos = 0;
 	for (int16_t subj = 0; subj < MAX_SUBJ; subj++)
 	{
-		textLine  = 0;
-		currKol   = 0;
-		currColor = PAL_FORGRND;
+		textLine = 0;
+		int16_t currKol = 0;
+		uint8_t currColor = PAL_FORGRND;
 
 		getLine(text); s = text;
 		while (strncmp(s, "END", 3) != 0)
@@ -161,7 +155,7 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 					s += 5;
 				}
 
-				t = &tempText[textLine];
+				helpRec *t = &tempText[textLine];
 				t->xPos = currKol;
 				t->color = currColor;
 				t->bigFont = true;
@@ -202,22 +196,22 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 					addText(&tempText[textLine], currKol, currColor, s2);
 				}
 
-				strLen = (int16_t)strlen(s);
+				int16_t sLen = (int16_t)strlen(s);
 
-				sEnd = &s[strLen];
+				sEnd = &s[sLen];
 				while (s < sEnd)
 				{
-					if (strLen < 0)
-						strLen = 0;
+					if (sLen < 0)
+						sLen = 0;
 
 					i = 0;
-					while (s[i] != ' ' && i < strLen) i++;
+					while (s[i] != ' ' && i < sLen) i++;
 					i++;
 
 					if (*(uint16_t *)s == 0x5440) // @T - "set absolute X position (in the middle of text)"
 					{
 						k = controlCodeToNum(&s[2]);
-						s += 5; strLen -= 5;
+						s += 5; sLen -= 5;
 
 						s3 = &s2[strlen(s2)];
 						while (textWidth(s2) + charWidth(' ') + 1 < k-currKol)
@@ -242,7 +236,7 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 
 					strncat(s2, s, i);
 
-					s += i; strLen -= i;
+					s += i; sLen -= i;
 					if ((*s == '\0') || (s >= sEnd))
 						strcat(s2, " ");
 				}
@@ -270,28 +264,23 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 
 static void bigTextOutHalf(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, bool lowerHalf, const char *textPtr)
 {
-	char chr;
-	const uint8_t *srcPtr;
-	uint16_t currX;
-	uint32_t *dstPtr, pixVal;
-
 	assert(textPtr != NULL);
 
-	currX = xPos;
+	uint16_t currX = xPos;
 	while (true)
 	{
-		chr = *textPtr++ & 0x7F;
+		const char chr = *textPtr++ & 0x7F;
 		if (chr == '\0')
 			break;
 
 		if (chr != ' ')
 		{
-			srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
+			const uint8_t *srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
 			if (!lowerHalf)
 				srcPtr += (FONT2_CHAR_H / 2) * FONT2_WIDTH;
 
-			dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + currX];
-			pixVal = video.palette[paletteIndex];
+			uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + currX];
+			const uint32_t pixVal = video.palette[paletteIndex];
 
 			for (uint32_t y = 0; y < FONT2_CHAR_H/2; y++)
 			{
@@ -312,16 +301,13 @@ static void bigTextOutHalf(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, b
 
 static void writeHelp(void)
 {
-	int16_t k;
-	helpRec *pek;
-
-	pek = subjPtrArr[fHlp_Nr];
+	helpRec *pek = subjPtrArr[fHlp_Nr];
 	if (pek == NULL)
 		return;
 
 	for (int16_t i = 0; i < HELP_LINES; i++)
 	{
-		k = i + fHlp_Line;
+		const int16_t k = i + fHlp_Line;
 		if (k >= subjLen[fHlp_Nr])
 			break;
 

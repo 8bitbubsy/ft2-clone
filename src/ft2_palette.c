@@ -94,13 +94,11 @@ uint8_t palMax(int32_t c)
 
 static void drawCurrentPaletteColor(void)
 {
-	uint8_t r, g, b, palIndex;
+	const uint8_t palIndex = FTC_EditOrder[cfg_ColorNr];
 
-	palIndex = FTC_EditOrder[cfg_ColorNr];
-
-	r = P6_TO_P8(cfg_Red);
-	g = P6_TO_P8(cfg_Green);
-	b = P6_TO_P8(cfg_Blue);
+	const uint8_t r = P6_TO_P8(cfg_Red);
+	const uint8_t g = P6_TO_P8(cfg_Green);
+	const uint8_t b = P6_TO_P8(cfg_Blue);
 
 	textOutShadow(516, 3, PAL_FORGRND, PAL_DSKTOP2, "Palette:");
 	hexOutBg(573, 3, PAL_FORGRND, PAL_DESKTOP, RGB32(r, g, b) & 0xFFFFFF, 6);
@@ -110,7 +108,7 @@ static void drawCurrentPaletteColor(void)
 
 static void updatePaletteEditor(void)
 {
-	uint8_t nr = FTC_EditOrder[cfg_ColorNr];
+	const uint8_t nr = FTC_EditOrder[cfg_ColorNr];
 
 	cfg_Red = palTable[config.cfg_StdPalNr][nr].r;
 	cfg_Green = palTable[config.cfg_StdPalNr][nr].g;
@@ -131,9 +129,6 @@ static void updatePaletteEditor(void)
 
 static void paletteDragMoved(void)
 {
-	uint8_t nr, p;
-	int16_t i, k;
-
 	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
 	{
 		updatePaletteEditor(); // resets colors/contrast vars
@@ -148,8 +143,8 @@ static void paletteDragMoved(void)
 		return;
 	}
 
-	nr = FTC_EditOrder[cfg_ColorNr];
-	p = (uint8_t)config.cfg_StdPalNr;
+	const uint8_t nr = FTC_EditOrder[cfg_ColorNr];
+	const uint8_t p = (uint8_t)config.cfg_StdPalNr;
 
 	palTable[p][nr].r = cfg_Red;
 	palTable[p][nr].g = cfg_Green;
@@ -165,11 +160,11 @@ static void paletteDragMoved(void)
 		if (contrast < 1)
 			contrast = 1;
 
-		double dContrast = contrast * (1.0 / 40.0);
+		const double dContrast = contrast * (1.0 / 40.0);
 
-		for (i = 0; i < 3; i++)
+		for (int32_t i = 0; i < 3; i++)
 		{
-			k = scaleOrder[i] + (cfg_ColorNr - 4) * 2;
+			const int32_t k = scaleOrder[i] + (cfg_ColorNr - 4) * 2;
 
 			double dMul = palPow((i + 1) * (1.0 / 2.0), dContrast);
 

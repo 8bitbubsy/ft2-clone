@@ -66,7 +66,6 @@ bool allocatePattern(uint16_t nr) // for tracker use only, not in loader!
 			return false;
 		}
 
-		// XXX: Do we really need this? Sounds redundant.
 		song.pattLen = pattLens[nr];
 	}
 
@@ -97,23 +96,11 @@ void killPatternIfUnused(uint16_t nr) // for tracker use only, not in loader!
 
 uint8_t getMaxVisibleChannels(void)
 {
+	assert(config.ptnMaxChannels >= 0 && config.ptnMaxChannels <= 3);
 	if (config.ptnS3M)
-	{
-		     if (config.ptnMaxChannels == 0) return 4;
-		else if (config.ptnMaxChannels == 1) return 6;
-		else if (config.ptnMaxChannels == 2) return 8;
-		else if (config.ptnMaxChannels == 3) return 8;
-
-	}
+		return maxVisibleChans1[config.ptnMaxChannels];
 	else
-	{
-		     if (config.ptnMaxChannels == 0) return 4;
-		else if (config.ptnMaxChannels == 1) return 6;
-		else if (config.ptnMaxChannels == 2) return 8;
-		else if (config.ptnMaxChannels == 3) return 12;
-	}
-
-	return 8;
+		return maxVisibleChans2[config.ptnMaxChannels];
 }
 
 void updatePatternWidth(void)
@@ -499,7 +486,7 @@ void hidePatternEditor(void)
 
 static void updatePatternEditorGUI(void)
 {
-	uint8_t i;
+	uint16_t i;
 	pushButton_t *p;
 	textBox_t *t;
 
@@ -508,10 +495,9 @@ static void updatePatternEditorGUI(void)
 		// extended pattern editor
 
 		// instrument names
-		for (i = 0; i < 8; i++)
+		t = &textBoxes[TB_INST1];
+		for (i = 0; i < 8; i++, t++)
 		{
-			t = &textBoxes[TB_INST1+i];
-
 			if (i < 4)
 			{
 				t->x = 406;
@@ -557,10 +543,9 @@ static void updatePatternEditorGUI(void)
 		pushButtons[PB_PATTLEN_DOWN].y = 37;
 
 		// instrument switcher
-		for (i = 0; i < 16; i++)
+		p = &pushButtons[PB_RANGE1];
+		for (i = 0; i < 16; i++, p++)
 		{
-			p = &pushButtons[PB_RANGE1+i];
-
 			p->w = iSwitchExtW[i & 3];
 			p->x = iSwitchExtX[i & 3];
 			p->y = iSwitchExtY[i & 7];
@@ -569,10 +554,9 @@ static void updatePatternEditorGUI(void)
 	else
 	{
 		// instrument names
-		for (i = 0; i < 8; i++)
+		t = &textBoxes[TB_INST1];
+		for (i = 0; i < 8; i++, t++)
 		{
-			t = &textBoxes[TB_INST1+i];
-
 			t->y = 5 + (i * 11);
 			t->x = 446;
 			t->w = 140;
@@ -611,10 +595,9 @@ static void updatePatternEditorGUI(void)
 		pushButtons[PB_PATTLEN_DOWN].y = 48;
 
 		// instrument switcher
-		for (i = 0; i < 16; i++)
+		p = &pushButtons[PB_RANGE1];
+		for (i = 0; i < 16; i++, p++)
 		{
-			p = &pushButtons[PB_RANGE1+i];
-
 			p->w = 39;
 			p->x = 590;
 			p->y = iSwitchY[i & 7];
@@ -756,36 +739,31 @@ void clearPattMark(void)
 
 void checkMarkLimits(void)
 {
-	uint16_t limit;
+	const uint16_t limitY = pattLens[editor.editPattern];
+	pattMark.markY1 = CLAMP(pattMark.markY1, 0, limitY);
+	pattMark.markY2 = CLAMP(pattMark.markY2, 0, limitY);
 
-	limit = pattLens[editor.editPattern];
-	pattMark.markY1 = CLAMP(pattMark.markY1, 0, limit);
-	pattMark.markY2 = CLAMP(pattMark.markY2, 0, limit);
+	const uint16_t limitX = (uint16_t)(song.antChn - 1);
+	pattMark.markX1 = CLAMP(pattMark.markX1, 0, limitX);
+	pattMark.markX2 = CLAMP(pattMark.markX2, 0, limitX);
 
-	limit = (uint16_t)(song.antChn - 1);
-	pattMark.markX1 = CLAMP(pattMark.markX1, 0, limit);
-	pattMark.markX2 = CLAMP(pattMark.markX2, 0, limit);
-
-	// will probably never happen? FT2 has this in CheckMarkLimits() though...
+	// XXX: will probably never happen? FT2 has this in CheckMarkLimits() though...
 	if (pattMark.markX1 > pattMark.markX2)
 		pattMark.markX1 = pattMark.markX2;
 }
 
 static int8_t mouseXToCh(void) // used to get channel num from mouse x (for pattern marking)
 {
-	int8_t ch, chEnd;
-	int32_t mouseX;
-
 	assert(ui.patternChannelWidth > 0);
 	if (ui.patternChannelWidth == 0)
 		return 0;
 
-	mouseX = mouse.x - 29;
+	int32_t mouseX = mouse.x - 29;
 	mouseX = CLAMP(mouseX, 0, 573);
 
-	chEnd = (ui.channelOffset + ui.numChannelsShown) - 1;
+	const int8_t chEnd = (ui.channelOffset + ui.numChannelsShown) - 1;
 
-	ch = ui.channelOffset + (int8_t)(mouseX / ui.patternChannelWidth);
+	int8_t ch = ui.channelOffset + (int8_t)(mouseX / ui.patternChannelWidth);
 	ch = CLAMP(ch, 0, chEnd);
 
 	// in some setups there can be non-used channels to the right, do clamping
@@ -797,23 +775,19 @@ static int8_t mouseXToCh(void) // used to get channel num from mouse x (for patt
 
 static int16_t mouseYToRow(void) // used to get row num from mouse y (for pattern marking)
 {
-	uint8_t charHeight, mode;
-	int16_t row, patternLen, my, maxY, maxRow;
-	const pattCoordsMouse_t *pattCoordsMouse;
-
-	pattCoordsMouse = &pattCoordMouseTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
+	const pattCoordsMouse_t *pattCoordsMouse = &pattCoordMouseTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
 
 	// clamp mouse y to boundaries
-	maxY = ui.pattChanScrollShown ? 382 : 396;
-	my   = (int16_t)(CLAMP(mouse.y, pattCoordsMouse->upperRowsY, maxY));
+	const int16_t maxY = ui.pattChanScrollShown ? 382 : 396;
+	const int16_t my = (int16_t)CLAMP(mouse.y, pattCoordsMouse->upperRowsY, maxY);
 
-	charHeight = config.ptnUnpressed ? 11 : 8;
+	const uint8_t charHeight = config.ptnUnpressed ? 11 : 8;
 
 	// test top/middle/bottom rows
 	if (my < pattCoordsMouse->midRowY)
 	{
 		// top rows
-		row = editor.pattPos - (pattCoordsMouse->numUpperRows - ((my - pattCoordsMouse->upperRowsY) / charHeight));
+		int16_t row = editor.pattPos - (pattCoordsMouse->numUpperRows - ((my - pattCoordsMouse->upperRowsY) / charHeight));
 		if (row < 0)
 			row = 0;
 
@@ -827,17 +801,17 @@ static int16_t mouseYToRow(void) // used to get row num from mouse y (for patter
 	else
 	{
 		// bottom rows
-		row = (editor.pattPos + 1) + ((my - pattCoordsMouse->lowerRowsY) / charHeight);
+		int16_t row = (editor.pattPos + 1) + ((my - pattCoordsMouse->lowerRowsY) / charHeight);
 
 		// prevent being able to mark the next unseen row on the bottom (in some configurations)
-		mode = (ui.extended * 4) + (config.ptnUnpressed * 2) + ui.pattChanScrollShown;
+		const uint8_t mode = (ui.extended * 4) + (config.ptnUnpressed * 2) + ui.pattChanScrollShown;
 
-		maxRow = (ptnAntLine[mode] + (editor.pattPos - ptnLineSub[mode])) - 1;
+		const int16_t maxRow = (ptnAntLine[mode] + (editor.pattPos - ptnLineSub[mode])) - 1;
 		if (row > maxRow)
 			row = maxRow;
 
 		// clamp to pattern length
-		patternLen = pattLens[editor.editPattern];
+		const int16_t patternLen = pattLens[editor.editPattern];
 		if (row >= patternLen)
 			row = patternLen - 1;
 
@@ -847,9 +821,7 @@ static int16_t mouseYToRow(void) // used to get row num from mouse y (for patter
 
 void handlePatternDataMouseDown(bool mouseButtonHeld)
 {
-	bool forceMarking;
-	int8_t chTmp;
-	int16_t y1, y2, rowTmp, pattLen;
+	int16_t y1, y2;
 
 	// non-FT2 feature: Use right mouse button to remove pattern marking
 	if (mouse.rightButtonPressed)
@@ -884,7 +856,7 @@ void handlePatternDataMouseDown(bool mouseButtonHeld)
 
 	// we're holding down the mouse button inside the pattern data area
 
-	forceMarking = songPlaying;
+	bool forceMarking = songPlaying;
 
 	// scroll left/right with mouse
 	if (ui.pattChanScrollShown)
@@ -906,7 +878,7 @@ void handlePatternDataMouseDown(bool mouseButtonHeld)
 	{
 		lastMouseX = mouse.x;
 
-		chTmp = mouseXToCh();
+		int8_t chTmp = mouseXToCh();
 		if (chTmp < lastChMark)
 		{
 			pattMark.markX1 = chTmp;
@@ -936,7 +908,6 @@ void handlePatternDataMouseDown(bool mouseButtonHeld)
 
 		if (mouse.y < y1)
 		{
-			pattLen = pattLens[editor.editPattern];
 			if (editor.pattPos > 0)
 				setPos(-1, editor.pattPos - 1, true);
 
@@ -945,8 +916,8 @@ void handlePatternDataMouseDown(bool mouseButtonHeld)
 		}
 		else if (mouse.y > y2)
 		{
-			pattLen = pattLens[editor.editPattern];
-			if (editor.pattPos < (pattLen - 1))
+			const int16_t pattLen = pattLens[editor.editPattern];
+			if (editor.pattPos < pattLen-1)
 				setPos(-1, editor.pattPos + 1, true);
 
 			forceMarking = true;
@@ -959,7 +930,7 @@ void handlePatternDataMouseDown(bool mouseButtonHeld)
 	{
 		lastMouseY = mouse.y;
 
-		rowTmp = mouseYToRow();
+		const int16_t rowTmp = mouseYToRow();
 		if (rowTmp < lastRowMark)
 		{
 			pattMark.markY1 = rowTmp;
@@ -1062,11 +1033,8 @@ void rowDown(uint16_t amount)
 
 void keybPattMarkUp(void)
 {
-	int8_t xPos;
-	int16_t pattPos;
-
-	xPos = cursor.ch;
-	pattPos = editor.pattPos;
+	int8_t xPos = cursor.ch;
+	int16_t pattPos = editor.pattPos;
 
 	if (xPos != pattMark.markX1 && xPos != pattMark.markX2)
 	{
@@ -1099,11 +1067,8 @@ void keybPattMarkUp(void)
 
 void keybPattMarkDown(void)
 {
-	int8_t xPos;
-	int16_t pattPos;
-
-	xPos = cursor.ch;
-	pattPos = editor.pattPos;
+	int8_t xPos = cursor.ch;
+	int16_t pattPos = editor.pattPos;
 
 	if (xPos != pattMark.markX1 && xPos != pattMark.markX2)
 	{
@@ -1135,11 +1100,8 @@ void keybPattMarkDown(void)
 
 void keybPattMarkLeft(void)
 {
-	int8_t xPos;
-	int16_t pattPos;
-
-	xPos = cursor.ch;
-	pattPos = editor.pattPos;
+	int8_t xPos = cursor.ch;
+	int16_t pattPos = editor.pattPos;
 
 	if (pattPos != pattMark.markY1-1 && pattPos != pattMark.markY2)
 	{
@@ -1169,11 +1131,8 @@ void keybPattMarkLeft(void)
 
 void keybPattMarkRight(void)
 {
-	int8_t xPos;
-	int16_t pattPos;
-
-	xPos = cursor.ch;
-	pattPos = editor.pattPos;
+	int8_t xPos = cursor.ch;
+	int16_t pattPos = editor.pattPos;
 
 	if (pattPos != pattMark.markY1-1 && pattPos != pattMark.markY2)
 	{
@@ -1203,20 +1162,18 @@ void keybPattMarkRight(void)
 
 bool loadTrack(UNICHAR *filenameU)
 {
-	FILE *f;
-	uint16_t nr, pattLen;
-	tonTyp *pattPtr, loadBuff[MAX_PATT_LEN];
+	tonTyp loadBuff[MAX_PATT_LEN];
 	trackHeaderType th;
 
-	f = UNICHAR_FOPEN(filenameU, "rb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
 	if (f == NULL)
 	{
 		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
 		return false;
 	}
 
-	nr = editor.editPattern;
-	pattLen = pattLens[nr];
+	uint16_t nr = editor.editPattern;
+	int16_t pattLen = pattLens[nr];
 
 	if (fread(&th, 1, sizeof (th), f) != sizeof (th))
 	{
@@ -1248,10 +1205,10 @@ bool loadTrack(UNICHAR *filenameU)
 		goto trackLoadError;
 	}
 
-	pattPtr = patt[nr];
+	tonTyp *pattPtr = patt[nr];
 
 	lockMixerCallback();
-	for (uint16_t i = 0; i < pattLen; i++)
+	for (int32_t i = 0; i < pattLen; i++)
 	{
 		pattPtr = &patt[nr][(i * MAX_VOICES) + cursor.ch];
 		*pattPtr = loadBuff[i];
@@ -1266,7 +1223,6 @@ bool loadTrack(UNICHAR *filenameU)
 			pattPtr->eff = 0;
 		}
 	}
-
 	unlockMixerCallback();
 
 	fclose(f);
@@ -1286,13 +1242,11 @@ trackLoadError:
 
 bool saveTrack(UNICHAR *filenameU)
 {
-	FILE *f;
-	uint16_t nr, pattLen, i;
-	tonTyp *pattPtr, saveBuff[MAX_PATT_LEN];
+	tonTyp saveBuff[MAX_PATT_LEN];
 	trackHeaderType th;
 
-	nr = editor.editPattern;
-	pattPtr = patt[nr];
+	uint16_t nr = editor.editPattern;
+	tonTyp *pattPtr = patt[nr];
 
 	if (pattPtr == NULL)
 	{
@@ -1300,15 +1254,15 @@ bool saveTrack(UNICHAR *filenameU)
 		return false;
 	}
 
-	f = UNICHAR_FOPEN(filenameU, "wb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
 		okBox(0, "System message", "General I/O error during saving! Is the file in use?");
 		return false;
 	}
 
-	pattLen = pattLens[nr];
-	for (i = 0; i < pattLen; i++)
+	const int16_t pattLen = pattLens[nr];
+	for (int32_t i = 0; i < pattLen; i++)
 		saveBuff[i] = pattPtr[(i * MAX_VOICES) + cursor.ch];
 
 	th.len = pattLen;
@@ -1334,19 +1288,16 @@ bool saveTrack(UNICHAR *filenameU)
 
 bool loadPattern(UNICHAR *filenameU)
 {
-	FILE *f;
-	uint16_t nr, pattLen;
-	tonTyp *pattPtr;
 	patternHeaderType th;
 
-	f = UNICHAR_FOPEN(filenameU, "rb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
 	if (f == NULL)
 	{
 		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
 		return false;
 	}
 
-	nr = editor.editPattern;
+	uint16_t nr = editor.editPattern;
 
 	if (!allocatePattern(nr))
 	{
@@ -1354,8 +1305,8 @@ bool loadPattern(UNICHAR *filenameU)
 		goto loadPattError;
 	}
 
-	pattPtr = patt[nr];
-	pattLen = pattLens[nr];
+	tonTyp *pattPtr = patt[nr];
+	uint16_t pattLen = pattLens[nr];
 
 	if (fread(&th, 1, sizeof (th), f) != sizeof (th))
 	{
@@ -1372,8 +1323,7 @@ bool loadPattern(UNICHAR *filenameU)
 	if (th.len > MAX_PATT_LEN)
 		th.len = MAX_PATT_LEN;
 
-	if (pattLen > th.len)
-		pattLen = th.len;
+	pattLen = th.len;
 
 	lockMixerCallback();
 
@@ -1385,9 +1335,9 @@ bool loadPattern(UNICHAR *filenameU)
 	}
 
 	// non-FT2 security fix: remove overflown (illegal) stuff
-	for (uint16_t i = 0; i < pattLen; i++)
+	for (int32_t i = 0; i < pattLen; i++)
 	{
-		for (uint16_t j = 0; j < MAX_VOICES; j++)
+		for (int32_t j = 0; j < MAX_VOICES; j++)
 		{
 			pattPtr = &patt[nr][(i * MAX_VOICES) + j];
 			if (pattPtr->ton > 97)
@@ -1399,6 +1349,16 @@ bool loadPattern(UNICHAR *filenameU)
 				pattPtr->eff = 0;
 			}
 		}
+	}
+
+	// set new pattern length (FT2 doesn't do this, strange...)
+	pattLens[nr] = pattLen;
+	song.pattLen = pattLen;
+	if (song.pattPos >= pattLen)
+	{
+		song.pattPos = pattLen-1;
+		if (!songPlaying)
+			editor.pattPos = song.pattPos;
 	}
 
 	unlockMixerCallback();
@@ -1420,13 +1380,10 @@ loadPattError:
 
 bool savePattern(UNICHAR *filenameU)
 {
-	FILE *f;
-	uint16_t nr, pattLen;
-	tonTyp *pattPtr;
 	patternHeaderType th;
 
-	nr = editor.editPattern;
-	pattPtr = patt[nr];
+	uint16_t nr = editor.editPattern;
+	tonTyp *pattPtr = patt[nr];
 
 	if (pattPtr == NULL)
 	{
@@ -1434,14 +1391,14 @@ bool savePattern(UNICHAR *filenameU)
 		return false;
 	}
 
-	f = UNICHAR_FOPEN(filenameU, "wb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
 		okBox(0, "System message", "General I/O error during saving! Is the file in use?");
 		return false;
 	}
 
-	pattLen = pattLens[nr];
+	uint16_t pattLen = pattLens[nr];
 
 	th.len = pattLen;
 	th.ver = 1;
@@ -1553,14 +1510,12 @@ void pbPosEdPosDown(void)
 
 void pbPosEdIns(void)
 {
-	uint8_t oldPatt;
-
 	if (song.len >= 255)
 		return;
 
 	lockMixerCallback();
 
-	oldPatt = song.songTab[song.songPos];
+	const uint8_t oldPatt = song.songTab[song.songPos];
 	for (uint16_t i = 0; i < 255-song.songPos; i++)
 		song.songTab[255-i] = song.songTab[254-i];
 	song.songTab[song.songPos] = oldPatt;
@@ -2014,13 +1969,6 @@ void pbPattLenDown(void)
 
 void drawPosEdNums(int16_t songPos)
 {
-	uint8_t y;
-	int16_t entry;
-	uint32_t color1, color2;
-
-	color1 = video.palette[PAL_PATTEXT];
-	color2 = video.palette[PAL_FORGRND];
-
 	if (songPos >= song.len)
 		songPos = song.len - 1;
 
@@ -2038,10 +1986,13 @@ void drawPosEdNums(int16_t songPos)
 		clearRect(8, 32, 39, 15);
 	}
 
+	const uint32_t color1 = video.palette[PAL_PATTEXT];
+	const uint32_t color2 = video.palette[PAL_FORGRND];
+
 	// top two
-	for (y = 0; y < 2; y++)
+	for (int16_t y = 0; y < 2; y++)
 	{
-		entry = songPos - (2 - y);
+		int16_t entry = songPos - (2 - y);
 		if (entry < 0)
 			continue;
 
@@ -2074,9 +2025,9 @@ void drawPosEdNums(int16_t songPos)
 	}
 
 	// bottom two
-	for (y = 0; y < 2; y++)
+	for (int16_t y = 0; y < 2; y++)
 	{
-		entry = songPos + (1 + y);
+		int16_t entry = songPos + (1 + y);
 		if (entry >= song.len)
 			break;
 
@@ -2290,7 +2241,6 @@ void changeBadgeType(uint8_t badgeType)
 
 void updateInstrumentSwitcher(void)
 {
-	int8_t i;
 	int16_t y;
 
 	if (ui.aboutScreenShown || ui.configScreenShown || ui.helpScreenShown || ui.nibblesShown)
@@ -2331,7 +2281,7 @@ void updateInstrumentSwitcher(void)
 		}
 
 		// draw numbers and texts
-		for (i = 0; i < 4; i++)
+		for (int16_t i = 0; i < 4; i++)
 		{
 			hexOut(388, 5 + (i * 11), PAL_FORGRND, 1 + editor.instrBankOffset + i, 2);
 			hexOut(511, 5 + (i * 11), PAL_FORGRND, 5 + editor.instrBankOffset + i, 2);
@@ -2363,7 +2313,7 @@ void updateInstrumentSwitcher(void)
 		}
 
 		// draw numbers and texts
-		for (i = 0; i < 8; i++)
+		for (int16_t i = 0; i < 8; i++)
 		{
 			hexOut(424, 5 + (i * 11), PAL_FORGRND, 1 + editor.instrBankOffset + i, 2);
 			drawTextBox(TB_INST1 + i);
@@ -2391,7 +2341,7 @@ void updateInstrumentSwitcher(void)
 		}
 
 		// draw numbers and texts
-		for (i = 0; i < 5; i++)
+		for (int16_t i = 0; i < 5; i++)
 		{
 			hexOut(424, 99 + (i * 11), PAL_FORGRND, editor.sampleBankOffset + i, 2);
 			drawTextBox(TB_SAMP1 + i);
@@ -2401,12 +2351,10 @@ void updateInstrumentSwitcher(void)
 
 void showInstrumentSwitcher(void)
 {
-	uint16_t i;
-
 	if (!ui.instrSwitcherShown)
 		return;
 
-	for (i = 0; i < 8; i++)
+	for (uint16_t i = 0; i < 8; i++)
 		showTextBox(TB_INST1 + i);
 
 	if (ui.extended)
@@ -2443,13 +2391,13 @@ void showInstrumentSwitcher(void)
 		showPushButton(PB_SAMPLE_LIST_DOWN);
 		showScrollBar(SB_SAMPLE_LIST);
 
-		for (i = 0; i < 5; i++)
+		for (uint16_t i = 0; i < 5; i++)
 			showTextBox(TB_SAMP1 + i);
 	}
 
 	updateInstrumentSwitcher();
 
-	for (i = 0; i < 8; i++)
+	for (uint16_t i = 0; i < 8; i++)
 		showPushButton(PB_RANGE1 + i + (editor.instrBankSwapped * 8));
 
 	showPushButton(PB_SWAP_BANK);
@@ -2457,9 +2405,7 @@ void showInstrumentSwitcher(void)
 
 void hideInstrumentSwitcher(void)
 {
-	uint8_t i;
-
-	for (i = 0; i < 16; i++)
+	for (uint16_t i = 0; i < 16; i++)
 		hidePushButton(PB_RANGE1 + i);
 
 	hidePushButton(PB_SWAP_BANK);
@@ -2467,10 +2413,10 @@ void hideInstrumentSwitcher(void)
 	hidePushButton(PB_SAMPLE_LIST_DOWN);
 	hideScrollBar(SB_SAMPLE_LIST);
 
-	for (i = 0; i < 8; i++)
+	for (uint16_t i = 0; i < 8; i++)
 		hideTextBox(TB_INST1 + i);
 
-	for (i = 0; i < 5; i++)
+	for (uint16_t i = 0; i < 5; i++)
 		hideTextBox(TB_SAMP1 + i);
 }
 
@@ -2479,9 +2425,9 @@ void pbSwapInstrBank(void)
 	editor.instrBankSwapped ^= 1;
 
 	if (editor.instrBankSwapped)
-		editor.instrBankOffset += (8 * 8);
+		editor.instrBankOffset += 8*8;
 	else
-		editor.instrBankOffset -= (8 * 8);
+		editor.instrBankOffset -= 8*8;
 
 	updateTextBoxPointers();
 
@@ -2650,7 +2596,7 @@ static void zapSong(void)
 	lockMixerCallback();
 
 	song.len = 1;
-	song.repS = 0; // Silly: FT2 doesn't do this!
+	song.repS = 0; // Bug: FT2 doesn't do this!
 	song.speed = 125;
 	song.tempo = 6;
 	song.songPos = 0;
@@ -2699,7 +2645,7 @@ static void zapInstrs(void)
 	for (int16_t i = 1; i <= MAX_INST; i++)
 	{
 		freeInstr(i);
-		memset(song.instrName[i], 0, 22 + 1);
+		memset(song.instrName[i], 0, 22+1);
 	}
 
 	updateNewInstrument();
@@ -2719,7 +2665,7 @@ static void zapInstrs(void)
 
 void pbZap(void)
 {
-	int16_t choice = okBox(4, "System request", "Total devastation of the...");
+	const int16_t choice = okBox(4, "System request", "Total devastation of the...");
 
 	if (choice == 1) // zap all
 	{
@@ -2779,35 +2725,32 @@ void resetChannelOffset(void)
 
 void shrinkPattern(void)
 {
-	uint16_t nr, pattLen;
-	tonTyp *pattPtr;
-
 	if (okBox(2, "System request", "Shrink pattern?") != 1)
 		return;
 
-	nr = editor.editPattern;
+	uint16_t nr = editor.editPattern;
 
-	pattLen = pattLens[nr];
+	int16_t pattLen = pattLens[nr];
 	if (pattLen > 1)
 	{
 		lockMixerCallback();
 
-		pattPtr = patt[nr];
+		tonTyp *pattPtr = patt[nr];
 		if (pattPtr != NULL)
 		{
-			for (uint16_t i = 0; i < pattLen/2; i++)
+			for (int32_t i = 0; i < pattLen/2; i++)
 			{
-				for (uint16_t j = 0; j < MAX_VOICES; j++)
+				for (int32_t j = 0; j < MAX_VOICES; j++)
 					pattPtr[(i * MAX_VOICES) + j] = pattPtr[((i * 2) * MAX_VOICES) + j];
 			}
 		}
 
-		pattLens[nr] /= 2;
+		pattLens[nr] >>= 1;
 
 		if (song.pattNr == nr)
 			song.pattLen = pattLens[nr];
 
-		song.pattPos /= 2;
+		song.pattPos >>= 1;
 		if (song.pattPos >= pattLens[nr])
 			song.pattPos = pattLens[nr] - 1;
 
@@ -2823,12 +2766,9 @@ void shrinkPattern(void)
 
 void expandPattern(void)
 {
-	uint16_t nr, pattLen;
-	tonTyp *tmpPtn;
+	uint16_t nr = editor.editPattern;
 
-	nr = editor.editPattern;
-
-	pattLen = pattLens[nr];
+	int16_t pattLen = pattLens[nr];
 	if (pattLen > 128)
 	{
 		okBox(0, "System message", "Pattern is too long to be expanded.");
@@ -2839,7 +2779,7 @@ void expandPattern(void)
 
 		if (patt[nr] != NULL)
 		{
-			tmpPtn = (tonTyp *)malloc((pattLen * 2) * TRACK_WIDTH);
+			tonTyp *tmpPtn = (tonTyp *)malloc((pattLen * 2) * TRACK_WIDTH);
 			if (tmpPtn == NULL)
 			{
 				unlockMixerCallback();
@@ -2847,9 +2787,9 @@ void expandPattern(void)
 				return;
 			}
 
-			for (uint16_t i = 0; i < pattLen; i++)
+			for (int32_t i = 0; i < pattLen; i++)
 			{
-				for (uint16_t j = 0; j < MAX_VOICES; j++)
+				for (int32_t j = 0; j < MAX_VOICES; j++)
 					tmpPtn[((i * 2) * MAX_VOICES) + j] = patt[nr][(i * MAX_VOICES) + j];
 
 				memset(&tmpPtn[((i * 2) + 1) * MAX_VOICES], 0, TRACK_WIDTH);

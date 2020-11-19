@@ -156,19 +156,18 @@ extern const char modSig[32][5];
 
 static bool allocateTmpInstr(int16_t nr)
 {
-	instrTyp *p;
-
 	if (instrTmp[nr] != NULL)
 		return false; // already allocated
 
-	p = (instrTyp *)calloc(1, sizeof (instrTyp));
+	instrTyp *p = (instrTyp *)calloc(1, sizeof (instrTyp));
 	if (p == NULL)
 		return false;
 
-	for (int8_t i = 0; i < MAX_SMP_PER_INST; i++) // set standard sample pan/vol
+	sampleTyp *s = p->samp;
+	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++, s++)
 	{
-		p->samp[i].pan = 128;
-		p->samp[i].vol = 64;
+		s->pan = 128;
+		s->vol = 64;
 	}
 
 	instrTmp[nr] = p;
@@ -215,7 +214,6 @@ static uint8_t getModType(uint8_t *numChannels, const char *id)
 static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool externalThreadFlag)
 {
 	char ID[16];
-	bool mightBeSTK, lateSTKVerFlag, veryLateSTKVerFlag;
 	uint8_t bytes[4], modFormat, numChannels;
 	int16_t i, j, k, ai;
 	uint16_t a, b, period;
@@ -227,9 +225,9 @@ static bool loadMusicMOD(FILE *f, uint32_t fileLength, bool externalThreadFlag)
 
 	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
-	veryLateSTKVerFlag = false; // "DFJ SoundTracker III" nad later
-	lateSTKVerFlag = false; // "TJC SoundTracker II" and later
-	mightBeSTK = false;
+	bool veryLateSTKVerFlag = false; // "DFJ SoundTracker III" nad later
+	bool lateSTKVerFlag = false; // "TJC SoundTracker II" and later
+	bool mightBeSTK = false;
 
 	memset(&songTmp, 0, sizeof (songTmp));
 	memset(&h_MOD31, 0, sizeof (songMOD31HeaderTyp));
@@ -726,11 +724,11 @@ modLoadError:
 static uint8_t stmTempoToBPM(uint8_t tempo) // ported from original ST2.3 replayer code
 {
 	const uint8_t slowdowns[16] = { 140, 50, 25, 15, 10, 7, 6, 4, 3, 3, 2, 2, 2, 2, 1, 1 };
-	uint32_t bpm;
 	uint16_t hz = 50;
 
 	hz -= ((slowdowns[tempo >> 4] * (tempo & 15)) >> 4); // can and will underflow
-	bpm = (hz << 1) + (hz >> 1); // BPM = hz * 2.5
+
+	const uint32_t bpm = (hz << 1) + (hz >> 1); // BPM = hz * 2.5
 	return (uint8_t)CLAMP(bpm, 32, 255); // result can be slightly off, but close enough...
 }
 
@@ -978,22 +976,18 @@ stmLoadError:
 
 static int8_t countS3MChannels(uint16_t antPtn)
 {
-	uint8_t j, k, channels;
-	int16_t i;
-	tonTyp ton;
-
-	channels = 0;
-	for (i = 0; i < antPtn; i++)
+	int32_t channels = 0;
+	for (int32_t i = 0; i < antPtn; i++)
 	{
 		if (pattTmp[i] == NULL)
 			continue;
 
-		for (j = 0; j < 64; j++)
+		tonTyp *ton = pattTmp[i];
+		for (int32_t j = 0; j < 64; j++)
 		{
-			for (k = 0; k < MAX_VOICES; k++)
+			for (int32_t k = 0; k < MAX_VOICES; k++, ton++)
 			{
-				ton = pattTmp[i][(j * MAX_VOICES) + k];
-				if (ton.eff == 0 && ton.effTyp == 0 && ton.instr == 0 && ton.ton == 0 && ton.vol == 0)
+				if (ton->eff == 0 && ton->effTyp == 0 && ton->instr == 0 && ton->ton == 0 && ton->vol == 0)
 					continue;
 
 				if (k > channels)
@@ -1003,7 +997,7 @@ static int8_t countS3MChannels(uint16_t antPtn)
 	}
 	channels++;
 
-	return channels;
+	return (int8_t)channels;
 }
 
 static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool externalThreadFlag)
@@ -1873,8 +1867,9 @@ xmLoadError:
 
 static int32_t SDLCALL loadMusicThread(void *ptr)
 {
-	(void)ptr;
 	return doLoadMusic(true);
+
+	(void)ptr;
 }
 
 void loadMusic(UNICHAR *filenameU)
@@ -1947,10 +1942,8 @@ bool loadMusicUnthreaded(UNICHAR *filenameU, bool autoPlay)
 
 static void freeTmpModule(void) // called on module load error
 {
-	int32_t i, j;
-
 	// free all patterns
-	for (i = 0; i < MAX_PATTERNS; i++)
+	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
 		if (pattTmp[i] != NULL)
 		{
@@ -1960,19 +1953,20 @@ static void freeTmpModule(void) // called on module load error
 	}
 
 	// free all instruments and samples
-	for (i = 1; i <= 256; i++) // if >128 instruments, we fake-load up to 128 extra (and discard them later)
+	for (int32_t i = 1; i <= 256; i++) // if >128 instruments, we fake-load up to 128 extra (and discard them later)
 	{
-		if (instrTmp[i] != NULL)
-		{
-			for (j = 0; j < MAX_SMP_PER_INST; j++)
-			{
-				if (instrTmp[i]->samp[j].origPek != NULL)
-					free(instrTmp[i]->samp[j].origPek);
-			}
+		if (instrTmp[i] == NULL)
+			continue;
 
-			free(instrTmp[i]);
-			instrTmp[i] = NULL;
+		sampleTyp *s = instrTmp[i]->samp;
+		for (int32_t j = 0; j < MAX_SMP_PER_INST; j++, s++)
+		{
+			if (s->origPek != NULL)
+				free(s->origPek);
 		}
+
+		free(instrTmp[i]);
+		instrTmp[i] = NULL;
 	}
 }
 
@@ -2173,10 +2167,6 @@ void checkSampleRepeat(sampleTyp *s)
 
 static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag)
 {
-	int8_t *newPtr;
-	uint16_t j, k;
-	int32_t l, bytesToSkip;
-	sampleTyp *s;
 	int16_t (*showMsg)(int16_t, const char *, const char *);
 
 	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
@@ -2184,30 +2174,29 @@ static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag)
 	if (instrTmp[i] == NULL)
 		return true; // empty instrument, let's just pretend it got loaded successfully
 
-	k = instrTmp[i]->antSamp;
+	uint16_t k = instrTmp[i]->antSamp;
 	if (k > MAX_SMP_PER_INST)
 		k = MAX_SMP_PER_INST;
 
+	sampleTyp *s = instrTmp[i]->samp;
+
 	if (i > MAX_INST) // insNum > 128, just skip sample data
 	{
-		for (j = 0; j < k; j++)
+		for (uint16_t j = 0; j < k; j++, s++)
 		{
-			s = &instrTmp[i]->samp[j];
 			if (s->len > 0)
 				fseek(f, s->len, SEEK_CUR);
 		}
 	}
 	else
 	{
-		for (j = 0; j < k; j++)
+		for (uint16_t j = 0; j < k; j++, s++)
 		{
-			s = &instrTmp[i]->samp[j];
-
 			// if a sample has both forward loop and pingpong loop set, make it pingpong loop only (FT2 mixer behavior)
 			if ((s->typ & 3) == 3)
 				s->typ &= 0xFE;
 
-			l = s->len;
+			int32_t l = s->len;
 			if (l <= 0)
 			{
 				s->pek = NULL;
@@ -2220,7 +2209,7 @@ static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag)
 			}
 			else
 			{
-				bytesToSkip = 0;
+				int32_t bytesToSkip = 0;
 				if (l > MAX_SAMPLE_LEN)
 				{
 					bytesToSkip = l - MAX_SAMPLE_LEN;
@@ -2257,7 +2246,7 @@ static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag)
 					s->repL >>= 1;
 					s->repS >>= 1;
 
-					newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
+					int8_t *newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
 					if (newPtr != NULL)
 					{
 						s->origPek = newPtr;
@@ -2295,18 +2284,19 @@ static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag)
 void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 {
 	uint8_t note, data;
-	int32_t srcEnd, srcIdx, j;
+	int32_t j;
 
 	if (dst == NULL)
 		return;
 
-	srcEnd = len * (sizeof (tonTyp) * antChn);
-	srcIdx = 0;
+	const int32_t srcEnd = len * (sizeof (tonTyp) * antChn);
+	int32_t srcIdx = 0;
 
 	int32_t numChannels = antChn;
 	if (numChannels > MAX_VOICES)
 		numChannels = MAX_VOICES;
 
+	const int32_t pitch = sizeof (tonTyp) * (MAX_VOICES - antChn);
 	for (int32_t i = 0; i < len; i++)
 	{
 		for (j = 0; j < numChannels; j++)
@@ -2374,20 +2364,17 @@ void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 
 		// if song has <32 channels, align pointer to next row (skip unused channels)
 		if (antChn < MAX_VOICES)
-			dst += sizeof (tonTyp) * (MAX_VOICES - antChn);
+			dst += pitch;
 	}
 }
 
 static bool tmpPatternEmpty(uint16_t nr)
 {
-	uint8_t *scanPtr;
-	uint32_t scanLen;
-
 	if (pattTmp[nr] == NULL)
 		return true;
 
-	scanPtr = (uint8_t *)pattTmp[nr];
-	scanLen = pattLensTmp[nr] * TRACK_WIDTH;
+	uint8_t *scanPtr = (uint8_t *)pattTmp[nr];
+	const uint32_t scanLen = pattLensTmp[nr] * TRACK_WIDTH;
 
 	for (uint32_t i = 0; i < scanLen; i++)
 	{
@@ -2403,22 +2390,23 @@ void clearUnusedChannels(tonTyp *p, int16_t pattLen, int32_t antChn)
 	if (p == NULL || antChn >= MAX_VOICES)
 		return;
 
-	for (int32_t i = 0; i < pattLen; i++)
-		memset(&p[(i * MAX_VOICES) + antChn], 0, sizeof (tonTyp) * (MAX_VOICES - antChn));
+	const int32_t width = sizeof (tonTyp) * (MAX_VOICES - antChn);
+
+	tonTyp *ptr = &p[antChn];
+	for (int32_t i = 0; i < pattLen; i++, ptr += MAX_VOICES)
+		memset(ptr, 0, width);
 }
 
 static bool loadPatterns(FILE *f, uint16_t antPtn, bool externalThreadFlag)
 {
-	bool pattLenWarn;
 	uint8_t tmpLen;
-	uint16_t i;
 	patternHeaderTyp ph;
 	int16_t (*showMsg)(int16_t, const char *, const char *);
 
 	showMsg = externalThreadFlag ? okBoxThreadSafe : okBox;
 
-	pattLenWarn = false;
-	for (i = 0; i < antPtn; i++)
+	bool pattLenWarn = false;
+	for (uint16_t i = 0; i < antPtn; i++)
 	{
 		if (fread(&ph.patternHeaderSize, 4, 1, f) != 1)
 			goto pattCorrupt;
@@ -2503,8 +2491,6 @@ pattCorrupt:
 // called from input/video thread after the module was done loading
 static void setupLoadedModule(void)
 {
-	int16_t i;
-
 	lockMixerCallback();
 
 	freeAllInstr();
@@ -2522,14 +2508,14 @@ static void setupLoadedModule(void)
 	memset(editor.keyOnTab, 0, sizeof (editor.keyOnTab));
 
 	// copy over new pattern pointers and lengths
-	for (i = 0; i < MAX_PATTERNS; i++)
+	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
 		patt[i] = pattTmp[i];
 		pattLens[i] = pattLensTmp[i];
 	}
 
 	// copy over new instruments (includes sample pointers)
-	for (i = 1; i <= MAX_INST; i++)
+	for (int16_t i = 1; i <= MAX_INST; i++)
 	{
 		instr[i] = instrTmp[i];
 		fixSampleName(i);
@@ -2620,9 +2606,7 @@ static void setupLoadedModule(void)
 
 bool handleModuleLoadFromArg(int argc, char **argv)
 {
-	int32_t filesize;
-	uint32_t filenameLen;
-	UNICHAR *filenameU, tmpPathU[PATH_MAX+2];
+	UNICHAR tmpPathU[PATH_MAX+2];
 
 	// this is crude, we always expect only one parameter, and that it is the module.
 
@@ -2634,9 +2618,9 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 		return false; // OS X < 10.9 passes a -psn_x_xxxxx parameter on double-click launch
 #endif
 
-	filenameLen = (uint32_t)strlen(argv[1]);
+	const uint32_t filenameLen = (const uint32_t)strlen(argv[1]);
 
-	filenameU = (UNICHAR *)calloc(filenameLen+1, sizeof (UNICHAR));
+	UNICHAR *filenameU = (UNICHAR *)calloc(filenameLen+1, sizeof (UNICHAR));
 	if (filenameU == NULL)
 	{
 		okBox(0, "System message", "Not enough memory!");
@@ -2655,7 +2639,7 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 	// set path to where the main executable is
 	UNICHAR_CHDIR(editor.binaryPathU);
 
-	filesize = getFileSize(filenameU);
+	const int32_t filesize = getFileSize(filenameU);
 	if (filesize == -1 || filesize >= 512L*1024*1024) // >=2GB or >=512MB
 	{
 		okBox(0, "System message", "Error: The module is too big to be loaded!");
@@ -2678,17 +2662,14 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 
 void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 {
-	int32_t fullPathLen, filesize;
-	UNICHAR *fullPathU;
-
 	if (ui.sysReqShown || fullPathUTF8 == NULL)
 		return;
 
-	fullPathLen = (int32_t)strlen(fullPathUTF8);
+	const int32_t fullPathLen = (const int32_t)strlen(fullPathUTF8);
 	if (fullPathLen == 0)
 		return;
 
-	fullPathU = (UNICHAR *)calloc(fullPathLen + 2, sizeof (UNICHAR));
+	UNICHAR *fullPathU = (UNICHAR *)calloc(fullPathLen + 2, sizeof (UNICHAR));
 	if (fullPathU == NULL)
 	{
 		okBox(0, "System message", "Not enough memory!");
@@ -2701,7 +2682,7 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 	strcpy(fullPathU, fullPathUTF8);
 #endif
 
-	filesize = getFileSize(fullPathU);
+	const int32_t filesize = getFileSize(fullPathU);
 
 	if (filesize == -1) // >2GB
 	{

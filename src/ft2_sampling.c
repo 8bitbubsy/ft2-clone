@@ -28,17 +28,12 @@ static int16_t rightChSmpSlot = -1;
 
 static void SDLCALL samplingCallback(void *userdata, Uint8 *stream, int len)
 {
-	int8_t *newPtr;
-	sampleTyp *s;
-
-	(void)userdata;
-
 	if (instr[editor.curInstr] == NULL || len < 0 || len > samplingBufferBytes)
 		return;
 
-	s = &instr[editor.curInstr]->samp[editor.curSmp];
+	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
 
-	newPtr = (int8_t *)realloc(s->origPek, (s->len + len) + LOOP_FIX_LEN);
+	int8_t *newPtr = (int8_t *)realloc(s->origPek, (s->len + len) + LOOP_FIX_LEN);
 	if (newPtr == NULL)
 	{
 		drawSamplingBufferFlag = false;
@@ -77,6 +72,8 @@ static void SDLCALL samplingCallback(void *userdata, Uint8 *stream, int len)
 
 		drawSamplingBufferFlag = true;
 	}
+
+	(void)userdata;
 }
 
 void stopSampling(void)
@@ -84,7 +81,6 @@ void stopSampling(void)
 	int8_t *newPtr;
 	int16_t *dst16, *src16;
 	int32_t i, len;
-	sampleTyp *currSmp, *nextSmp;
 
 	resumeAudio();
 	mouseAnimOff();
@@ -92,8 +88,8 @@ void stopSampling(void)
 	SDL_CloseAudioDevice(recordDev);
 	editor.samplingAudioFlag = false;
 
-	currSmp = NULL;
-	nextSmp = NULL;
+	sampleTyp *currSmp = NULL;
+	sampleTyp *nextSmp = NULL;
 
 	if (instr[editor.curInstr] != NULL)
 		currSmp = &instr[editor.curInstr]->samp[editor.curSmp];
@@ -161,16 +157,12 @@ void stopSampling(void)
 
 static uint8_t getDispBuffPeakMono(const int16_t *smpData, int32_t smpNum)
 {
-	int16_t smp16;
-	uint32_t smpAbs, max;
-	int32_t i;
-
-	max = 0;
-	for (i = 0; i < smpNum; i++)
+	uint32_t max = 0;
+	for (int32_t i = 0; i < smpNum; i++)
 	{
-		smp16 = smpData[i];
+		const int16_t smp16 = smpData[i];
 
-		smpAbs = ABS(smp16);
+		const uint32_t smpAbs = ABS(smp16);
 		if (smpAbs > max)
 			max = smpAbs;
 	}
@@ -184,18 +176,14 @@ static uint8_t getDispBuffPeakMono(const int16_t *smpData, int32_t smpNum)
 
 static uint8_t getDispBuffPeakLeft(const int16_t *smpData, int32_t smpNum)
 {
-	int16_t smp16;
-	uint32_t smpAbs, max;
-	int32_t i;
-
 	smpNum <<= 1;
 
-	max = 0;
-	for (i = 0; i < smpNum; i += 2)
+	uint32_t max = 0;
+	for (int32_t i = 0; i < smpNum; i += 2)
 	{
-		smp16 = smpData[i];
+		const int16_t smp16 = smpData[i];
 
-		smpAbs = ABS(smp16);
+		const uint32_t smpAbs = ABS(smp16);
 		if (smpAbs > max)
 			max = smpAbs;
 	}
@@ -209,18 +197,14 @@ static uint8_t getDispBuffPeakLeft(const int16_t *smpData, int32_t smpNum)
 
 static uint8_t getDispBuffPeakRight(const int16_t *smpData, int32_t smpNum)
 {
-	int16_t smp16;
-	uint32_t smpAbs, max;
-	int32_t i;
-
 	smpNum <<= 1;
 
-	max = 0;
-	for (i = 0; i < smpNum; i += 2)
+	uint32_t max = 0;
+	for (int32_t i = 0; i < smpNum; i += 2)
 	{
-		smp16 = smpData[i];
+		const int16_t smp16 = smpData[i];
 
-		smpAbs = ABS(smp16);
+		const uint32_t smpAbs = ABS(smp16);
 		if (smpAbs > max)
 			max = smpAbs;
 	}
@@ -243,9 +227,9 @@ static void drawSamplingPreview(void)
 	int16_t *readBuf;
 	uint16_t x;
 	int32_t smpIdx, smpNum;
-	uint32_t *centerPtrL, *centerPtrR, pixVal;
+	uint32_t *centerPtrL, *centerPtrR;
 
-	pixVal = video.palette[PAL_PATTEXT];
+	const uint32_t pixVal = video.palette[PAL_PATTEXT];
 
 	// select buffer currently not being written to (double-buffering)
 	if (currWriteBuf == displayBuffer1)
@@ -352,14 +336,12 @@ void startSampling(void)
 	okBox(0, "System message", "This program needs to be compiled with SDL 2.0.5 or later to support audio sampling.");
 	return;
 #else
-	int16_t result;
 	SDL_AudioSpec want, have;
-	sampleTyp *s, *nextSmp;
 
 	if (editor.samplingAudioFlag || editor.curInstr == 0)
 		return;
 
-	result = okBox(9, "System request", "Stereo sampling will use the next sample slot. While ongoing, press any key to stop.");
+	int16_t result = okBox(9, "System request", "Stereo sampling will use the next sample slot. While ongoing, press any key to stop.");
 	if (result == 0 || result == 3)
 		return;
 
@@ -399,7 +381,7 @@ void startSampling(void)
 		return;
 	}
 
-	s = &instr[editor.curInstr]->samp[editor.curSmp];
+	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
 
 	// wipe current sample and prepare it
 	freeSample(editor.curInstr, editor.curSmp);
@@ -421,7 +403,7 @@ void startSampling(void)
 		{
 			// wipe current sample and prepare it
 			freeSample(editor.curInstr, rightChSmpSlot);
-			nextSmp = &instr[editor.curInstr]->samp[rightChSmpSlot];
+			sampleTyp *nextSmp = &instr[editor.curInstr]->samp[rightChSmpSlot];
 
 			strcpy(nextSmp->name, "Right sample");
 			nextSmp->typ |= 16; // we always sample in 16-bit

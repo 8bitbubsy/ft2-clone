@@ -398,22 +398,20 @@ static uint32_t tmpCounter;
 
 void drawPushButton(uint16_t pushButtonID)
 {
-	uint8_t state;
-	uint16_t x, y, w, h, textX, textY, textW;
-	pushButton_t *b;
+	uint16_t textX, textY, textW;
 
 	assert(pushButtonID < NUM_PUSHBUTTONS);
 
-	b = &pushButtons[pushButtonID];
+	pushButton_t *b = &pushButtons[pushButtonID];
 	if (!b->visible)
 		return;
 
-	state = b->state;
+	uint8_t state = b->state;
 
-	x = b->x;
-	y = b->y;
-	w = b->w;
-	h = b->h;
+	uint16_t x = b->x;
+	uint16_t y = b->y;
+	uint16_t w = b->w;
+	uint16_t h = b->h;
 
 	assert(x < SCREEN_W && y < SCREEN_H && w >= 4 && h >= 4);
 
@@ -497,10 +495,9 @@ void hidePushButton(uint16_t pushButtonID)
 void handlePushButtonsWhileMouseDown(void)
 {
 	int8_t buttonDelay;
-	pushButton_t *pushButton;
 
 	assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
-	pushButton = &pushButtons[mouse.lastUsedObjectID];
+	pushButton_t *pushButton = &pushButtons[mouse.lastUsedObjectID];
 	if (!pushButton->visible)
 		return;
 
@@ -550,7 +547,7 @@ void handlePushButtonsWhileMouseDown(void)
 		{
 			mouse.buttonCounter = 0;
 			if (pushButton->callbackFuncOnDown != NULL)
-			    pushButton->callbackFuncOnDown();
+				pushButton->callbackFuncOnDown();
 		}
 	}
 }
@@ -558,7 +555,6 @@ void handlePushButtonsWhileMouseDown(void)
 bool testPushButtonMouseDown(void)
 {
 	uint16_t start, end;
-	pushButton_t *pushButton;
 
 	if (ui.sysReqShown)
 	{
@@ -572,9 +568,9 @@ bool testPushButtonMouseDown(void)
 		end = NUM_PUSHBUTTONS;
 	}
 
-	for (uint16_t i = start; i < end; i++)
+	pushButton_t *pushButton = &pushButtons[start];
+	for (uint16_t i = start; i < end; i++, pushButton++)
 	{
-		pushButton = &pushButtons[i];
 		if (!pushButton->visible)
 			continue;
 
@@ -605,13 +601,11 @@ bool testPushButtonMouseDown(void)
 
 int16_t testPushButtonMouseRelease(bool runCallback)
 {
-	pushButton_t *pushButton;
-
 	if (mouse.lastUsedObjectType != OBJECT_PUSHBUTTON || mouse.lastUsedObjectID == OBJECT_ID_NONE)
 		return -1;
 
 	assert(mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
-	pushButton = &pushButtons[mouse.lastUsedObjectID];
+	pushButton_t *pushButton = &pushButtons[mouse.lastUsedObjectID];
 	if (!pushButton->visible)
 		return -1;
 

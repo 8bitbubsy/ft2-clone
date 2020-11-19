@@ -46,25 +46,20 @@ static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t colo
 
 void updatePattFontPtrs(void)
 {
-	//config.ptnFont is pre-clamped and safe
+	//config.ptnFont is pre-clamped and safe to use
 	font4Ptr = &bmp.font4[config.ptnFont * (FONT4_WIDTH * FONT4_CHAR_H)];
 	font5Ptr = &bmp.font4[(4 + config.ptnFont) * (FONT4_WIDTH * FONT4_CHAR_H)];
 }
 
 void drawPatternBorders(void)
 {
-	uint8_t chans;
-	uint16_t xOffs, chanWidth;
-	int32_t clearSize;
-	const pattCoord2_t *pattCoord;
-
 	// get heights/pos/rows depending on configuration
-	pattCoord = &pattCoord2Table[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
+	const pattCoord2_t *pattCoord = &pattCoord2Table[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
 
 	// set pattern cursor Y position
 	editor.ptnCursorY = pattCoord->lowerRowsY - 9;
 
-	chans = ui.numChannelsShown;
+	int32_t chans = ui.numChannelsShown;
 	if (chans > ui.maxVisibleChannels)
 		chans = ui.maxVisibleChannels;
 
@@ -76,7 +71,7 @@ void drawPatternBorders(void)
 
 	assert(chans >= 2 && chans <= 12);
 
-	chanWidth = chanWidths[(chans / 2) - 1] + 2;
+	const uint16_t chanWidth = chanWidths[(chans >> 1) - 1] + 2;
 
 	// fill scrollbar framework (if needed)
 	if (ui.pattChanScrollShown)
@@ -131,8 +126,8 @@ void drawPatternBorders(void)
 		drawFramework(604, pattCoord->lowerRowsY, 26, pattCoord->lowerRowsH, FRAMEWORK_TYPE2); // bottom right
 
 		// draw channels
-		xOffs = 28;
-		for (uint8_t i = 0; i < chans; i++)
+		uint16_t xOffs = 28;
+		for (int32_t i = 0; i < chans; i++)
 		{
 			vLine(xOffs - 1, pattCoord->upperRowsY, pattCoord->upperRowsH, PAL_DESKTOP);
 			vLine(xOffs - 1, pattCoord->lowerRowsY, pattCoord->lowerRowsH + 1, PAL_DESKTOP);
@@ -152,12 +147,12 @@ void drawPatternBorders(void)
 
 		if (ui.extended)
 		{
-			clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof (int32_t) * 330) : (SCREEN_W * sizeof (int32_t) * 347);
+			const int32_t clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof (int32_t) * 330) : (SCREEN_W * sizeof (int32_t) * 347);
 			memset(&video.frameBuffer[53 * SCREEN_W], 0, clearSize);
 		}
 		else
 		{
-			clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof(int32_t) * 210) : (SCREEN_W * sizeof(int32_t) * 227);
+			const int32_t clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof(int32_t) * 210) : (SCREEN_W * sizeof(int32_t) * 227);
 			memset(&video.frameBuffer[173 * SCREEN_W], 0, clearSize);
 		}
 
@@ -182,20 +177,18 @@ void drawPatternBorders(void)
 
 static void writeCursor(void)
 {
-	uint32_t *dstPtr, xPos, width, tabOffset;
+	const int32_t tabOffset = (config.ptnS3M * 32) + (columnModeTab[ui.numChannelsShown-1] * 8) + cursor.object;
 
-	tabOffset = (config.ptnS3M * 32) + (columnModeTab[ui.numChannelsShown - 1] * 8) + cursor.object;
-
-	xPos = pattCursorXTab[tabOffset];
-	width = pattCursorWTab[tabOffset];
+	int32_t xPos = pattCursorXTab[tabOffset];
+	const int32_t width = pattCursorWTab[tabOffset];
 
 	assert(editor.ptnCursorY > 0 && xPos > 0 && width > 0);
 	xPos += ((cursor.ch - ui.channelOffset) * ui.patternChannelWidth);
 
-	dstPtr = &video.frameBuffer[(editor.ptnCursorY * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < 9; y++)
+	uint32_t *dstPtr = &video.frameBuffer[(editor.ptnCursorY * SCREEN_W) + xPos];
+	for (int32_t y = 0; y < 9; y++)
 	{
-		for (uint32_t x = 0; x < width; x++)
+		for (int32_t x = 0; x < width; x++)
 			dstPtr[x] = video.palette[(dstPtr[x] >> 24) ^ 4]; // ">> 24" to get palette, XOR 4 to change to cursor palette
 
 		dstPtr += SCREEN_W;
@@ -204,35 +197,33 @@ static void writeCursor(void)
 
 static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pattCoord_t *pattCoord)
 {
-	int32_t startCh, endCh, startRow, endRow, x1, x2, y1, y2, pattYStart, pattYEnd;
-	uint32_t w, h, *ptr32;
-	const markCoord_t *markCoord;
+	int32_t y1, y2;
 
 	// this can happen (buggy FT2 code), treat like no mark
 	if (pattMark.markY1 > pattMark.markY2)
 		return;
 
-	startCh = ui.channelOffset;
-	endCh = ui.channelOffset + (ui.numChannelsShown - 1);
-	startRow = currRow - pattCoord->numUpperRows;
-	endRow = currRow + pattCoord->numLowerRows;
+	const int32_t startCh = ui.channelOffset;
+	const int32_t endCh = ui.channelOffset + (ui.numChannelsShown - 1);
+	const int32_t startRow = currRow - pattCoord->numUpperRows;
+	const int32_t endRow = currRow + pattCoord->numLowerRows;
 
 	// test if pattern marking is outside of visible area (don't draw)
 	if (pattMark.markX1 > endCh || pattMark.markX2 < startCh || pattMark.markY1 > endRow || pattMark.markY2 < startRow)
 		return;
 
-	markCoord = &markCoordTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
-	pattYStart = markCoord->upperRowsY;
+	const markCoord_t *markCoord = &markCoordTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
+	const int32_t pattYStart = markCoord->upperRowsY;
 
 	// X1
 
-	x1 = 32 + ((pattMark.markX1 - ui.channelOffset) * ui.patternChannelWidth);
+	int32_t x1 = 32 + ((pattMark.markX1 - ui.channelOffset) * ui.patternChannelWidth);
 	if (x1 < 32)
 		x1 = 32;
 
 	// X2
 
-	x2 = (32 - 8) + (((pattMark.markX2 + 1) - ui.channelOffset) * ui.patternChannelWidth);
+	int32_t x2 = (32 - 8) + (((pattMark.markX2 + 1) - ui.channelOffset) * ui.patternChannelWidth);
 	if (x2 > 608)
 		x2 = 608;
 
@@ -265,7 +256,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 	}
 	else
 	{
-		pattYEnd = markCoord->lowerRowsY + (pattCoord->numLowerRows * rowHeight);
+		const int32_t pattYEnd = markCoord->lowerRowsY + (pattCoord->numLowerRows * rowHeight);
 
 		y2 = markCoord->lowerRowsY + ((pattMark.markY2 - (currRow + 1)) * rowHeight);
 		if (y2 > pattYEnd)
@@ -291,15 +282,15 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 
 	// pattern mark drawing
 
-	w = x2 - x1;
-	h = y2 - y1;
+	const int32_t w = x2 - x1;
+	const int32_t h = y2 - y1;
 
 	assert(x1+w <= SCREEN_W && y1+h <= SCREEN_H);
 
-	ptr32 = &video.frameBuffer[(y1 * SCREEN_W) + x1];
-	for (uint32_t y = 0; y < h; y++)
+	uint32_t *ptr32 = &video.frameBuffer[(y1 * SCREEN_W) + x1];
+	for (int32_t y = 0; y < h; y++)
 	{
-		for (uint32_t x = 0; x < w; x++)
+		for (int32_t x = 0; x < w; x++)
 			ptr32[x] = video.palette[(ptr32[x] >> 24) ^ 2]; // ">> 24" to get palette of pixel, XOR 2 to change to mark palette
 
 		ptr32 += SCREEN_W;
@@ -308,9 +299,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 
 static void drawChannelNumbering(uint16_t yPos)
 {
-#define CH_NUM_XPOS 30
-
-	uint16_t xPos = CH_NUM_XPOS;
+	uint16_t xPos = 30;
 	int32_t ch = ui.channelOffset + 1;
 
 	for (uint8_t i = 0; i < ui.numChannelsShown; i++)
@@ -335,8 +324,7 @@ static void drawRowNums(int32_t yPos, uint8_t row, bool selectedRowFlag)
 #define LEFT_ROW_XPOS 8
 #define RIGHT_ROW_XPOS 608
 
-	const uint8_t *src1Ptr, *src2Ptr;
-	uint32_t *dst1Ptr, *dst2Ptr, pixVal;
+	uint32_t pixVal;
 
 	// set color based on some conditions
 	if (selectedRowFlag)
@@ -349,14 +337,14 @@ static void drawRowNums(int32_t yPos, uint8_t row, bool selectedRowFlag)
 	if (!config.ptnHex)
 		row = hex2Dec[row];
 
-	src1Ptr = &font4Ptr[(row   >> 4) * FONT4_CHAR_W];
-	src2Ptr = &font4Ptr[(row & 0x0F) * FONT4_CHAR_W];
-	dst1Ptr = &video.frameBuffer[(yPos * SCREEN_W) + LEFT_ROW_XPOS];
-	dst2Ptr = dst1Ptr + (RIGHT_ROW_XPOS - LEFT_ROW_XPOS);
+	const uint8_t *src1Ptr = &font4Ptr[(row   >> 4) * FONT4_CHAR_W];
+	const uint8_t *src2Ptr = &font4Ptr[(row & 0x0F) * FONT4_CHAR_W];
+	uint32_t *dst1Ptr = &video.frameBuffer[(yPos * SCREEN_W) + LEFT_ROW_XPOS];
+	uint32_t *dst2Ptr = dst1Ptr + (RIGHT_ROW_XPOS - LEFT_ROW_XPOS);
 
-	for (uint32_t y = 0; y < FONT4_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT4_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT4_CHAR_W; x++)
 		{
 			if (src1Ptr[x])
 			{
@@ -408,7 +396,7 @@ static void showNoteNum(uint32_t xPos, uint32_t yPos, int16_t ton, uint32_t colo
 
 static void showInstrNum(uint32_t xPos, uint32_t yPos, uint8_t ins, uint32_t color)
 {
-	uint8_t chr1, chr2, charW, fontType;
+	uint8_t charW, fontType;
 
 	if (ui.numChannelsShown <= 4)
 	{
@@ -436,8 +424,8 @@ static void showInstrNum(uint32_t xPos, uint32_t yPos, uint8_t ins, uint32_t col
 	}
 	else
 	{
-		chr1 = ins >> 4;
-		chr2 = ins & 0x0F;
+		const uint8_t chr1 = ins >> 4;
+		const uint8_t chr2 = ins & 0x0F;
 
 		if (chr1 > 0)
 			pattCharOut(xPos, yPos, chr1, fontType, color);
@@ -559,7 +547,7 @@ static void showNoteNumNoVolColumn(uint32_t xPos, uint32_t yPos, int16_t ton, ui
 
 static void showInstrNumNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t ins, uint32_t color)
 {
-	uint8_t chr1, chr2, charW, fontType;
+	uint8_t charW, fontType;
 
 	if (ui.numChannelsShown <= 4)
 	{
@@ -593,8 +581,8 @@ static void showInstrNumNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t ins, u
 	}
 	else
 	{
-		chr1 = ins >> 4;
-		chr2 = ins & 0x0F;
+		const uint8_t chr1 = ins >> 4;
+		const uint8_t chr2 = ins & 0x0F;
 
 		if (chr1 > 0)
 			pattCharOut(xPos, yPos, chr1, fontType, color);
@@ -606,7 +594,6 @@ static void showInstrNumNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t ins, u
 
 static void showNoVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t color)
 {
-	// make compiler happy
 	(void)xPos;
 	(void)yPos;
 	(void)vol;
@@ -649,11 +636,8 @@ static void showEfxNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t effTyp, uin
 
 void writePattern(int32_t currRow, int32_t pattern)
 {
-	int32_t row, rowsOnScreen, numRows, afterCurrRow, numChannels;
-	int32_t textY, midRowTextY, lowerRowsTextY, xPos, xWidth;
-	uint32_t rowHeight, chanWidth, chans, noteTextColors[2], color;
-	tonTyp *note, *pattPtr;
-	const pattCoord_t *pattCoord;
+	uint32_t noteTextColors[2];
+
 	void (*drawNote)(uint32_t, uint32_t, int16_t, uint32_t);
 	void (*drawInst)(uint32_t, uint32_t, uint8_t, uint32_t);
 	void (*drawVolEfx)(uint32_t, uint32_t, uint8_t, uint32_t);
@@ -668,31 +652,30 @@ void writePattern(int32_t currRow, int32_t pattern)
 
 	// setup variables
 
-	chans = ui.numChannelsShown;
+	uint32_t chans = ui.numChannelsShown;
 	if (chans > ui.maxVisibleChannels)
 		chans = ui.maxVisibleChannels;
 
 	assert(chans >= 2 && chans <= 12);
 
 	// get channel width
-	chanWidth = chanWidths[(chans / 2) - 1];
+	const uint32_t chanWidth = chanWidths[(chans / 2) - 1];
 	ui.patternChannelWidth = (uint16_t)(chanWidth + 3);
 
 	// get heights/pos/rows depending on configuration
-	rowHeight = config.ptnUnpressed ? 11 : 8;
-	pattCoord = &pattCoordTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
-	midRowTextY = pattCoord->midRowTextY;
-	lowerRowsTextY = pattCoord->lowerRowsTextY;
-	row = currRow - pattCoord->numUpperRows;
-	rowsOnScreen = pattCoord->numUpperRows + 1 + pattCoord->numLowerRows;
-	textY = pattCoord->upperRowsTextY;
+	uint32_t rowHeight = config.ptnUnpressed ? 11 : 8;
+	const pattCoord_t *pattCoord = &pattCoordTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
+	const int32_t midRowTextY = pattCoord->midRowTextY;
+	const int32_t lowerRowsTextY = pattCoord->lowerRowsTextY;
+	int32_t row = currRow - pattCoord->numUpperRows;
+	const int32_t rowsOnScreen = pattCoord->numUpperRows + 1 + pattCoord->numLowerRows;
+	int32_t textY = pattCoord->upperRowsTextY;
+	const int32_t afterCurrRow = currRow + 1;
+	const int32_t numChannels = ui.numChannelsShown;
+	tonTyp *pattPtr = patt[pattern];
+	const int32_t numRows = pattLens[pattern];
 
-	afterCurrRow = currRow + 1;
-	numChannels = ui.numChannelsShown;
-	pattPtr = patt[pattern];
-	numRows = pattLens[pattern];
-	noteTextColors[0] = video.palette[PAL_PATTEXT]; // not selected
-	noteTextColors[1] = video.palette[PAL_FORGRND]; // selected
+
 
 	// increment pattern data pointer by horizontal scrollbar offset/channel
 	if (pattPtr != NULL)
@@ -714,25 +697,24 @@ void writePattern(int32_t currRow, int32_t pattern)
 		drawEfx = showEfxNoVolColumn;
 	}
 
+	noteTextColors[0] = video.palette[PAL_PATTEXT]; // not selected
+	noteTextColors[1] = video.palette[PAL_FORGRND]; // selected
+
 	// draw pattern data
 	for (int32_t i = 0; i < rowsOnScreen; i++)
 	{
 		if (row >= 0)
 		{
-			bool selectedRowFlag = row == currRow;
+			const bool selectedRowFlag = (row == currRow);
 
 			drawRowNums(textY, (uint8_t)row, selectedRowFlag);
-	
-			if (pattPtr == NULL)
-				note = emptyPattern;
-			else
-				note = &pattPtr[(uint32_t)row * MAX_VOICES];
 
-			xPos = 29;
-			xWidth = ui.patternChannelWidth;
+			const tonTyp *note = (pattPtr == NULL) ? emptyPattern : &pattPtr[(uint32_t)row * MAX_VOICES];
+			const int32_t xWidth = ui.patternChannelWidth;
+			const uint32_t color = noteTextColors[selectedRowFlag];
 
-			color = noteTextColors[selectedRowFlag];
-			for (int32_t j = 0; j < numChannels; j++)
+			int32_t xPos = 29;
+			for (int32_t j = 0; j < numChannels; j++, note++)
 			{
 				drawNote(xPos, textY, note->ton, color);
 				drawInst(xPos, textY, note->instr, color);
@@ -740,7 +722,6 @@ void writePattern(int32_t currRow, int32_t pattern)
 				drawEfx(xPos, textY, note->effTyp, note->eff, color);
 
 				xPos += xWidth;
-				note++;
 			}
 		}
 
@@ -772,26 +753,20 @@ void writePattern(int32_t currRow, int32_t pattern)
 
 void pattTwoHexOut(uint32_t xPos, uint32_t yPos, uint8_t val, uint32_t color)
 {
-	const uint8_t *ch1Ptr, *ch2Ptr;
-	uint32_t *dstPtr;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	const uint8_t *ch1Ptr = &font4Ptr[(val   >> 4) * FONT4_CHAR_W];
+	const uint8_t *ch2Ptr = &font4Ptr[(val & 0x0F) * FONT4_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	ch1Ptr = &font4Ptr[(val   >> 4) * FONT4_CHAR_W];
-	ch2Ptr = &font4Ptr[(val & 0x0F) * FONT4_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-
-	for (uint32_t y = 0; y < FONT4_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT4_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT4_CHAR_W; x++)
 		{
 #ifdef __arm__
 			if (ch1Ptr[x] != 0) dstPtr[x] = color;
 			if (ch2Ptr[x] != 0) dstPtr[FONT4_CHAR_W+x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (ch1Ptr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 
@@ -810,12 +785,12 @@ void pattTwoHexOut(uint32_t xPos, uint32_t yPos, uint8_t val, uint32_t color)
 static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontType, uint32_t color)
 {
 	const uint8_t *srcPtr;
-	uint32_t x, y, *dstPtr;
+	int32_t x, y;
 #ifndef __arm__
 	uint32_t tmp;
 #endif
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	if (fontType == FONT_TYPE3)
 	{
@@ -909,25 +884,19 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 
 static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	const uint8_t *srcPtr = &bmp.font7[18 * FONT7_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	srcPtr = &bmp.font7[18 * FONT7_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-
-	for (uint32_t y = 0; y < FONT7_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT7_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT7_CHAR_W*3; x++)
+		for (int32_t x = 0; x < FONT7_CHAR_W*3; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 #endif
@@ -940,25 +909,19 @@ static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 
 static void drawKeyOffSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	const uint8_t *srcPtr = &bmp.font7[21 * FONT7_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + (xPos + 2)];
 
-	srcPtr = &bmp.font7[21 * FONT7_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + (xPos + 2)];
-
-	for (uint32_t y = 0; y < FONT7_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT7_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT7_CHAR_W*2; x++)
+		for (int32_t x = 0; x < FONT7_CHAR_W*2; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 #endif
@@ -971,19 +934,13 @@ static void drawKeyOffSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 
 static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color)
 {
-	const uint8_t *ch1Ptr, *ch2Ptr, *ch3Ptr;
-	uint8_t note;
-	uint32_t *dstPtr, char1, char2, char3;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	uint32_t char1, char2;
 
 	assert(ton >= 1 && ton <= 97);
-
 	ton--;
 
-	note = noteTab1[ton];
-	char3 = noteTab2[ton] * FONT7_CHAR_W;
+	const uint8_t note = noteTab1[ton];
+	const uint32_t char3 = noteTab2[ton] * FONT7_CHAR_W;
 
 	if (config.ptnAcc == 0)
 	{
@@ -996,14 +953,14 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t co
 		char2 = flatNote2Char_small[note];
 	}
 
-	ch1Ptr = &bmp.font7[char1];
-	ch2Ptr = &bmp.font7[char2];
-	ch3Ptr = &bmp.font7[char3];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint8_t *ch1Ptr = &bmp.font7[char1];
+	const uint8_t *ch2Ptr = &bmp.font7[char2];
+	const uint8_t *ch3Ptr = &bmp.font7[char3];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	for (uint32_t y = 0; y < FONT7_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT7_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT7_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT7_CHAR_W; x++)
 		{
 #ifdef __arm__
 			if (ch1Ptr[x] != 0) dstPtr[x] = color;
@@ -1011,7 +968,7 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t co
 			if (ch3Ptr[x] != 0) dstPtr[((FONT7_CHAR_W*2)-2)+x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (ch1Ptr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 
@@ -1034,25 +991,19 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t co
 
 static void drawEmptyNoteMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint8_t *srcPtr = &font4Ptr[43 * FONT4_CHAR_W];
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	srcPtr = &font4Ptr[43 * FONT4_CHAR_W];
-
-	for (uint32_t y = 0; y < FONT4_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT4_CHAR_W*3; x++)
+		for (int32_t x = 0; x < FONT4_CHAR_W*3; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 #endif
@@ -1065,25 +1016,19 @@ static void drawEmptyNoteMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 
 static void drawKeyOffMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	const uint8_t *srcPtr = &font4Ptr[40 * FONT4_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	srcPtr = &font4Ptr[40 * FONT4_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-
-	for (uint32_t y = 0; y < FONT4_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT4_CHAR_W*3; x++)
+		for (int32_t x = 0; x < FONT4_CHAR_W*3; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 #endif
@@ -1096,16 +1041,12 @@ static void drawKeyOffMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 
 static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color)
 {
-	const uint8_t *ch1Ptr, *ch2Ptr, *ch3Ptr;
-	uint32_t note, *dstPtr, char1, char2, char3;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	uint32_t char1, char2;
 
 	ton--;
 
-	note = noteTab1[ton];
-	char3 = noteTab2[ton] * FONT4_CHAR_W;
+	const uint8_t note = noteTab1[ton];
+	const uint32_t char3 = noteTab2[ton] * FONT4_CHAR_W;
 
 	if (config.ptnAcc == 0)
 	{
@@ -1118,14 +1059,14 @@ static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t c
 		char2 = flatNote2Char_med[note];
 	}
 
-	ch1Ptr = &font4Ptr[char1];
-	ch2Ptr = &font4Ptr[char2];
-	ch3Ptr = &font4Ptr[char3];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint8_t *ch1Ptr = &font4Ptr[char1];
+	const uint8_t *ch2Ptr = &font4Ptr[char2];
+	const uint8_t *ch3Ptr = &font4Ptr[char3];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	for (uint32_t y = 0; y < FONT4_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT4_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT4_CHAR_W; x++)
 		{
 #ifdef __arm__
 			if (ch1Ptr[x] != 0) dstPtr[x] = color;
@@ -1133,7 +1074,7 @@ static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t c
 			if (ch3Ptr[x] != 0) dstPtr[(FONT4_CHAR_W*2)+x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (ch1Ptr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 
@@ -1156,25 +1097,19 @@ static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t c
 
 static void drawEmptyNoteBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	const uint8_t *srcPtr = &font4Ptr[67 * FONT4_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	srcPtr = &font4Ptr[67 * FONT4_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-
-	for (uint32_t y = 0; y < FONT4_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT4_CHAR_W*6; x++)
+		for (int32_t x = 0; x < FONT4_CHAR_W*6; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 #endif
@@ -1187,25 +1122,19 @@ static void drawEmptyNoteBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 
 static void drawKeyOffBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	const uint8_t *srcPtr = &bmp.font4[61 * FONT4_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	srcPtr = &bmp.font4[61 * FONT4_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-
-	for (uint32_t y = 0; y < FONT4_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT4_CHAR_W*6; x++)
+		for (int32_t x = 0; x < FONT4_CHAR_W*6; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 #endif
@@ -1218,16 +1147,12 @@ static void drawKeyOffBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 
 static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color)
 {
-	const uint8_t *ch1Ptr, *ch2Ptr, *ch3Ptr;
-	uint8_t note;
-	uint32_t *dstPtr, char1, char2, char3;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
+	uint32_t char1, char2;
+
 	ton--;
 
-	note = noteTab1[ton];
-	char3 = noteTab2[ton] * FONT5_CHAR_W;
+	const uint8_t note = noteTab1[ton];
+	const uint32_t char3 = noteTab2[ton] * FONT5_CHAR_W;
 
 	if (config.ptnAcc == 0)
 	{
@@ -1240,14 +1165,14 @@ static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t colo
 		char2 = flatNote2Char_big[note];
 	}
 
-	ch1Ptr = &font5Ptr[char1];
-	ch2Ptr = &font5Ptr[char2];
-	ch3Ptr = &font5Ptr[char3];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint8_t *ch1Ptr = &font5Ptr[char1];
+	const uint8_t *ch2Ptr = &font5Ptr[char2];
+	const uint8_t *ch3Ptr = &font5Ptr[char3];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	for (uint32_t y = 0; y < FONT5_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT5_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT5_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT5_CHAR_W; x++)
 		{
 #ifdef __arm__
 			if (ch1Ptr[x] != 0) dstPtr[x] = color;
@@ -1255,7 +1180,7 @@ static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t colo
 			if (ch3Ptr[x] != 0) dstPtr[(FONT5_CHAR_W*2)+x] = color;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (ch1Ptr[x] != 0) tmp = color;
 			dstPtr[x] = tmp;
 

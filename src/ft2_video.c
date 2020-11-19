@@ -80,10 +80,6 @@ void beginFPSCounter(void)
 
 static void drawFPSCounter(void)
 {
-	char *textPtr, ch;
-	uint16_t xPos, yPos;
-	double dRefreshRate, dAudLatency;
-
 	if (editor.framesPassed >= FPS_SCAN_FRAMES && (editor.framesPassed % FPS_SCAN_FRAMES) == 0)
 	{
 		dAvgFPS = dRunningFPS * (1.0 / FPS_SCAN_FRAMES);
@@ -106,11 +102,11 @@ static void drawFPSCounter(void)
 		return;
 	}
 
-	dRefreshRate = video.dMonitorRefreshRate;
+	double dRefreshRate = video.dMonitorRefreshRate;
 	if (dRefreshRate < 0.0 || dRefreshRate > 9999.9)
 		dRefreshRate = 9999.9; // prevent number from overflowing text box
 
-	dAudLatency = audio.dAudioLatencyMs;
+	double dAudLatency = audio.dAudioLatencyMs;
 	if (dAudLatency < 0.0 || dAudLatency > 999999999.9999)
 		dAudLatency = 999999999.9999; // prevent number from overflowing text box
 
@@ -131,13 +127,13 @@ static void drawFPSCounter(void)
 
 	// draw text
 
-	xPos = FPS_RENDER_X + 3;
-	yPos = FPS_RENDER_Y + 3;
+	uint16_t xPos = FPS_RENDER_X+3;
+	uint16_t yPos = FPS_RENDER_Y+3;
 
-	textPtr = fpsTextBuf;
+	char *textPtr = fpsTextBuf;
 	while (*textPtr != '\0')
 	{
-		ch = *textPtr++;
+		const char ch = *textPtr++;
 		if (ch == '\n')
 		{
 			yPos += FONT1_CHAR_H+1;
@@ -152,15 +148,12 @@ static void drawFPSCounter(void)
 
 void endFPSCounter(void)
 {
-	uint64_t frameTimeDiff;
-	double dHz;
-
-	if (!video.showFPSCounter || frameStartTime == 0)
-		return;
-
-	frameTimeDiff = SDL_GetPerformanceCounter() - frameStartTime;
-	dHz = 1000.0 / (frameTimeDiff * editor.dPerfFreqMulMs);
-	dRunningFPS += dHz;
+	if (video.showFPSCounter && frameStartTime > 0)
+	{
+		const uint64_t frameTimeDiff = SDL_GetPerformanceCounter() - frameStartTime;
+		const double dHz = 1000.0 / (frameTimeDiff * editor.dPerfFreqMulMs);
+		dRunningFPS += dHz;
+	}
 }
 
 void flipFrame(void)
@@ -220,15 +213,10 @@ void showErrorMsgBox(const char *fmt, ...)
 
 static void updateRenderSizeVars(void)
 {
-	int32_t di;
-#ifdef __APPLE__
-	int32_t actualScreenW, actualScreenH;
-	double dXUpscale, dYUpscale;
-#endif
 	float fXScale, fYScale;
 	SDL_DisplayMode dm;
 
-	di = SDL_GetWindowDisplayIndex(video.window);
+	int32_t di = SDL_GetWindowDisplayIndex(video.window);
 	if (di < 0)
 		di = 0; // return display index 0 (default) on error
 
@@ -252,12 +240,13 @@ static void updateRenderSizeVars(void)
 			video.renderW = (int32_t)(SCREEN_W * fXScale);
 			video.renderH = (int32_t)(SCREEN_H * fYScale);
 
-#ifdef __APPLE__
 			// retina high-DPI hackery (SDL2 is bad at reporting actual rendering sizes on macOS w/ high-DPI)
+#ifdef __APPLE__
+			int32_t actualScreenW, actualScreenH;
 			SDL_GL_GetDrawableSize(video.window, &actualScreenW, &actualScreenH);
 
-			dXUpscale = (double)actualScreenW / video.displayW;
-			dYUpscale = (double)actualScreenH / video.displayH;
+			const double dXUpscale = (const double)actualScreenW / video.displayW;
+			const double dYUpscale = (const double)actualScreenH / video.displayH;
 
 			// downscale back to correct sizes
 			if (dXUpscale != 0.0) video.renderW = (int32_t)(video.renderW / dXUpscale);
@@ -361,10 +350,11 @@ bool setupSprites(void)
 	hideSprite(SPRITE_TEXT_CURSOR);
 
 	// setup refresh buffer (used to clear sprites after each frame)
-	for (uint32_t i = 0; i < SPRITE_NUM; i++)
+	s = sprites;
+	for (uint32_t i = 0; i < SPRITE_NUM; i++, s++)
 	{
-		sprites[i].refreshBuffer = (uint32_t *)malloc(sprites[i].w * sprites[i].h * sizeof (int32_t));
-		if (sprites[i].refreshBuffer == NULL)
+		s->refreshBuffer = (uint32_t *)malloc(s->w * s->h * sizeof (int32_t));
+		if (s->refreshBuffer == NULL)
 			return false;
 	}
 
@@ -379,12 +369,13 @@ void changeSpriteData(int32_t sprite, const uint8_t *data)
 
 void freeSprites(void)
 {
-	for (int32_t i = 0; i < SPRITE_NUM; i++)
+	sprite_t *s = sprites;
+	for (int32_t i = 0; i < SPRITE_NUM; i++, s++)
 	{
-		if (sprites[i].refreshBuffer != NULL)
+		if (s->refreshBuffer != NULL)
 		{
-			free(sprites[i].refreshBuffer);
-			sprites[i].refreshBuffer = NULL;
+			free(s->refreshBuffer);
+			s->refreshBuffer = NULL;
 		}
 	}
 }
@@ -417,24 +408,18 @@ void hideSprite(int32_t sprite)
 
 void eraseSprites(void)
 {
-	int8_t i;
-	int32_t sx, sy, x, y, sw, sh, srcPitch, dstPitch;
-	const uint32_t *src32;
-	uint32_t *dst32;
-	sprite_t *s;
-
-	for (i = SPRITE_NUM-1; i >= 0; i--) // erasing must be done in reverse order
+	sprite_t *s = &sprites[SPRITE_NUM-1];
+	for (int32_t i = SPRITE_NUM-1; i >= 0; i--, s--) // erasing must be done in reverse order
 	{
-		s = &sprites[i];
 		if (s->x >= SCREEN_W || s->y >= SCREEN_H) // sprite is hidden, don't draw nor fill clear buffer
 			continue;
 
 		assert(s->refreshBuffer != NULL);
 
-		sw = s->w;
-		sh = s->h;
-		sx = s->x;
-		sy = s->y;
+		int32_t sw = s->w;
+		int32_t sh = s->h;
+		int32_t sx = s->x;
+		int32_t sy = s->y;
 
 		// if x is negative, adjust variables
 		if (sx < 0)
@@ -450,19 +435,19 @@ void eraseSprites(void)
 			sy = 0;
 		}
 
-		src32 = s->refreshBuffer;
-		dst32 = &video.frameBuffer[(sy * SCREEN_W) + sx];
+		const uint32_t *src32 = s->refreshBuffer;
+		uint32_t *dst32 = &video.frameBuffer[(sy * SCREEN_W) + sx];
 
 		// handle x/y clipping
 		if (sx+sw >= SCREEN_W) sw = SCREEN_W - sx;
 		if (sy+sh >= SCREEN_H) sh = SCREEN_H - sy;
 
-		srcPitch = s->w - sw;
-		dstPitch = SCREEN_W - sw;
+		const int32_t srcPitch = s->w - sw;
+		const int32_t dstPitch = SCREEN_W - sw;
 
-		for (y = 0; y < sh; y++)
+		for (int32_t y = 0; y < sh; y++)
 		{
-			for (x = 0; x < sw; x++)
+			for (int32_t x = 0; x < sw; x++)
 				*dst32++ = *src32++;
 
 			src32 += srcPitch;
@@ -473,12 +458,8 @@ void eraseSprites(void)
 
 void renderSprites(void)
 {
-	const uint8_t *src8;
-	int32_t sx, sy, x, y, sw, sh, srcPitch, dstPitch;
-	uint32_t i, *clr32, *dst32, windowFlags;
-	sprite_t *s;
-
-	for (i = 0; i < SPRITE_NUM; i++)
+	sprite_t *s = sprites;
+	for (int32_t i = 0; i < SPRITE_NUM; i++, s++)
 	{
 		if (i == SPRITE_LEFT_LOOP_PIN || i == SPRITE_RIGHT_LOOP_PIN)
 			continue; // these need special drawing (done elsewhere)
@@ -487,12 +468,10 @@ void renderSprites(void)
 		if (i == SPRITE_TEXT_CURSOR)
 		{
 			assert(video.window != NULL);
-			windowFlags = SDL_GetWindowFlags(video.window);
+			const uint32_t windowFlags = SDL_GetWindowFlags(video.window);
 			if (!(windowFlags & SDL_WINDOW_INPUT_FOCUS))
 				continue;
 		}
-
-		s = &sprites[i];
 
 		// set new sprite position
 		s->x = s->newX;
@@ -503,11 +482,11 @@ void renderSprites(void)
 
 		assert(s->data != NULL && s->refreshBuffer != NULL);
 
-		sw = s->w;
-		sh = s->h;
-		sx = s->x;
-		sy = s->y;
-		src8 = s->data;
+		int32_t sw = s->w;
+		int32_t sh = s->h;
+		int32_t sx = s->x;
+		int32_t sy = s->y;
+		const uint8_t *src8 = s->data;
 
 		// if x is negative, adjust variables
 		if (sx < 0)
@@ -528,22 +507,22 @@ void renderSprites(void)
 		if (sw <= 0 || sh <= 0) // sprite is hidden, don't draw nor fill clear buffer
 			continue;
 
-		dst32 = &video.frameBuffer[(sy * SCREEN_W) + sx];
-		clr32 = s->refreshBuffer;
+		uint32_t *dst32 = &video.frameBuffer[(sy * SCREEN_W) + sx];
+		uint32_t *clr32 = s->refreshBuffer;
 
 		// handle x/y clipping
 		if (sx+sw >= SCREEN_W) sw = SCREEN_W - sx;
 		if (sy+sh >= SCREEN_H) sh = SCREEN_H - sy;
 
-		srcPitch = s->w - sw;
-		dstPitch = SCREEN_W - sw;
+		const int32_t srcPitch = s->w - sw;
+		const int32_t dstPitch = SCREEN_W - sw;
 
 		if (mouse.mouseOverTextBox && i == SPRITE_MOUSE_POINTER)
 		{
 			// text edit mouse pointer (has color changing depending on content under it)
-			for (y = 0; y < sh; y++)
+			for (int32_t y = 0; y < sh; y++)
 			{
-				for (x = 0; x < sw; x++)
+				for (int32_t x = 0; x < sw; x++)
 				{
 					*clr32++ = *dst32; // fill clear buffer
 
@@ -567,9 +546,9 @@ void renderSprites(void)
 		else
 		{
 			// normal sprites
-			for (y = 0; y < sh; y++)
+			for (int32_t y = 0; y < sh; y++)
 			{
-				for (x = 0; x < sw; x++)
+				for (int32_t x = 0; x < sw; x++)
 				{
 					*clr32++ = *dst32; // fill clear buffer
 
@@ -593,15 +572,13 @@ void renderSprites(void)
 
 void renderLoopPins(void)
 {
-	uint8_t pal;
 	const uint8_t *src8;
 	int32_t sx, x, y, sw, sh, srcPitch, dstPitch;
 	uint32_t *clr32, *dst32;
-	sprite_t *s;
 
 	// left loop pin
 
-	s = &sprites[SPRITE_LEFT_LOOP_PIN];
+	sprite_t *s = &sprites[SPRITE_LEFT_LOOP_PIN];
 	assert(s->data != NULL && s->refreshBuffer != NULL);
 
 	// set new sprite position
@@ -704,7 +681,7 @@ void renderLoopPins(void)
 					if (y < 9 && *src8 == PAL_LOOPPIN)
 					{
 						// don't draw marker line on top of left loop pin's thumb graphics
-						pal = *dst32 >> 24;
+						const uint8_t pal = *dst32 >> 24;
 						if (pal != PAL_DESKTOP && pal != PAL_DSKTOP1 && pal != PAL_DSKTOP2)
 							*dst32 = video.palette[*src8];
 					}
@@ -796,7 +773,7 @@ void setWindowSizeFromConfig(bool updateRenderer)
 {
 #define MAX_UPSCALE_FACTOR 16 // 10112x6400 - ought to be good enough for many years to come
 
-	uint8_t i, oldUpscaleFactor;
+	uint8_t i;
 	SDL_DisplayMode dm;
 
 	/* Kludge for Raspbarry Pi. Upscaling of 3x or higher makes everything slow as a snail.
@@ -811,7 +788,7 @@ void setWindowSizeFromConfig(bool updateRenderer)
 	}
 #endif
 
-	oldUpscaleFactor = video.upscaleFactor;
+	uint8_t oldUpscaleFactor = video.upscaleFactor;
 	if (config.windowFlags & WINSIZE_AUTO)
 	{
 		// find out which upscaling factor is the biggest to fit on screen
@@ -862,12 +839,10 @@ void setWindowSizeFromConfig(bool updateRenderer)
 
 void updateWindowTitle(bool forceUpdate)
 {
-	char *songTitle;
-
 	if (!forceUpdate && songIsModified == song.isModified)
 		return; // window title is already set to the same
 
-	songTitle = getCurrSongFilename();
+	char *songTitle = getCurrSongFilename();
 	if (songTitle != NULL)
 	{
 		if (song.isModified)
@@ -913,12 +888,11 @@ bool recreateTexture(void)
 
 bool setupWindow(void)
 {
-	uint32_t windowFlags;
 	SDL_DisplayMode dm;
 
 	video.vsync60HzPresent = false;
 
-	windowFlags = SDL_WINDOW_ALLOW_HIGHDPI;
+	uint32_t windowFlags = SDL_WINDOW_ALLOW_HIGHDPI;
 #if defined (__APPLE__) || defined (_WIN32) // yet another quirk!
 	windowFlags |= SDL_WINDOW_HIDDEN;
 #endif
@@ -959,9 +933,7 @@ bool setupWindow(void)
 
 bool setupRenderer(void)
 {
-	uint32_t rendererFlags;
-
-	rendererFlags = SDL_RENDERER_ACCELERATED;
+	uint32_t rendererFlags = SDL_RENDERER_ACCELERATED;
 	if (video.vsync60HzPresent)
 		rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
 
@@ -1033,8 +1005,6 @@ bool setupRenderer(void)
 
 void handleRedrawing(void)
 {
-	textBox_t *txt;
-
 	if (!ui.configScreenShown && !ui.helpScreenShown)
 	{
 		if (ui.aboutScreenShown)
@@ -1111,7 +1081,7 @@ void handleRedrawing(void)
 	{
 		assert(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
 
-		txt = &textBoxes[mouse.lastEditBox];
+		textBox_t *txt = &textBoxes[mouse.lastEditBox];
 		if (editor.textCursorBlinkCounter < 256/2 && !textIsMarked() && !(mouse.leftButtonPressed | mouse.rightButtonPressed))
 			setSpritePos(SPRITE_TEXT_CURSOR, getTextCursorX(txt), getTextCursorY(txt) - 1); // show text cursor
 		else
@@ -1128,8 +1098,6 @@ void handleRedrawing(void)
 
 static void drawReplayerData(void)
 {
-	bool drawPosText;
-
 	if (songPlaying)
 	{
 		if (ui.drawReplayerPianoFlag)
@@ -1139,7 +1107,7 @@ static void drawReplayerData(void)
 				drawPiano(chSyncEntry);
 		}
 
-		drawPosText = true;
+		bool drawPosText = true;
 		if (ui.configScreenShown || ui.nibblesShown     ||
 			ui.helpScreenShown   || ui.aboutScreenShown ||
 			ui.diskOpShown)

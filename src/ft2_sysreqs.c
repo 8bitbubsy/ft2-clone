@@ -77,10 +77,8 @@ static quitType_t quitMessage[QUIT_MESSAGES] =
 static void drawWindow(uint16_t w)
 {
 	const uint16_t h = SYSTEM_REQUEST_H;
-	uint16_t x, y;
-
-	x = (SCREEN_W - w) >> 1;
-	y = ui.extended ? 91 : SYSTEM_REQUEST_Y;
+	const uint16_t x = (SCREEN_W - w) >> 1;
+	const uint16_t y = ui.extended ? 91 : SYSTEM_REQUEST_Y;
 
 	// main fill
 	fillRect(x + 1, y + 1, w - 2, h - 2, PAL_BUTTONS);
@@ -159,11 +157,9 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 {
 #define PUSHBUTTON_W 80
 
-	int16_t returnVal, oldLastUsedObjectID, oldLastUsedObjectType;
-	uint16_t x, y, i, tlen, hlen, wlen, tx, knp, headlineX, textX;
+	uint16_t i;
 	SDL_Event inputEvent;
 	pushButton_t *p;
-	checkBox_t *c;
 
 	if (editor.editTextFlag)
 		exitTextEditing();
@@ -180,22 +176,22 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	ui.sysReqShown = true;
 	mouseAnimOff();
 
-	oldLastUsedObjectID = mouse.lastUsedObjectID;
-	oldLastUsedObjectType = mouse.lastUsedObjectType;
+	int16_t oldLastUsedObjectID = mouse.lastUsedObjectID;
+	int16_t oldLastUsedObjectType = mouse.lastUsedObjectType;
 
 	// count number of buttons
-	knp = 0;
+	uint16_t knp = 0;
 	while (buttonText[typ][knp][0] != '\0' && knp < 5)
 		knp++;
 
-	tlen = textWidth(text);
-	hlen = textWidth(headline);
+	uint16_t tlen = textWidth(text);
+	uint16_t hlen = textWidth(headline);
 
-	wlen = tlen;
+	uint16_t wlen = tlen;
 	if (hlen > tlen)
 		wlen = hlen;
 
-	tx = (knp * 100) - 20;
+	uint16_t tx = (knp * 100) - 20;
 	if (tx > wlen)
 		wlen = tx;
 
@@ -203,12 +199,12 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	if (wlen > 600)
 		wlen = 600;
 
-	headlineX = (SCREEN_W - hlen) >> 1;
-	textX = (SCREEN_W - tlen) >> 1;
-	x = (SCREEN_W - wlen) >> 1;
+	uint16_t headlineX = (SCREEN_W - hlen) >> 1;
+	uint16_t textX = (SCREEN_W - tlen) >> 1;
+	uint16_t x = (SCREEN_W - wlen) >> 1;
 
 	// the box y position differs in extended pattern editor mode
-	y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
+	uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set up buttons
 	for (i = 0; i < knp; i++)
@@ -226,7 +222,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	// set up checkbox (special okBox types only!)
 	if (typ >= 6 && typ <= 7)
 	{
-		c = &checkBoxes[0];
+		checkBox_t *c = &checkBoxes[0];
 		c->x = x + 5;
 		c->y = y + 50;
 		c->clickAreaWidth = 116;
@@ -253,7 +249,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	mouse.rightButtonPressed = 0;
 
 	// input/rendering loop
-	returnVal = 0;
+	int16_t returnVal = 0;
 	while (ui.sysReqShown)
 	{
 		beginFPSCounter();
@@ -368,12 +364,8 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 #define PUSHBUTTON_W 80
 #define TEXTBOX_W 250
 
-	char *inputText;
-	int16_t returnVal, oldLastUsedObjectID, oldLastUsedObjectType;
-	uint16_t y, wlen, tx, knp, headlineX, i;
+	uint16_t wlen, i;
 	SDL_Event inputEvent;
-	pushButton_t *p;
-	textBox_t *t;
 
 	if (editor.editTextFlag)
 		exitTextEditing();
@@ -385,10 +377,10 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	if (ui.sysReqShown)
 		return 0;
 
-	oldLastUsedObjectID = mouse.lastUsedObjectID;
-	oldLastUsedObjectType = mouse.lastUsedObjectType;
+	int16_t oldLastUsedObjectID = mouse.lastUsedObjectID;
+	int16_t oldLastUsedObjectType = mouse.lastUsedObjectType;
 
-	t = &textBoxes[0];
+	textBox_t *t = &textBoxes[0];
 
 	// set up text box
 	memset(t, 0, sizeof (textBox_t));
@@ -416,14 +408,14 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	mouseAnimOff();
 
 	wlen = textWidth(headline);
-	headlineX = (SCREEN_W - wlen) >> 1;
+	uint16_t headlineX = (SCREEN_W - wlen) >> 1;
 
 	// count number of buttons
-	knp = 0;
+	uint16_t knp = 0;
 	while (buttonText[typ][knp][0] != '\0' && knp < 5)
 		knp++;
 
-	tx = TEXTBOX_W;
+	uint16_t tx = TEXTBOX_W;
 	if (tx > wlen)
 		wlen = tx;
 
@@ -436,7 +428,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 		wlen = 600;
 
 	// the box y position differs in extended pattern editor mode
-	y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
+	uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set further text box settings
 	t->x = (SCREEN_W - TEXTBOX_W) >> 1;
@@ -444,10 +436,10 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	t->visible = true;
 
 	// setup buttons
-	for (i = 0; i < knp; i++)
-	{
-		p = &pushButtons[i];
 
+	pushButton_t *p = pushButtons;
+	for (i = 0; i < knp; i++, p++)
+	{
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
 		p->x = ((SCREEN_W - tx) >> 1) + (i * 100);
@@ -469,7 +461,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	mouse.rightButtonPressed = 0;
 
 	// input/rendering loop
-	returnVal = 0;
+	int16_t returnVal = 0;
 	while (ui.sysReqShown)
 	{
 		beginFPSCounter();
@@ -497,7 +489,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 						continue;
 					}
 
-					inputText = utf8ToCp437(inputEvent.text.text, false);
+					char *inputText = utf8ToCp437(inputEvent.text.text, false);
 					if (inputText != NULL)
 					{
 						if (inputText[0] != '\0')

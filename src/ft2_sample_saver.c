@@ -509,8 +509,9 @@ static int32_t SDLCALL saveSampleThread(void *ptr)
 	if (saveRangeFlag)
 		UNICHAR_CHDIR(oldPathU);
 
-	(void)ptr;
 	return true;
+
+	(void)ptr;
 }
 
 void saveSample(UNICHAR *filenameU, bool saveAsRange)

@@ -256,8 +256,6 @@ int main(int argc, char *argv[])
 
 static void initializeVars(void)
 {
-	int32_t i;
-
 	cpu.hasSSE = SDL_HasSSE();
 	cpu.hasSSE2 = SDL_HasSSE2();
 
@@ -271,7 +269,8 @@ static void initializeVars(void)
 	memset(&chSync, 0, sizeof (chSync));
 	memset(&song, 0, sizeof (song));
 
-	for (i = 0; i < MAX_VOICES; i++)
+	// used for scopes and sampling position line (sampler screen)
+	for (int32_t i = 0; i < MAX_VOICES; i++)
 	{
 		lastChInstr[i].instrNr = 255;
 		lastChInstr[i].sampleNr = 255;
@@ -380,9 +379,6 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 #ifdef __APPLE__
 static void osxSetDirToProgramDirFromArgs(char **argv)
 {
-	char *tmpPath;
-	int32_t i, tmpPathLen;
-
 	/* OS X/macOS: hackish way of setting the current working directory to the place where we double clicked
 	** on the icon (for protracker.ini loading)
 	*/
@@ -390,12 +386,12 @@ static void osxSetDirToProgramDirFromArgs(char **argv)
 	// if we launched from the terminal, argv[0][0] would be '.'
 	if (argv[0] != NULL && argv[0][0] == DIR_DELIMITER) // don't do the hack if we launched from the terminal
 	{
-		tmpPath = strdup(argv[0]);
+		char *tmpPath = strdup(argv[0]);
 		if (tmpPath != NULL)
 		{
 			// cut off program filename
-			tmpPathLen = strlen(tmpPath);
-			for (i = tmpPathLen - 1; i >= 0; i--)
+			int32_t tmpPathLen = strlen(tmpPath);
+			for (int32_t i = tmpPathLen - 1; i >= 0; i--)
 			{
 				if (tmpPath[i] == DIR_DELIMITER)
 				{
@@ -415,17 +411,17 @@ static void osxSetDirToProgramDirFromArgs(char **argv)
 
 static void setupPerfFreq(void)
 {
-	uint64_t perfFreq64;
-	double dInt, dFrac;
+	double dInt;
 
-	perfFreq64 = SDL_GetPerformanceFrequency();
+	const uint64_t perfFreq64 = SDL_GetPerformanceFrequency();
 	assert(perfFreq64 != 0);
+
 	editor.dPerfFreq = (double)perfFreq64;
 	editor.dPerfFreqMulMicro = 1000000.0 / editor.dPerfFreq;
 	editor.dPerfFreqMulMs = 1.0 / (editor.dPerfFreq / 1000.0);
 
 	// calculate vblank time for performance counters and split into int/frac
-	dFrac = modf(editor.dPerfFreq / VBLANK_HZ, &dInt);
+	double dFrac = modf(editor.dPerfFreq / VBLANK_HZ, &dInt);
 
 	// integer part
 	video.vblankTimeLen = (int32_t)dInt;

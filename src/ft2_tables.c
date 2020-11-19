@@ -458,6 +458,9 @@ pal16 palTable[12][16] = // FT2 palettes (18-bit VGA RGB, 16 color palette)
 	}
 };
 
+const int8_t maxVisibleChans1[4] = { 4, 6, 8, 8 };
+const int8_t maxVisibleChans2[4] = { 4, 6, 8, 12 };
+
 const uint16_t chanWidths[6] = { 141, 141, 93, 69, 45, 45 };
 
 const pattCoordsMouse_t pattCoordMouseTable[2][2][2] =

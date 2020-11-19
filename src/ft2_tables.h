@@ -23,6 +23,8 @@ extern const char *dec3StrTab[256];
 extern const uint8_t font1Widths[128];
 extern const uint8_t font2Widths[128];
 extern pal16 palTable[12][16];
+extern const int8_t maxVisibleChans1[4];
+extern const int8_t maxVisibleChans2[4];
 extern const uint16_t chanWidths[6];
 extern const pattCoordsMouse_t pattCoordMouseTable[2][2][2];
 extern const uint8_t noteTab1[96];

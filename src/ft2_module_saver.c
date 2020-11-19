@@ -33,7 +33,7 @@ static const char modSig[32][5] =
 
 bool saveXM(UNICHAR *filenameU)
 {
-	int16_t ap, ai, i, j, k, a;
+	int16_t i, j, k, a;
 	size_t result;
 	songHeaderTyp h;
 	patternHeaderTyp ph;
@@ -41,9 +41,8 @@ bool saveXM(UNICHAR *filenameU)
 	instrHeaderTyp ih;
 	sampleTyp *s;
 	sampleHeaderTyp *dst;
-	FILE *f;
 
-	f = UNICHAR_FOPEN(filenameU, "wb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "Error opening file for saving, is it in use?");
@@ -64,7 +63,7 @@ bool saveXM(UNICHAR *filenameU)
 	h.defSpeed = song.speed;
 
 	// count number of patterns
-	ap = MAX_PATTERNS;
+	int16_t ap = MAX_PATTERNS;
 	do
 	{
 		if (patternEmpty(ap - 1))
@@ -76,7 +75,7 @@ bool saveXM(UNICHAR *filenameU)
 	h.antPtn = ap;
 
 	// count number of instruments
-	ai = 128;
+	int16_t ai = 128;
 	while (ai > 0 && getUsedSamples(ai) == 0 && song.instrName[ai][0] == '\0')
 		ai--;
 	h.antInstrs = ai;
@@ -598,8 +597,6 @@ modSaveError:
 
 static int32_t SDLCALL saveMusicThread(void *ptr)
 {
-	(void)ptr;
-
 	assert(editor.tmpFilenameU != NULL);
 	if (editor.tmpFilenameU == NULL)
 		return false;
@@ -613,6 +610,8 @@ static int32_t SDLCALL saveMusicThread(void *ptr)
 
 	resumeAudio();
 	return true;
+
+	(void)ptr;
 }
 
 void saveMusic(UNICHAR *filenameU)
@@ -632,17 +631,17 @@ void saveMusic(UNICHAR *filenameU)
 
 static uint16_t packPatt(uint8_t *writePtr, uint8_t *pattPtr, uint16_t numRows)
 {
-	uint8_t bytes[5], packBits, *firstBytePtr;
-	uint16_t totalPackLen;
-
-	totalPackLen = 0;
+	uint8_t bytes[5];
 
 	if (pattPtr == NULL)
 		return 0;
 
-	for (uint16_t row = 0; row < numRows; row++)
+	uint16_t totalPackLen = 0;
+
+	const int32_t pitch = sizeof (tonTyp) * (MAX_VOICES - song.antChn);
+	for (int32_t row = 0; row < numRows; row++)
 	{
-		for (uint16_t chn = 0; chn < song.antChn; chn++)
+		for (int32_t chn = 0; chn < song.antChn; chn++)
 		{
 			bytes[0] = *pattPtr++;
 			bytes[1] = *pattPtr++;
@@ -650,9 +649,9 @@ static uint16_t packPatt(uint8_t *writePtr, uint8_t *pattPtr, uint16_t numRows)
 			bytes[3] = *pattPtr++;
 			bytes[4] = *pattPtr++;
 
-			firstBytePtr = writePtr++;
+			uint8_t *firstBytePtr = writePtr++;
 
-			packBits = 0;
+			uint8_t packBits = 0;
 			if (bytes[0] > 0) { packBits |= 1; *writePtr++ = bytes[0]; } // note
 			if (bytes[1] > 0) { packBits |= 2; *writePtr++ = bytes[1]; } // instrument
 			if (bytes[2] > 0) { packBits |= 4; *writePtr++ = bytes[2]; } // volume column
@@ -682,7 +681,7 @@ static uint16_t packPatt(uint8_t *writePtr, uint8_t *pattPtr, uint16_t numRows)
 		}
 
 		// skip unused channels (unpacked patterns always have 32 channels)
-		pattPtr += sizeof (tonTyp) * (MAX_VOICES - song.antChn);
+		pattPtr += pitch;
 	}
 
 	return totalPackLen;

@@ -51,7 +51,7 @@ tonTyp *patt[MAX_PATTERNS];
 
 void fixSongName(void) // removes spaces from right side of song name
 {
-	for (int16_t i = 20; i >= 0; i--)
+	for (int32_t i = 20; i >= 0; i--)
 	{
 		if (song.name[i] == ' ')
 			song.name[i] = '\0';
@@ -62,10 +62,7 @@ void fixSongName(void) // removes spaces from right side of song name
 
 void fixSampleName(int16_t nr) // removes spaces from right side of ins/smp names
 {
-	int16_t i, j;
-	sampleTyp *s;
-
-	for (i = 21; i >= 0; i--)
+	for (int32_t i = 21; i >= 0; i--)
 	{
 		if (song.instrName[nr][i] == ' ')
 			song.instrName[nr][i] = '\0';
@@ -75,10 +72,10 @@ void fixSampleName(int16_t nr) // removes spaces from right side of ins/smp name
 
 	if (instr[nr] != NULL)
 	{
-		for (i = 0; i < MAX_SMP_PER_INST; i++)
+		sampleTyp *s = instr[nr]->samp;
+		for (int32_t i = 0; i < MAX_SMP_PER_INST; i++, s++)
 		{
-			s = &instr[nr]->samp[i];
-			for (j = 21; j >= 0; j--)
+			for (int16_t j = 21; j >= 0; j--)
 			{
 				if (s->name[j] == ' ')
 					s->name[j] = '\0';
@@ -97,10 +94,10 @@ void resetChannels(void)
 		lockAudio();
 
 	memset(stm, 0, sizeof (stm));
-	for (int32_t i = 0; i < MAX_VOICES; i++)
-	{
-		stmTyp *ch = &stm[i];
 
+	stmTyp *ch = stm;
+	for (int32_t i = 0; i < MAX_VOICES; i++, ch++)
+	{
 		ch->instrPtr = instr[0];
 		ch->status = IS_Vol;
 		ch->oldPan = 128;
@@ -176,22 +173,19 @@ void setPatternLen(uint16_t nr, int16_t len)
 
 int16_t getUsedSamples(int16_t nr)
 {
-	int16_t i, j;
-	instrTyp *ins;
-
 	if (instr[nr] == NULL)
 		return 0;
 
-	ins = instr[nr];
+	instrTyp *ins = instr[nr];
 
-	i = 16 - 1;
+	int16_t i = 16 - 1;
 	while (i >= 0 && ins->samp[i].pek == NULL && ins->samp[i].name[0] == '\0')
 		i--;
 
 	/* Yes, 'i' can be -1 here, and will be set to at least 0
 	** because of ins->ta values. Possibly an FT2 bug...
 	*/
-	for (j = 0; j < 96; j++)
+	for (int16_t j = 0; j < 96; j++)
 	{
 		if (ins->ta[j] > i)
 			i = ins->ta[j];
@@ -202,12 +196,10 @@ int16_t getUsedSamples(int16_t nr)
 
 int16_t getRealUsedSamples(int16_t nr)
 {
-	int8_t i;
-
 	if (instr[nr] == NULL)
 		return 0;
 
-	i = 16 - 1;
+	int8_t i = 16 - 1;
 	while (i >= 0 && instr[nr]->samp[i].pek == NULL)
 		i--;
 
@@ -245,7 +237,7 @@ static void calcPeriod2HzTable(void) // called every time "linear/amiga frequenc
 ** be beneficial if you are playing VERY tightly looped samples, and/or if the CPU has
 ** no DIV instruction (certain ARM CPUs, for instance).
 **
-** A bit hackish and extreme considering it's 65536*4 bytes, but that's My Game™
+** A bit hackish and extreme considering it's 65536*4 bytes long, but why not.
 */
 void calcRevMixDeltaTable(void)
 {
@@ -437,11 +429,6 @@ int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote) // 
 
 static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 {
-	uint8_t smp;
-	uint16_t tmpTon;
-	sampleTyp *s;
-	instrTyp *ins;
-
 	if (ton == 97)
 	{
 		keyOff(ch);
@@ -459,10 +446,9 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 	ch->tonNr = ton;
 
 	assert(ch->instrNr <= 130);
-
-	ins = instr[ch->instrNr];
+	instrTyp *ins = instr[ch->instrNr];
 	if (ins == NULL)
-		ins = instr[0];
+		ins = instr[0]; // empty instruments use this placeholder instrument
 
 	ch->instrPtr = ins;
 	ch->mute = ins->mute;
@@ -470,10 +456,10 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 	if (ton > 96) // non-FT2 security (should never happen because I clamp in the patt. loader now)
 		ton = 96;
 
-	smp = ins->ta[ton-1] & 0xF;
+	const uint8_t smp = ins->ta[ton-1] & 0xF;
 	ch->sampleNr = smp;
 
-	s = &ins->samp[smp];
+	sampleTyp *s = &ins->samp[smp];
 	ch->smpPtr = s;
 	ch->relTonNr = s->relTon;
 
@@ -491,7 +477,7 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 
 	if (ton != 0)
 	{
-		tmpTon = ((ton - 1) << 4) + (((ch->fineTune >> 3) + 16) & 0xFF);
+		const uint16_t tmpTon = ((ton - 1) << 4) + (((ch->fineTune >> 3) + 16) & 0xFF);
 		if (tmpTon < MAX_NOTES)
 		{
 			assert(note2Period != NULL);
@@ -1347,7 +1333,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 	bool envInterpolateFlag, envDidInterpolate;
 	uint8_t envPos;
 	int16_t autoVibVal;
-	uint16_t tmpPeriod, autoVibAmp;
+	uint16_t autoVibAmp;
 	double dVol, dEnvVal;
 
 	instrTyp *ins = ch->instrPtr;
@@ -1608,7 +1594,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 		else autoVibVal = vibSineTab[ch->eVibPos]; // sine
 
 		autoVibVal <<= 2;
-		tmpPeriod = (autoVibVal * (int16_t)autoVibAmp) >> 16;
+		uint16_t tmpPeriod = (autoVibVal * (int16_t)autoVibAmp) >> 16;
 
 		tmpPeriod += ch->outPeriod;
 		if (tmpPeriod > 32000-1)
@@ -1639,17 +1625,17 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 // for arpeggio and portamento (semitone-slide mode)
 static uint16_t relocateTon(uint16_t period, uint8_t arpNote, stmTyp *ch)
 {
-	int32_t fineTune, loPeriod, hiPeriod, tmpPeriod, tableIndex;
+	int32_t tmpPeriod;
 
-	fineTune = ((ch->fineTune >> 3) + 16) << 1;
-	hiPeriod = (8 * 12 * 16) * 2;
-	loPeriod = 0;
+	const int32_t fineTune = ((ch->fineTune >> 3) + 16) << 1;
+	int32_t hiPeriod = (8 * 12 * 16) * 2;
+	int32_t loPeriod = 0;
 
 	for (int32_t i = 0; i < 8; i++)
 	{
 		tmpPeriod = (((loPeriod + hiPeriod) >> 1) & 0xFFFFFFE0) + fineTune;
 
-		tableIndex = (uint32_t)(tmpPeriod - 16) >> 1;
+		int32_t tableIndex = (uint32_t)(tmpPeriod - 16) >> 1;
 		tableIndex = CLAMP(tableIndex, 0, 1935); // 8bitbubsy: added security check
 
 		if (period >= note2Period[tableIndex])
@@ -2323,54 +2309,50 @@ void setPos(int16_t songPos, int16_t pattPos, bool resetTimer)
 
 void delta2Samp(int8_t *p, int32_t len, uint8_t typ)
 {
-	int8_t *p8, news8, olds8L, olds8R;
-	int16_t *p16, news16, olds16L, olds16R, tmp16;
-	int32_t i, tmp32;
-
-	if (typ & 16) len /= 2; // 16-bit
-	if (typ & 32) len /= 2; // stereo
+	if (typ & 16) len >>= 1; // 16-bit
+	if (typ & 32) len >>= 1; // stereo
 
 	if (typ & 32)
 	{
 		if (typ & 16)
 		{
-			p16 = (int16_t *)p;
+			int16_t *p16 = (int16_t *)p;
 
-			olds16L = 0;
-			olds16R = 0;
+			int16_t olds16L = 0;
+			int16_t olds16R = 0;
 
-			for (i = 0; i < len; i++)
+			for (int32_t i = 0; i < len; i++)
 			{
-				news16 = p16[i] + olds16L;
-				p16[i] = news16;
-				olds16L = news16;
+				const int16_t news16L = p16[i] + olds16L;
+				p16[i] = news16L;
+				olds16L = news16L;
 
-				news16 = p16[len+i] + olds16R;
-				p16[len+i] = news16;
-				olds16R = news16;
+				const int16_t news16R = p16[len+i] + olds16R;
+				p16[len+i] = news16R;
+				olds16R = news16R;
 
-				tmp32 = olds16L + olds16R;
+				const int32_t tmp32 = olds16L + olds16R;
 				p16[i] = (int16_t)(tmp32 >> 1);
 			}
 		}
 		else
 		{
-			p8 = (int8_t *)p;
+			int8_t *p8 = (int8_t *)p;
 
-			olds8L = 0;
-			olds8R = 0;
+			int8_t olds8L = 0;
+			int8_t olds8R = 0;
 
-			for (i = 0; i < len; i++)
+			for (int32_t i = 0; i < len; i++)
 			{
-				news8 = p8[i] + olds8L;
-				p8[i] = news8;
-				olds8L = news8;
+				const int8_t news8L = p8[i] + olds8L;
+				p8[i] = news8L;
+				olds8L = news8L;
 
-				news8 = p8[len+i] + olds8R;
-				p8[len+i] = news8;
-				olds8R = news8;
+				const int8_t news8R = p8[len+i] + olds8R;
+				p8[len+i] = news8R;
+				olds8R = news8R;
 
-				tmp16 = olds8L + olds8R;
+				const int16_t tmp16 = olds8L + olds8R;
 				p8[i] = (int8_t)(tmp16 >> 1);
 			}
 		}
@@ -2379,24 +2361,24 @@ void delta2Samp(int8_t *p, int32_t len, uint8_t typ)
 	{
 		if (typ & 16)
 		{
-			p16 = (int16_t *)p;
+			int16_t *p16 = (int16_t *)p;
 
-			olds16L = 0;
-			for (i = 0; i < len; i++)
+			int16_t olds16L = 0;
+			for (int32_t i = 0; i < len; i++)
 			{
-				news16 = p16[i] + olds16L;
+				const int16_t news16 = p16[i] + olds16L;
 				p16[i] = news16;
 				olds16L = news16;
 			}
 		}
 		else
 		{
-			p8 = (int8_t *)p;
+			int8_t *p8 = (int8_t *)p;
 
-			olds8L = 0;
-			for (i = 0; i < len; i++)
+			int8_t olds8L = 0;
+			for (int32_t i = 0; i < len; i++)
 			{
-				news8 = p8[i] + olds8L;
+				const int8_t news8 = p8[i] + olds8L;
 				p8[i] = news8;
 				olds8L = news8;
 			}
@@ -2406,32 +2388,29 @@ void delta2Samp(int8_t *p, int32_t len, uint8_t typ)
 
 void samp2Delta(int8_t *p, int32_t len, uint8_t typ)
 {
-	int8_t *p8, news8, olds8;
-	int16_t *p16, news16, olds16;
-	int32_t i;
-
-	if (typ & 16) len /= 2; // 16-bit
+	if (typ & 16)
+		len >>= 1; // 16-bit
 
 	if (typ & 16)
 	{
-		p16 = (int16_t *)p;
+		int16_t *p16 = (int16_t *)p;
 
-		news16 = 0;
-		for (i = 0; i < len; i++)
+		int16_t news16 = 0;
+		for (int32_t i = 0; i < len; i++)
 		{
-			olds16 = p16[i];
+			const int16_t olds16 = p16[i];
 			p16[i] -= news16;
 			news16 = olds16;
 		}
 	}
 	else
 	{
-		p8 = (int8_t *)p;
+		int8_t *p8 = (int8_t *)p;
 
-		news8 = 0;
-		for (i = 0; i < len; i++)
+		int8_t news8 = 0;
+		for (int32_t i = 0; i < len; i++)
 		{
-			olds8 = p8[i];
+			const int8_t olds8 = p8[i];
 			p8[i] -= news8;
 			news8 = olds8;
 		}
@@ -2448,8 +2427,7 @@ bool allocateInstr(int16_t nr)
 		return false;
 
 	memset(p, 0, sizeof (instrTyp));
-
-	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++) // set standard sample pan/vol
+	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++)
 	{
 		p->samp[i].pan = 128;
 		p->samp[i].vol = 64;
@@ -2476,9 +2454,9 @@ void freeInstr(int32_t nr)
 
 	pauseAudio(); // channel instrument pointers are now cleared
 
-	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++) // free sample data
+	sampleTyp *s = instr[nr]->samp;
+	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++, s++) // free sample data
 	{
-		sampleTyp *s = &instr[nr]->samp[i];
 		if (s->origPek != NULL)
 			free(s->origPek);
 	}
@@ -2492,13 +2470,13 @@ void freeInstr(int32_t nr)
 void freeAllInstr(void)
 {
 	pauseAudio(); // channel instrument pointers are now cleared
-	for (int16_t i = 1; i <= MAX_INST; i++)
+	for (int32_t i = 1; i <= MAX_INST; i++)
 	{
 		if (instr[i] != NULL)
 		{
-			for (int8_t j = 0; j < MAX_SMP_PER_INST; j++) // free sample data
+			sampleTyp *s = instr[i]->samp;
+			for (int32_t j = 0; j < MAX_SMP_PER_INST; j++, s++) // free sample data
 			{
-				sampleTyp *s = &instr[i]->samp[j];
 				if (s->origPek != NULL)
 					free(s->origPek);
 			}
@@ -2512,14 +2490,12 @@ void freeAllInstr(void)
 
 void freeSample(int16_t nr, int16_t nr2)
 {
-	sampleTyp *s;
-
 	if (instr[nr] == NULL)
 		return; // instrument not allocated
 
 	pauseAudio(); // voice sample pointers are now cleared
 
-	s = &instr[nr]->samp[nr2];
+	sampleTyp *s = &instr[nr]->samp[nr2];
 	if (s->origPek != NULL)
 		free(s->origPek);
 
@@ -2534,7 +2510,7 @@ void freeSample(int16_t nr, int16_t nr2)
 void freeAllPatterns(void)
 {
 	pauseAudio();
-	for (uint16_t i = 0; i < MAX_PATTERNS; i++)
+	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
 		if (patt[i] != NULL)
 		{
@@ -2631,58 +2607,14 @@ void updateChanNums(void)
 {
 	assert(!(song.antChn & 1));
 
-	uint8_t pageLen = 8;
-	if (config.ptnS3M)
-	{
-		     if (song.antChn == 2) pageLen = 4;
-		else if (song.antChn == 4) pageLen = 4;
-		else if (song.antChn == 6) pageLen = 6;
-		else if (song.antChn >= 8) pageLen = 8;
-	}
-	else
-	{
-		     if (song.antChn ==  2) pageLen = 4;
-		else if (song.antChn ==  4) pageLen = 4;
-		else if (song.antChn ==  6) pageLen = 6;
-		else if (song.antChn ==  8) pageLen = 8;
-		else if (song.antChn == 10) pageLen = 10;
-		else if (song.antChn >= 12) pageLen = 12;
-	}
+	const int32_t maxChannelsShown = getMaxVisibleChannels();
 
-	ui.numChannelsShown = pageLen;
-	if (song.antChn == 2)
-		ui.numChannelsShown = 2;
+	int32_t channelsShown = song.antChn;
+	if (channelsShown > maxChannelsShown)
+		channelsShown = maxChannelsShown;
 
-	if (config.ptnMaxChannels == 0)
-	{
-		if (ui.numChannelsShown > 4)
-			ui.numChannelsShown = 4;
-	}
-	else if (config.ptnMaxChannels == 1)
-	{
-		if (ui.numChannelsShown > 6)
-			ui.numChannelsShown = 6;
-	}
-	else if (config.ptnMaxChannels == 2)
-	{
-		if (ui.numChannelsShown > 8)
-			ui.numChannelsShown = 8;
-	}
-	else if (config.ptnMaxChannels == 3)
-	{
-		if (config.ptnS3M)
-		{
-			if (ui.numChannelsShown > 8)
-				ui.numChannelsShown = 8;
-		}
-		else
-		{
-			if (ui.numChannelsShown > 12)
-				ui.numChannelsShown = 12;
-		}
-	}
-
-	ui.pattChanScrollShown = song.antChn > getMaxVisibleChannels();
+	ui.numChannelsShown = (uint8_t)channelsShown;
+	ui.pattChanScrollShown = (song.antChn > maxChannelsShown);
 
 	if (ui.patternEditorShown)
 	{
@@ -2719,58 +2651,50 @@ void updateChanNums(void)
 
 void conv8BitSample(int8_t *p, int32_t len, bool stereo)
 {
-	int8_t *p2, l, r;
-	int16_t tmp16;
-	int32_t i;
-
 	if (stereo)
 	{
 		len /= 2;
 
-		p2 = &p[len];
-		for (i = 0; i < len; i++)
+		int8_t *p2 = &p[len];
+		for (int32_t i = 0; i < len; i++)
 		{
-			l = p[i] - 128;
-			r = p2[i] - 128;
+			const int8_t l = p[i] ^ 0x80;
+			const int8_t r = p2[i] ^ 0x80;
 
-			tmp16 = l + r;
+			int16_t tmp16 = l + r;
 			p[i] = (int8_t)(tmp16 >> 1);
 		}
 	}
 	else
 	{
-		for (i = 0; i < len; i++)
-			p[i] -= 128;
+		for (int32_t i = 0; i < len; i++)
+			p[i] ^= 0x80;
 	}
 }
 
 void conv16BitSample(int8_t *p, int32_t len, bool stereo)
 {
-	int16_t *p16_1, *p16_2, l, r;
-	int32_t i, tmp32;
-
-	p16_1 = (int16_t *)p;
-
+	int16_t *p16_1 = (int16_t *)p;
 	len /= 2;
 
 	if (stereo)
 	{
 		len /= 2;
 
-		p16_2 = (int16_t *)&p[len * 2];
-		for (i = 0; i < len; i++)
+		int16_t *p16_2 = (int16_t *)&p[len * 2];
+		for (int32_t i = 0; i < len; i++)
 		{
-			l = p16_1[i] - 32768;
-			r = p16_2[i] - 32768;
+			const int16_t l = p16_1[i] ^ 0x8000;
+			const int16_t r = p16_2[i] ^ 0x8000;
 
-			tmp32 = l + r;
+			int32_t tmp32 = l + r;
 			p16_1[i] = (int16_t)(tmp32 >> 1);
 		}
 	}
 	else
 	{
-		for (i = 0; i < len; i++)
-			p16_1[i] -= 32768;
+		for (int32_t i = 0; i < len; i++)
+			p16_1[i] ^= 0x8000;
 	}
 }
 
@@ -2804,28 +2728,24 @@ void closeReplayer(void)
 
 bool setupReplayer(void)
 {
-	int32_t i;
-
-	for (i = 0; i < MAX_PATTERNS; i++)
+	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 		pattLens[i] = 64;
 
 	playMode = PLAYMODE_IDLE;
 	songPlaying = false;
 
 	// unmute all channels (must be done before resetChannels() call)
-	for (i = 0; i < MAX_VOICES; i++)
+	for (int32_t i = 0; i < MAX_VOICES; i++)
 		editor.chnMode[i] = 1;
 
 	resetChannels();
 
 	song.len = 1;
 	song.antChn = 8;
-
 	editor.speed = song.speed = 125;
 	editor.tempo = song.tempo = 6;
 	editor.globalVol = song.globVol = 64;
 	song.initialTempo = song.tempo;
-
 	audio.linearFreqTable = true;
 	note2Period = linearPeriods;
 
@@ -2855,8 +2775,9 @@ bool setupReplayer(void)
 		showErrorMsgBox("Not enough memory!");
 		return false;
 	}
+
 	memset(instr[131], 0, sizeof (instrTyp));
-	for (i = 0; i < 16; i++)
+	for (int32_t i = 0; i < 16; i++)
 		instr[131]->samp[i].pan = 128;
 
 	editor.tmpPattern = 65535; // pattern editor update/redraw kludge
@@ -2868,7 +2789,6 @@ void startPlaying(int8_t mode, int16_t row)
 	lockMixerCallback();
 
 	assert(mode != PLAYMODE_IDLE && mode != PLAYMODE_EDIT);
-
 	if (mode == PLAYMODE_PATT || mode == PLAYMODE_RECPATT)
 		setPos(-1, row, true);
 	else
@@ -2894,10 +2814,7 @@ void startPlaying(int8_t mode, int16_t row)
 
 void stopPlaying(void)
 {
-	uint8_t i;
-	bool songWasPlaying;
-
-	songWasPlaying = songPlaying;
+	bool songWasPlaying = songPlaying;
 	playMode = PLAYMODE_IDLE;
 	songPlaying = false;
 
@@ -2909,7 +2826,7 @@ void stopPlaying(void)
 	}
 	else
 	{
-		for (i = 0; i < MAX_VOICES; i++)
+		for (uint8_t i = 0; i < MAX_VOICES; i++)
 			playTone(i, 0, 97, -1, 0, 0);
 	}
 
@@ -2936,15 +2853,12 @@ void stopPlaying(void)
 // from keyboard/smp. ed.
 void playTone(uint8_t stmm, uint8_t inst, uint8_t ton, int8_t vol, uint16_t midiVibDepth, uint16_t midiPitch)
 {
-	sampleTyp *s;
-	stmTyp *ch;
 	instrTyp *ins = instr[inst];
-
 	if (ins == NULL)
 		return;
 
 	assert(stmm < MAX_VOICES && inst <= MAX_INST && ton <= 97);
-	ch = &stm[stmm];
+	stmTyp *ch = &stm[stmm];
 
 	// FT2 bugfix: Don't play tone if certain requirements are not met
 	if (ton != 97)
@@ -2952,7 +2866,7 @@ void playTone(uint8_t stmm, uint8_t inst, uint8_t ton, int8_t vol, uint16_t midi
 		if (ton == 0 || ton > 96)
 			return;
 
-		s = &ins->samp[ins->ta[ton-1] & 0xF];
+		sampleTyp *s = &ins->samp[ins->ta[ton-1] & 0xF];
 
 		int16_t newTon = (int16_t)ton + s->relTon;
 		if (s->pek == NULL || s->len == 0 || newTon <= 0 || newTon >= 12*10)
@@ -2998,9 +2912,6 @@ void playTone(uint8_t stmm, uint8_t inst, uint8_t ton, int8_t vol, uint16_t midi
 // smp. ed.
 void playSample(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t midiVibDepth, uint16_t midiPitch)
 {
-	uint8_t vol;
-	stmTyp *ch;
-
 	if (instr[inst] == NULL)
 		return;
 
@@ -3011,11 +2922,11 @@ void playSample(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t
 	editor.curPlaySmp = 255;
 
 	assert(stmm < MAX_VOICES && inst <= MAX_INST && smpNr < MAX_SMP_PER_INST && ton <= 97);
-	ch = &stm[stmm];
+	stmTyp *ch = &stm[stmm];
 
 	memcpy(&instr[130]->samp[0], &instr[inst]->samp[smpNr], sizeof (sampleTyp));
 
-	vol = instr[inst]->samp[smpNr].vol;
+	uint8_t vol = instr[inst]->samp[smpNr].vol;
 	
 	lockAudio();
 
@@ -3052,11 +2963,6 @@ void playSample(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t
 // smp. ed.
 void playRange(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t midiVibDepth, uint16_t midiPitch, int32_t offs, int32_t len)
 {
-	uint8_t vol;
-	int32_t samplePlayOffset;
-	stmTyp *ch;
-	sampleTyp *s;
-
 	if (instr[inst] == NULL)
 		return;
 
@@ -3068,12 +2974,12 @@ void playRange(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t 
 
 	assert(stmm < MAX_VOICES && inst <= MAX_INST && smpNr < MAX_SMP_PER_INST && ton <= 97);
 
-	ch = &stm[stmm];
-	s = &instr[130]->samp[0];
+	stmTyp *ch = &stm[stmm];
+	sampleTyp *s = &instr[130]->samp[0];
 
 	memcpy(s, &instr[inst]->samp[smpNr], sizeof (sampleTyp));
 
-	vol = instr[inst]->samp[smpNr].vol;
+	uint8_t vol = instr[inst]->samp[smpNr].vol;
 
 	if (s->typ & 16)
 	{
@@ -3088,7 +2994,7 @@ void playRange(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t 
 	s->repL = 0;
 	s->typ &= 16; // only keep 8-bit/16-bit flag (disable loop)
 
-	samplePlayOffset = offs;
+	int32_t samplePlayOffset = offs;
 	if (s->typ & 16)
 		samplePlayOffset >>= 1;
 
@@ -3130,10 +3036,9 @@ void stopVoices(void)
 	if (audioWasntLocked)
 		lockAudio();
 
-	for (int32_t i = 0; i < MAX_VOICES; i++)
+	stmTyp *ch = stm;
+	for (int32_t i = 0; i < MAX_VOICES; i++, ch++)
 	{
-		stmTyp *ch = &stm[i];
-
 		lastChInstr[i].sampleNr = 255;
 		lastChInstr[i].instrNr = 255;
 
@@ -3324,14 +3229,13 @@ void pbRecPtn(void)
 void setSyncedReplayerVars(void)
 {
 	uint8_t scopeUpdateStatus[MAX_VOICES];
-	uint64_t frameTime64;
 
 	pattSyncEntry = NULL;
 	chSyncEntry = NULL;
 
 	memset(scopeUpdateStatus, 0, sizeof (scopeUpdateStatus)); // this is needed
 
-	frameTime64 = SDL_GetPerformanceCounter();
+	uint64_t frameTime64 = SDL_GetPerformanceCounter();
 
 	// handle channel sync queue
 

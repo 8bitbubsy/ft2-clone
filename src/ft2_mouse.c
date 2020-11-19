@@ -45,7 +45,7 @@ static bool setSystemCursor(SDL_Cursor *cur)
 void freeMouseCursors(void)
 {
 	SDL_SetCursor(SDL_GetDefaultCursor());
-	for (uint32_t i = 0; i < NUM_CURSORS; i++)
+	for (int32_t i = 0; i < NUM_CURSORS; i++)
 	{
 		if (cursors[i] != NULL)
 		{
@@ -69,9 +69,9 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 		default: break;
 	}
 
-	for (uint32_t i = 0; i < NUM_CURSORS; i++)
+	for (int32_t i = 0; i < NUM_CURSORS; i++)
 	{
-		int32_t scaleFactor = video.yScale;
+		const int32_t scaleFactor = video.yScale;
 
 		SDL_Surface *surface = SDL_CreateRGBSurface(0, MOUSE_CURSOR_W*scaleFactor, MOUSE_CURSOR_H*scaleFactor, 32, 0, 0, 0, 0);
 		if (surface == NULL)
@@ -81,9 +81,9 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 			return false;
 		}
 
-		uint32_t colorkey = SDL_MapRGB(surface->format, 0x00, 0xFF, 0x00); // colorkey
-		uint32_t fg = SDL_MapRGB(surface->format, 0xFF, 0xFF, 0xFF); // foreground
-		uint32_t border = SDL_MapRGB(surface->format, 0x00, 0x00, 0x00); // border
+		const uint32_t colorkey = SDL_MapRGB(surface->format, 0x00, 0xFF, 0x00); // colorkey
+		const uint32_t fg = SDL_MapRGB(surface->format, 0xFF, 0xFF, 0xFF); // foreground
+		const uint32_t border = SDL_MapRGB(surface->format, 0x00, 0x00, 0x00); // border
 
 		SDL_SetSurfaceBlendMode(surface, SDL_BLENDMODE_NONE);
 		SDL_SetColorKey(surface, SDL_TRUE, colorkey);
@@ -102,19 +102,19 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 		SDL_LockSurface(surface);
 
 		uint32_t *dstPixels32 = (uint32_t *)surface->pixels;
-
 		for (int32_t k = 0; k < surface->w*surface->h; k++) // fill surface with colorkey pixels
 			dstPixels32[k] = colorkey;
 
 		// blit upscaled cursor to surface
-		for (uint32_t y = 0; y < MOUSE_CURSOR_H; y++)
+		for (int32_t y = 0; y < MOUSE_CURSOR_H; y++)
 		{
 			uint32_t *outX = &dstPixels32[(y * scaleFactor) * surface->w];
 			for (int32_t yScale = 0; yScale < scaleFactor; yScale++)
 			{
+				const uint8_t *srcPtr = &srcPixels8[y * MOUSE_CURSOR_W];
 				for (int32_t x = 0; x < MOUSE_CURSOR_W; x++)
 				{
-					uint8_t srcPix = srcPixels8[(y * MOUSE_CURSOR_W) + x];
+					const uint8_t srcPix = srcPtr[x];
 					if (srcPix != PAL_TRANSPR)
 					{
 						uint32_t pixel = colorkey;
@@ -247,11 +247,11 @@ void setMouseShape(int16_t shape)
 		gfxPtr = &bmp.mouseCursors[mouseModeGfxOffs];
 		switch (shape)
 		{
-			case MOUSE_IDLE_SHAPE_NICE: gfxPtr += 0 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_UGLY: gfxPtr += 1 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_AWFUL: gfxPtr += 2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_SHAPE_USABLE: gfxPtr += 3 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
-			case MOUSE_IDLE_TEXT_EDIT: gfxPtr += 12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_NICE:   gfxPtr +=  0 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_UGLY:   gfxPtr +=  1 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_AWFUL:  gfxPtr +=  2 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_SHAPE_USABLE: gfxPtr +=  3 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
+			case MOUSE_IDLE_TEXT_EDIT:    gfxPtr += 12 * (MOUSE_CURSOR_W * MOUSE_CURSOR_H); break;
 			default: return;
 		}
 	}
@@ -289,22 +289,21 @@ static void clearTextEditMouse(void)
 
 static void changeCursorIfOverTextBoxes(void)
 {
-	int32_t i, mx, my;
-	textBox_t *t;
+	int32_t i;
 
 	mouse.mouseOverTextBox = false;
 	if (editor.busy || mouse.mode != MOUSE_MODE_NORMAL)
 		return;
 
-	mx = mouse.x;
-	my = mouse.y;
+	const int32_t mx = mouse.x;
+	const int32_t my = mouse.y;
 
-	for (i = 0; i < NUM_TEXTBOXES; i++)
+	textBox_t *t = textBoxes;
+	for (i = 0; i < NUM_TEXTBOXES; i++, t++)
 	{
 		if (ui.sysReqShown && i > 0)
 			continue;
 
-		t = &textBoxes[i];
 		if (!t->visible)
 			continue;
 
@@ -378,12 +377,10 @@ void mouseAnimOff(void)
 
 static void mouseWheelDecRow(void)
 {
-	int16_t pattPos;
-
 	if (songPlaying)
 		return;
 
-	pattPos = editor.pattPos - 1;
+	int16_t pattPos = editor.pattPos - 1;
 	if (pattPos < 0)
 		pattPos = pattLens[editor.editPattern] - 1;
 
@@ -392,12 +389,10 @@ static void mouseWheelDecRow(void)
 
 static void mouseWheelIncRow(void)
 {
-	int16_t pattPos;
-
 	if (songPlaying)
 		return;
 
-	pattPos = editor.pattPos + 1;
+	int16_t pattPos = editor.pattPos + 1;
 	if (pattPos > (pattLens[editor.editPattern] - 1))
 		pattPos = 0;
 
@@ -528,12 +523,10 @@ static bool testSamplerDataMouseDown(void)
 
 static bool testPatternDataMouseDown(void)
 {
-	uint16_t y1, y2;
-
 	if (ui.patternEditorShown)
 	{
-		y1 = ui.extended ? 56 : 176;
-		y2 = ui.pattChanScrollShown ? 382 : 396;
+		const int32_t y1 = ui.extended ? 56 : 176;
+		const int32_t y2 = ui.pattChanScrollShown ? 382 : 396;
 
 		if (mouse.y >= y1 && mouse.y <= y2 && mouse.x >= 29 && mouse.x <= 602)
 		{
@@ -726,7 +719,6 @@ static void sendMouseButtonUpEvent(uint8_t button)
 	SDL_Event event;
 
 	memset(&event, 0, sizeof (event));
-
 	event.type = SDL_MOUSEBUTTONUP;
 	event.button.button = button;
 
@@ -802,20 +794,26 @@ void readMouseXY(void)
 	}
 
 	if (video.useDesktopMouseCoords)
+	{
 		mouse.buttonState = SDL_GetGlobalMouseState(&mx, &my);
+
+		// convert desktop coords to window coords
+		SDL_GetWindowPosition(video.window, &windowX, &windowY);
+		mx -= windowX;
+		my -= windowY;
+	}
 	else
+	{
+		// special mode for KMSDRM (XXX: Confirm that this still works...)
 		mouse.buttonState = SDL_GetMouseState(&mx, &my);
+	}
 
 	if (video.fullscreen)
 	{
-		/* If fullscreen without filtering mode, translate coords and warp mouse
-		** inside the render space.
-		** Fullscreen + filtering mode takes up 100% of the screen area used, so no
-		** need to translate coords in that mode.
-		*/
-
+		// centered fullscreen mode (not stretched) needs further coord translation
 		if (!(config.specialFlags2 & STRETCH_IMAGE))
 		{
+			// if software mouse is enabled, warp mouse inside render space
 			if (!(config.specialFlags2 & HARDWARE_MOUSE))
 			{
 				bool warpMouse = false;
@@ -850,16 +848,6 @@ void readMouseXY(void)
 			mx -= video.renderX;
 			my -= video.renderY;
 		}
-	}
-	else if (video.useDesktopMouseCoords)
-	{
-		// convert desktop coords to window coords
-
-		// (a call to this function is really fast in windowed mode)
-		SDL_GetWindowPosition(video.window, &windowX, &windowY);
-
-		mx -= windowX;
-		my -= windowY;
 	}
 
 	// multiply coords by video upscaling factors (don't round)

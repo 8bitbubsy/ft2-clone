@@ -175,10 +175,8 @@ void exitWavRenderer(void)
 
 static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 {
-	uint32_t maxSamplesPerTick, sampleSize;
-
-	maxSamplesPerTick = (int32_t)ceil((frq * 2.5) / MIN_BPM); // absolute max samples per tick
-	sampleSize = (WDBitDepth / 8) * 2; // 2 channels
+	const int32_t maxSamplesPerTick = (const int32_t)ceil((frq * 2.5) / MIN_BPM); // absolute max samples per tick
+	uint32_t sampleSize = (WDBitDepth / 8) * 2; // 2 channels
 
 	// *2 for stereo
 	wavRenderBuffer = (uint8_t *)malloc((TICKS_PER_RENDER_CHUNK * maxSamplesPerTick) * sampleSize);
@@ -205,7 +203,6 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 
 static void dump_Close(FILE *f, uint32_t totalSamples)
 {
-	uint32_t tmpLen, totalBytes;
 	wavHeader_t wavHeader;
 
 	if (wavRenderBuffer != NULL)
@@ -214,6 +211,7 @@ static void dump_Close(FILE *f, uint32_t totalSamples)
 		wavRenderBuffer = NULL;
 	}
 
+	uint32_t totalBytes;
 	if (WDBitDepth == 16)
 		totalBytes = totalSamples * sizeof (int16_t);
 	else
@@ -222,7 +220,7 @@ static void dump_Close(FILE *f, uint32_t totalSamples)
 	if (totalBytes & 1)
 		fputc(0, f); // write pad byte
 
-	tmpLen = ftell(f) - 8;
+	uint32_t tmpLen = ftell(f)-8;
 
 	// go back and fill in WAV header
 	rewind(f);
@@ -278,7 +276,7 @@ static bool dump_EndOfTune(int16_t endSongPos)
 	return returnValue;
 }
 
-void dump_RenderTick(uint32_t samplesPerTick, uint8_t *buffer)
+void dump_TickReplayer(void)
 {
 	replayerBusy = true;
 
@@ -289,8 +287,6 @@ void dump_RenderTick(uint32_t samplesPerTick, uint8_t *buffer)
 	updateVoices();
 
 	replayerBusy = false;
-
-	mixReplayerTickToBuffer(samplesPerTick, buffer, WDBitDepth);
 }
 
 static void updateVisuals(void)
@@ -313,14 +309,7 @@ static void updateVisuals(void)
 
 static int32_t SDLCALL renderWavThread(void *ptr)
 {
-	bool renderDone;
-	uint8_t *ptr8, tickCounter;
-	uint32_t samplesInChunk, sampleCounter;
-	FILE *f;
-
-	(void)ptr;
-
-	f = (FILE *)editor.wavRendererFileHandle;
+	FILE *f = (FILE *)editor.wavRendererFileHandle;
 	fseek(f, sizeof (wavHeader_t), SEEK_SET);
 
 	pauseAudio();
@@ -332,19 +321,18 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 		return true;
 	}
 
-	sampleCounter = 0;
-	renderDone = false;
-	tickCounter = 4;
-
-	double dTickSamples = audio.dSamplesPerTick;
+	uint32_t sampleCounter = 0;
+	bool renderDone = false;
+	uint8_t tickCounter = 4;
+	double dTickSampleCounter = 0.0;
 
 	editor.wavReachedEndFlag = false;
 	while (!renderDone)
 	{
-		samplesInChunk = 0;
+		uint32_t samplesInChunk = 0;
 
 		// render several ticks at once to prevent frequent disk I/O (speeds up the process)
-		ptr8 = wavRenderBuffer;
+		uint8_t *ptr8 = wavRenderBuffer;
 		for (uint32_t i = 0; i < TICKS_PER_RENDER_CHUNK; i++)
 		{
 			if (!editor.wavIsRendering || dump_EndOfTune(WDStopPos))
@@ -353,21 +341,27 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 				break;
 			}
 
-			int32_t tickSamples = (int32_t)dTickSamples;
-			dump_RenderTick(tickSamples, ptr8);
+			if (dTickSampleCounter <= 0.0)
+			{
+				// new replayer tick
+				dump_TickReplayer();
+				dTickSampleCounter += audio.dSamplesPerTick;
+			}
 
-			dTickSamples -= tickSamples; // keep fractional part
-			dTickSamples += audio.dSamplesPerTick;
+			int32_t remainingTick = (int32_t)ceil(dTickSampleCounter);
 
-			tickSamples *= 2; // stereo
-			samplesInChunk += tickSamples;
-			sampleCounter += tickSamples;
+			mixReplayerTickToBuffer(remainingTick, ptr8, WDBitDepth);
+			dTickSampleCounter -= remainingTick;
+
+			remainingTick *= 2; // stereo
+			samplesInChunk += remainingTick;
+			sampleCounter += remainingTick;
 
 			// increase buffer pointer
 			if (WDBitDepth == 16)
-				ptr8 += tickSamples * sizeof (int16_t);
+				ptr8 += remainingTick * sizeof (int16_t);
 			else
-				ptr8 += tickSamples * sizeof (float);
+				ptr8 += remainingTick * sizeof (float);
 
 			if (++tickCounter >= 4)
 			{
@@ -394,15 +388,16 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 
 	editor.diskOpReadOnOpen = true;
 	return true;
+
+	(void)ptr;
 }
 
 static void createOverwriteText(char *name)
 {
 	char nameTmp[128];
-	uint32_t nameLen;
 
 	// read entry name to a small buffer
-	nameLen = (uint32_t)strlen(name);
+	uint32_t nameLen = (uint32_t)strlen(name);
 	memcpy(nameTmp, name, (nameLen >= sizeof (nameTmp)) ? sizeof (nameTmp) : (nameLen + 1));
 	nameTmp[sizeof (nameTmp) - 1] = '\0';
 
@@ -413,8 +408,6 @@ static void createOverwriteText(char *name)
 
 static void wavRender(bool checkOverwrite)
 {
-	char *filename;
-
 	WDStartPos = (uint8_t)(MAX(0, MIN(WDStartPos, song.len - 1)));
 	WDStopPos  = (uint8_t)(MAX(0, MIN(MAX(WDStartPos, WDStopPos), song.len - 1)));
 
@@ -422,7 +415,7 @@ static void wavRender(bool checkOverwrite)
 
 	diskOpChangeFilenameExt(".wav");
 
-	filename = getDiskOpFilename();
+	char *filename = getDiskOpFilename();
 	if (checkOverwrite && fileExistsAnsi(filename))
 	{
 		createOverwriteText(filename);

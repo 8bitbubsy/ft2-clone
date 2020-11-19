@@ -69,8 +69,6 @@ void stopVoice(int32_t i)
 
 bool setNewAudioSettings(void) // only call this from the main input/video thread
 {
-	uint32_t stringLen;
-
 	pauseAudio();
 
 	if (!setupAudio(CONFIG_HIDE_ERRORS))
@@ -89,7 +87,7 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 				audio.currOutputDevice = NULL;
 			}
 
-			stringLen = (uint32_t)strlen(audio.lastWorkingAudioDeviceName);
+			const uint32_t stringLen = (uint32_t)strlen(audio.lastWorkingAudioDeviceName);
 
 			audio.currOutputDevice = (char *)malloc(stringLen + 2);
 			if (audio.currOutputDevice != NULL)
@@ -286,17 +284,14 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 
 static void voiceTrigger(int32_t ch, sampleTyp *s, int32_t position)
 {
-	bool sampleIs16Bit;
-	uint8_t loopType;
-	int32_t length, loopStart, loopLength, loopEnd;
-
 	voice_t *v = &voice[ch];
-	length = s->len;
-	loopStart = s->repS;
-	loopLength = s->repL;
-	loopEnd = s->repS + s->repL;
-	loopType = s->typ & 3;
-	sampleIs16Bit = (s->typ >> 4) & 1;
+
+	int32_t length = s->len;
+	int32_t loopStart = s->repS;
+	int32_t loopLength = s->repL;
+	int32_t loopEnd = s->repS + s->repL;
+	uint8_t loopType = s->typ & 3;
+	const bool sampleIs16Bit = (s->typ >> 4) & 1;
 
 	if (sampleIs16Bit)
 	{
@@ -324,15 +319,13 @@ static void voiceTrigger(int32_t ch, sampleTyp *s, int32_t position)
 	{
 		v->base16 = (const int16_t *)s->pek;
 		v->revBase16 = &v->base16[loopStart + loopEnd]; // for pingpong loops
-
-		v->leftEdgeTaps16 = s->leftEdgeTapSamples16 + 3;
+		v->leftEdgeTaps16 = s->leftEdgeTapSamples16 + SINC_LEFT_TAPS;
 	}
 	else
 	{
 		v->base8 = s->pek;
 		v->revBase8 = &v->base8[loopStart + loopEnd]; // for pingpong loops
-		v->leftEdgeTaps8 = s->leftEdgeTapSamples8 + 3;
-
+		v->leftEdgeTaps8 = s->leftEdgeTapSamples8 + SINC_LEFT_TAPS;
 	}
 
 	v->hasLooped = false; // for sinc interpolation special case
@@ -368,17 +361,15 @@ void resetRampVolumes(void)
 
 void updateVoices(void)
 {
-	uint8_t status;
-	stmTyp *ch;
-	voice_t *v;
-
-	ch = stm;
-	v = voice;
+	stmTyp *ch = stm;
+	voice_t *v = voice;
 
 	for (int32_t i = 0; i < song.antChn; i++, ch++, v++)
 	{
-		status = ch->tmpStatus = ch->status; // (tmpStatus is used for audio/video sync queue)
-		if (status == 0) continue; // nothing to do
+		const uint8_t status = ch->tmpStatus = ch->status; // (tmpStatus is used for audio/video sync queue)
+		if (status == 0)
+			continue;
+
 		ch->status = 0;
 
 		if (status & IS_Vol)
@@ -860,8 +851,6 @@ static void fillVisualsSyncBuffer(void)
 {
 	pattSyncData_t pattSyncData;
 	chSyncData_t chSyncData;
-	syncedChannel_t *c;
-	stmTyp *s;
 
 	if (audio.resetSyncTickTimeFlag)
 	{
@@ -887,8 +876,8 @@ static void fillVisualsSyncBuffer(void)
 
 	// push channel variables to sync queue
 
-	c = chSyncData.channels;
-	s = stm;
+	syncedChannel_t *c = chSyncData.channels;
+	stmTyp *s = stm;
 
 	for (int32_t i = 0; i < song.antChn; i++, c++, s++)
 	{
@@ -967,7 +956,7 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 	// normalize mix buffer and send to audio stream
 	sendAudSamplesFunc(stream, len, pmpChannels);
 
-	(void)userdata; // make compiler not complain
+	(void)userdata;
 }
 
 static bool setupAudioBuffers(void)
@@ -1031,14 +1020,14 @@ void updateSendAudSamplesRoutine(bool lockMixer)
 
 static void calcAudioLatencyVars(int32_t audioBufferSize, int32_t audioFreq)
 {
-	double dInt, dFrac;
+	double dInt;
 
 	if (audioFreq == 0)
 		return;
 
 	const double dAudioLatencySecs = audioBufferSize / (double)audioFreq;
 
-	dFrac = modf(dAudioLatencySecs * editor.dPerfFreq, &dInt);
+	double dFrac = modf(dAudioLatencySecs * editor.dPerfFreq, &dInt);
 
 	// integer part
 	audio.audLatencyPerfValInt = (int32_t)dInt;
@@ -1052,8 +1041,6 @@ static void calcAudioLatencyVars(int32_t audioBufferSize, int32_t audioFreq)
 
 static void setLastWorkingAudioDevName(void)
 {
-	uint32_t stringLen;
-
 	if (audio.lastWorkingAudioDeviceName != NULL)
 	{
 		free(audio.lastWorkingAudioDeviceName);
@@ -1062,7 +1049,7 @@ static void setLastWorkingAudioDevName(void)
 
 	if (audio.currOutputDevice != NULL)
 	{
-		stringLen = (uint32_t)strlen(audio.currOutputDevice);
+		const uint32_t stringLen = (uint32_t)strlen(audio.currOutputDevice);
 
 		audio.lastWorkingAudioDeviceName = (char *)malloc(stringLen + 2);
 		if (audio.lastWorkingAudioDeviceName != NULL)
@@ -1076,8 +1063,6 @@ static void setLastWorkingAudioDevName(void)
 
 bool setupAudio(bool showErrorMsg)
 {
-	int8_t newBitDepth;
-	uint16_t configAudioBufSize;
 	SDL_AudioSpec want, have;
 
 	closeAudio();
@@ -1087,7 +1072,7 @@ bool setupAudio(bool showErrorMsg)
 
 	// get audio buffer size from config special flags
 
-	configAudioBufSize = 1024;
+	uint16_t configAudioBufSize = 1024;
 	if (config.specialFlags & BUFFSIZE_512)
 		configAudioBufSize = 512;
 	else if (config.specialFlags & BUFFSIZE_2048)
@@ -1150,7 +1135,7 @@ bool setupAudio(bool showErrorMsg)
 
 	// set new bit depth flag
 
-	newBitDepth = 16;
+	int8_t newBitDepth = 16;
 	config.specialFlags &= ~BITDEPTH_32;
 	config.specialFlags |=  BITDEPTH_16;
 

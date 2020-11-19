@@ -255,29 +255,27 @@ bool handleSingleInstancing(int32_t argc, char **argv)
 
 static void handleSysMsg(SDL_Event inputEvent)
 {
-	SDL_SysWMmsg *wmMsg;
+	if (inputEvent.type != SDL_SYSWMEVENT)
+		return;
 
-	if (inputEvent.type == SDL_SYSWMEVENT)
+	SDL_SysWMmsg *wmMsg = inputEvent.syswm.msg;
+	if (wmMsg->subsystem == SDL_SYSWM_WINDOWS && wmMsg->msg.win.msg == SYSMSG_FILE_ARG)
 	{
-		wmMsg = inputEvent.syswm.msg;
-		if (wmMsg->subsystem == SDL_SYSWM_WINDOWS && wmMsg->msg.win.msg == SYSMSG_FILE_ARG)
+		hMapFile = OpenFileMapping(FILE_MAP_READ, FALSE, SHARED_FILENAME);
+		if (hMapFile != NULL)
 		{
-			hMapFile = OpenFileMapping(FILE_MAP_READ, FALSE, SHARED_FILENAME);
-			if (hMapFile != NULL)
+			sharedMemBuf = (LPTSTR)MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, ARGV_SHARED_MEM_MAX_LEN);
+			if (sharedMemBuf != NULL)
 			{
-				sharedMemBuf = (LPTSTR)MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, ARGV_SHARED_MEM_MAX_LEN);
-				if (sharedMemBuf != NULL)
-				{
-					editor.autoPlayOnDrop = true;
-					loadDroppedFile((char *)sharedMemBuf, true);
+				editor.autoPlayOnDrop = true;
+				loadDroppedFile((char *)sharedMemBuf, true);
 
-					UnmapViewOfFile(sharedMemBuf);
-					sharedMemBuf = NULL;
-				}
-
-				CloseHandle(hMapFile);
-				hMapFile = NULL;
+				UnmapViewOfFile(sharedMemBuf);
+				sharedMemBuf = NULL;
 			}
+
+			CloseHandle(hMapFile);
+			hMapFile = NULL;
 		}
 	}
 }
@@ -295,11 +293,7 @@ static LONG WINAPI exceptionHandler(EXCEPTION_POINTERS *ptr)
 {
 #define BACKUP_FILES_TO_TRY 1000
 	char fileName[32];
-	uint16_t i;
-	UNICHAR *fileNameU;
 	struct stat statBuffer;
-
-	(void)ptr;
 
 	if (oneInstHandle != NULL)
 		CloseHandle(oneInstHandle);
@@ -309,16 +303,17 @@ static LONG WINAPI exceptionHandler(EXCEPTION_POINTERS *ptr)
 		if (getDiskOpModPath() != NULL && UNICHAR_CHDIR(getDiskOpModPath()) == 0)
 		{
 			// find a free filename
-			for (i = 1; i < 1000; i++)
+			int32_t i;
+			for (i = 1; i < BACKUP_FILES_TO_TRY; i++)
 			{
 				sprintf(fileName, "backup%03d.xm", (int32_t)i);
 				if (stat(fileName, &statBuffer) != 0)
 					break; // filename OK
 			}
 
-			if (i != 1000)
+			if (i != BACKUP_FILES_TO_TRY)
 			{
-				fileNameU = cp437ToUnichar(fileName);
+				UNICHAR *fileNameU = cp437ToUnichar(fileName);
 				if (fileNameU != NULL)
 				{
 					saveXM(fileNameU);
@@ -332,14 +327,14 @@ static LONG WINAPI exceptionHandler(EXCEPTION_POINTERS *ptr)
 	}
 
 	return EXCEPTION_CONTINUE_SEARCH;
+
+	(void)ptr;
 }
 #else
 static void exceptionHandler(int32_t signal)
 {
 #define BACKUP_FILES_TO_TRY 1000
 	char fileName[32];
-	uint16_t i;
-	UNICHAR *fileNameU;
 	struct stat statBuffer;
 
 	if (signal == 15)
@@ -350,16 +345,17 @@ static void exceptionHandler(int32_t signal)
 		if (getDiskOpModPath() != NULL && UNICHAR_CHDIR(getDiskOpModPath()) == 0)
 		{
 			// find a free filename
-			for (i = 1; i < 1000; i++)
+			int32_t i;
+			for (i = 1; i < BACKUP_FILES_TO_TRY; i++)
 			{
 				sprintf(fileName, "backup%03d.xm", i);
 				if (stat(fileName, &statBuffer) != 0)
 					break; // filename OK
 			}
 
-			if (i != 1000)
+			if (i != BACKUP_FILES_TO_TRY)
 			{
-				fileNameU = cp437ToUnichar(fileName);
+				UNICHAR *fileNameU = cp437ToUnichar(fileName);
 				if (fileNameU != NULL)
 				{
 					saveXM(fileNameU);
@@ -398,10 +394,7 @@ void setupCrashHandler(void)
 
 static void handleInput(void)
 {
-	char *inputText;
-	uint32_t eventType;
 	SDL_Event event;
-	SDL_Keycode key;
 
 	if (!editor.busy)
 		handleLastGUIObjectDown(); // this should be handled before main input poll (on next frame)
@@ -430,11 +423,12 @@ static void handleInput(void)
 
 		if (editor.busy)
 		{
-			eventType = event.type;
-			key = event.key.keysym.scancode;
+			const uint32_t eventType = event.type;
+			const SDL_Keycode key = event.key.keysym.scancode;
 
-			/* The Echo tool in Smp. Ed. can literally take forever if abused,
-			** let mouse buttons/ESC/SIGTERM force-stop it. */
+			/* The Echo tool in Smp. Ed. can take forever if abused, let
+			** mouse buttons/ESC/SIGTERM force-stop it.
+			*/
 			if (eventType == SDL_MOUSEBUTTONDOWN || eventType == SDL_QUIT ||
 				(eventType == SDL_KEYUP && key == SDL_SCANCODE_ESCAPE))
 			{
@@ -471,7 +465,7 @@ static void handleInput(void)
 					continue;
 				}
 
-				inputText = utf8ToCp437(event.text.text, false);
+				char *inputText = utf8ToCp437(event.text.text, false);
 				if (inputText != NULL)
 				{
 					if (inputText[0] != '\0')
@@ -542,7 +536,7 @@ static void handleInput(void)
 
 #ifdef HAS_MIDI
 	// MIDI vibrato
-	uint8_t vibDepth = (midi.currMIDIVibDepth >> 9) & 0x0F;
+	const uint8_t vibDepth = (midi.currMIDIVibDepth >> 9) & 0x0F;
 	if (vibDepth > 0)
 		recordMIDIEffect(0x04, 0xA0 | vibDepth);
 #endif

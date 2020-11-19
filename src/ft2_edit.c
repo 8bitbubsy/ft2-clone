@@ -46,7 +46,7 @@ void recordNote(uint8_t note, int8_t vol);
 // when the cursor is at the note slot
 static bool testNoteKeys(SDL_Scancode scancode)
 {
-	int8_t noteNum = scancodeKeyToNote(scancode);
+	const int8_t noteNum = scancodeKeyToNote(scancode);
 	if (noteNum > 0 && noteNum <= 96)
 	{
 		recordNote(noteNum, -1);
@@ -59,7 +59,7 @@ static bool testNoteKeys(SDL_Scancode scancode)
 // when the cursor is at the note slot
 void testNoteKeysRelease(SDL_Scancode scancode)
 {
-	int8_t noteNum = scancodeKeyToNote(scancode); // convert key scancode to note number
+	const int8_t noteNum = scancodeKeyToNote(scancode); // convert key scancode to note number
 	if (noteNum > 0 && noteNum <= 96)
 		recordNote(noteNum, 0); // release note
 }
@@ -68,8 +68,6 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 {
 	int8_t i;
 	uint8_t oldVal;
-	uint16_t pattLen;
-	tonTyp *ton;
 
 	if (cursor.object == CURSOR_NOTE)
 	{
@@ -134,7 +132,7 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 
 	// insert slot data
 
-	ton = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
+	tonTyp *ton = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
 	switch (cursor.object)
 	{
 		case CURSOR_INST1:
@@ -228,7 +226,7 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 
 	// increase row (only in edit mode)
 
-	pattLen = pattLens[editor.editPattern];
+	const int16_t pattLen = pattLens[editor.editPattern];
 	if (playMode == PLAYMODE_EDIT && pattLen >= 1)
 		setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
@@ -242,13 +240,10 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 // directly ported from the original FT2 code (fun fact: named EvulateTimeStamp() in the FT2 code)
 static void evaluateTimeStamp(int16_t *songPos, int16_t *pattNr, int16_t *pattPos, int16_t *tick)
 {
-	int16_t nr, t, p, r, sp, row;
-	uint16_t pattLen;
-
-	sp = editor.songPos;
-	nr = editor.editPattern;
-	row = editor.pattPos;
-	t = editor.tempo - editor.timer;
+	int16_t sp = editor.songPos;
+	int16_t nr = editor.editPattern;
+	int16_t row = editor.pattPos;
+	int16_t t = editor.tempo - editor.timer;
 
 	t = CLAMP(t, 0, editor.tempo - 1);
 
@@ -256,10 +251,11 @@ static void evaluateTimeStamp(int16_t *songPos, int16_t *pattNr, int16_t *pattPo
 	if (t > 15)
 		t = 15;
 
-	pattLen = pattLens[nr];
+	const int16_t pattLen = pattLens[nr];
 
 	if (config.recQuant > 0)
 	{
+		int16_t r;
 		if (config.recQuantRes >= 16)
 		{
 			t += (editor.tempo >> 1) + 1;
@@ -268,7 +264,7 @@ static void evaluateTimeStamp(int16_t *songPos, int16_t *pattNr, int16_t *pattPo
 		{
 			r = tickArr[config.recQuantRes-1];
 
-			p = row & (r - 1);
+			int16_t p = row & (r - 1);
 			if (p < (r >> 1))
 				row -= p;
 			else
@@ -305,13 +301,12 @@ static void evaluateTimeStamp(int16_t *songPos, int16_t *pattNr, int16_t *pattPo
 // directly ported from the original FT2 code - what a mess, but it works...
 void recordNote(uint8_t note, int8_t vol)
 {
-	int8_t i, k, c, editmode, recmode;
-	int16_t nr, sp, oldpattpos, pattpos, tick;
-	uint16_t pattLen;
+	int8_t i;
+	int16_t nr, sp, pattpos, tick;
 	int32_t time;
 	tonTyp *noteData;
 
-	oldpattpos = editor.pattPos;
+	const int16_t oldpattpos = editor.pattPos;
 
 	if (songPlaying)
 	{
@@ -326,14 +321,14 @@ void recordNote(uint8_t note, int8_t vol)
 		tick = 0;
 	}
 
-	editmode = (playMode == PLAYMODE_EDIT);
-	recmode = (playMode == PLAYMODE_RECSONG) || (playMode == PLAYMODE_RECPATT);
+	bool editmode = (playMode == PLAYMODE_EDIT);
+	bool recmode = (playMode == PLAYMODE_RECSONG) || (playMode == PLAYMODE_RECPATT);
 
 	if (note == 97)
 		vol = 0;
 
-	c = -1;
-	k = -1;
+	int8_t c = -1;
+	int8_t k = -1;
 
 	if (editmode || recmode)
 	{
@@ -428,7 +423,7 @@ void recordNote(uint8_t note, int8_t vol)
 		{
 			if (allocatePattern(nr))
 			{
-				pattLen  = pattLens[nr];
+				const int16_t pattLen  = pattLens[nr];
 				noteData = &patt[nr][(pattpos * MAX_VOICES) + c];
 
 				// insert data
@@ -488,7 +483,7 @@ void recordNote(uint8_t note, int8_t vol)
 			{
 				// insert data
 
-				pattLen = pattLens[nr];
+				int16_t pattLen = pattLens[nr];
 				noteData = &patt[nr][(pattpos * MAX_VOICES) + c];
 
 				if (noteData->ton != 0)
@@ -535,10 +530,6 @@ void recordNote(uint8_t note, int8_t vol)
 
 bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 {
-	bool frKeybHack;
-	uint16_t pattLen;
-	tonTyp *note;
-
 	// special case for delete - manipulate note data
 	if (keycode == SDLK_DELETE)
 	{
@@ -548,7 +539,7 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 		if (patt[editor.editPattern] == NULL)
 			return true;
 
-		note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
+		tonTyp *note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
 
 		if (keyb.leftShiftPressed)
 		{
@@ -586,7 +577,7 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 		killPatternIfUnused(editor.editPattern);
 
 		// increase row (only in edit mode)
-		pattLen = pattLens[editor.editPattern];
+		const int16_t pattLen = pattLens[editor.editPattern];
 		if (playMode == PLAYMODE_EDIT && pattLen >= 1)
 			setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
@@ -597,7 +588,7 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 	}
 
 	// a kludge for french keyb. layouts to allow writing numbers in the pattern data with left SHIFT
-	frKeybHack = keyb.leftShiftPressed && !keyb.leftAltPressed && !keyb.leftCtrlPressed &&
+	const bool frKeybHack = keyb.leftShiftPressed && !keyb.leftAltPressed && !keyb.leftCtrlPressed &&
 	               (scancode >= SDL_SCANCODE_1) && (scancode <= SDL_SCANCODE_0);
 
 	if (frKeybHack || !keyb.keyModifierDown)
@@ -608,15 +599,12 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 
 void writeToMacroSlot(uint8_t slot)
 {
-	uint16_t writeVol, writeEff;
-	tonTyp *note;
-
-	writeVol = 0;
-	writeEff = 0;
+	uint16_t writeVol = 0;
+	uint16_t writeEff = 0;
 
 	if (patt[editor.editPattern] != NULL)
 	{
-		note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
+		tonTyp *note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
 		writeVol = note->vol;
 		writeEff = (note->effTyp << 8) | note->eff;
 	}
@@ -629,18 +617,14 @@ void writeToMacroSlot(uint8_t slot)
 
 void writeFromMacroSlot(uint8_t slot)
 {
-	uint8_t effTyp;
-	uint16_t pattLen;
-	tonTyp *note;
-
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
 		return;
 
 	if (!allocatePattern(editor.editPattern))
 		return;
 
-	pattLen = pattLens[editor.editPattern];
-	note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
+	const int16_t pattLen = pattLens[editor.editPattern];
+	tonTyp *note = &patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch];
 
 	if (cursor.object == CURSOR_VOL1 || cursor.object == CURSOR_VOL2)
 	{
@@ -648,7 +632,7 @@ void writeFromMacroSlot(uint8_t slot)
 	}
 	else
 	{
-		effTyp = (uint8_t)(config.comMacro[slot] >> 8);
+		uint8_t effTyp = (uint8_t)(config.comMacro[slot] >> 8);
 		if (effTyp > 35)
 		{
 			// illegal effect
@@ -673,21 +657,17 @@ void writeFromMacroSlot(uint8_t slot)
 
 void insertPatternNote(void)
 {
-	int16_t nr, pattPos;
-	uint16_t pattLen;
-	tonTyp *pattPtr;
-
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
-	nr = editor.editPattern;
+	const int16_t nr = editor.editPattern;
 
-	pattPtr = patt[nr];
+	tonTyp *pattPtr = patt[nr];
 	if (pattPtr == NULL)
 		return;
 
-	pattPos = editor.pattPos;
-	pattLen = pattLens[nr];
+	const int16_t pattPos = editor.pattPos;
+	const int16_t pattLen = pattLens[nr];
 
 	if (pattLen > 1)
 	{
@@ -705,21 +685,18 @@ void insertPatternNote(void)
 
 void insertPatternLine(void)
 {
-	int16_t nr, pattLen, pattPos;
-	tonTyp *pattPtr;
-
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
-	nr = editor.editPattern;
+	const int16_t nr = editor.editPattern;
 
 	setPatternLen(nr, pattLens[nr] + config.recTrueInsert); // config.recTrueInsert is 0 or 1
 
-	pattPtr = patt[nr];
+	tonTyp *pattPtr = patt[nr];
 	if (pattPtr != NULL)
 	{
-		pattPos = editor.pattPos;
-		pattLen = pattLens[nr];
+		const int16_t pattPos = editor.pattPos;
+		const int16_t pattLen = pattLens[nr];
 
 		if (pattLen > 1)
 		{
@@ -741,18 +718,14 @@ void insertPatternLine(void)
 
 void deletePatternNote(void)
 {
-	int16_t nr, pattPos;
-	uint16_t pattLen;
-	tonTyp *pattPtr;
-
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
-	nr = editor.editPattern;
-	pattPos = editor.pattPos;
-	pattLen = pattLens[nr];
+	const int16_t nr = editor.editPattern;
+	int16_t pattPos = editor.pattPos;
+	const int16_t pattLen = pattLens[nr];
 
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 	if (pattPtr != NULL)
 	{
 		if (pattPos > 0)
@@ -783,18 +756,14 @@ void deletePatternNote(void)
 
 void deletePatternLine(void)
 {
-	int16_t nr, pattPos;
-	uint16_t pattLen;
-	tonTyp *pattPtr;
-
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
-	nr = editor.editPattern;
-	pattPos = editor.pattPos;
-	pattLen = pattLens[nr];
+	const int16_t nr = editor.editPattern;
+	int16_t pattPos = editor.pattPos;
+	const int16_t pattLen = pattLens[nr];
 
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 	if (pattPtr != NULL)
 	{
 		if (pattPos > 0)
@@ -1389,26 +1358,23 @@ void pasteNote(tonTyp *src, tonTyp *dst)
 
 void cutTrack(void)
 {
-	uint16_t i, pattLen;
-	tonTyp *pattPtr;
-
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 	if (pattPtr == NULL)
 		return;
 
-	pattLen = pattLens[editor.editPattern];
+	const int16_t pattLen = pattLens[editor.editPattern];
 
 	if (config.ptnCutToBuffer)
 	{
 		memset(trackCopyBuff, 0, MAX_PATT_LEN * sizeof (tonTyp));
-		for (i = 0; i < pattLen; i++)
+		for (int16_t i = 0; i < pattLen; i++)
 			copyNote(&pattPtr[(i * MAX_VOICES) + cursor.ch], &trackCopyBuff[i]);
 
 		trkBufLen = pattLen;
 	}
 
 	pauseMusic();
-	for (i = 0; i < pattLen; i++)
+	for (int16_t i = 0; i < pattLen; i++)
 		pasteNote(&clearNote, &pattPtr[(i * MAX_VOICES) + cursor.ch]);
 	resumeMusic();
 
@@ -1420,17 +1386,14 @@ void cutTrack(void)
 
 void copyTrack(void)
 {
-	uint16_t i, pattLen;
-	tonTyp *pattPtr;
-
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 	if (pattPtr == NULL)
 		return;
 
-	pattLen = pattLens[editor.editPattern];
+	const int16_t pattLen = pattLens[editor.editPattern];
 
 	memset(trackCopyBuff, 0, MAX_PATT_LEN * sizeof (tonTyp));
-	for (i = 0; i < pattLen; i++)
+	for (int16_t i = 0; i < pattLen; i++)
 		copyNote(&pattPtr[(i * MAX_VOICES) + cursor.ch], &trackCopyBuff[i]);
 
 	trkBufLen = pattLen;
@@ -1438,17 +1401,14 @@ void copyTrack(void)
 
 void pasteTrack(void)
 {
-	uint16_t i, pattLen;
-	tonTyp *pattPtr;
-
 	if (trkBufLen == 0 || !allocatePattern(editor.editPattern))
 		return;
 
-	pattPtr = patt[editor.editPattern];
-	pattLen = pattLens[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
+	const int16_t pattLen = pattLens[editor.editPattern];
 
 	pauseMusic();
-	for (i = 0; i < pattLen; i++)
+	for (int16_t i = 0; i < pattLen; i++)
 		pasteNote(&trackCopyBuff[i], &pattPtr[(i * MAX_VOICES) + cursor.ch]);
 	resumeMusic();
 
@@ -1460,21 +1420,18 @@ void pasteTrack(void)
 
 void cutPattern(void)
 {
-	uint16_t i, x, pattLen;
-	tonTyp *pattPtr;
-
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 	if (pattPtr == NULL)
 		return;
 
-	pattLen = pattLens[editor.editPattern];
+	const int16_t pattLen = pattLens[editor.editPattern];
 
 	if (config.ptnCutToBuffer)
 	{
 		memset(ptnCopyBuff, 0, (MAX_PATT_LEN * MAX_VOICES) * sizeof (tonTyp));
-		for (x = 0; x < song.antChn; x++)
+		for (int16_t x = 0; x < song.antChn; x++)
 		{
-			for (i = 0; i < pattLen; i++)
+			for (int16_t i = 0; i < pattLen; i++)
 				copyNote(&pattPtr[(i * MAX_VOICES) + x], &ptnCopyBuff[(i * MAX_VOICES) + x]);
 		}
 
@@ -1482,9 +1439,9 @@ void cutPattern(void)
 	}
 
 	pauseMusic();
-	for (x = 0; x < song.antChn; x++)
+	for (int16_t x = 0; x < song.antChn; x++)
 	{
-		for (i = 0; i < pattLen; i++)
+		for (int16_t i = 0; i < pattLen; i++)
 			pasteNote(&clearNote, &pattPtr[(i * MAX_VOICES) + x]);
 	}
 	resumeMusic();
@@ -1497,19 +1454,16 @@ void cutPattern(void)
 
 void copyPattern(void)
 {
-	uint16_t i, x, pattLen;
-	tonTyp *pattPtr;
-
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 	if (pattPtr == NULL)
 		return;
 
-	pattLen = pattLens[editor.editPattern];
+	const int16_t pattLen = pattLens[editor.editPattern];
 
 	memset(ptnCopyBuff, 0, (MAX_PATT_LEN * MAX_VOICES) * sizeof (tonTyp));
-	for (x = 0; x < song.antChn; x++)
+	for (int16_t x = 0; x < song.antChn; x++)
 	{
-		for (i = 0; i < pattLen; i++)
+		for (int16_t i = 0; i < pattLen; i++)
 			copyNote(&pattPtr[(i * MAX_VOICES) + x], &ptnCopyBuff[(i * MAX_VOICES) + x]);
 	}
 
@@ -1520,9 +1474,6 @@ void copyPattern(void)
 
 void pastePattern(void)
 {
-	uint16_t i, x, pattLen;
-	tonTyp *pattPtr;
-	
 	if (ptnBufLen == 0)
 		return;
 
@@ -1535,13 +1486,13 @@ void pastePattern(void)
 	if (!allocatePattern(editor.editPattern))
 		return;
 
-	pattPtr = patt[editor.editPattern];
-	pattLen = pattLens[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
+	const int16_t pattLen = pattLens[editor.editPattern];
 
 	pauseMusic();
-	for (x = 0; x < song.antChn; x++)
+	for (int16_t x = 0; x < song.antChn; x++)
 	{
-		for (i = 0; i < pattLen; i++)
+		for (int16_t i = 0; i < pattLen; i++)
 			pasteNote(&ptnCopyBuff[(i * MAX_VOICES) + x], &pattPtr[(i * MAX_VOICES) + x]);
 	}
 	resumeMusic();
@@ -1554,21 +1505,18 @@ void pastePattern(void)
 
 void cutBlock(void)
 {
-	uint16_t x, y;
-	tonTyp *pattPtr;
-
 	if (pattMark.markY1 == pattMark.markY2 || pattMark.markY1 > pattMark.markY2)
 		return;
 
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 	if (pattPtr == NULL)
 		return;
 
 	if (config.ptnCutToBuffer)
 	{
-		for (x = pattMark.markX1; x <= pattMark.markX2; x++)
+		for (int16_t x = pattMark.markX1; x <= pattMark.markX2; x++)
 		{
-			for (y = pattMark.markY1; y < pattMark.markY2; y++)
+			for (int16_t y = pattMark.markY1; y < pattMark.markY2; y++)
 			{
 				assert(x < song.antChn && y < pattLens[editor.editPattern]);
 				copyNote(&pattPtr[(y * MAX_VOICES) + x],
@@ -1578,9 +1526,9 @@ void cutBlock(void)
 	}
 
 	pauseMusic();
-	for (x = pattMark.markX1; x <= pattMark.markX2; x++)
+	for (int16_t x = pattMark.markX1; x <= pattMark.markX2; x++)
 	{
-		for (y = pattMark.markY1; y < pattMark.markY2; y++)
+		for (int16_t y = pattMark.markY1; y < pattMark.markY2; y++)
 			pasteNote(&clearNote, &pattPtr[(y * MAX_VOICES) + x]);
 	}
 	resumeMusic();
@@ -1597,19 +1545,16 @@ void cutBlock(void)
 
 void copyBlock(void)
 {
-	uint16_t x, y;
-	tonTyp *pattPtr;
-
 	if (pattMark.markY1 == pattMark.markY2 || pattMark.markY1 > pattMark.markY2)
 		return;
 
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 	if (pattPtr == NULL)
 		return;
 
-	for (x = pattMark.markX1; x <= pattMark.markX2; x++)
+	for (int16_t x = pattMark.markX1; x <= pattMark.markX2; x++)
 	{
-		for (y = pattMark.markY1; y < pattMark.markY2; y++)
+		for (int16_t y = pattMark.markY1; y < pattMark.markY2; y++)
 		{
 			assert(x < song.antChn && y < pattLens[editor.editPattern]);
 			copyNote(&pattPtr[(y * MAX_VOICES) + x],
@@ -1624,26 +1569,23 @@ void copyBlock(void)
 
 void pasteBlock(void)
 {
-	int32_t xpos, ypos, j, k, pattLen;
-	tonTyp *pattPtr;
-
 	if (!blockCopied || !allocatePattern(editor.editPattern))
 		return;
 
-	pattLen = pattLens[editor.editPattern];
+	const int16_t pattLen = pattLens[editor.editPattern];
 
-	xpos = cursor.ch;
-	ypos = editor.pattPos;
+	const int32_t xpos = cursor.ch;
+	const int32_t ypos = editor.pattPos;
 
-	j = markXSize;
+	int32_t j = markXSize;
 	if (j+xpos >= song.antChn)
 		j = song.antChn - xpos - 1;
 
-	k = markYSize;
+	int32_t k = markYSize;
 	if (k+ypos >= pattLen)
 		k = pattLen - ypos;
 
-	pattPtr = patt[editor.editPattern];
+	tonTyp *pattPtr = patt[editor.editPattern];
 
 	pauseMusic();
 	for (int32_t x = xpos; x <= xpos+j; x++)
@@ -1664,17 +1606,14 @@ void pasteBlock(void)
 
 static void remapInstrXY(uint16_t nr, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t src, uint8_t dst)
 {
-	int32_t noteSkipLen;
-	tonTyp *pattPtr, *note;
-
 	// this routine is only used sanely, so no need to check input
 
-	pattPtr = patt[nr];
+	tonTyp *pattPtr = patt[nr];
 	if (pattPtr == NULL)
 		return;
 
-	noteSkipLen = MAX_VOICES - ((x2 + 1) - x1);
-	note = &pattPtr[(y1 * MAX_VOICES) + x1];
+	const int32_t noteSkipLen = MAX_VOICES - ((x2 + 1) - x1);
+	tonTyp *note = &pattPtr[(y1 * MAX_VOICES) + x1];
 
 	for (uint16_t y = y1; y <= y2; y++)
 	{
@@ -1741,15 +1680,13 @@ void remapPattern(void)
 
 void remapSong(void)
 {
-	uint8_t pattNr;
-
 	if (editor.srcInstr == editor.curInstr)
 		return;
 
 	pauseMusic();
 	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
-		pattNr = (uint8_t)i;
+		const uint8_t pattNr = (uint8_t)i;
 
 		remapInstrXY(pattNr,
 		             0, 0,
@@ -1762,9 +1699,11 @@ void remapSong(void)
 	setSongModifiedFlag();
 }
 
+// "scale-fade volume" routines
+
 static int8_t getNoteVolume(tonTyp *note)
 {
-	int8_t nv, vv, ev, finalv;
+	int8_t nv, vv, ev;
 
 	if (note->vol >= 0x10 && note->vol <= 0x50)
 		vv = note->vol - 0x10;
@@ -1781,7 +1720,7 @@ static int8_t getNoteVolume(tonTyp *note)
 	else
 		nv = -1;
 
-	finalv = -1;
+	int8_t finalv = -1;
 	if (nv >= 0) finalv = nv;
 	if (vv >= 0) finalv = vv;
 	if (ev >= 0) finalv = ev;
@@ -1791,12 +1730,10 @@ static int8_t getNoteVolume(tonTyp *note)
 
 static void setNoteVolume(tonTyp *note, int8_t newVol)
 {
-	int8_t oldv;
-
 	if (newVol < 0)
 		return;
 
-	oldv = getNoteVolume(note);
+	const int8_t oldv = getNoteVolume(note);
 	if (note->vol == oldv)
 		return; // volume is the same
 
@@ -1808,23 +1745,19 @@ static void setNoteVolume(tonTyp *note, int8_t newVol)
 
 static void scaleNote(uint16_t ptn, int8_t ch, int16_t row, double dScale)
 {
-	int32_t vol;
-	uint16_t pattLen;
-	tonTyp *note;
-
 	if (patt[ptn] == NULL)
 		return;
 
-	pattLen = pattLens[ptn];
+	const int16_t pattLen = pattLens[ptn];
 	if (row < 0 || row >= pattLen || ch < 0 || ch >= song.antChn)
 		return;
 
-	note = &patt[ptn][(row * MAX_VOICES) + ch];
+	tonTyp *note = &patt[ptn][(row * MAX_VOICES) + ch];
 
-	vol = getNoteVolume(note);
+	int32_t vol = getNoteVolume(note);
 	if (vol >= 0)
 	{
-		vol = (int32_t)round(vol * dScale);
+		vol = (int32_t)((vol * dScale) + 0.5); // rounded
 		vol = MIN(MAX(0, vol), 64);
 		setNoteVolume(note, (int8_t)vol);
 	}
@@ -1832,20 +1765,19 @@ static void scaleNote(uint16_t ptn, int8_t ch, int16_t row, double dScale)
 
 static bool askForScaleFade(char *msg)
 {
-	char *val1, *val2, volstr[32 + 1];
-	uint8_t err;
+	char volstr[32+1];
 
 	sprintf(volstr, "%0.2f,%0.2f", dVolScaleFK1, dVolScaleFK2);
 	if (inputBox(1, msg, volstr, sizeof (volstr) - 1) != 1)
 		return false;
 
-	err = false;
+	bool err = false;
 
-	val1 = volstr;
+	char *val1 = volstr;
 	if (strlen(val1) < 3)
 		err = true;
 
-	val2 = strchr(volstr, ',');
+	char *val2 = strchr(volstr, ',');
 	if (val2 == NULL || strlen(val2) < 3)
 		err = true;
 
@@ -1856,32 +1788,29 @@ static bool askForScaleFade(char *msg)
 	}
 
 	dVolScaleFK1 = atof(val1);
-	dVolScaleFK2 = atof(val2 + 1);
+	dVolScaleFK2 = atof(val2+1);
 
 	return true;
 }
 
 void scaleFadeVolumeTrack(void)
 {
-	uint16_t pattLen;
-	double dIPy, dVol;
-
 	if (!askForScaleFade("Volume scale-fade track (start-, end scale)"))
 		return;
 
 	if (patt[editor.editPattern] == NULL)
 		return;
 
-	pattLen = pattLens[editor.editPattern];
+	const int32_t pattLen = pattLens[editor.editPattern];
 
-	dIPy = 0.0;
+	double dIPy = 0.0;
 	if (pattLen > 0)
 		dIPy = (dVolScaleFK2 - dVolScaleFK1) / pattLen;
 
-	dVol = dVolScaleFK1;
+	double dVol = dVolScaleFK1;
 
 	pauseMusic();
-	for (uint16_t row = 0; row < pattLen; row++)
+	for (int16_t row = 0; row < pattLen; row++)
 	{
 		scaleNote(editor.editPattern, cursor.ch, row, dVol);
 		dVol += dIPy;
@@ -1891,27 +1820,24 @@ void scaleFadeVolumeTrack(void)
 
 void scaleFadeVolumePattern(void)
 {
-	uint16_t pattLen;
-	double dIPy, dVol;
-
 	if (!askForScaleFade("Volume scale-fade pattern (start-, end scale)"))
 		return;
 
 	if (patt[editor.editPattern] == NULL)
 		return;
 
-	pattLen = pattLens[editor.editPattern];
+	const int32_t pattLen = pattLens[editor.editPattern];
 
-	dIPy = 0.0;
+	double dIPy = 0.0;
 	if (pattLen > 0)
 		dIPy = (dVolScaleFK2 - dVolScaleFK1) / pattLen;
 
-	dVol = dVolScaleFK1;
+	double dVol = dVolScaleFK1;
 
 	pauseMusic();
-	for (uint16_t row = 0; row < pattLen; row++)
+	for (int16_t row = 0; row < pattLen; row++)
 	{
-		for (uint8_t ch = 0; ch < song.antChn; ch++)
+		for (int8_t ch = 0; ch < song.antChn; ch++)
 			scaleNote(editor.editPattern, ch, row, dVol);
 
 		dVol += dIPy;
@@ -1921,27 +1847,24 @@ void scaleFadeVolumePattern(void)
 
 void scaleFadeVolumeBlock(void)
 {
-	uint16_t dy;
-	double dIPy, dVol;
-
 	if (!askForScaleFade("Volume scale-fade block (start-, end scale)"))
 		return;
 
 	if (patt[editor.editPattern] == NULL || pattMark.markY1 == pattMark.markY2 || pattMark.markY1 > pattMark.markY2)
 		return;
 
-	dy = pattMark.markY2 - pattMark.markY1;
+	const int32_t dy = pattMark.markY2 - pattMark.markY1;
 
-	dIPy = 0.0;
+	double dIPy = 0.0;
 	if (dy > 0)
 		dIPy = (dVolScaleFK2 - dVolScaleFK1) / dy;
 
-	dVol = dVolScaleFK1;
+	double dVol = dVolScaleFK1;
 
 	pauseMusic();
-	for (uint16_t row = pattMark.markY1; row < pattMark.markY2; row++)
+	for (int16_t row = pattMark.markY1; row < pattMark.markY2; row++)
 	{
-		for (uint16_t ch = pattMark.markX1; ch <= pattMark.markX2; ch++)
+		for (int16_t ch = pattMark.markX1; ch <= pattMark.markX2; ch++)
 			scaleNote(editor.editPattern, (uint8_t)ch, row, dVol);
 
 		dVol += dIPy;

@@ -38,9 +38,7 @@ static inline void midiInSetChannel(uint8_t status)
 
 static inline void midiInKeyAction(int8_t m, uint8_t mv)
 {
-	int16_t vol;
-
-	vol = (mv * 64 * config.recMIDIVolSens) / (127 * 100);
+	int16_t vol = (mv * 64 * config.recMIDIVolSens) / (127 * 100);
 	if (vol > 64)
 		vol = 64;
 
@@ -61,8 +59,6 @@ static inline void midiInKeyAction(int8_t m, uint8_t mv)
 
 static inline void midiInControlChange(uint8_t data1, uint8_t data2)
 {
-	uint8_t vibDepth;
-
 	if (data1 != 1) // 1 = modulation wheel
 		return;
 
@@ -77,25 +73,24 @@ static inline void midiInControlChange(uint8_t data1, uint8_t data2)
 		}
 	}
 
-	vibDepth = (midi.currMIDIVibDepth >> 9) & 0x0F;
+	const uint8_t vibDepth = (midi.currMIDIVibDepth >> 9) & 0x0F;
 	if (vibDepth > 0 && recMIDIValidChn)
 		recordMIDIEffect(0x04, 0xA0 | vibDepth);
 }
 
 static inline void midiInPitchBendChange(uint8_t data1, uint8_t data2)
 {
-	int16_t pitch;
-
-	pitch = (int16_t)((data2 << 7) | data1) - 8192; // -8192..8191
+	int16_t pitch = (int16_t)((data2 << 7) | data1) - 8192; // -8192..8191
 	pitch >>= 6; // -128..127
 
 	midi.currMIDIPitch = pitch;
 	if (recMIDIValidChn)
 	{
-		for (uint8_t i = 0; i < song.antChn; i++)
+		stmTyp *ch = stm;
+		for (uint8_t i = 0; i < song.antChn; i++, ch++)
 		{
-			if (stm[i].midiPitch != 0 || editor.keyOnTab[i] != 0)
-				stm[i].midiPitch = midi.currMIDIPitch;
+			if (ch->midiPitch != 0 || editor.keyOnTab[i] != 0)
+				ch->midiPitch = midi.currMIDIPitch;
 		}
 	}
 }
@@ -103,9 +98,6 @@ static inline void midiInPitchBendChange(uint8_t data1, uint8_t data2)
 static void midiInCallback(double dTimeStamp, const unsigned char *message, size_t messageSize, void *userData)
 {
 	uint8_t byte[3];
-
-	(void)dTimeStamp;
-	(void)userData;
 
 	if (!midi.enable || messageSize < 2)
 		return;
@@ -127,6 +119,9 @@ static void midiInCallback(double dTimeStamp, const unsigned char *message, size
 		else if (byte[0] >= 176 && byte[0] <= 176+15)   midiInControlChange(byte[1], byte[2]);
 		else if (byte[0] >= 224 && byte[0] <= 224+15) midiInPitchBendChange(byte[1], byte[2]);
 	}
+
+	(void)dTimeStamp;
+	(void)userData;
 }
 
 static uint32_t getNumMidiInDevices(void)
@@ -139,12 +134,10 @@ static uint32_t getNumMidiInDevices(void)
 
 static char *getMidiInDeviceName(uint32_t deviceID)
 {
-	char *devStr;
-
 	if (midiDev == NULL)
 		return NULL;
 
-	devStr = (char *)rtmidi_get_port_name(midiDev, deviceID);
+	char *devStr = (char *)rtmidi_get_port_name(midiDev, deviceID);
 	if (!midiDev->ok)
 		return NULL;
 
@@ -221,29 +214,25 @@ bool openMidiInDevice(uint32_t deviceID)
 
 void recordMIDIEffect(uint8_t effTyp, uint8_t effData)
 {
-	int16_t nr;
-	tonTyp *note;
-
 	// only handle this in record mode
 	if (!midi.enable || (playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT))
 		return;
 
-	nr = editor.editPattern;
+	const int16_t nr = editor.editPattern;
 	if (config.multiRec)
 	{
-		for (uint16_t i = 0; i < song.antChn; i++)
+		tonTyp *note = &patt[nr][editor.pattPos * MAX_VOICES];
+		for (int32_t i = 0; i < song.antChn; i++, note++)
 		{
 			if (config.multiRecChn[i] && editor.chnMode[i])
 			{
 				if (!allocatePattern(nr))
 					return;
 
-				note = &patt[nr][(editor.pattPos * MAX_VOICES) + i];
 				if (note->effTyp == 0)
 				{
 					note->effTyp = effTyp;
-					note->eff    = effData;
-
+					note->eff = effData;
 					setSongModifiedFlag();
 				}
 			}
@@ -254,33 +243,29 @@ void recordMIDIEffect(uint8_t effTyp, uint8_t effData)
 		if (!allocatePattern(nr))
 			return;
 
-		note = &patt[nr][(editor.pattPos * MAX_VOICES) + cursor.ch];
+		tonTyp *note = &patt[nr][(editor.pattPos * MAX_VOICES) + cursor.ch];
 		if (note->effTyp != effTyp || note->eff != effData)
 			setSongModifiedFlag();
 
 		note->effTyp = effTyp;
-		note->eff    = effData;
+		note->eff = effData;
 	}
 }
 
 bool saveMidiInputDeviceToConfig(void)
 {
-	char *midiInStr;
-	uint32_t numDevices;
-	FILE *f;
-
 	if (!midi.initThreadDone || midiDev == NULL || !midiDeviceOpened)
 		return false;
 
-	numDevices = getNumMidiInDevices();
+	const uint32_t numDevices = getNumMidiInDevices();
 	if (numDevices == 0)
 		return false;
 
-	midiInStr = getMidiInDeviceName(midi.inputDevice);
+	char *midiInStr = getMidiInDeviceName(midi.inputDevice);
 	if (midiInStr == NULL)
 		return false;
 
-	f = UNICHAR_FOPEN(editor.midiConfigFileLocation, "w");
+	FILE *f = UNICHAR_FOPEN(editor.midiConfigFileLocation, "w");
 	if (f == NULL)
 	{
 		free(midiInStr);
@@ -298,22 +283,20 @@ bool setMidiInputDeviceFromConfig(void)
 {
 #define MAX_DEV_STR_LEN 1024
 
-	char *midiInStr, *devString;
-	uint32_t i, numDevices;
-	FILE *f;
+	uint32_t i;
 
 	if (midi.inputDeviceName != NULL)
 		free(midi.inputDeviceName);
 
-	numDevices = getNumMidiInDevices();
+	const uint32_t numDevices = getNumMidiInDevices();
 	if (numDevices == 0)
 		goto setDefMidiInputDev;
 
-	f = UNICHAR_FOPEN(editor.midiConfigFileLocation, "r");
+	FILE *f = UNICHAR_FOPEN(editor.midiConfigFileLocation, "r");
 	if (f == NULL)
 		goto setDefMidiInputDev;
 
-	devString = (char *)calloc(MAX_DEV_STR_LEN + 4, sizeof (char));
+	char *devString = (char *)calloc(MAX_DEV_STR_LEN+4, sizeof (char));
 	if (devString == NULL)
 	{
 		fclose(f);
@@ -330,7 +313,7 @@ bool setMidiInputDeviceFromConfig(void)
 	fclose(f);
 
 	// scan for device in list
-	midiInStr = NULL;
+	char *midiInStr = NULL;
 	for (i = 0; i < numDevices; i++)
 	{
 		midiInStr = getMidiInDeviceName(i);
@@ -381,8 +364,6 @@ void freeMidiInputDeviceList(void)
 
 void rescanMidiInputDevices(void)
 {
-	char *deviceName;
-
 	freeMidiInputDeviceList();
 
 	midi.numInputDevices = getNumMidiInDevices();
@@ -391,7 +372,7 @@ void rescanMidiInputDevices(void)
 
 	for (int32_t i = 0; i < midi.numInputDevices; i++)
 	{
-		deviceName = getMidiInDeviceName(i);
+		char *deviceName = getMidiInDeviceName(i);
 		if (deviceName == NULL)
 		{
 			if (midi.numInputDevices > 0)
@@ -409,10 +390,6 @@ void rescanMidiInputDevices(void)
 
 void drawMidiInputList(void)
 {
-	char *tmpString;
-	uint16_t y;
-	int32_t deviceEntry;
-
 	clearRect(114, 4, 365, 165);
 
 	if (!midi.initThreadDone || midiDev == NULL || midi.numInputDevices == 0)
@@ -425,13 +402,13 @@ void drawMidiInputList(void)
 
 	for (uint16_t i = 0; i < 15; i++)
 	{
-		deviceEntry = getScrollBarPos(SB_MIDI_INPUT_SCROLL) + i;
+		const int32_t deviceEntry = getScrollBarPos(SB_MIDI_INPUT_SCROLL) + i;
 		if (deviceEntry < midi.numInputDevices)
 		{
 			if (midi.inputDeviceNames[deviceEntry] == NULL)
 				continue;
 
-			y = 4 + (i * 11);
+			const uint16_t y = 4 + (i * 11);
 
 			if (midi.inputDeviceName != NULL)
 			{
@@ -439,7 +416,7 @@ void drawMidiInputList(void)
 					fillRect(114, y, 365, 10, PAL_BOXSLCT); // selection background color
 			}
 
-			tmpString = utf8ToCp437(midi.inputDeviceNames[deviceEntry], true);
+			char *tmpString = utf8ToCp437(midi.inputDeviceNames[deviceEntry], true);
 			if (tmpString != NULL)
 			{
 				textOutClipX(114, y, PAL_FORGRND, tmpString, 479);
@@ -461,29 +438,27 @@ void scrollMidiInputDevListDown(void)
 
 void sbMidiInputSetPos(uint32_t pos)
 {
-	(void)pos;
-
 	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
 		drawMidiInputList();
+
+	(void)pos;
 }
 
 bool testMidiInputDeviceListMouseDown(void)
 {
-	int32_t mx, my, deviceNum;
-
 	if (!ui.configScreenShown || editor.currConfigScreen != CONFIG_SCREEN_MIDI_INPUT)
 		return false; // we didn't click the area
 
 	if (!midi.initThreadDone)
 		return true;
 
-	mx = mouse.x;
-	my = mouse.y;
+	const int32_t mx = mouse.x;
+	const int32_t my = mouse.y;
 
 	if (my < 4 || my > 166 || mx < 114 || mx > 479)
 		return false; // we didn't click the area
 
-	deviceNum = (int32_t)scrollBars[SB_MIDI_INPUT_SCROLL].pos + ((my - 4) / 11);
+	const int32_t deviceNum = (int32_t)scrollBars[SB_MIDI_INPUT_SCROLL].pos + ((my - 4) / 11);
 	if (midi.numInputDevices <= 0 || deviceNum >= midi.numInputDevices)
 		return true;
 
@@ -509,8 +484,6 @@ bool testMidiInputDeviceListMouseDown(void)
 
 int32_t SDLCALL initMidiFunc(void *ptr)
 {
-	(void)ptr;
-
 	midi.closeMidiOnExit = true;
 
 	midi.initThreadDone = false;
@@ -522,6 +495,8 @@ int32_t SDLCALL initMidiFunc(void *ptr)
 	midi.rescanDevicesFlag = true;
 
 	return true;
+
+	(void)ptr;
 }
 
 #else

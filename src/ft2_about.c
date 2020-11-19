@@ -7,7 +7,7 @@
 #include "ft2_video.h"
 #include "ft2_structs.h"
 
-#define NUM_STARS 1500
+#define NUM_STARS 1750
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
 #define ABOUT_LOGO_W 449
@@ -49,12 +49,17 @@ static int32_t random32(void)
 
 static void rotateMatrix(void)
 {
-	const float sa = sinf(rotation.x * f2pi);
-	const float ca = cosf(rotation.x * f2pi);
-	const float sb = sinf(rotation.y * f2pi);
-	const float cb = cosf(rotation.y * f2pi);
-	const float sc = sinf(rotation.z * f2pi);
-	const float cc = cosf(rotation.z * f2pi);
+	const float xx = rotation.x * f2pi;
+	const float sa = sinf(xx);
+	const float ca = cosf(xx);
+
+	const float yy = rotation.y * f2pi;
+	const float sb = sinf(yy);
+	const float cb = cosf(yy);
+
+	const float zz = rotation.z * f2pi;
+	const float sc = sinf(zz);
+	const float cc = cosf(zz);
 
 	// x
 	matrix.x.x = (ca * cc) + (sc * sa * sb);
@@ -79,9 +84,9 @@ static void aboutInit(void)
 	vector_t *s = starPoints;
 	for (int32_t i = 0; i < NUM_STARS; i++, s++)
 	{
-		s->x = (float)(random32() * (1.0f / (UINT32_MAX+1.0f)));
-		s->y = (float)(random32() * (1.0f / (UINT32_MAX+1.0f)));
-		s->z = (float)(random32() * (1.0f / (UINT32_MAX+1.0f)));
+		s->x = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
+		s->y = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
+		s->z = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
 	}
 
 	rotation.x = rotation.y = rotation.z = 0.0f;
@@ -104,10 +109,8 @@ static void starfield(void)
 			lastStarScreenPos[i] = -1;
 		}
 
-		/*
-		star->z += 0.00075f;
+		star->z += 0.00015f;
 		if (star->z >= 0.5f) star->z -= 1.0f;
-		*/
 
 		const float z = (matrix.x.z * star->x) + (matrix.y.z * star->y) + (matrix.z.z * star->z) + 0.5f;
 		if (z <= 0.0f)
@@ -131,24 +134,22 @@ static void starfield(void)
 		screenBufferPos = ((uint32_t)outY * SCREEN_W) + (uint32_t)outX;
 		if ((video.frameBuffer[screenBufferPos] >> 24) == PAL_BCKGRND)
 		{
-			int32_t d = (int32_t)((255.0f - (z * 235.0f)) + 0.5f);
-
-			d = (d * starfieldFade) >> 8;
-			if (d <= 0)
-				continue;
-
+			int32_t d = (int32_t)(z * 255.0f);
 			if (d > 255)
 				d = 255;
 
-			int32_t r = d - 48;
+			d ^= 255;
+			d = (d * starfieldFade) >> 8;
+
+			int32_t r = d - 61;
 			if (r < 0)
 				r = 0;
 
-			int32_t g = d - 14;
+			int32_t g = d - 35;
 			if (g < 0)
 				g = 0;
 
-			int32_t b = d + 72;
+			int32_t b = d + 75;
 			if (b > 255)
 				b = 255;
 
@@ -163,9 +164,9 @@ void aboutFrame(void)
 	rotateMatrix();
 	starfield();
 
-	rotation.x += 0.00011f;
-	rotation.y += 0.00009f;
-	rotation.z -= 0.00007f;
+	rotation.x += 0.00009f;
+	rotation.y += 0.00007f;
+	rotation.z -= 0.00005f;
 
 	// fade in starfield
 	if (starfieldFade < 256)

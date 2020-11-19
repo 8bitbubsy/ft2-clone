@@ -43,20 +43,16 @@ void resetCachedScopeVars(void)
 
 int32_t getSamplePosition(uint8_t ch)
 {
-	volatile bool active, sampleIs16Bit;
-	volatile int32_t pos, end;
-	volatile scope_t *sc;
-
 	if (ch >= song.antChn)
 		return -1;
 
-	sc = &scope[ch];
+	volatile scope_t *sc = &scope[ch];
 
 	// cache some stuff
-	active = sc->active;
-	pos = sc->pos;
-	end = sc->end;
-	sampleIs16Bit = sc->sampleIs16Bit;
+	volatile bool active = sc->active;
+	volatile int32_t pos = sc->pos;
+	volatile int32_t end = sc->end;
+	volatile bool sampleIs16Bit = sc->sampleIs16Bit;
 
 	if (!active || end == 0)
 		return -1;
@@ -76,9 +72,10 @@ void stopAllScopes(void)
 {
 	// wait for scopes to finish updating
 	while (scopesUpdatingFlag);
-
-	for (uint8_t i = 0; i < MAX_VOICES; i++)
-		scope[i].active = false;
+	
+	volatile scope_t *sc = scope;
+	for (int32_t i = 0; i < MAX_VOICES; i++, sc++)
+		sc->active = false;
 
 	// wait for scope displaying to be done (safety)
 	while (scopesDisplayingFlag);
@@ -87,9 +84,7 @@ void stopAllScopes(void)
 // toggle mute
 static void setChannel(int32_t nr, bool on)
 {
-	stmTyp *ch;
-
-	ch = &stm[nr];
+	stmTyp *ch = &stm[nr];
 
 	ch->stOff = !on;
 	if (ch->stOff)
@@ -145,20 +140,18 @@ static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t ch
 
 static void redrawScope(int32_t ch)
 {
-	const uint16_t *scopeLens;
-	uint16_t x, y, scopeLen, muteGfxLen, muteGfxX;
-	int32_t i, chanLookup, chansPerRow;
+	int32_t i;
 
-	chansPerRow = (uint32_t)song.antChn >> 1;
-	chanLookup = chansPerRow - 1;
-	scopeLens = scopeLenTab[chanLookup];
+	int32_t chansPerRow = (uint32_t)song.antChn >> 1;
+	int32_t chanLookup = chansPerRow - 1;
+	const uint16_t *scopeLens = scopeLenTab[chanLookup];
 
 	// get x,y,len for scope according to channel (we must do it this way since 'len' can differ!)
 
-	x = 2;
-	y = 94;
+	uint16_t x = 2;
+	uint16_t y = 94;
 
-	scopeLen = 0; // prevent compiler warning
+	uint16_t scopeLen = 0; // prevent compiler warning
 	for (i = 0; i < song.antChn; i++)
 	{
 		scopeLen = scopeLens[i];
@@ -182,8 +175,8 @@ static void redrawScope(int32_t ch)
 	// draw mute graphics if channel is muted
 	if (!editor.chnMode[i])
 	{
-		muteGfxLen = scopeMuteBMP_Widths[chanLookup];
-		muteGfxX = x + ((scopeLen - muteGfxLen) >> 1);
+		const uint16_t muteGfxLen = scopeMuteBMP_Widths[chanLookup];
+		const uint16_t muteGfxX = x + ((scopeLen - muteGfxLen) >> 1);
 
 		blitFastClipX(muteGfxX, y + 6, bmp.scopeMute+scopeMuteBMP_Offs[chanLookup], 162, scopeMuteBMP_Heights[chanLookup], muteGfxLen);
 
@@ -202,17 +195,16 @@ void refreshScopes(void)
 
 static void channelMode(int32_t chn)
 {
-	bool m, m2, test;
 	int32_t i;
 	
 	assert(chn < song.antChn);
 
-	m = mouse.leftButtonPressed && !mouse.rightButtonPressed;
-	m2 = mouse.rightButtonPressed && mouse.leftButtonPressed;
+	bool m = mouse.leftButtonPressed && !mouse.rightButtonPressed;
+	bool m2 = mouse.rightButtonPressed && mouse.leftButtonPressed;
 
 	if (m2)
 	{
-		test = false;
+		bool test = false;
 		for (i = 0; i < song.antChn; i++)
 		{
 			if (i != chn && !editor.chnMode[i])
@@ -264,9 +256,7 @@ static void channelMode(int32_t chn)
 
 bool testScopesMouseDown(void)
 {
-	uint16_t x;
-	const uint16_t *scopeLens;
-	int32_t i, chansPerRow, chanToToggle;
+	int32_t i;
 
 	if (!ui.scopesShown)
 		return false;
@@ -276,11 +266,11 @@ bool testScopesMouseDown(void)
 		if (mouse.y > 130 && mouse.y < 134)
 			return true;
 
-		chansPerRow = (uint32_t)song.antChn >> 1;
-		scopeLens = scopeLenTab[chansPerRow-1];
+		int32_t chansPerRow = (uint32_t)song.antChn >> 1;
+		const uint16_t *scopeLens = scopeLenTab[chansPerRow-1];
 
 		// find out if we clicked inside a scope
-		x = 3;
+		uint16_t x = 3;
 		for (i = 0; i < chansPerRow; i++)
 		{
 			if (mouse.x >= x && mouse.x < x+scopeLens[i])
@@ -292,7 +282,7 @@ bool testScopesMouseDown(void)
 		if (i == chansPerRow)
 			return true; // scope framework was clicked instead
 
-		chanToToggle = i;
+		int32_t chanToToggle = i;
 		if (mouse.y >= 134) // second row of scopes?
 			chanToToggle += chansPerRow; // yes, increase lookup offset
 
@@ -305,20 +295,16 @@ bool testScopesMouseDown(void)
 
 static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 {
-	bool sampleIs16Bit;
-	uint8_t loopType;
-	int32_t length, loopStart, loopLength, loopEnd;
-	volatile scope_t *sc;
 	scope_t tempState;
 
-	sc = &scope[ch];
+	volatile scope_t *sc = &scope[ch];
 
-	length = s->len;
-	loopStart = s->repS;
-	loopLength = s->repL;
-	loopEnd = s->repS + s->repL;
-	loopType = s->typ & 3;
-	sampleIs16Bit = (s->typ >> 4) & 1;
+	int32_t length = s->len;
+	int32_t loopStart = s->repS;
+	int32_t loopLength = s->repL;
+	int32_t loopEnd = s->repS + s->repL;
+	uint8_t loopType = s->typ & 3;
+	bool sampleIs16Bit = (s->typ >> 4) & 1;
 
 	if (sampleIs16Bit)
 	{
@@ -444,18 +430,13 @@ static void updateScopes(void)
 
 void drawScopes(void)
 {
-	int16_t scopeLineY;
-	const uint16_t *scopeLens;
-	uint16_t scopeXOffs, scopeYOffs, scopeDrawLen;
-	int32_t chansPerRow;
-	
 	scopesDisplayingFlag = true;
-	chansPerRow = (uint32_t)song.antChn >> 1;
+	int32_t chansPerRow = (uint32_t)song.antChn >> 1;
 
-	scopeLens = scopeLenTab[chansPerRow-1];
-	scopeXOffs = 3;
-	scopeYOffs = 95;
-	scopeLineY = 112;
+	const uint16_t *scopeLens = scopeLenTab[chansPerRow-1];
+	uint16_t scopeXOffs = 3;
+	uint16_t scopeYOffs = 95;
+	int16_t scopeLineY = 112;
 
 	for (int32_t i = 0; i < song.antChn; i++)
 	{
@@ -467,7 +448,7 @@ void drawScopes(void)
 			scopeLineY = 151;
 		}
 
-		scopeDrawLen = scopeLens[i];
+		const uint16_t scopeDrawLen = scopeLens[i];
 		if (!editor.chnMode[i]) // scope muted (mute graphics blit()'ed elsewhere)
 		{
 			scopeXOffs += scopeDrawLen+3; // align x to next scope
@@ -526,13 +507,11 @@ void drawScopeFramework(void)
 
 void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatus)
 {
-	uint8_t status;
-
 	volatile scope_t *sc = scope;
 	syncedChannel_t *ch = chSyncData->channels;
 	for (int32_t i = 0; i < song.antChn; i++, sc++, ch++)
 	{
-		status = scopeUpdateStatus[i];
+		const uint8_t status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
 			sc->vol = (int32_t)((ch->dFinalVol * SCOPE_HEIGHT) + 0.5); // rounded
@@ -631,10 +610,10 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 
 bool initScopes(void)
 {
-	double dInt, dFrac;
+	double dInt;
 
 	// calculate scope time for performance counters and split into int/frac
-	dFrac = modf(editor.dPerfFreq / SCOPE_HZ, &dInt);
+	double dFrac = modf(editor.dPerfFreq / SCOPE_HZ, &dInt);
 
 	// integer part
 	scopeTimeLen = (int32_t)dInt;

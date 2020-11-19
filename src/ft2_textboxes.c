@@ -132,24 +132,21 @@ static int16_t getTextLength(textBox_t *t, uint16_t offset)
 
 static void deleteMarkedText(textBox_t *t)
 {
-	int16_t start, end;
-	int32_t i, deleteTextWidth, length;
-
 	if (!textIsMarked())
 		return;
 
-	start = getTextMarkStart();
-	end = getTextMarkEnd();
+	const int16_t start = getTextMarkStart();
+	const int16_t end = getTextMarkEnd();
 
 	assert(start < t->maxChars && end <= t->maxChars);
 
 	// calculate pixel width of string to delete
-	deleteTextWidth = 0;
-	for (i = start; i < end; i++)
+	int32_t deleteTextWidth = 0;
+	for (int32_t i = start; i < end; i++)
 		deleteTextWidth += charWidth(t->textPtr[i]);
 
 	// copy markEnd part to markStart, and add null termination
-	length = (int32_t)strlen(&t->textPtr[end]);
+	const int32_t length = (int32_t)strlen(&t->textPtr[end]);
 	if (length > 0)
 		memcpy(&t->textPtr[start], &t->textPtr[end], length);
 	t->textPtr[start+length] = '\0';
@@ -168,21 +165,17 @@ static void deleteMarkedText(textBox_t *t)
 
 static void setCursorToMarkStart(textBox_t *t)
 {
-	char ch;
-	int16_t start;
-	int32_t startXPos;
-
 	if (!textIsMarked())
 		return;
 
-	start = getTextMarkStart();
+	const int16_t start = getTextMarkStart();
 	assert(start < t->maxChars);
 	t->cursorPos = start;
 
-	startXPos = 0;
+	int32_t startXPos = 0;
 	for (int32_t i = 0; i < start; i++)
 	{
-		ch = t->textPtr[i];
+		const char ch = t->textPtr[i];
 		if (ch == '\0')
 			break;
 
@@ -196,21 +189,17 @@ static void setCursorToMarkStart(textBox_t *t)
 
 static void setCursorToMarkEnd(textBox_t *t)
 {
-	char ch;
-	int16_t end;
-	int32_t endXPos;
-
 	if (!textIsMarked())
 		return;
 
-	end = getTextMarkEnd();
+	const int16_t end = getTextMarkEnd();
 	assert(end <= t->maxChars);
 	t->cursorPos = end;
 
-	endXPos = 0;
+	int32_t endXPos = 0;
 	for (int32_t i = 0; i < end; i++)
 	{
-		ch = t->textPtr[i];
+		const char ch = t->textPtr[i];
 		if (ch == '\0')
 			break;
 
@@ -224,30 +213,27 @@ static void setCursorToMarkEnd(textBox_t *t)
 
 static void copyMarkedText(textBox_t *t)
 {
-	int32_t length, start, end;
-	char *utf8Text, oldChar;
-
 	if (!textIsMarked())
 		return;
 
-	start = getTextMarkStart();
-	end = getTextMarkEnd();
+	const int32_t start = getTextMarkStart();
+	const int32_t end = getTextMarkEnd();
 
 	assert(start < t->maxChars && end <= t->maxChars);
 
-	length = end - start;
+	const int32_t length = end - start;
 	if (length < 1)
 		return;
 
 	/* Change mark-end character to NUL so that we
-	 * we only copy the marked section of the string.
-	 * There's always room for a NUL at the end of
-	 * the text box string, so this is safe.
-	 */
-	oldChar = t->textPtr[end];
+	** we only copy the marked section of the string.
+	** There's always room for a NUL at the end of
+	** the text box string, so this is safe.
+	**/
+	const char oldChar = t->textPtr[end];
 	t->textPtr[end] = '\0';
 
-	utf8Text = cp437ToUtf8(&t->textPtr[start]);
+	char *utf8Text = cp437ToUtf8(&t->textPtr[start]);
 	if (utf8Text != NULL)
 	{
 		SDL_SetClipboardText(utf8Text);
@@ -271,9 +257,7 @@ static void cutMarkedText(textBox_t *t)
 
 static void pasteText(textBox_t *t)
 {
-	char *copiedText, *copiedTextUtf8, *endPart;
-	uint16_t endOffset;
-	int32_t textLength, roomLeft, copiedTextLength, endPartLength;
+	char *endPart;
 
 	if (!SDL_HasClipboardText())
 		return;
@@ -288,29 +272,29 @@ static void pasteText(textBox_t *t)
 	if (t->cursorPos >= t->maxChars)
 		return;
 
-	textLength = getTextLength(t, 0);
+	const int32_t textLength = getTextLength(t, 0);
 
-	roomLeft = t->maxChars - textLength;
+	const int32_t roomLeft = t->maxChars - textLength;
 	if (roomLeft <= 0)
 		return; // no more room!
  
-	copiedTextUtf8 = SDL_GetClipboardText();
+	char *copiedTextUtf8 = SDL_GetClipboardText();
 
-	copiedText = utf8ToCp437(copiedTextUtf8, true);
+	char *copiedText = utf8ToCp437(copiedTextUtf8, true);
 	if (copiedText == NULL)
 		return;
 
-	copiedTextLength = (int32_t)strlen(copiedText);
+	int32_t copiedTextLength = (int32_t)strlen(copiedText);
 	if (copiedTextLength > roomLeft)
 		copiedTextLength = roomLeft;
 
-	endOffset = t->cursorPos;
+	const uint16_t endOffset = t->cursorPos;
 	endPart = NULL; // prevent false compiler warning
 
-	endPartLength = getTextLength(t, endOffset);
+	const int32_t endPartLength = getTextLength(t, endOffset);
 	if (endPartLength > 0)
 	{
-		endPart = (char *)malloc(endPartLength + 1);
+		endPart = (char *)malloc(endPartLength+1);
 		if (endPart == NULL)
 		{
 			free(copiedText);
@@ -373,11 +357,9 @@ void exitTextEditing(void)
 
 static int16_t cursorPosToX(textBox_t *t)
 {
-	int32_t x;
-
 	assert(t->textPtr != NULL);
 
-	x = -1; // cursor starts one pixel before character
+	int32_t x = -1; // cursor starts one pixel before character
 	for (int16_t i = 0; i < t->cursorPos; i++)
 		x += charWidth(t->textPtr[i]);
  
@@ -405,12 +387,10 @@ static void scrollTextBufferLeft(textBox_t *t)
 
 static void scrollTextBufferRight(textBox_t *t, uint16_t numCharsInText)
 {
-	int32_t textEnd;
-
 	assert(numCharsInText <= t->maxChars);
 
 	// get end of text position
-	textEnd = 0;
+	int32_t textEnd = 0;
 	for (uint16_t j = 0; j < numCharsInText; j++)
 		textEnd += charWidth(t->textPtr[j]);
 
@@ -427,29 +407,26 @@ static void scrollTextBufferRight(textBox_t *t, uint16_t numCharsInText)
 
 static void moveTextCursorToMouseX(uint16_t textBoxID)
 {
-	int8_t cw;
-	int16_t i, numChars, cursorPos;
-	int32_t mx, tx, tx2;
-	textBox_t *t;
+	int16_t i;
 
-	t = &textBoxes[textBoxID];
+	textBox_t *t = &textBoxes[textBoxID];
 	if ((mouse.x == t->x && t->bufOffset == 0) || t->textPtr == NULL || t->textPtr[0] == '\0')
 	{
 		t->cursorPos = 0;
 		return;
 	}
 
-	numChars = getTextLength(t, 0);
+	int16_t numChars = getTextLength(t, 0);
 
 	// find out what character we are clicking at, and set cursor to that character
-	mx = t->bufOffset + mouse.x;
-	tx = (t->x + t->tx) - 1;
-	cw = -1;
+	const int32_t mx = t->bufOffset + mouse.x;
+	int32_t tx = (t->x + t->tx) - 1;
+	int32_t cw = -1;
 
 	for (i = 0; i < numChars; i++)
 	{
 		cw = charWidth(t->textPtr[i]);
-		tx2 = tx + cw;
+		const int32_t tx2 = tx + cw;
 
 		if (mx >= tx && mx < tx2)
 		{
@@ -466,7 +443,7 @@ static void moveTextCursorToMouseX(uint16_t textBoxID)
 
 	if (cw != -1)
 	{
-		cursorPos = cursorPosToX(t);
+		const int16_t cursorPos = cursorPosToX(t);
 
 		// scroll buffer to the right if needed
 		if (cursorPos+cw > t->renderW)
@@ -482,26 +459,21 @@ static void moveTextCursorToMouseX(uint16_t textBoxID)
 
 static void textOutBuf(uint8_t *dstBuffer, uint32_t dstWidth, uint8_t paletteIndex, char *text, uint32_t maxTextLen)
 {
-	char chr;
-	uint8_t *dstPtr;
-	const uint8_t *srcPtr;
-	uint16_t currX;
-
 	assert(text != NULL);
 	if (*text == '\0')
 		return; // empty string
 
-	currX = 0;
+	uint16_t currX = 0;
 	for (uint32_t i = 0; i < maxTextLen; i++)
 	{
-		chr = *text++ & 0x7F;
+		const char chr = *text++ & 0x7F;
 		if (chr == '\0')
 			break;
 
 		if (chr != ' ')
 		{
-			srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
-			dstPtr = &dstBuffer[currX];
+			const uint8_t *srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
+			uint8_t *dstPtr = &dstBuffer[currX];
 
 			for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
 			{
@@ -523,14 +495,11 @@ static void textOutBuf(uint8_t *dstBuffer, uint32_t dstWidth, uint8_t paletteInd
  // a lot of filling here, but textboxes are small so no problem...
 void drawTextBox(uint16_t textBoxID)
 {
-	char ch;
 	int8_t cw;
 	uint8_t pal;
-	int32_t start, end, x1, x2, length;
-	textBox_t *t;
 
 	assert(textBoxID < NUM_TEXTBOXES);
-	t = &textBoxes[textBoxID];
+	textBox_t *t = &textBoxes[textBoxID];
 	if (!t->visible)
 		return;
 
@@ -551,17 +520,19 @@ void drawTextBox(uint16_t textBoxID)
 	{
 		hideSprite(SPRITE_TEXT_CURSOR);
 
-		start = getTextMarkStart();
-		end = getTextMarkEnd();
+		int32_t start = getTextMarkStart();
+		int32_t end = getTextMarkEnd();
 
 		assert(start < t->maxChars && end <= t->maxChars);
 
 		// find pixel start/length from markX1 and markX2
 
-		x1 = 0; x2 = 0;
+		int32_t x1 = 0;
+		int32_t x2 = 0;
+
 		for (int32_t i = 0; i < end; i++)
 		{
-			ch = t->textPtr[i];
+			const char ch = t->textPtr[i];
 			if (ch == '\0')
 				break;
 
@@ -576,11 +547,13 @@ void drawTextBox(uint16_t textBoxID)
 		if (x1 != x2)
 		{
 			start = x1;
-			length = x2 - x1;
+			const int32_t length = x2 - x1;
 
 			assert(start+length <= t->renderBufW);
-			for (uint16_t y = 0; y < t->renderBufH; y++)
-				memset(&t->renderBuf[(y * t->renderBufW) + start], PAL_TEXTMRK, length);
+
+			uint8_t *ptr32 = &t->renderBuf[start];
+			for (uint16_t y = 0; y < t->renderBufH; y++, ptr32 += t->renderBufW)
+				memset(ptr32, PAL_TEXTMRK, length);
 		}
 	}
 
@@ -610,9 +583,7 @@ void hideTextBox(uint16_t textBoxID)
 
 static void setMarkX2ToMouseX(textBox_t *t)
 {
-	int8_t cw;
-	int16_t i, numChars;
-	int32_t mx, tx, tx2;
+	int16_t i;
 
 	if (t->textPtr == NULL || t->textPtr[0] == '\0')
 	{
@@ -626,16 +597,16 @@ static void setMarkX2ToMouseX(textBox_t *t)
 		return;
 	}
 
-	numChars = getTextLength(t, 0);
+	const int16_t numChars = getTextLength(t, 0);
 
 	// find out what character we are clicking at, and set markX2 to that character
-	mx = t->bufOffset + mouse.x;
-	tx = (t->x + t->tx) - 1;
+	const int32_t mx = t->bufOffset + mouse.x;
+	int32_t tx = (t->x + t->tx) - 1;
 
 	for (i = 0; i < numChars; i++)
 	{
-		cw  = charWidth(t->textPtr[i]);
-		tx2 = tx + cw;
+		const int32_t cw = charWidth(t->textPtr[i]);
+		const int32_t tx2 = tx + cw;
 
 		if (mx >= tx && mx < tx2)
 		{
@@ -674,10 +645,8 @@ static void setMarkX2ToMouseX(textBox_t *t)
 
 void handleTextBoxWhileMouseDown(void)
 {
-	textBox_t *t;
-
 	assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_TEXTBOXES);
-	t = &textBoxes[mouse.lastUsedObjectID];
+	textBox_t *t = &textBoxes[mouse.lastUsedObjectID];
 	if (!t->visible)
 		return;
 
@@ -695,7 +664,6 @@ void handleTextBoxWhileMouseDown(void)
 bool testTextBoxMouseDown(void)
 {
 	uint16_t start, end;
-	textBox_t *t;
 
 	oldMouseX = mouse.x;
 	oldCursorPos = 0;
@@ -712,14 +680,17 @@ bool testTextBoxMouseDown(void)
 		end = NUM_TEXTBOXES;
 	}
 
-	for (uint16_t i = start; i < end; i++)
+	const int32_t mx = mouse.x;
+	const int32_t my = mouse.y;
+
+	textBox_t *t = &textBoxes[start];
+	for (uint16_t i = start; i < end; i++, t++)
 	{
-		t = &textBoxes[i];
 		if (!t->visible || t->textPtr == NULL)
 			continue;
 
-		if (mouse.y >= t->y && mouse.y < t->y+t->h &&
-		    mouse.x >= t->x && mouse.x < t->x+t->w)
+		if (my >= t->y && my < t->y+t->h &&
+		    mx >= t->x && mx < t->x+t->w)
 		{
 			if (!mouse.rightButtonPressed && t->rightMouseButton)
 				break;
@@ -755,7 +726,7 @@ bool testTextBoxMouseDown(void)
 
 void updateTextBoxPointers(void)
 {
-	uint8_t i;
+	int32_t i;
 	instrTyp *curIns = instr[editor.curInstr];
 
 	// instrument names
@@ -789,15 +760,13 @@ void setupInitialTextBoxPointers(void)
 
 void setTextCursorToEnd(textBox_t *t)
 {
-	char ch;
 	uint16_t numChars;
-	uint32_t textWidth;
 
 	// count number of chars and get full text width
-	textWidth = 0;
+	uint32_t textWidth = 0;
 	for (numChars = 0; numChars < t->maxChars; numChars++)
 	{
-		ch = t->textPtr[numChars];
+		const char ch = t->textPtr[numChars];
 		if (ch == '\0')
 			break;
 
@@ -836,11 +805,10 @@ void handleTextEditControl(SDL_Keycode keycode)
 	uint16_t numChars;
 	int32_t textLength;
 	uint32_t textWidth;
-	textBox_t *t;
 
 	assert(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
 
-	t = &textBoxes[mouse.lastEditBox];
+	textBox_t *t = &textBoxes[mouse.lastEditBox];
 	assert(t->textPtr != NULL);
 
 	switch (keycode)
@@ -1123,17 +1091,13 @@ void handleTextEditControl(SDL_Keycode keycode)
 
 void handleTextEditInputChar(char textChar)
 {
-	int8_t ch;
-	int16_t i;
-	textBox_t *t;
-
 	assert(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
 
-	t = &textBoxes[mouse.lastEditBox];
+	textBox_t *t = &textBoxes[mouse.lastEditBox];
 	if (t->textPtr == NULL)
 		return;
 
-	ch = (int8_t)textChar;
+	const int8_t ch = (const int8_t)textChar;
 	if (ch < 32 && ch != -124 && ch != -108 && ch != -122 && ch != -114 && ch != -103 && ch != -113)
 		return; // allow certain codepage 437 nordic characters
 
@@ -1145,7 +1109,7 @@ void handleTextEditInputChar(char textChar)
 
 	if (t->cursorPos >= 0 && t->cursorPos < t->maxChars)
 	{
-		i = getTextLength(t, 0);
+		int32_t i = getTextLength(t, 0);
 		if (i < t->maxChars) // do we have room for a new character?
 		{
 			t->textPtr[i+1] = '\0';
@@ -1167,9 +1131,7 @@ void handleTextEditInputChar(char textChar)
 
 static void moveTextCursorLeft(int16_t i, bool updateTextBox)
 {
-	textBox_t *t;
-
-	t = &textBoxes[i];
+	textBox_t *t = &textBoxes[i];
 	if (t->cursorPos == 0)
 		return;
 
@@ -1187,12 +1149,9 @@ static void moveTextCursorLeft(int16_t i, bool updateTextBox)
 
 static void moveTextCursorRight(int16_t i, bool updateTextBox)
 {
-	uint16_t numChars;
-	textBox_t *t;
+	textBox_t *t = &textBoxes[i];
 
-	t = &textBoxes[i];
-
-	numChars = getTextLength(t, 0);
+	const uint16_t numChars = getTextLength(t, 0);
 	if (t->cursorPos >= numChars)
 		return;
 
@@ -1210,12 +1169,10 @@ static void moveTextCursorRight(int16_t i, bool updateTextBox)
 
 void freeTextBoxes(void)
 {
-	textBox_t *t;
-
 	// free text box buffers (skip first entry, it's reserved for inputBox())
-	for (int32_t i = 1; i < NUM_TEXTBOXES; i++)
+	textBox_t *t = &textBoxes[1];
+	for (int32_t i = 1; i < NUM_TEXTBOXES; i++, t++)
 	{
-		t = &textBoxes[i];
 		if (t->renderBuf != NULL)
 		{
 			free(t->renderBuf);

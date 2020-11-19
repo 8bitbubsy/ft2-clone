@@ -43,14 +43,9 @@ static void releaseMouseStates(void)
 
 void unstuckLastUsedGUIElement(void)
 {
-	pushButton_t *p;
-	radioButton_t *r;
-	checkBox_t *c;
-	scrollBar_t *s;
-
 	if (mouse.lastUsedObjectID == OBJECT_ID_NONE)
 	{
-		/* if last object ID is OBJECT_ID_NONE, check if we moved the
+		/* If last object ID is OBJECT_ID_NONE, check if we moved the
 		** sample data loop pins, and unstuck them if so
 		*/
 
@@ -77,7 +72,7 @@ void unstuckLastUsedGUIElement(void)
 		case OBJECT_PUSHBUTTON:
 		{
 			assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
-			p = &pushButtons[mouse.lastUsedObjectID];
+			pushButton_t *p = &pushButtons[mouse.lastUsedObjectID];
 			if (p->state == PUSHBUTTON_PRESSED)
 			{
 				p->state = PUSHBUTTON_UNPRESSED;
@@ -90,7 +85,7 @@ void unstuckLastUsedGUIElement(void)
 		case OBJECT_RADIOBUTTON:
 		{
 			assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_RADIOBUTTONS);
-			r = &radioButtons[mouse.lastUsedObjectID];
+			radioButton_t *r = &radioButtons[mouse.lastUsedObjectID];
 			if (r->state == RADIOBUTTON_PRESSED)
 			{
 				r->state = RADIOBUTTON_UNCHECKED;
@@ -103,7 +98,7 @@ void unstuckLastUsedGUIElement(void)
 		case OBJECT_CHECKBOX:
 		{
 			assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_CHECKBOXES);
-			c = &checkBoxes[mouse.lastUsedObjectID];
+			checkBox_t *c = &checkBoxes[mouse.lastUsedObjectID];
 			if (c->state == CHECKBOX_PRESSED)
 			{
 				c->state = CHECKBOX_UNPRESSED;
@@ -116,7 +111,7 @@ void unstuckLastUsedGUIElement(void)
 		case OBJECT_SCROLLBAR:
 		{
 			assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_SCROLLBARS);
-			s = &scrollBars[mouse.lastUsedObjectID];
+			scrollBar_t *s = &scrollBars[mouse.lastUsedObjectID];
 			if (s->state == SCROLLBAR_PRESSED)
 			{
 				s->state = SCROLLBAR_UNPRESSED;
@@ -133,11 +128,6 @@ void unstuckLastUsedGUIElement(void)
 bool setupGUI(void)
 {
 	int32_t i;
-	textBox_t *t;
-	pushButton_t *p;
-	checkBox_t *c;
-	radioButton_t *r;
-	scrollBar_t *s;
 
 	// all memory will be NULL-tested and free'd if we return false somewhere in this function
 
@@ -149,10 +139,9 @@ bool setupGUI(void)
 
 	// set uninitialized GUI struct entries
 
-	for (i = 1; i < NUM_TEXTBOXES; i++) // skip first entry, it's reserved for inputBox())
+	textBox_t *t = &textBoxes[1]; // skip first entry, it's reserved for inputBox())
+	for (i = 1; i < NUM_TEXTBOXES; i++, t++)
 	{
-		t = &textBoxes[i];
-
 		t->visible = false;
 		t->bufOffset = 0;
 		t->cursorPos = 0;
@@ -166,10 +155,9 @@ bool setupGUI(void)
 			goto setupGUI_OOM;
 	}
 
-	for (i = 0; i < NUM_PUSHBUTTONS; i++)
+	pushButton_t *p = pushButtons;
+	for (i = 0; i < NUM_PUSHBUTTONS; i++, p++)
 	{
-		p = &pushButtons[i];
-
 		p->state = 0;
 		p->visible = false;
 
@@ -185,27 +173,24 @@ bool setupGUI(void)
 		}
 	}
 
-	for (i = 0; i < NUM_CHECKBOXES; i++)
+	checkBox_t *c = checkBoxes;
+	for (i = 0; i < NUM_CHECKBOXES; i++, c++)
 	{
-		c = &checkBoxes[i];
-
 		c->state = 0;
 		c->checked = false;
 		c->visible = false;
 	}
 
-	for (i = 0; i < NUM_RADIOBUTTONS; i++)
+	radioButton_t *r = radioButtons;
+	for (i = 0; i < NUM_RADIOBUTTONS; i++, r++)
 	{
-		r = &radioButtons[i];
-
 		r->state = 0;
 		r->visible = false;
 	}
 
-	for (i = 0; i < NUM_SCROLLBARS; i++)
+	scrollBar_t *s = scrollBars;
+	for (i = 0; i < NUM_SCROLLBARS; i++, s++)
 	{
-		s = &scrollBars[i];
-
 		s->visible = false;
 		s->state = 0;
 		s->pos = 0;
@@ -253,11 +238,9 @@ uint8_t charWidth16(char ch)
 // return full pixel width of a text string
 uint16_t textWidth(const char *textPtr)
 {
-	uint16_t textWidth;
-
 	assert(textPtr != NULL);
 
-	textWidth = 0;
+	uint16_t textWidth = 0;
 	while (*textPtr != '\0')
 		textWidth += charWidth(*textPtr++);
 
@@ -270,15 +253,12 @@ uint16_t textWidth(const char *textPtr)
 
 uint16_t textNWidth(const char *textPtr, int32_t length)
 {
-	char ch;
-	uint16_t textWidth;
-
 	assert(textPtr != NULL);
 
-	textWidth = 0;
+	uint16_t textWidth = 0;
 	for (int32_t i = 0; i < length; i++)
 	{
-		ch = textPtr[i];
+		const char ch = textPtr[i];
 		if (ch == '\0')
 			break;
 
@@ -295,11 +275,9 @@ uint16_t textNWidth(const char *textPtr, int32_t length)
 // return full pixel width of a text string (big font)
 uint16_t textWidth16(const char *textPtr)
 {
-	uint16_t textWidth;
-
 	assert(textPtr != NULL);
 
-	textWidth = 0;
+	uint16_t textWidth = 0;
 	while (*textPtr != '\0')
 		textWidth += charWidth(*textPtr++);
 
@@ -312,21 +290,15 @@ uint16_t textWidth16(const char *textPtr)
 
 void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
-	pixVal = video.palette[paletteIndex];
-	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint32_t pixVal = video.palette[paletteIndex];
+	const uint8_t *srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
 	{
@@ -337,7 +309,7 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 				dstPtr[x] = pixVal;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = pixVal;
 			dstPtr[x] = tmp;
 #endif
@@ -348,30 +320,27 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	}
 }
 
-static void charOutFade(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, int32_t fade)
+static void charOutFade(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, int32_t fade) // for about screen
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal;
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
-	pixVal = video.palette[paletteIndex];
-	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint32_t pixVal = video.palette[paletteIndex];
+	const uint8_t *srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT1_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT1_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
 			if (srcPtr[x] != 0)
 			{
-				int32_t r = (RGB32_R(pixVal) * fade) >> 8;
-				int32_t g = (RGB32_G(pixVal) * fade) >> 8;
-				int32_t b = (RGB32_B(pixVal) * fade) >> 8;
+				const int32_t r = (RGB32_R(pixVal) * fade) >> 8;
+				const int32_t g = (RGB32_G(pixVal) * fade) >> 8;
+				const int32_t b = (RGB32_B(pixVal) * fade) >> 8;
 
 				dstPtr[x] = RGB32(r, g, b) | 0xFF000000;
 			}
@@ -384,24 +353,21 @@ static void charOutFade(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char
 
 void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, char chr)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr, fg, bg;
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
-	fg = video.palette[fgPalette];
-	bg = video.palette[bgPalette];
+	const uint32_t fg = video.palette[fgPalette];
+	const uint32_t bg = video.palette[bgPalette];
 
-	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint8_t *srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT1_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT1_CHAR_W-1; x++)
+		for (int32_t x = 0; x < FONT1_CHAR_W-1; x++)
 			dstPtr[x] = srcPtr[x] ? fg : bg; // compiles nicely into conditional move instructions
 
 		srcPtr += FONT1_WIDTH;
@@ -421,27 +387,21 @@ void charOutOutlined(uint16_t x, uint16_t y, uint8_t paletteIndex, char chr)
 
 void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr1, *dstPtr2, pixVal1, pixVal2;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
-	pixVal1 = video.palette[paletteIndex];
-	pixVal2 = video.palette[shadowPaletteIndex];
-	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
-	dstPtr1 = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	dstPtr2 = dstPtr1 + (SCREEN_W+1);
+	const uint32_t pixVal1 = video.palette[paletteIndex];
+	const uint32_t pixVal2 = video.palette[shadowPaletteIndex];
+	const uint8_t *srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
+	uint32_t *dstPtr1 = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	uint32_t *dstPtr2 = dstPtr1 + (SCREEN_W+1);
 
-	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT1_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT1_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
@@ -451,7 +411,7 @@ void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t s
 			}
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr2[x];
+			uint32_t tmp = dstPtr2[x];
 			if (srcPtr[x] != 0) tmp = pixVal2;
 			dstPtr2[x] = tmp;
 
@@ -469,13 +429,6 @@ void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t s
 
 void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, uint16_t clipX)
 {
-	const uint8_t *srcPtr;
-	uint16_t width;
-	uint32_t *dstPtr, pixVal;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	if (xPos > clipX)
@@ -485,24 +438,24 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 	if (chr == ' ')
 		return;
 
-	pixVal = video.palette[paletteIndex];
-	srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint32_t pixVal = video.palette[paletteIndex];
+	const uint8_t *srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	width = FONT1_CHAR_W;
+	int32_t width = FONT1_CHAR_W;
 	if (xPos+width > clipX)
 		width = FONT1_CHAR_W - ((xPos + width) - clipX);
 
-	for (uint32_t y = 0; y < FONT1_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT1_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < width; x++)
+		for (int32_t x = 0; x < width; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = pixVal;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = pixVal;
 			dstPtr[x] = tmp;
 #endif
@@ -515,32 +468,26 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 
 void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
-	srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	pixVal = video.palette[paletteIndex];
+	const uint8_t *srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint32_t pixVal = video.palette[paletteIndex];
 
-	for (uint32_t y = 0; y < FONT2_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT2_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT2_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT2_CHAR_W; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = pixVal;
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr[x];
+			uint32_t tmp = dstPtr[x];
 			if (srcPtr[x] != 0) tmp = pixVal;
 			dstPtr[x] = tmp;
 #endif
@@ -553,27 +500,21 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 
 static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr1, *dstPtr2, pixVal1, pixVal2;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
 
-	pixVal1 = video.palette[paletteIndex];
-	pixVal2 = video.palette[shadowPaletteIndex];
-	srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
-	dstPtr1 = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	dstPtr2 = dstPtr1 + (SCREEN_W+1);
+	const uint32_t pixVal1 = video.palette[paletteIndex];
+	const uint32_t pixVal2 = video.palette[shadowPaletteIndex];
+	const uint8_t *srcPtr = &bmp.font2[chr * FONT2_CHAR_W];
+	uint32_t *dstPtr1 = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	uint32_t *dstPtr2 = dstPtr1 + (SCREEN_W+1);
 
-	for (uint32_t y = 0; y < FONT2_CHAR_H; y++)
+	for (int32_t y = 0; y < FONT2_CHAR_H; y++)
 	{
-		for (uint32_t x = 0; x < FONT2_CHAR_W; x++)
+		for (int32_t x = 0; x < FONT2_CHAR_W; x++)
 		{
 #ifdef __arm__
 			if (srcPtr[x] != 0)
@@ -583,7 +524,7 @@ static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex,
 			}
 #else
 			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			tmp = dstPtr2[x];
+			uint32_t tmp = dstPtr2[x];
 			if (srcPtr[x] != 0) tmp = pixVal2;
 			dstPtr2[x] = tmp;
 
@@ -601,15 +542,12 @@ static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex,
 
 void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 {
-	char chr;
-	uint16_t currX;
-
 	assert(textPtr != NULL);
 
-	currX = x;
+	uint16_t currX = x;
 	while (true)
 	{
-		chr = *textPtr++;
+		const char chr = *textPtr++;
 		if (chr == '\0')
 			break;
 
@@ -618,8 +556,7 @@ void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 	}
 }
 
-// for about screen
-void textOutFade(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, int32_t fade)
+void textOutFade(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, int32_t fade) // for about screen
 {
 	char chr;
 	uint16_t currX;
@@ -651,15 +588,12 @@ void textOutBorder(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t borderP
 // fixed width
 void textOutFixed(uint16_t x, uint16_t y, uint8_t fgPaltete, uint8_t bgPalette, const char *textPtr)
 {
-	char chr;
-	uint16_t currX;
-
 	assert(textPtr != NULL);
 
-	currX = x;
+	uint16_t currX = x;
 	while (true)
 	{
-		chr = *textPtr++;
+		const char chr = *textPtr++;
 		if (chr == '\0')
 			break;
 
@@ -670,15 +604,12 @@ void textOutFixed(uint16_t x, uint16_t y, uint8_t fgPaltete, uint8_t bgPalette, 
 
 void textOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, const char *textPtr)
 {
-	char chr;
-	uint16_t currX;
-
 	assert(textPtr != NULL);
 
-	currX = x;
+	uint16_t currX = x;
 	while (true)
 	{
-		chr = *textPtr++;
+		const char chr = *textPtr++;
 		if (chr == '\0')
 			break;
 
@@ -689,15 +620,12 @@ void textOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowP
 
 void bigTextOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 {
-	char chr;
-	uint16_t currX;
-
 	assert(textPtr != NULL);
 
-	currX = x;
+	uint16_t currX = x;
 	while (true)
 	{
-		chr = *textPtr++;
+		const char chr = *textPtr++;
 		if (chr == '\0')
 			break;
 
@@ -708,15 +636,12 @@ void bigTextOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPt
 
 void bigTextOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, const char *textPtr)
 {
-	char chr;
-	uint16_t currX;
-
 	assert(textPtr != NULL);
 
-	currX = x;
+	uint16_t currX = x;
 	while (true)
 	{
-		chr = *textPtr++;
+		const char chr = *textPtr++;
 		if (chr == '\0')
 			break;
 
@@ -727,15 +652,12 @@ void bigTextOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shad
 
 void textOutClipX(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, uint16_t clipX)
 {
-	char chr;
-	uint16_t currX;
-
 	assert(textPtr != NULL);
 
-	currX = x;
+	uint16_t currX = x;
 	while (true)
 	{
-		chr = *textPtr++;
+		const char chr = *textPtr++;
 		if (chr == '\0')
 			break;
 
@@ -749,32 +671,26 @@ void textOutClipX(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *text
 
 void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, uint8_t numDigits)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr, pixVal;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
-	pixVal = video.palette[paletteIndex];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint32_t pixVal = video.palette[paletteIndex];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	for (int32_t i = numDigits-1; i >= 0; i--)
 	{
-		srcPtr = &bmp.font6[((val >> (i * 4)) & 15) * FONT6_CHAR_W];
+		const uint8_t *srcPtr = &bmp.font6[((val >> (i * 4)) & 15) * FONT6_CHAR_W];
 
 		// render glyph
-		for (uint32_t y = 0; y < FONT6_CHAR_H; y++)
+		for (int32_t y = 0; y < FONT6_CHAR_H; y++)
 		{
-			for (uint32_t x = 0; x < FONT6_CHAR_W; x++)
+			for (int32_t x = 0; x < FONT6_CHAR_W; x++)
 			{
 #ifdef __arm__
 				if (srcPtr[x] != 0)
 					dstPtr[x] = pixVal;
 #else
 				// carefully written like this to generate conditional move instructions (font data is hard to predict)
-				tmp = dstPtr[x];
+				uint32_t tmp = dstPtr[x];
 				if (srcPtr[x] != 0) tmp = pixVal;
 				dstPtr[x] = tmp;
 #endif
@@ -790,24 +706,21 @@ void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, ui
 
 void hexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint32_t val, uint8_t numDigits)
 {
-	const uint8_t *srcPtr;
-	uint32_t *dstPtr, fg, bg;
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
-	fg = video.palette[fgPalette];
-	bg = video.palette[bgPalette];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint32_t fg = video.palette[fgPalette];
+	const uint32_t bg = video.palette[bgPalette];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
 	for (int32_t i = numDigits-1; i >= 0; i--)
 	{
 		// extract current nybble and set pointer to glyph
-		srcPtr = &bmp.font6[((val >> (i * 4)) & 15) * FONT6_CHAR_W];
+		const uint8_t *srcPtr = &bmp.font6[((val >> (i * 4)) & 15) * FONT6_CHAR_W];
 
 		// render glyph
-		for (uint32_t y = 0; y < FONT6_CHAR_H; y++)
+		for (int32_t y = 0; y < FONT6_CHAR_H; y++)
 		{
-			for (uint32_t x = 0; x < FONT6_CHAR_W; x++)
+			for (int32_t x = 0; x < FONT6_CHAR_W; x++)
 				dstPtr[x] = srcPtr[x] ? fg : bg; // compiles nicely into conditional move instructions
 
 			srcPtr += FONT6_WIDTH;
@@ -828,32 +741,28 @@ void hexOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t sh
 
 void clearRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h)
 {
-	uint32_t *dstPtr, fillNumDwords;
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	fillNumDwords = w * sizeof (int32_t);
+	const uint32_t width = w * sizeof (int32_t);
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < h; y++)
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (int32_t y = 0; y < h; y++)
 	{
-		memset(dstPtr, 0, fillNumDwords);
+		memset(dstPtr, 0, width);
 		dstPtr += SCREEN_W;
 	}
 }
 
 void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t paletteIndex)
 {
-	uint32_t *dstPtr, pixVal;
-
 	assert(xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	pixVal = video.palette[paletteIndex];
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	const uint32_t pixVal = video.palette[paletteIndex];
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	for (uint32_t y = 0; y < h; y++)
+	for (int32_t y = 0; y < h; y++)
 	{
-		for (uint32_t x = 0; x < w; x++)
+		for (int32_t x = 0; x < w; x++)
 			dstPtr[x] = pixVal;
 
 		dstPtr += SCREEN_W;
@@ -862,14 +771,12 @@ void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t pale
 
 void blit32(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h)
 {
-	uint32_t* dstPtr;
-
 	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < h; y++)
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (int32_t y = 0; y < h; y++)
 	{
-		for (uint32_t x = 0; x < w; x++)
+		for (int32_t x = 0; x < w; x++)
 		{
 			if (srcPtr[x] != 0x00FF00)
 				dstPtr[x] = srcPtr[x] | 0xFF000000; // most significant 8 bits = palette number. 0xFF because no true palette
@@ -880,26 +787,23 @@ void blit32(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, ui
 	}
 }
 
-// for about screen
-void blit32Fade(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h, int32_t fade)
+void blit32Fade(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h, int32_t fade) // for about screen
 {
-	uint32_t* dstPtr;
-
 	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < h; y++)
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (int32_t y = 0; y < h; y++)
 	{
-		for (uint32_t x = 0; x < w; x++)
+		for (int32_t x = 0; x < w; x++)
 		{
-			if (srcPtr[x] != 0x00FF00)
+			const uint32_t pixel = srcPtr[x];
+			if (pixel != 0x00FF00)
 			{
-				const uint32_t pixel = srcPtr[x];
-				int32_t r = (RGB32_R(pixel) * fade) >> 8;
-				int32_t g = (RGB32_G(pixel) * fade) >> 8;
-				int32_t b = (RGB32_B(pixel) * fade) >> 8;
+				const int32_t r = (RGB32_R(pixel) * fade) >> 8;
+				const int32_t g = (RGB32_G(pixel) * fade) >> 8;
+				const int32_t b = (RGB32_B(pixel) * fade) >> 8;
 
-				dstPtr[x] = RGB32(r, g, b) | 0xFF000000;
+				dstPtr[x] = RGB32(r, g, b) | 0xFF000000; // most significant 8 bits = palette number. 0xFF because no true palette
 			}
 		}
 
@@ -910,17 +814,16 @@ void blit32Fade(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w
 
 void blit(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h)
 {
-	uint32_t *dstPtr;
-
 	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < h; y++)
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (int32_t y = 0; y < h; y++)
 	{
-		for (uint32_t x = 0; x < w; x++)
+		for (int32_t x = 0; x < w; x++)
 		{
-			if (srcPtr[x] != PAL_TRANSPR)
-				dstPtr[x] = video.palette[srcPtr[x]];
+			const uint32_t pixel = srcPtr[x];
+			if (pixel != PAL_TRANSPR)
+				dstPtr[x] = video.palette[pixel];
 		}
 
 		srcPtr += w;
@@ -930,20 +833,19 @@ void blit(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint1
 
 void blitClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h, uint16_t clipX)
 {
-	uint32_t *dstPtr;
-
 	if (clipX > w)
 		clipX = w;
 
 	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + clipX) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < h; y++)
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (int32_t y = 0; y < h; y++)
 	{
-		for (uint32_t x = 0; x < clipX; x++)
+		for (int32_t x = 0; x < clipX; x++)
 		{
-			if (srcPtr[x] != PAL_TRANSPR)
-				dstPtr[x] = video.palette[srcPtr[x]];
+			const uint32_t pixel = srcPtr[x];
+			if (pixel != PAL_TRANSPR)
+				dstPtr[x] = video.palette[pixel];
 		}
 
 		srcPtr += w;
@@ -953,14 +855,12 @@ void blitClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, 
 
 void blitFast(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h) // no transparency/colorkey
 {
-	uint32_t *dstPtr;
-
 	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < h; y++)
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (int32_t y = 0; y < h; y++)
 	{
-		for (uint32_t x = 0; x < w; x++)
+		for (int32_t x = 0; x < w; x++)
 			dstPtr[x] = video.palette[srcPtr[x]];
 
 		srcPtr += w;
@@ -970,17 +870,15 @@ void blitFast(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, u
 
 void blitFastClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h, uint16_t clipX) // no transparency/colorkey
 {
-	uint32_t *dstPtr;
-
 	if (clipX > w)
 		clipX = w;
 
 	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + clipX) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (uint32_t y = 0; y < h; y++)
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	for (int32_t y = 0; y < h; y++)
 	{
-		for (uint32_t x = 0; x < clipX; x++)
+		for (int32_t x = 0; x < clipX; x++)
 			dstPtr[x] = video.palette[srcPtr[x]];
 
 		srcPtr += w;
@@ -992,27 +890,23 @@ void blitFastClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t
 
 void hLine(uint16_t x, uint16_t y, uint16_t w, uint8_t paletteIndex)
 {
-	uint32_t *dstPtr, pixVal;
-
 	assert(x < SCREEN_W && y < SCREEN_H && (x + w) <= SCREEN_W);
 
-	pixVal = video.palette[paletteIndex];
+	const uint32_t pixVal = video.palette[paletteIndex];
 
-	dstPtr = &video.frameBuffer[(y * SCREEN_W) + x];
-	for (uint32_t i = 0; i < w; i++)
+	uint32_t *dstPtr = &video.frameBuffer[(y * SCREEN_W) + x];
+	for (int32_t i = 0; i < w; i++)
 		dstPtr[i] = pixVal;
 }
 
 void vLine(uint16_t x, uint16_t y, uint16_t h, uint8_t paletteIndex)
 {
-	uint32_t *dstPtr, pixVal;
-
 	assert(x < SCREEN_W && y < SCREEN_H && (y + h) <= SCREEN_W);
 
-	pixVal = video.palette[paletteIndex];
+	const uint32_t pixVal = video.palette[paletteIndex];
 
-	dstPtr = &video.frameBuffer[(y * SCREEN_W) + x];
-	for (uint32_t i = 0; i < h; i++)
+	uint32_t *dstPtr = &video.frameBuffer[(y * SCREEN_W) + x];
+	for (int32_t i = 0; i < h; i++)
 	{
 		*dstPtr = pixVal;
 		 dstPtr += SCREEN_W;
@@ -1033,29 +927,23 @@ void vLineDouble(uint16_t x, uint16_t y, uint16_t h, uint8_t paletteIndex)
 
 void line(int16_t x1, int16_t x2, int16_t y1, int16_t y2, uint8_t paletteIndex)
 {
-	int16_t d, x, y, sx, sy, dx, dy;
-	uint16_t ax, ay;
-	int32_t pitch;
-	uint32_t pixVal, *dst32;
+	const int16_t dx = x2 - x1;
+	const uint16_t ax = ABS(dx) * 2;
+	const int16_t sx = SGN(dx);
+	const int16_t dy = y2 - y1;
+	const uint16_t ay = ABS(dy) * 2;
+	const int16_t sy = SGN(dy);
+	int16_t x = x1;
+	int16_t y  = y1;
 
-	// get coefficients
-	dx = x2 - x1;
-	ax = ABS(dx) * 2;
-	sx = SGN(dx);
-	dy = y2 - y1;
-	ay = ABS(dy) * 2;
-	sy = SGN(dy);
-	x  = x1;
-	y  = y1;
-
-	pixVal = video.palette[paletteIndex];
-	pitch  = sy * SCREEN_W;
-	dst32  = &video.frameBuffer[(y * SCREEN_W) + x];
+	uint32_t pixVal = video.palette[paletteIndex];
+	const int32_t pitch  = sy * SCREEN_W;
+	uint32_t *dst32  = &video.frameBuffer[(y * SCREEN_W) + x];
 
 	// draw line
 	if (ax > ay)
 	{
-		d = ay - (ax / 2);
+		int16_t d = ay - (ax >> 1);
 		while (true)
 		{
 			*dst32 = pixVal;
@@ -1075,7 +963,7 @@ void line(int16_t x1, int16_t x2, int16_t y1, int16_t y2, uint8_t paletteIndex)
 	}
 	else
 	{
-		d = ax - (ay / 2);
+		int16_t d = ax - (ay >> 1);
 		while (true)
 		{
 			*dst32 = pixVal;

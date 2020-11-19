@@ -12,6 +12,8 @@
 #include "ft2_tables.h"
 #include "ft2_structs.h"
 
+#define STAGES_BMP_WIDTH 530
+
 #define NI_MAXLEVEL 30
 
 static const char *NI_HelpText[] =
@@ -86,8 +88,8 @@ static bool wallColorsAreCloseToBlack(void)
 {
 #define LUMINOSITY_THRESHOLD 4
 
-	uint8_t wallColor1L = rgb24ToLuminosity(video.palette[PAL_DESKTOP]);
-	uint8_t wallColor2L = rgb24ToLuminosity(video.palette[PAL_BUTTONS]);
+	const uint8_t wallColor1L = rgb24ToLuminosity(video.palette[PAL_DESKTOP]);
+	const uint8_t wallColor2L = rgb24ToLuminosity(video.palette[PAL_BUTTONS]);
 
 	/* Since the rest of the wall colors are based on lower and higher
 	** contrast values from these two primary colors, we don't really
@@ -104,20 +106,17 @@ static bool wallColorsAreCloseToBlack(void)
 
 static void redrawNibblesScreen(void)
 {
-	uint8_t x, y, c;
-	int16_t xs, ys;
-
 	if (!editor.NI_Play)
 		return;
 
-	for (x = 0; x < 51; x++)
+	for (int16_t x = 0; x < 51; x++)
 	{
-		for (y = 0; y < 23; y++)
+		for (int16_t y = 0; y < 23; y++)
 		{
-			xs = 152 + (x * 8);
-			ys = 7 + (y * 7);
+			const int16_t xs = 152 + (x * 8);
+			const int16_t ys = 7 + (y * 7);
 
-			c = NI_Screen[x][y];
+			const uint8_t c = NI_Screen[x][y];
 			if (c < 16)
 			{
 				if (config.NI_Grid)
@@ -153,9 +152,7 @@ static void redrawNibblesScreen(void)
 
 static void nibblesAddBuffer(int16_t nr, uint8_t typ)
 {
-	nibbleBufferTyp *n;
-
-	n = &nibblesBuffer[nr];
+	nibbleBufferTyp *n = &nibblesBuffer[nr];
 	if (n->antal < 8)
 	{
 		n->data[n->antal] = typ;
@@ -170,13 +167,10 @@ static bool nibblesBufferFull(int16_t nr)
 
 static int16_t nibblesGetBuffer(int16_t nr)
 {
-	int16_t dataOut;
-	nibbleBufferTyp *n;
-
-	n = &nibblesBuffer[nr];
+	nibbleBufferTyp *n = &nibblesBuffer[nr];
 	if (n->antal > 0)
 	{
-		dataOut = n->data[0];
+		const int16_t dataOut = n->data[0];
 		memmove(&n->data[0], &n->data[1], 7);
 		n->antal--;
 
@@ -188,38 +182,39 @@ static int16_t nibblesGetBuffer(int16_t nr)
 
 static void nibblesGetLevel(int16_t nr)
 {
-	int16_t readX, readY, x, y;
+	const int32_t readX = 1 + ((51+2) * (nr % 10));
+	const int32_t readY = 1 + ((23+2) * (nr / 10));
 
-	readX = 1 + ((51+2) * (nr % 10));
-	readY = 1 + ((23+2) * (nr / 10));
+	const uint8_t *stagePtr = &bmp.nibblesStages[(readY * STAGES_BMP_WIDTH) + readX];
 
-	for (x = 0; x < 51; x++)
+	for (int32_t y = 0; y < 23; y++)
 	{
-		for (y = 0; y < 23; y++)
-			NI_Screen[x][y] = bmp.nibblesStages[((readY + y) * 530) + (readX + x)];
+		for (int32_t x = 0; x < 51; x++)
+			NI_Screen[x][y] = stagePtr[x];
+
+		stagePtr += STAGES_BMP_WIDTH;
 	}
 }
 
 static void nibblesCreateLevel(int16_t nr)
 {
-	uint8_t c;
-	int16_t x, y, x1, y1, x2, y2;
-
 	if (nr >= NI_MAXLEVEL)
 		nr = NI_MAXLEVEL - 1;
 
 	nibblesGetLevel(nr);
 
-	x1 = 0; x2 = 0;
-	y1 = 0; y2 = 0;
+	int32_t x1 = 0;
+	int32_t x2 = 0;
+	int32_t y1 = 0;
+	int32_t y2 = 0;
 
-	for (y = 0; y < 23; y++)
+	for (int32_t y = 0; y < 23; y++)
 	{
-		for (x = 0; x < 51; x++)
+		for (int32_t x = 0; x < 51; x++)
 		{
 			if (NI_Screen[x][y] == 1 || NI_Screen[x][y] == 3)
 			{
-				c = NI_Screen[x][y];
+				const uint8_t c = NI_Screen[x][y];
 
 				if (c == 3)
 				{
@@ -238,11 +233,11 @@ static void nibblesCreateLevel(int16_t nr)
 		}
 	}
 
-	x = (51 + 2) * (nr % 10);
-	y = (23 + 2) * (nr / 10);
+	const int32_t readX = (51 + 2) * (nr % 10);
+	const int32_t readY = (23 + 2) * (nr / 10);
 
-	NI_P1Dir = bmp.nibblesStages[(y * 530) + (x + 1)];
-	NI_P2Dir = bmp.nibblesStages[(y * 530) + (x + 0)];
+	NI_P1Dir = bmp.nibblesStages[(readY * 530) + (readX + 1)];
+	NI_P2Dir = bmp.nibblesStages[(readY * 530) + (readX + 0)];
 
 	NI_P1Len = 5;
 	NI_P2Len = 5;
@@ -252,7 +247,7 @@ static void nibblesCreateLevel(int16_t nr)
 	nibblesBuffer[0].antal = 0;
 	nibblesBuffer[1].antal = 0;
 
-	for (int16_t i = 0; i < 256; i++)
+	for (int32_t i = 0; i < 256; i++)
 	{
 		NI_P1[i].x = (uint8_t)x1;
 		NI_P1[i].y = (uint8_t)y1;
@@ -263,23 +258,19 @@ static void nibblesCreateLevel(int16_t nr)
 
 static void nibbleWriteLevelSprite(int16_t xOut, int16_t yOut, int16_t nr)
 {
-	uint8_t *src;
-	uint16_t readX, readY;
-	uint32_t *dst;
+	const int32_t readX = (51 + 2) * (nr % 10);
+	const int32_t readY = (23 + 2) * (nr / 10);
 
-	readX = (51 + 2) * (nr % 10);
-	readY = (23 + 2) * (nr / 10);
+	const uint8_t *src = (const uint8_t *)&bmp.nibblesStages[(readY * 530) + readX];
+	uint32_t *dst = &video.frameBuffer[(yOut * SCREEN_W) + xOut];
 
-	src = (uint8_t *)&bmp.nibblesStages[(readY * 530) + readX];
-	dst = &video.frameBuffer[(yOut * SCREEN_W) + xOut];
-
-	for (uint16_t y = 0; y < 23+2; y++)
+	for (int32_t y = 0; y < 23+2; y++)
 	{
-		for (uint16_t x = 0; x < 51+2; x++)
-			*dst++ = video.palette[*src++];
+		for (int32_t x = 0; x < 51+2; x++)
+			dst[x] = video.palette[src[x]];
 
-		src += 530 - (51+2);
-		dst += SCREEN_W - (51+2);
+		src += 530;
+		dst += SCREEN_W;
 	}
 
 	// overwrite start position pixels
@@ -289,15 +280,12 @@ static void nibbleWriteLevelSprite(int16_t xOut, int16_t yOut, int16_t nr)
 
 static void highScoreTextOutClipX(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, const char *textPtr, uint16_t clipX)
 {
-	char ch;
-	uint16_t currX;
-
 	assert(textPtr != NULL);
 
-	currX = x;
+	uint16_t currX = x;
 	for (uint16_t i = 0; i < 22; i++)
 	{
-		ch = textPtr[i];
+		const char ch = textPtr[i];
 		if (ch == '\0')
 			break;
 
@@ -335,10 +323,8 @@ void nibblesHighScore(void)
 
 static void setNibbleDot(uint8_t x, uint8_t y, uint8_t c)
 {
-	uint16_t xs, ys;
-
-	xs = 152 + (x * 8);
-	ys = 7 + (y * 7);
+	const uint16_t xs = 152 + (x * 8);
+	const uint16_t ys = 7 + (y * 7);
 
 	if (config.NI_Grid)
 	{
@@ -355,12 +341,10 @@ static void setNibbleDot(uint8_t x, uint8_t y, uint8_t c)
 
 static void nibblesGenNewNumber(void)
 {
-	int16_t x, y, xs, ys;
-
 	while (true)
 	{
-		x = rand() % 51;
-		y = rand() % 23;
+		const int16_t x = rand() % 51;
+		const int16_t y = rand() % 23;
 
 		bool blockIsSuitable;
 
@@ -376,8 +360,8 @@ static void nibblesGenNewNumber(void)
 			NI_NumberX = x;
 			NI_NumberY = y;
 
-			xs = 152 + (x * 8);
-			ys = 7 + (y * 7);
+			const int16_t xs = 152 + (x * 8);
+			const int16_t ys = 7 + (y * 7);
 
 			if (config.NI_Grid)
 			{
@@ -435,7 +419,7 @@ static void drawScoresLives(void)
 
 static void nibblesDecLives(int16_t l1, int16_t l2)
 {
-	char name[21 + 1];
+	char name[21+1];
 	int16_t i, k;
 	highScoreType *h;
 
@@ -539,7 +523,7 @@ static void nibblesNewLevel(void)
 {
 	char text[24];
 
-	sprintf(text, "Level %d finished!", NI_Level + 1);
+	sprintf(text, "Level %d finished!", NI_Level+1);
 	okBox(0, "Nibbles message", text);
 
 	// cast to int16_t to simulate a bug in FT2
@@ -567,8 +551,6 @@ static void nibblesNewLevel(void)
 
 void moveNibblePlayers(void)
 {
-	int16_t i, j;
-
 	if (ui.sysReqShown || --NI_CurTick60Hz != 0)
 		return;
 
@@ -663,8 +645,8 @@ void moveNibblePlayers(void)
 		}
 	}
 
-	j = 0;
-	i = NI_Screen[NI_P1[0].x][NI_P1[0].y];
+	int16_t j = 0;
+	int16_t i = NI_Screen[NI_P1[0].x][NI_P1[0].y];
 	if (i >= 16)
 	{
 		NI_P1Score += (i & 15) * 999 * (NI_Level + 1);
@@ -876,7 +858,7 @@ void nibblesHelp(void)
 	clearRect(152, 7, 409, 162);
 
 	bigTextOut(160, 10, PAL_FORGRND, "Fasttracker Nibbles Help");
-	for (uint8_t i = 0; i < NIBBLES_HELP_LINES; i++)
+	for (uint16_t i = 0; i < NIBBLES_HELP_LINES; i++)
 		textOut(160, 36 + (11 * i), PAL_BUTTONS, NI_HelpText[i]);
 }
 

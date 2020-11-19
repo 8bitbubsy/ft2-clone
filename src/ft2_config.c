@@ -52,14 +52,11 @@ static void xorConfigBuffer(uint8_t *ptr8)
 
 static int32_t calcChecksum(uint8_t *p, uint16_t len) // for nibbles highscore data
 {
-	uint16_t data;
-	uint32_t checksum;
-
 	if (len == 0)
 		return 0;
 
-	data = 0;
-	checksum = 0;
+	uint16_t data = 0;
+	uint32_t checksum = 0;
 
 	do
 	{
@@ -74,14 +71,14 @@ static int32_t calcChecksum(uint8_t *p, uint16_t len) // for nibbles highscore d
 
 static void loadConfigFromBuffer(void)
 {
-	int32_t i, checksum;
+	int32_t i;
 
 	lockMixerCallback();
 
 	memcpy(&config, configBuffer, CONFIG_FILE_SIZE);
 
 	// if Nibbles highscore table checksum is incorrect, load default highscore table instead
-	checksum = calcChecksum((uint8_t *)&config.NI_HighScore, sizeof (config.NI_HighScore));
+	const int32_t checksum = calcChecksum((uint8_t *)&config.NI_HighScore, sizeof (config.NI_HighScore));
 	if (config.NI_HighScoreChecksum != checksum)
 	{
 		memcpy(&config.NI_HighScore, &defConfigData[636], sizeof (config.NI_HighScore));
@@ -209,12 +206,10 @@ static void setDefaultConfigSettings(void)
 
 void resetConfig(void)
 {
-	uint8_t oldWindowFlags;
-
 	if (okBox(2, "System request", "Are you sure you want to completely reset your FT2 configuration?") != 1)
 		return;
 
-	oldWindowFlags = config.windowFlags;
+	const uint8_t oldWindowFlags = config.windowFlags;
 
 	setDefaultConfigSettings();
 	setToDefaultAudioOutputDevice();
@@ -247,9 +242,6 @@ void resetConfig(void)
 
 bool loadConfig(bool showErrorFlag)
 {
-	size_t fileSize;
-	FILE *in;
-
 	// this routine can be called at any time, so make sure we free these first...
 
 	if (audio.currOutputDevice != NULL)
@@ -286,7 +278,7 @@ bool loadConfig(bool showErrorFlag)
 		return false;
 	}
 
-	in = UNICHAR_FOPEN(editor.configFileLocation, "rb");
+	FILE *in = UNICHAR_FOPEN(editor.configFileLocation, "rb");
 	if (in == NULL)
 	{
 		if (showErrorFlag)
@@ -296,7 +288,7 @@ bool loadConfig(bool showErrorFlag)
 	}
 
 	fseek(in, 0, SEEK_END);
-	fileSize = (int32_t)ftell(in);
+	const size_t fileSize = ftell(in);
 	rewind(in);
 
 	if (fileSize > CONFIG_FILE_SIZE)
@@ -350,9 +342,7 @@ bool loadConfig(bool showErrorFlag)
 
 void loadConfig2(void) // called by "Load config" button
 {
-	uint8_t oldWindowFlags;
-
-	oldWindowFlags = config.windowFlags;
+	const uint8_t oldWindowFlags = config.windowFlags;
 
 	loadConfig(CONFIG_SHOW_ERRORS);
 
@@ -379,8 +369,6 @@ void loadConfig2(void) // called by "Load config" button
 
 bool saveConfig(bool showErrorFlag)
 {
-	FILE *out;
-
 	if (editor.configFileLocation == NULL)
 	{
 		if (showErrorFlag)
@@ -395,7 +383,7 @@ bool saveConfig(bool showErrorFlag)
 	saveMidiInputDeviceToConfig();
 #endif
 
-	out = UNICHAR_FOPEN(editor.configFileLocation, "wb");
+	FILE *out = UNICHAR_FOPEN(editor.configFileLocation, "wb");
 	if (out == NULL)
 	{
 		if (showErrorFlag)
@@ -443,13 +431,12 @@ void saveConfig2(void) // called by "Save config" button
 
 static UNICHAR *getFullAudDevConfigPath(void) // kinda hackish
 {
-	UNICHAR *filePath;
-	int32_t ft2ConfPathLen, stringOffset, audiodevDotIniStrLen, ft2DotCfgStrLen;
+	int32_t audiodevDotIniStrLen, ft2DotCfgStrLen;
 
 	if (editor.configFileLocation == NULL)
 		return NULL;
 
-	ft2ConfPathLen = (int32_t)UNICHAR_STRLEN(editor.configFileLocation);
+	const int32_t ft2ConfPathLen = (int32_t)UNICHAR_STRLEN(editor.configFileLocation);
 
 #ifdef _WIN32
 	audiodevDotIniStrLen = (int32_t)UNICHAR_STRLEN(L"audiodev.ini");
@@ -459,11 +446,11 @@ static UNICHAR *getFullAudDevConfigPath(void) // kinda hackish
 	ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
 #endif
 
-	filePath = (UNICHAR *)calloc(ft2ConfPathLen + audiodevDotIniStrLen + 2, sizeof (UNICHAR));
+	UNICHAR *filePath = (UNICHAR *)calloc(ft2ConfPathLen + audiodevDotIniStrLen + 2, sizeof (UNICHAR));
 
 	UNICHAR_STRCPY(filePath, editor.configFileLocation);
 
-	stringOffset = ft2ConfPathLen - ft2DotCfgStrLen;
+	const int32_t stringOffset = ft2ConfPathLen - ft2DotCfgStrLen;
 	filePath[stringOffset+0] = '\0';
 	filePath[stringOffset+1] = '\0';
 
@@ -478,13 +465,12 @@ static UNICHAR *getFullAudDevConfigPath(void) // kinda hackish
 
 static UNICHAR *getFullMidiDevConfigPath(void) // kinda hackish
 {
-	UNICHAR *filePath;
-	int32_t ft2ConfPathLen, stringOffset, mididevDotIniStrLen, ft2DotCfgStrLen;
+	int32_t mididevDotIniStrLen, ft2DotCfgStrLen;
 
 	if (editor.configFileLocation == NULL)
 		return NULL;
 
-	ft2ConfPathLen = (int32_t)UNICHAR_STRLEN(editor.configFileLocation);
+	const int32_t ft2ConfPathLen = (int32_t)UNICHAR_STRLEN(editor.configFileLocation);
 
 #ifdef _WIN32
 	mididevDotIniStrLen = (int32_t)UNICHAR_STRLEN(L"mididev.ini");
@@ -494,11 +480,11 @@ static UNICHAR *getFullMidiDevConfigPath(void) // kinda hackish
 	ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
 #endif
 
-	filePath = (UNICHAR *)calloc(ft2ConfPathLen + mididevDotIniStrLen + 2, sizeof (UNICHAR));
+	UNICHAR *filePath = (UNICHAR *)calloc(ft2ConfPathLen + mididevDotIniStrLen + 2, sizeof (UNICHAR));
 
 	UNICHAR_STRCPY(filePath, editor.configFileLocation);
 
-	stringOffset = ft2ConfPathLen - ft2DotCfgStrLen;
+	const int32_t stringOffset = ft2ConfPathLen - ft2DotCfgStrLen;
 	filePath[stringOffset+0] = '\0';
 	filePath[stringOffset+1] = '\0';
 
@@ -513,7 +499,7 @@ static UNICHAR *getFullMidiDevConfigPath(void) // kinda hackish
 
 static void setConfigFileLocation(void) // kinda hackish
 {
-	int32_t result, ft2DotCfgStrLen;
+	int32_t ft2DotCfgStrLen;
 	FILE *f;
 
 	// Windows
@@ -551,7 +537,7 @@ static void setConfigFileLocation(void) // kinda hackish
 	UNICHAR_STRCPY(editor.configFileLocation, oldPath);
 	if ((f = fopen("FT2.CFG", "rb")) == NULL)
 	{
-		result = SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, tmpPath);
+		int32_t result = SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, tmpPath);
 		if (result == S_OK)
 		{
 			if (SetCurrentDirectoryW(tmpPath) != 0)
@@ -602,7 +588,7 @@ static void setConfigFileLocation(void) // kinda hackish
 	{
 		if (chdir(getenv("HOME")) == 0)
 		{
-			result = chdir("Library/Application Support");
+			int32_t result = chdir("Library/Application Support");
 			if (result == 0)
 			{
 				result = chdir("FT2 clone");
@@ -682,9 +668,6 @@ static void setConfigFileLocation(void) // kinda hackish
 
 void loadConfigOrSetDefaults(void)
 {
-	size_t fileSize;
-	FILE *in;
-
 	setConfigFileLocation();
 
 	if (editor.configFileLocation == NULL)
@@ -693,7 +676,7 @@ void loadConfigOrSetDefaults(void)
 		return;
 	}
 
-	in = UNICHAR_FOPEN(editor.configFileLocation, "rb");
+	FILE *in = UNICHAR_FOPEN(editor.configFileLocation, "rb");
 	if (in == NULL)
 	{
 		setDefaultConfigSettings();
@@ -701,7 +684,7 @@ void loadConfigOrSetDefaults(void)
 	}
 
 	fseek(in, 0, SEEK_END);
-	fileSize = ftell(in);
+	size_t fileSize = ftell(in);
 	rewind(in);
 
 	// not a valid FT2 config file (FT2.CFG filesize varies depending on version)
@@ -755,14 +738,11 @@ static void drawMIDIChanValue(void)
 
 static void drawMIDITransp(void)
 {
-	char sign;
-	int8_t val;
-
 	fillRect(571, 123, 20, 8, PAL_DESKTOP);
 
-	sign = (config.recMIDITranspVal < 0) ? '-' : '+';
+	const char sign = (config.recMIDITranspVal < 0) ? '-' : '+';
 
-	val = (int8_t)(ABS(config.recMIDITranspVal));
+	const int8_t val = (int8_t)(ABS(config.recMIDITranspVal));
 	if (val >= 10)
 	{
 		charOut(571, 123, PAL_FORGRND, sign);

@@ -59,34 +59,28 @@ void removeSampleIsLoadingFlag(void)
 
 static int32_t getAIFFRate(uint8_t *in)
 {
-	int32_t exp;
-	uint32_t lo, hi;
-	double dOut;
-
-	exp = (int32_t)(((in[0] & 0x7F) << 8) | in[1]);
-	lo  = (in[2] << 24) | (in[3] << 16) | (in[4] << 8) | in[5];
-	hi  = (in[6] << 24) | (in[7] << 16) | (in[8] << 8) | in[9];
+	int32_t exp = (int32_t)(((in[0] & 0x7F) << 8) | in[1]);
+	uint32_t lo = (in[2] << 24) | (in[3] << 16) | (in[4] << 8) | in[5];
+	uint32_t hi = (in[6] << 24) | (in[7] << 16) | (in[8] << 8) | in[9];
 
 	if (exp == 0 && lo == 0 && hi == 0)
 		return 0;
 
 	exp -= 16383;
 
-	dOut = ldexp(lo, -31 + exp) + ldexp(hi, -63 + exp);
-	return (int32_t)(dOut + 0.5);
+	double dOut = ldexp(lo, -31 + exp) + ldexp(hi, -63 + exp);
+	return (int32_t)(dOut + 0.5); // rounded
 }
 
 static bool aiffIsStereo(FILE *f) // only ran on files that are confirmed to be AIFFs
 {
 	uint16_t numChannels;
-	int32_t bytesRead, endOfChunk, filesize;
-	uint32_t chunkID, chunkSize, commPtr, commLen;
-	uint32_t oldPos;
+	uint32_t chunkID, chunkSize;
 
-	oldPos = ftell(f);
+	uint32_t oldPos = ftell(f);
 
 	fseek(f, 0, SEEK_END);
-	filesize = ftell(f);
+	int32_t filesize = ftell(f);
 
 	if (filesize < 12)
 	{
@@ -96,15 +90,16 @@ static bool aiffIsStereo(FILE *f) // only ran on files that are confirmed to be 
 
 	fseek(f, 12, SEEK_SET);
 
-	commPtr = 0; commLen = 0;
+	uint32_t commPtr = 0;
+	uint32_t commLen = 0;
 
-	bytesRead = 0;
+	int32_t bytesRead = 0;
 	while (!feof(f) && bytesRead < filesize-12)
 	{
 		fread(&chunkID, 4, 1, f); chunkID = SWAP32(chunkID); if (feof(f)) break;
 		fread(&chunkSize, 4, 1, f); chunkSize = SWAP32(chunkSize); if (feof(f)) break;
 
-		endOfChunk = (ftell(f) + chunkSize) + (chunkSize & 1);
+		int32_t endOfChunk = (ftell(f) + chunkSize) + (chunkSize & 1);
 		switch (chunkID)
 		{
 			case 0x434F4D4D: // "COMM"
@@ -137,14 +132,12 @@ static bool aiffIsStereo(FILE *f) // only ran on files that are confirmed to be 
 static bool wavIsStereo(FILE *f) // only ran on files that are confirmed to be WAVs
 {
 	uint16_t numChannels;
-	int32_t bytesRead, endOfChunk, filesize;
-	uint32_t chunkID, chunkSize, fmtPtr, fmtLen;
-	uint32_t oldPos;
+	uint32_t chunkID, chunkSize;
 
-	oldPos = ftell(f);
+	uint32_t oldPos = ftell(f);
 
 	fseek(f, 0, SEEK_END);
-	filesize = ftell(f);
+	int32_t filesize = ftell(f);
 
 	if (filesize < 12)
 	{
@@ -154,16 +147,16 @@ static bool wavIsStereo(FILE *f) // only ran on files that are confirmed to be W
 
 	fseek(f, 12, SEEK_SET);
 
-	fmtPtr = 0;
-	fmtLen = 0;
+	uint32_t fmtPtr = 0;
+	uint32_t fmtLen = 0;
 
-	bytesRead = 0;
+	int32_t bytesRead = 0;
 	while (!feof(f) && bytesRead < filesize-12)
 	{
 		fread(&chunkID, 4, 1, f); if (feof(f)) break;
 		fread(&chunkSize, 4, 1, f); if (feof(f)) break;
 
-		endOfChunk = (ftell(f) + chunkSize) + (chunkSize & 1);
+		int32_t endOfChunk = (ftell(f) + chunkSize) + (chunkSize & 1);
 		switch (chunkID)
 		{
 			case 0x20746D66: // "fmt "
@@ -195,23 +188,19 @@ static bool wavIsStereo(FILE *f) // only ran on files that are confirmed to be W
 
 static int32_t SDLCALL loadAIFFSample(void *ptr)
 {
-	char *tmpFilename, *tmpPtr, compType[4];
-	int8_t *audioDataS8, *newPtr;
+	char compType[4];
+	int8_t *audioDataS8;
 	uint8_t sampleRateBytes[10], *audioDataU8;
 	int16_t *audioDataS16, *audioDataS16_2, smp16;
 	uint16_t numChannels, bitDepth;
-	int32_t j, filesize, smp32, *audioDataS32;
-	uint32_t i, filenameLen, sampleRate, sampleLength, blockName, blockSize;
-	uint32_t commPtr, commLen, ssndPtr, ssndLen, offset, len32;
+	int32_t j, smp32, *audioDataS32;
+	uint32_t i, blockName, blockSize;
+	uint32_t offset, len32;
 	int64_t smp64;
-	FILE *f;
-	UNICHAR *filename;
-	sampleTyp tmpSmp, *s;
-
-	(void)ptr;
+	sampleTyp tmpSmp;
 
 	// this is important for the "goto" on load error
-	f = NULL;
+	FILE *f = NULL;
 	memset(&tmpSmp, 0, sizeof (tmpSmp));
 
 	if (editor.tmpFilenameU == NULL)
@@ -220,7 +209,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 		goto aiffLoadError;
 	}
 
-	filename = editor.tmpFilenameU;
+	UNICHAR *filename = editor.tmpFilenameU;
 
 	f = UNICHAR_FOPEN(filename, "rb");
 	if (f == NULL)
@@ -230,7 +219,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 	}
 
 	fseek(f, 0, SEEK_END);
-	filesize = ftell(f);
+	int32_t filesize = ftell(f);
 	if (filesize < 12)
 	{
 		okBoxThreadSafe(0, "System message", "Error loading sample: The sample is not supported or is invalid!");
@@ -239,8 +228,10 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 
 	// handle chunks
 
-	commPtr = 0; commLen = 0;
-	ssndPtr = 0; ssndLen = 0;
+	uint32_t commPtr = 0;
+	uint32_t commLen = 0;
+	uint32_t ssndPtr = 0;
+	uint32_t ssndLen = 0;
 
 	fseek(f, 12, SEEK_SET);
 	while (!feof(f) && ftell(f) < filesize-12)
@@ -315,7 +306,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 		}
 	}
 
-	sampleRate = getAIFFRate(sampleRateBytes);
+	uint32_t sampleRate = getAIFFRate(sampleRateBytes);
 
 	// sample data chunk
 
@@ -332,7 +323,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 
 	ssndLen -= 8; // don't include offset and blockSize datas
 
-	sampleLength = ssndLen;
+	uint32_t sampleLength = ssndLen;
 	if (sampleLength > MAX_SAMPLE_LEN)
 		sampleLength = MAX_SAMPLE_LEN;
 
@@ -647,7 +638,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 	}
 
 	// adjust memory needed
-	newPtr = (int8_t *)realloc(tmpSmp.origPek, sampleLength + LOOP_FIX_LEN);
+	int8_t *newPtr = (int8_t *)realloc(tmpSmp.origPek, sampleLength + LOOP_FIX_LEN);
 	if (newPtr != NULL)
 	{
 		tmpSmp.origPek = newPtr;
@@ -662,7 +653,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 	tuneSample(&tmpSmp, sampleRate);
 
 	// set sample name
-	tmpFilename = unicharToCp437(filename, true);
+	char *tmpFilename = unicharToCp437(filename, true);
 	if (tmpFilename != NULL)
 	{
 		j = (int32_t)strlen(tmpFilename);
@@ -672,13 +663,13 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 				break;
 		}
 
-		tmpPtr = tmpFilename;
+		char *tmpPtr = tmpFilename;
 		if (j > 0)
 			tmpPtr += j + 1;
 
 		sanitizeFilename(tmpPtr);
 
-		filenameLen = (uint32_t)strlen(tmpPtr);
+		uint32_t filenameLen = (uint32_t)strlen(tmpPtr);
 		for (i = 0; i < 22; i++)
 		{
 			if (i < filenameLen)
@@ -704,7 +695,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 
 	if (instr[editor.curInstr] != NULL)
 	{
-		s = &instr[editor.curInstr]->samp[sampleSlot];
+		sampleTyp *s = &instr[editor.curInstr]->samp[sampleSlot];
 
 		freeSample(editor.curInstr, sampleSlot);
 		memcpy(s, &tmpSmp, sizeof (sampleTyp));
@@ -734,25 +725,20 @@ aiffLoadError:
 	sampleIsLoading = false;
 
 	return false;
+
+	(void)ptr;
 }
 
 static int32_t SDLCALL loadIFFSample(void *ptr)
 {
-	char *tmpFilename, *tmpPtr, hdr[4 + 1];
-	bool is16Bit;
+	char hdr[4+1];
 	uint8_t i;
-	uint16_t sampleRate;
-	int32_t j, filesize;
-	uint32_t filenameLen, sampleVol, sampleLength, sampleLoopStart, sampleLoopLength, blockName, blockSize;
-	uint32_t vhdrPtr, vhdrLen, bodyPtr, bodyLen, namePtr, nameLen;
-	FILE *f;
-	UNICHAR *filename;
-	sampleTyp tmpSmp, *s;
-
-	(void)ptr;
+	int32_t j;
+	uint32_t blockName, blockSize;
+	sampleTyp tmpSmp;
 
 	// this is important for the "goto" on load error
-	f = NULL;
+	FILE *f = NULL;
 	memset(&tmpSmp, 0, sizeof (tmpSmp));
 
 	if (editor.tmpFilenameU == NULL)
@@ -761,7 +747,7 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 		goto iffLoadError;
 	}
 
-	filename = editor.tmpFilenameU;
+	UNICHAR *filename = editor.tmpFilenameU;
 
 	f = UNICHAR_FOPEN(filename, "rb");
 	if (f == NULL)
@@ -771,7 +757,7 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 	}
 
 	fseek(f, 0, SEEK_END);
-	filesize = ftell(f);
+	int32_t filesize = ftell(f);
 	if (filesize < 12)
 	{
 		okBoxThreadSafe(0, "System message", "Error loading sample: The sample is not supported or is invalid!");
@@ -781,17 +767,20 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 	fseek(f, 8, SEEK_SET);
 	fread(hdr, 1, 4, f);
 	hdr[4] = '\0';
-	is16Bit = !strncmp(hdr, "16SV", 4);
+	bool is16Bit = !strncmp(hdr, "16SV", 4);
 
-	sampleLength = 0;
-	sampleVol = 64;
-	sampleLoopStart = 0;
-	sampleLoopLength = 0;
-	sampleRate = 16726;
+	uint32_t sampleLength = 0;
+	uint32_t sampleVol = 64;
+	uint32_t sampleLoopStart = 0;
+	uint32_t sampleLoopLength = 0;
+	uint16_t sampleRate = 16726;
 
-	vhdrPtr = 0; vhdrLen = 0;
-	bodyPtr = 0; bodyLen = 0;
-	namePtr = 0; nameLen = 0;
+	uint32_t vhdrPtr = 0;
+	uint32_t vhdrLen = 0;
+	uint32_t bodyPtr = 0;
+	uint32_t bodyLen = 0;
+	uint32_t namePtr = 0;
+	uint32_t nameLen = 0;
 
 	fseek(f, 12, SEEK_SET);
 	while (!feof(f) && ftell(f) < filesize-12)
@@ -947,7 +936,7 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 	else
 	{
 		// set sample name from filename if we didn't load name from .wav
-		tmpFilename = unicharToCp437(filename, true);
+		char *tmpFilename = unicharToCp437(filename, true);
 		if (tmpFilename != NULL)
 		{
 			j = (int32_t)strlen(tmpFilename);
@@ -957,13 +946,13 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 					break;
 			}
 
-			tmpPtr = tmpFilename;
+			char *tmpPtr = tmpFilename;
 			if (j > 0)
 				tmpPtr += j + 1;
 
 			sanitizeFilename(tmpPtr);
 
-			filenameLen = (uint32_t)strlen(tmpPtr);
+			uint32_t filenameLen = (uint32_t)strlen(tmpPtr);
 			for (i = 0; i < 22; i++)
 			{
 				if (i < filenameLen)
@@ -990,7 +979,7 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 
 	if (instr[editor.curInstr] != NULL)
 	{
-		s = &instr[editor.curInstr]->samp[sampleSlot];
+		sampleTyp *s = &instr[editor.curInstr]->samp[sampleSlot];
 
 		freeSample(editor.curInstr, sampleSlot);
 		memcpy(s, &tmpSmp, sizeof (sampleTyp));
@@ -1020,21 +1009,18 @@ iffLoadError:
 	sampleIsLoading = false;
 
 	return false;
+
+	(void)ptr;
 }
 
 static int32_t SDLCALL loadRawSample(void *ptr)
 {
-	char *tmpFilename, *tmpPtr;
 	int32_t j;
-	uint32_t filenameLen, i, filesize;
-	FILE *f;
-	UNICHAR *filename;
-	sampleTyp tmpSmp, *s;
-
-	(void)ptr;
+	uint32_t i;
+	sampleTyp tmpSmp;
 
 	// this is important for the "goto" on load error
-	f = NULL;
+	FILE *f = NULL;
 	memset(&tmpSmp, 0, sizeof (tmpSmp));
 
 	if (editor.tmpFilenameU == NULL)
@@ -1043,7 +1029,7 @@ static int32_t SDLCALL loadRawSample(void *ptr)
 		goto rawLoadError;
 	}
 
-	filename = editor.tmpFilenameU;
+	UNICHAR *filename = editor.tmpFilenameU;
 
 	f = UNICHAR_FOPEN(filename, "rb");
 	if (f == NULL)
@@ -1053,7 +1039,7 @@ static int32_t SDLCALL loadRawSample(void *ptr)
 	}
 
 	fseek(f, 0, SEEK_END);
-	filesize = ftell(f);
+	uint32_t filesize = ftell(f);
 	rewind(f);
 
 	if (filesize > MAX_SAMPLE_LEN)
@@ -1085,7 +1071,7 @@ static int32_t SDLCALL loadRawSample(void *ptr)
 
 	fclose(f);
 
-	tmpFilename = unicharToCp437(filename, true);
+	char *tmpFilename = unicharToCp437(filename, true);
 	if (tmpFilename != NULL)
 	{
 		j = (int32_t)strlen(tmpFilename);
@@ -1095,13 +1081,13 @@ static int32_t SDLCALL loadRawSample(void *ptr)
 				break;
 		}
 
-		tmpPtr = tmpFilename;
+		char *tmpPtr = tmpFilename;
 		if (j > 0)
 			tmpPtr += j + 1;
 
 		sanitizeFilename(tmpPtr);
 
-		filenameLen = (uint32_t)strlen(tmpPtr);
+		uint32_t filenameLen = (uint32_t)strlen(tmpPtr);
 		for (i = 0; i < 22; i++)
 		{
 			if (i < filenameLen)
@@ -1129,7 +1115,7 @@ static int32_t SDLCALL loadRawSample(void *ptr)
 
 	if (instr[editor.curInstr] != NULL)
 	{
-		s = &instr[editor.curInstr]->samp[sampleSlot];
+		sampleTyp *s = &instr[editor.curInstr]->samp[sampleSlot];
 
 		freeSample(editor.curInstr, sampleSlot);
 		memcpy(s, &tmpSmp, sizeof (sampleTyp));
@@ -1159,6 +1145,8 @@ rawLoadError:
 	sampleIsLoading = false;
 
 	return false;
+
+	(void)ptr;
 }
 
 static int32_t SDLCALL loadWAVSample(void *ptr)
@@ -1175,14 +1163,10 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 	int64_t smp64;
 	float *fAudioDataFloat;
 	double *dAudioDataDouble;
-	FILE *f;
 	sampleTyp tmpSmp, *s;
-	UNICHAR *filename;
-
-	(void)ptr;
 
 	// this is important for the "goto" on load error
-	f = NULL;
+	FILE *f = NULL;
 	memset(&tmpSmp, 0, sizeof (tmpSmp));
 
 	// zero out chunk pointers and lengths
@@ -1198,7 +1182,7 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 		goto wavLoadError;
 	}
 
-	filename = editor.tmpFilenameU;
+	UNICHAR *filename = editor.tmpFilenameU;
 
 	f = UNICHAR_FOPEN(filename, "rb");
 	if (f == NULL)
@@ -1967,12 +1951,13 @@ wavLoadError:
 	sampleIsLoading = false;
 
 	return false;
+
+	(void)ptr;
 }
 
 bool loadSample(UNICHAR *filenameU, uint8_t smpNr, bool instrFlag)
 {
 	char tmpBuffer[16+1];
-	FILE *f;
 
 	if (sampleIsLoading)
 		return false;
@@ -1988,7 +1973,7 @@ bool loadSample(UNICHAR *filenameU, uint8_t smpNr, bool instrFlag)
 		return false;
 	}
 
-	f = UNICHAR_FOPEN(filenameU, "rb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
 	if (f == NULL)
 	{
 		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
@@ -2109,13 +2094,12 @@ bool loadSample(UNICHAR *filenameU, uint8_t smpNr, bool instrFlag)
 
 static void normalize32bitSigned(int32_t *sampleData, uint32_t sampleLength)
 {
-	uint32_t i, sample, sampleVolPeak;
-	double dGain;
+	uint32_t i;
 
-	sampleVolPeak = 0;
+	uint32_t sampleVolPeak = 0;
 	for (i = 0; i < sampleLength; i++)
 	{
-		sample = ABS(sampleData[i]);
+		const uint32_t sample = ABS(sampleData[i]);
 		if (sampleVolPeak < sample)
 			sampleVolPeak = sample;
 	}
@@ -2123,7 +2107,7 @@ static void normalize32bitSigned(int32_t *sampleData, uint32_t sampleLength)
 	if (sampleVolPeak <= 0)
 		return;
 
-	dGain = (double)INT32_MAX / sampleVolPeak;
+	const double dGain = (double)INT32_MAX / sampleVolPeak;
 	for (i = 0; i < sampleLength; i++)
 		sampleData[i] = (int32_t)(sampleData[i] * dGain);
 }
@@ -2131,12 +2115,11 @@ static void normalize32bitSigned(int32_t *sampleData, uint32_t sampleLength)
 static void normalize16bitFloatSigned(float *fSampleData, uint32_t sampleLength)
 {
 	uint32_t i;
-	float fSample, fSampleVolPeak, fGain;
 
-	fSampleVolPeak = 0.0f;
+	float fSampleVolPeak = 0.0f;
 	for (i = 0; i < sampleLength; i++)
 	{
-		fSample = fabsf(fSampleData[i]);
+		const float fSample = fabsf(fSampleData[i]);
 		if (fSampleVolPeak < fSample)
 			fSampleVolPeak = fSample;
 	}
@@ -2144,7 +2127,7 @@ static void normalize16bitFloatSigned(float *fSampleData, uint32_t sampleLength)
 	if (fSampleVolPeak <= 0.0f)
 		return;
 
-	fGain = (float)INT16_MAX / fSampleVolPeak;
+	const float fGain = (float)INT16_MAX / fSampleVolPeak;
 	for (i = 0; i < sampleLength; i++)
 		fSampleData[i] *= fGain;
 }
@@ -2152,12 +2135,11 @@ static void normalize16bitFloatSigned(float *fSampleData, uint32_t sampleLength)
 static void normalize64bitDoubleSigned(double *dSampleData, uint32_t sampleLength)
 {
 	uint32_t i;
-	double dSample, dSampleVolPeak, dGain;
 
-	dSampleVolPeak = 0.0;
+	double dSampleVolPeak = 0.0;
 	for (i = 0; i < sampleLength; i++)
 	{
-		dSample = fabs(dSampleData[i]);
+		const double dSample = fabs(dSampleData[i]);
 		if (dSampleVolPeak < dSample)
 			dSampleVolPeak = dSample;
 	}
@@ -2165,15 +2147,14 @@ static void normalize64bitDoubleSigned(double *dSampleData, uint32_t sampleLengt
 	if (dSampleVolPeak <= 0.0)
 		return;
 
-	dGain = (double)INT16_MAX / dSampleVolPeak;
+	const double dGain = (double)INT16_MAX / dSampleVolPeak;
 	for (i = 0; i < sampleLength; i++)
 		dSampleData[i] *= dGain;
 }
 
 bool fileIsInstrument(char *fullPath)
 {
-	char *filename;
-	int32_t i, len, extOffset;
+	int32_t i, len;
 
 	// this assumes that fullPath is not empty
 
@@ -2187,7 +2168,7 @@ bool fileIsInstrument(char *fullPath)
 			break;
 	}
 
-	filename = fullPath;
+	char *filename = fullPath;
 	if (i > 0)
 		filename += i + 1;
 	// --------------------------
@@ -2199,7 +2180,7 @@ bool fileIsInstrument(char *fullPath)
 	if (!_strnicmp("xi.", filename, 3) || (len >= 4 && !_strnicmp("pat.", filename, 4)))
 		return true;
 
-	extOffset = getExtOffset(filename, len);
+	int32_t extOffset = getExtOffset(filename, len);
 	if (extOffset != -1)
 	{
 		if ((extOffset <= len-4) && !_strnicmp(".pat", &filename[extOffset], 4)) return true;
@@ -2211,8 +2192,7 @@ bool fileIsInstrument(char *fullPath)
 
 bool fileIsSample(char *fullPath)
 {
-	char *filename;
-	int32_t i, len, extOffset;
+	int32_t i, len;
 
 	// this assumes that fullPath is not empty
 
@@ -2226,7 +2206,7 @@ bool fileIsSample(char *fullPath)
 			break;
 	}
 
-	filename = fullPath;
+	char *filename = fullPath;
 	if (i > 0)
 		filename += i + 1;
 	// --------------------------
@@ -2243,7 +2223,7 @@ bool fileIsSample(char *fullPath)
 		return false; // definitely a module
 	}
 
-	extOffset = getExtOffset(filename, len);
+	int32_t extOffset = getExtOffset(filename, len);
 	if (extOffset != -1)
 	{
 		if (extOffset <= len-4)

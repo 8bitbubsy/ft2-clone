@@ -222,17 +222,14 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 
 void drawRadioButton(uint16_t radioButtonID)
 {
-	uint8_t *gfxPtr;
-	radioButton_t *radioButton;
-
 	assert(radioButtonID < NUM_RADIOBUTTONS);
-	radioButton = &radioButtons[radioButtonID];
+	radioButton_t *radioButton = &radioButtons[radioButtonID];
 	if (!radioButton->visible)
 		return;
 
 	assert(radioButton->x < SCREEN_W && radioButton->y < SCREEN_H);
 
-	gfxPtr = &bmp.radiobuttonGfx[radioButton->state*(RADIOBUTTON_W*RADIOBUTTON_H)];
+	const uint8_t *gfxPtr = &bmp.radiobuttonGfx[radioButton->state*(RADIOBUTTON_W*RADIOBUTTON_H)];
 	blitFast(radioButton->x, radioButton->y, gfxPtr, RADIOBUTTON_W, RADIOBUTTON_H);
 }
 
@@ -252,16 +249,15 @@ void hideRadioButton(uint16_t radioButtonID)
 
 void checkRadioButton(uint16_t radioButtonID)
 {
-	radioButton_t *radioButton;
-
 	assert(radioButtonID < NUM_RADIOBUTTONS);
-	radioButton = &radioButtons[radioButtonID];
+	const uint16_t testGroup = radioButtons[radioButtonID].group;
 
-	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++)
+	radioButton_t *radioButton = radioButtons;
+	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++, radioButton++)
 	{
-		if (radioButtons[i].group == radioButton->group && radioButtons[i].state == RADIOBUTTON_CHECKED)
+		if (radioButton->group == testGroup && radioButton->state == RADIOBUTTON_CHECKED)
 		{
-			radioButtons[i].state = RADIOBUTTON_UNCHECKED;
+			radioButton->state = RADIOBUTTON_UNCHECKED;
 			drawRadioButton(i);
 			break;
 		}
@@ -273,37 +269,38 @@ void checkRadioButton(uint16_t radioButtonID)
 
 void uncheckRadioButtonGroup(uint16_t radioButtonGroup)
 {
-	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++)
+	radioButton_t *radioButton = radioButtons;
+	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++, radioButton++)
 	{
-		if (radioButtons[i].group == radioButtonGroup)
-			radioButtons[i].state = RADIOBUTTON_UNCHECKED;
+		if (radioButton->group == radioButtonGroup)
+			radioButton->state = RADIOBUTTON_UNCHECKED;
 	}
 }
 
 void showRadioButtonGroup(uint16_t radioButtonGroup)
 {
-	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++)
+	radioButton_t *radioButton = radioButtons;
+	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++, radioButton++)
 	{
-		if (radioButtons[i].group == radioButtonGroup)
+		if (radioButton->group == radioButtonGroup)
 			showRadioButton(i);
 	}
 }
 
 void hideRadioButtonGroup(uint16_t radioButtonGroup)
 {
-	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++)
+	radioButton_t *radioButton = radioButtons;
+	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++, radioButton++)
 	{
-		if (radioButtons[i].group == radioButtonGroup)
+		if (radioButton->group == radioButtonGroup)
 			hideRadioButton(i);
 	}
 }
 
 void handleRadioButtonsWhileMouseDown(void)
 {
-	radioButton_t *radioButton;
-
 	assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_RADIOBUTTONS);
-	radioButton = &radioButtons[mouse.lastUsedObjectID];
+	radioButton_t *radioButton = &radioButtons[mouse.lastUsedObjectID];
 	if (!radioButton->visible || radioButton->state == RADIOBUTTON_CHECKED)
 		return;
 
@@ -325,19 +322,20 @@ void handleRadioButtonsWhileMouseDown(void)
 
 bool testRadioButtonMouseDown(void)
 {
-	radioButton_t *radioButton;
-
 	if (ui.sysReqShown)
 		return false;
 
-	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++)
+	const int32_t mx = mouse.x;
+	const int32_t my = mouse.y;
+
+	radioButton_t *radioButton = radioButtons;
+	for (uint16_t i = 0; i < NUM_RADIOBUTTONS; i++, radioButton++)
 	{
-		radioButton = &radioButtons[i];
 		if (!radioButton->visible || radioButton->state == RADIOBUTTON_CHECKED)
 			continue;
 
-		if (mouse.x >= radioButton->x && mouse.x < radioButton->x+radioButton->clickAreaWidth &&
-		    mouse.y >= radioButton->y && mouse.y < radioButton->y+(RADIOBUTTON_H+1))
+		if (mx >= radioButton->x && mx < radioButton->x+radioButton->clickAreaWidth &&
+		    my >= radioButton->y && my < radioButton->y+(RADIOBUTTON_H+1))
 		{
 			mouse.lastUsedObjectID = i;
 			mouse.lastUsedObjectType = OBJECT_RADIOBUTTON;
@@ -350,13 +348,11 @@ bool testRadioButtonMouseDown(void)
 
 void testRadioButtonMouseRelease(void)
 {
-	radioButton_t *radioButton;
-
 	if (mouse.lastUsedObjectType != OBJECT_RADIOBUTTON || mouse.lastUsedObjectID == OBJECT_ID_NONE)
 		return;
 
 	assert(mouse.lastUsedObjectID < NUM_RADIOBUTTONS);
-	radioButton = &radioButtons[mouse.lastUsedObjectID];
+	radioButton_t *radioButton = &radioButtons[mouse.lastUsedObjectID];
 	if (!radioButton->visible || radioButton->state == RADIOBUTTON_CHECKED)
 		return;
 

@@ -42,13 +42,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode);
 
 int8_t scancodeKeyToNote(SDL_Scancode scancode)
 {
-	int8_t note;
-
 	if (scancode == SDL_SCANCODE_CAPSLOCK || scancode == SDL_SCANCODE_NONUSBACKSLASH)
 		return 97; // key off
 
 	// translate key to note
-	note = 0;
+	int8_t note = 0;
 	if (scancode >= SDL_SCANCODE_B && scancode <= SDL_SCANCODE_SLASH)
 		note = scancodeKey2Note[(int32_t)scancode - SDL_SCANCODE_B];
 
@@ -73,8 +71,6 @@ void readKeyModifiers(void)
 
 void keyUpHandler(SDL_Scancode scancode, SDL_Keycode keycode)
 {
-	(void)keycode;
-
 	if (editor.editTextFlag || ui.sysReqShown)
 		return; // kludge: don't handle key up! (XXX: Is this hack really needed anymore?)
 
@@ -94,6 +90,8 @@ void keyUpHandler(SDL_Scancode scancode, SDL_Keycode keycode)
 		keyb.numPadPlusPressed = false;
 
 	keyb.keyRepeat = false;
+
+	(void)keycode;
 }
 
 void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepeated)
@@ -161,8 +159,6 @@ void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepea
 
 static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 {
-	uint16_t pattLen;
-
 	// if we're holding numpad plus but not pressing bank keys, don't check any other key
 	if (keyb.numPadPlusPressed)
 	{
@@ -346,7 +342,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 				patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch].ton = 97;
 
-				pattLen = pattLens[editor.editPattern];
+				const uint16_t pattLen = pattLens[editor.editPattern];
 				if (playMode == PLAYMODE_EDIT && pattLen >= 1)
 					setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
 
