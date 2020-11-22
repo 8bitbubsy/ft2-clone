@@ -2269,7 +2269,7 @@ void setPos(int16_t songPos, int16_t pattPos, bool resetTimer)
 		if (song.len > 0 && song.songPos >= song.len)
 			song.songPos = song.len - 1;
 
-		song.pattNr = song.songTab[songPos];
+		song.pattNr = song.songTab[song.songPos];
 		assert(song.pattNr < MAX_PATTERNS);
 		song.pattLen = pattLens[song.pattNr];
 
