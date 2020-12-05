@@ -141,7 +141,7 @@ void setNewAudioFreq(uint32_t freq) // for song-to-WAV rendering
 	const bool mustRecalcTables = audio.freq != oldAudioFreq;
 	if (mustRecalcTables)
 	{
-		calcReplayRate(audio.freq);
+		calcReplayerVars(audio.freq);
 		calcRevMixDeltaTable();
 	}
 }
@@ -154,7 +154,7 @@ void setBackOldAudioFreq(void) // for song-to-WAV rendering
 
 	if (mustRecalcTables)
 	{
-		calcReplayRate(audio.freq);
+		calcReplayerVars(audio.freq);
 		calcRevMixDeltaTable();
 	}
 }
@@ -1182,7 +1182,7 @@ bool setupAudio(bool showErrorMsg)
 
 	audio.dTickSampleCounter = 0.0; // zero tick sample counter so that it will instantly initiate a tick
 
-	calcReplayRate(audio.freq);
+	calcReplayerVars(audio.freq);
 
 	if (song.speed == 0)
 		song.speed = 125;

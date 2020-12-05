@@ -360,9 +360,10 @@ void calcReplayerLogTab(void)
 		dLogTab[i] = exp2(i / 768.0) * (8363.0 * 256.0);
 }
 
-void calcReplayRate(int32_t audioFreq)
+void calcReplayerVars(int32_t audioFreq)
 {
-	if (audioFreq == 0)
+	assert(audioFreq > 0);
+	if (audioFreq <= 0)
 		return;
 
 	dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
@@ -2749,7 +2750,12 @@ bool setupReplayer(void)
 	audio.linearFreqTable = true;
 	note2Period = linearPeriods;
 
-	calcWindowedSincTables();
+	if (!calcWindowedSincTables())
+	{
+		showErrorMsgBox("Not enough memory!");
+		return false;
+	}
+
 	calcPeriod2HzTable();
 	calcRevMixDeltaTable();
 	calcPanningTable();

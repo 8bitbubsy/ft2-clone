@@ -10,5 +10,4 @@ bool handleModuleLoadFromArg(int argc, char **argv);
 void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck);
 void handleLoadMusicEvents(void);
 void clearUnusedChannels(tonTyp *p, int16_t pattLen, int32_t antChn);
-//void unpackPatt(uint8_t *dst, uint16_t inn, uint16_t len, int32_t antChn);
 void checkSampleRepeat(sampleTyp *s);

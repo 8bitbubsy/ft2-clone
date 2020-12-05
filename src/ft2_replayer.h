@@ -252,7 +252,7 @@ void resetReplayerState(void);
 
 void fixSongName(void); // removes spaces from right side of song name
 void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
-void calcReplayRate(int32_t rate);
+void calcReplayerVars(int32_t rate);
 void tuneSample(sampleTyp *s, int32_t midCFreq);
 
 void calcRevMixDeltaTable(void);

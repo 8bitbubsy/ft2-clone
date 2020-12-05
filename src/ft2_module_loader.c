@@ -2283,7 +2283,6 @@ static bool loadInstrSample(FILE *f, uint16_t i, bool externalThreadFlag)
 
 void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 {
-	uint8_t note, data;
 	int32_t j;
 
 	if (dst == NULL)
@@ -2304,14 +2303,14 @@ void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 			if (srcIdx >= srcEnd)
 				return; // error!
 
-			note = *src++;
+			const uint8_t note = *src++;
 			if (note & 0x80)
 			{
-				data = 0; if (note & 0x01) data = *src++; *dst++ = data;
-				data = 0; if (note & 0x02) data = *src++; *dst++ = data;
-				data = 0; if (note & 0x04) data = *src++; *dst++ = data;
-				data = 0; if (note & 0x08) data = *src++; *dst++ = data;
-				data = 0; if (note & 0x10) data = *src++; *dst++ = data;
+				*dst++ = (note & 0x01) ? *src++ : 0;
+				*dst++ = (note & 0x02) ? *src++ : 0;
+				*dst++ = (note & 0x04) ? *src++ : 0;
+				*dst++ = (note & 0x08) ? *src++ : 0;
+				*dst++ = (note & 0x10) ? *src++ : 0;
 			}
 			else
 			{
@@ -2342,7 +2341,7 @@ void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 			if (srcIdx >= srcEnd)
 				return; // error!
 
-			note = *src++;
+			const uint8_t note = *src++;
 			if (note & 0x80)
 			{
 				if (note & 0x01) src++;
