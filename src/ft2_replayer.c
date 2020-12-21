@@ -1628,32 +1628,29 @@ static uint16_t relocateTon(uint16_t period, uint8_t arpNote, stmTyp *ch)
 {
 	int32_t tmpPeriod;
 
-	const int32_t fineTune = ((ch->fineTune >> 3) + 16) << 1;
-	int32_t hiPeriod = (8 * 12 * 16) * 2;
+	const int32_t fineTune = ((int8_t)ch->fineTune >> 3) + 16;
+	int32_t hiPeriod = 1536; // FT2 bug: should've been 1935
 	int32_t loPeriod = 0;
 
 	for (int32_t i = 0; i < 8; i++)
 	{
-		tmpPeriod = (((loPeriod + hiPeriod) >> 1) & 0xFFFFFFE0) + fineTune;
+		tmpPeriod = (((loPeriod + hiPeriod) >> 1) & ~15) + fineTune;
 
-		int32_t tableIndex = (uint32_t)(tmpPeriod - 16) >> 1;
-		tableIndex = CLAMP(tableIndex, 0, 1935); // 8bitbubsy: added security check
+		int32_t lookUp = tmpPeriod - 8;
+		if (lookUp < 0)
+			lookUp = 0; // 8bitbubsy: safety fix (C-0 w/ finetune <= -65)
 
-		if (period >= note2Period[tableIndex])
-			hiPeriod = (tmpPeriod - fineTune) & 0xFFFFFFE0;
+		if (period >= note2Period[lookUp])
+			hiPeriod = (tmpPeriod - fineTune) & ~15;
 		else
-			loPeriod = (tmpPeriod - fineTune) & 0xFFFFFFE0;
+			loPeriod = (tmpPeriod - fineTune) & ~15;
 	}
 
-	tmpPeriod = loPeriod + fineTune + (arpNote << 5);
+	tmpPeriod = loPeriod + fineTune + (arpNote << 4);
+	if (tmpPeriod >= 1550) // FT2 bugs: off-by-one edge case, and should've been 1935 (1936)
+		tmpPeriod = 1551;
 
-	if (tmpPeriod < 0) // 8bitbubsy: added security check
-		tmpPeriod = 0;
-
-	if (tmpPeriod >= (8*12*16+15)*2-1) // FT2 bug: off-by-one edge case
-		tmpPeriod = (8*12*16+15)*2;
-
-	return note2Period[(uint32_t)tmpPeriod>>1];
+	return note2Period[tmpPeriod];
 }
 
 static void vibrato2(stmTyp *ch)
