@@ -141,15 +141,15 @@ static void starfield(void)
 			d ^= 255;
 			d = (d * starfieldFade) >> 8;
 
-			int32_t r = d - 61;
+			int32_t r = d - 66;
 			if (r < 0)
 				r = 0;
 
-			int32_t g = d - 35;
+			int32_t g = d - 38;
 			if (g < 0)
 				g = 0;
 
-			int32_t b = d + 75;
+			int32_t b = d + 78;
 			if (b > 255)
 				b = 255;
 
@@ -170,10 +170,10 @@ void aboutFrame(void)
 
 	// fade in starfield
 	if (starfieldFade < 256)
-		starfieldFade += 2;
+		starfieldFade += 4;
 
-	// fade in logo after 2 seconds
-	if (logoFade < 256 && frameCounter++ >= 2*VBLANK_HZ)
+	// fade in logo after 1 second
+	if (logoFade < 256 && frameCounter++ >= VBLANK_HZ*1)
 	{
 		blit32Fade(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H, logoFade);
 		textOutFade(customText1X, customTextY, PAL_FORGRND, customText1, logoFade);
