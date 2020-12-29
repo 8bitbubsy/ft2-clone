@@ -131,13 +131,19 @@
 
 #define LINEAR_INTERPOLATION8(s, f) \
 { \
-	const double dFrac = (const double)((uint32_t)f * (1.0 / (UINT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
+	/* uint32_t -> int32_t so that we can use SIMD for fast int->double conversion */ \
+	const int32_t frac = (uint32_t)(f) >> 1; /* (2^32)-1 -> (2^31)-1 */ \
+	\
+	const double dFrac = (double)(frac * (1.0 / (INT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
 	dSample = ((s[0] + (s[1]-s[0]) * dFrac)) * (1.0 / 128.0); \
 } \
 
 #define LINEAR_INTERPOLATION16(s, f) \
 { \
-	const double dFrac = (const double)((uint32_t)f * (1.0 / (UINT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
+	/* uint32_t -> int32_t so that we can use SIMD for fast int->double conversion */ \
+	const int32_t frac = (uint32_t)(f) >> 1; /* (2^32)-1 -> (2^31)-1 */ \
+	\
+	const double dFrac = (double)(frac * (1.0 / (INT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
 	dSample = ((s[0] + (s[1]-s[0]) * dFrac)) * (1.0 / 32768.0); \
 } \
 
