@@ -933,7 +933,7 @@ bool setupWindow(void)
 
 bool setupRenderer(void)
 {
-	uint32_t rendererFlags = SDL_RENDERER_ACCELERATED;
+	uint32_t rendererFlags = 0;
 	if (video.vsync60HzPresent)
 		rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
 
