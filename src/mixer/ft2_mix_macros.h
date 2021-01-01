@@ -131,7 +131,7 @@
 
 #define LINEAR_INTERPOLATION8(s, f) \
 { \
-	/* uint32_t -> int32_t so that we can use SIMD for fast int->double conversion */ \
+	/* uint32_t -> int32_t for less SIMD overhead when doing int->double conversion */ \
 	const int32_t frac = (uint32_t)(f) >> 1; /* (2^32)-1 -> (2^31)-1 */ \
 	\
 	const double dFrac = (double)(frac * (1.0 / (INT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
@@ -140,7 +140,7 @@
 
 #define LINEAR_INTERPOLATION16(s, f) \
 { \
-	/* uint32_t -> int32_t so that we can use SIMD for fast int->double conversion */ \
+	/* uint32_t -> int32_t for less SIMD overhead when doing int->double conversion */ \
 	const int32_t frac = (uint32_t)(f) >> 1; /* (2^32)-1 -> (2^31)-1 */ \
 	\
 	const double dFrac = (double)(frac * (1.0 / (INT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
