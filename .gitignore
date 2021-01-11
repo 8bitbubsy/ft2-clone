@@ -1,4 +1,3 @@
-
 *.db
 *.ilk
 *.pdb
@@ -13,6 +12,8 @@
 vs2019_project/.vs/ft2-clone/v16/.suo
 *.ipch
 .DS_Store
+*.dmg
+release/macos/ft2-clone-macos.app/Contents/MacOS
 vs2019_project/ft2-clone/Release/ft2-clone.vcxproj.FileListAbsolute.txt
 vs2019_project/ft2-clone/x64/Debug/ft2-clone.vcxproj.FileListAbsolute.txt
 *.cod
