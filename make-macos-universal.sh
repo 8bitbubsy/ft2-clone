@@ -16,10 +16,18 @@ VERSION=v`grep PROG_VER_STR src/ft2_header.h|cut -d'"' -f 2`
 
 RELEASE_MACOS_DIR=release/macos/
 APP_DIR=${RELEASE_MACOS_DIR}ft2-clone-macos.app/
+TARGET_DIR=${APP_DIR}Contents/MacOS/
 
-TARGET_X86_64=${APP_DIR}Contents/MacOS/ft2-clone-macos-x86_64
-TARGET_ARM64=${APP_DIR}Contents/MacOS/ft2-clone-macos-arm64
-TARGET_UNIVERSAL=${APP_DIR}Contents/MacOS/ft2-clone-macos
+TARGET_X86_64=${TARGET_DIR}ft2-clone-macos-x86_64
+TARGET_ARM64=${TARGET_DIR}ft2-clone-macos-arm64
+TARGET_UNIVERSAL=${TARGET_DIR}ft2-clone-macos
+
+#
+# Prepare
+#
+if [ ! -d $TARGET_DIR ]; then
+    mkdir -p $TARGET_DIR
+fi
 
 #
 # Compile
