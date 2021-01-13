@@ -213,9 +213,12 @@ typedef struct stmTyp_t
 	int16_t midiPitch;
 	uint16_t outPeriod, realPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
 	uint16_t envVCnt, envPCnt, eVibAmp, eVibSweep;
-	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;
-	double dEnvVIPValue, dEnvPIPValue, dEnvVAmp, dEnvPAmp, dFinalVol;
+	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;	
+	int32_t envVIPValue, envPIPValue, envVAmp, envPAmp;
 	int32_t oldFinalPeriod, smpStartPos;
+
+	double dFinalVol;
+
 	sampleTyp *smpPtr;
 	instrTyp *instrPtr;
 } stmTyp;
@@ -247,13 +250,15 @@ typedef struct syncedChannel_t // used for audio/video sync queue
 	double dFinalVol;
 } syncedChannel_t;
 
+double getSampleC4Rate(sampleTyp *s);
+
 void setNewSongPos(int32_t pos);
 void resetReplayerState(void);
 
 void fixSongName(void); // removes spaces from right side of song name
 void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
 void calcReplayerVars(int32_t rate);
-void tuneSample(sampleTyp *s, int32_t midCFreq);
+void tuneSample(sampleTyp *s, const int32_t midCFreq);
 
 void calcRevMixDeltaTable(void);
 void calcReplayerLogTab(void);
@@ -262,7 +267,7 @@ double dPeriod2Hz(uint16_t period);
 int64_t getMixerDelta(uint16_t period);
 uint32_t getRevMixerDelta(uint16_t period);
 
-int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote); // for piano in Instr. Ed.
+int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
 
 bool allocateInstr(int16_t nr);
 void freeInstr(int32_t nr);

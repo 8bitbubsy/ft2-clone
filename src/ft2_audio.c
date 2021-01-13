@@ -198,7 +198,7 @@ void calcPanningTable(void)
 {
 	// same formula as FT2's panning table (with 0.0f..1.0f range)
 	for (int32_t i = 0; i <= 256; i++)
-		dPanningTab[i] = sqrt(i / 256.0);
+		dPanningTab[i] = sqrt(i * (1.0 / 256.0));
 }
 
 static void voiceUpdateVolumes(int32_t i, uint8_t status)

@@ -26,9 +26,8 @@
 #define SCOPE_HEIGHT 36
 
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
-static int32_t oldPeriod;
-static uint32_t oldDrawDelta, scopeTimeLen, scopeTimeLenFrac;
-static uint64_t oldDelta, timeNext64, timeNext64Frac;
+static uint32_t scopeTimeLen, scopeTimeLenFrac;
+static uint64_t timeNext64, timeNext64Frac;
 static volatile scope_t scope[MAX_VOICES];
 static SDL_Thread *scopeThread;
 
@@ -36,9 +35,13 @@ lastChInstr_t lastChInstr[MAX_VOICES]; // global
 
 void resetCachedScopeVars(void)
 {
-	oldPeriod = -1;
-	oldDelta = 0;
-	oldDrawDelta = 0;
+	volatile scope_t *sc = scope;
+	for (int32_t i = 0; i < MAX_VOICES; i++, sc++)
+	{
+		sc->oldPeriod = -1;
+		sc->oldDrawDelta = 0;
+		sc->oldDelta = 0;
+	}
 }
 
 int32_t getSamplePosition(uint8_t ch)
@@ -383,8 +386,13 @@ static void updateScopes(void)
 		// scope position update
 
 		s.posFrac += s.delta;
-		s.pos += (int32_t)(s.posFrac >> SCOPE_FRAC_BITS) * s.direction;
+		const int32_t wholeSamples = (int32_t)(s.posFrac >> SCOPE_FRAC_BITS);
 		s.posFrac &= SCOPE_FRAC_MASK;
+
+		if (s.direction == 1)
+			s.pos += wholeSamples; // forwards
+		else
+			s.pos -= wholeSamples; // backwards
 
 		// handle loop wrapping or sample end
 		if (s.direction == -1 && s.pos < s.loopStart) // sampling backwards (definitely pingpong loop)
@@ -521,20 +529,20 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 			// use cached values if possible
 
 			const uint16_t period = ch->finalPeriod;
-			if (period != oldPeriod)
+			if (period != sc->oldPeriod)
 			{
-				oldPeriod = period;
+				sc->oldPeriod = period;
 				const double dHz = dPeriod2Hz(period);
 
 				const double dScopeRateFactor = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-				oldDelta = (int64_t)((dHz * dScopeRateFactor) + 0.5); // Hz -> rounded fixed-point delta
+				sc->oldDelta = (int64_t)((dHz * dScopeRateFactor) + 0.5); // Hz -> rounded fixed-point delta
 
 				const double dRelativeHz = dHz * (1.0 / (8363.0 / 2.0));
-				oldDrawDelta = (int32_t)((dRelativeHz * SCOPE_DRAW_FRAC_SCALE) + 0.5); // Hz -> rounded fixed-point draw delta
+				sc->oldDrawDelta = (int32_t)((dRelativeHz * SCOPE_DRAW_FRAC_SCALE) + 0.5); // Hz -> rounded fixed-point draw delta
 			}
 
-			sc->delta = oldDelta;
-			sc->drawDelta = oldDrawDelta;
+			sc->delta = sc->oldDelta;
+			sc->drawDelta = sc->oldDrawDelta;
 		}
 
 		if (status & IS_NyTon)

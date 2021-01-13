@@ -31,9 +31,9 @@ typedef struct scope_t
 	const int16_t *base16;
 	bool wasCleared, sampleIs16Bit;
 	uint8_t loopType;
-	int32_t vol, loopStart, loopLength, end, pos, direction;
-	uint32_t drawDelta;
-	uint64_t delta, posFrac;
+	int32_t vol, loopStart, loopLength, end, pos, direction, oldPeriod;
+	uint32_t drawDelta, oldDrawDelta;
+	uint64_t delta, posFrac, oldDelta;
 } scope_t;
 
 typedef struct lastChInstr_t
