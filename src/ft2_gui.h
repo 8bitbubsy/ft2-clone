@@ -87,6 +87,8 @@ void blitFastClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t
 void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, uint8_t numDigits);
 void hexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint32_t val, uint8_t numDigits);
 void hexOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, uint32_t val, uint8_t numDigits);
+void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color); // A..Z/a..z and 0..9
+void textOutTinyOutline(int32_t xPos, int32_t yPos, char *str); // A..Z/a..z and 0..9
 void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr);
 void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, char chr);
 void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr);

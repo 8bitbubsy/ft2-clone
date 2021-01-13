@@ -288,6 +288,70 @@ uint16_t textWidth16(const char *textPtr)
 	return textWidth;
 }
 
+void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color) // A..Z/a..z and 0..9
+{
+	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
+	while (*str != '\0')
+	{
+		char chr = *str++;
+
+		if (chr >= '0' && chr <= '9')
+		{
+			chr -= '0';
+		}
+		else if (chr >= 'a' && chr <= 'z')
+		{
+			chr -= 'a';
+			chr += 10;
+		}
+		else if (chr >= 'A' && chr <= 'Z')
+		{
+			chr -= 'A';
+			chr += 10;
+		}
+		else
+		{
+			dstPtr += FONT3_CHAR_W;
+			continue;
+		}
+
+		const uint8_t *srcPtr = &bmp.font3[chr * FONT3_CHAR_W];
+		for (int32_t y = 0; y < FONT3_CHAR_H; y++)
+		{
+			for (int32_t x = 0; x < FONT3_CHAR_W; x++)
+			{
+#ifdef __arm__
+				if (srcPtr[x] != 0)
+					dstPtr[x] = color;
+#else
+				// carefully written like this to generate conditional move instructions (font data is hard to predict)
+				uint32_t tmp = dstPtr[x];
+				if (srcPtr[x] != 0) tmp = color;
+				dstPtr[x] = tmp;
+#endif
+			}
+
+			srcPtr += FONT3_WIDTH;
+			dstPtr += SCREEN_W;
+		}
+
+		dstPtr -= (SCREEN_W * FONT3_CHAR_H) - FONT3_CHAR_W;
+	}
+}
+
+void textOutTinyOutline(int32_t xPos, int32_t yPos, char *str) // A..Z/a..z and 0..9
+{
+	const uint32_t bgColor = video.palette[PAL_BCKGRND];
+	const uint32_t fgColor = video.palette[PAL_FORGRND];
+
+	textOutTiny(xPos-1, yPos,   str, bgColor);
+	textOutTiny(xPos,   yPos-1, str, bgColor);
+	textOutTiny(xPos+1, yPos,   str, bgColor);
+	textOutTiny(xPos,   yPos+1, str, bgColor);
+
+	textOutTiny(xPos, yPos, str, fgColor);
+}
+
 void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
