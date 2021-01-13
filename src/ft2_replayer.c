@@ -28,7 +28,7 @@
 */
 
 // non-FT2 precalced stuff (these are kinda big...)
-static double dPeriod2HzTab[65536], dLogTab[768], dHz2MixDeltaMul;
+static double dPeriod2HzTab[65536], dLogTab[768], dLogMulTab[32], dHz2MixDeltaMul;
 static uint32_t revMixDeltaTab[65536];
 static bool bxxOverflow;
 static tonTyp nilPatternLine[MAX_VOICES];
@@ -123,21 +123,77 @@ void removeSongModifiedFlag(void)
 	editor.updateWindowTitle = true;
 }
 
-void tuneSample(sampleTyp *s, int32_t midCFreq)
+void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample load (not when loading module)
 {
-	if (midCFreq <= 0)
+	#define NOTE_C4 (4*12)
+	#define MIN_PERIOD (0)
+	#define MAX_PERIOD (((10*12*16)-1)-1) /* -1 (because of bugged amigaPeriods table values */
+
+	if (midCFreq <= 0 || note2Period == NULL)
 	{
-		s->fine = 0;
-		s->relTon = 0;
+		s->fine = s->relTon = 0;
 		return;
 	}
 
-	double dFreq = log2(midCFreq / 8363.0) * (12.0 * 128.0);
-	int32_t linearFreq = (int32_t)(dFreq + 0.5); // rounded
-	s->fine = ((linearFreq + 128) & 255) - 128;
+	// handle frequency boundaries
 
-	int32_t relTon = (linearFreq - s->fine) >> 7;
-	s->relTon = (int8_t)CLAMP(relTon, -48, 71);
+	if (midCFreq <= (int32_t)dPeriod2HzTab[note2Period[MIN_PERIOD]])
+	{
+		s->fine = -128;
+		s->relTon = -48;
+		return;
+	}
+
+	if (midCFreq >= (int32_t)dPeriod2HzTab[note2Period[MAX_PERIOD]])
+	{
+		s->fine = 127;
+		s->relTon = 71;
+		return;
+	}
+
+	// check if midCFreq is matching any of the clean note frequencies (C-0..B-9)
+
+	for (int8_t i = 0; i < 10*12; i++)
+	{
+		if (midCFreq == (int32_t)dPeriod2HzTab[note2Period[16 + (i<<4)]])
+		{
+			s->fine = 0;
+			s->relTon = i - NOTE_C4;
+			return;
+		}
+	}
+
+	// find closest frequency in period table
+
+	int32_t period = MAX_PERIOD;
+	for (; period >= MIN_PERIOD; period--)
+	{
+		const int32_t curr = (int32_t)dPeriod2HzTab[note2Period[period+0]];
+		if (midCFreq == curr)
+			break;
+
+		if (midCFreq > curr)
+		{
+			const int32_t next = (int32_t)dPeriod2HzTab[note2Period[period+1]];
+			const int32_t errorCurr = ABS(curr-midCFreq);
+			const int32_t errorNext = ABS(next-midCFreq);
+
+			if (errorCurr <= errorNext)
+				break; // current is the closest
+
+			period++;
+			break; // current+1 is the closest
+		}
+	}
+
+	if (period == -1) // frequency was too for period table
+	{
+		s->fine = s->relTon = 0;
+		return;
+	}
+
+	s->fine = ((period & 31) - 16) << 3;
+	s->relTon = (int8_t)(((period & ~31) >> 4) - NOTE_C4);
 }
 
 void setPatternLen(uint16_t nr, int16_t len)
@@ -220,7 +276,7 @@ static void calcPeriod2HzTable(void) // called every time "linear/amiga frequenc
 			const int32_t period = invPeriod % 768;
 			const int32_t invOct = (14 - octave) & 0x1F; // accurate to FT2
 
-			dPeriod2HzTab[i] = dLogTab[period] / (1UL << invOct); // x = y / 2^invOct
+			dPeriod2HzTab[i] = dLogTab[period] * dLogMulTab[invOct]; // x = y / 2^invOct
 		}
 	}
 	else
@@ -254,6 +310,19 @@ void calcRevMixDeltaTable(void)
 	}
 }
 
+// returns *exact* FT2 C-4 voice rate (depending on finetune, relative note and Amiga/linear mode)
+double getSampleC4Rate(sampleTyp *s)
+{
+	int32_t note = (96/2) + s->relTon;
+	if (note >= (12*10)-1)
+		return -1; // B-9 (from relTon) = illegal! (won't play in replayer)
+
+	const int32_t C4Period = (note * 16) + (((int8_t)s->fine >> 3) + 16);
+
+	const uint16_t period = audio.linearFreqTable ? linearPeriods[C4Period] : amigaPeriods[C4Period];
+	return dPeriod2Hz(period);
+}
+
 void setFrqTab(bool linear)
 {
 	pauseAudio();
@@ -272,7 +341,12 @@ void setFrqTab(bool linear)
 
 	// update "frequency table" radiobutton, if it's shown
 	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+	{
 		setConfigIORadioButtonStates();
+
+		if (ui.instEditorShown)
+			drawC4Rate();
+	}
 }
 
 static void retrigVolume(stmTyp *ch)
@@ -356,8 +430,11 @@ void keyOff(stmTyp *ch)
 
 void calcReplayerLogTab(void)
 {
+	for (uint32_t i = 0; i < 32; i++)
+		dLogMulTab[i] = 1.0 / (1UL << i);
+
 	for (int32_t i = 0; i < 768; i++)
-		dLogTab[i] = exp2(i / 768.0) * (8363.0 * 256.0);
+		dLogTab[i] = exp2(i * (1.0 / 768.0)) * (8363.0 * 256.0);
 }
 
 void calcReplayerVars(int32_t audioFreq)
@@ -415,16 +492,36 @@ uint32_t getRevMixerDelta(uint16_t period)
 	return revMixDeltaTab[period];
 }
 
-int32_t getPianoKey(uint16_t period, int32_t finetune, int32_t relativeNote) // for piano in Instr. Ed.
+int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote) // for piano in Instr. Ed.
 {
-	finetune >>= 3; // FT2 does this in the replayer internally, so the actual range is -16..15
+	if (period > note2Period[0]) // don't show periods below C-0 (w/ lowest finetune) on piano
+		return -1;
 
-	const double dRelativeHz = dPeriod2Hz(period) * (1.0 / (8363.0 / 16.0));
-	const double dNote = (log2(dRelativeHz) * 12.0) - (finetune * (1.0 / 16.0));
+	finetune = ((int8_t)finetune >> 3) + 16;
+	
+	// this is not 100% accurate for all periods, but should be much faster than using log2()
 
-	const int32_t note = (int32_t)(dNote + 0.5) - relativeNote; // rounded
+	int32_t hiPeriod = (10*12*16)+16;
+	int32_t loPeriod = 0;
 
-	// "note" is now the raw piano key number, unaffected by finetune and relativeNote
+	for (int32_t i = 0; i < 7; i++)
+	{
+		const int32_t tmpPeriod = (((loPeriod + hiPeriod) >> 1) & ~15) + finetune;
+
+		int32_t lookUp = tmpPeriod - 8;
+		if (lookUp < 0)
+			lookUp = 0;
+
+		if (period >= note2Period[lookUp])
+			hiPeriod = (tmpPeriod - finetune) & ~15;
+		else
+			loPeriod = (tmpPeriod - finetune) & ~15;
+	}
+
+	int32_t note = loPeriod;
+	note >>= 4;
+	note -= relativeNote;
+
 	return note;
 }
 
@@ -478,7 +575,7 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 
 	if (ton != 0)
 	{
-		const uint16_t tmpTon = ((ton - 1) << 4) + (((ch->fineTune >> 3) + 16) & 0xFF);
+		const uint16_t tmpTon = ((ton-1) << 4) + (((int8_t)ch->fineTune >> 3) + 16);
 		if (tmpTon < MAX_NOTES)
 		{
 			assert(note2Period != NULL);
@@ -722,9 +819,9 @@ static void setGlobaVol(stmTyp *ch, uint8_t param)
 
 static void setEnvelopePos(stmTyp *ch, uint8_t param)
 {
-	int8_t envPos;
 	bool envUpdate;
-	int16_t newEnvPos;
+	int8_t point;
+	int16_t tick;
 
 	instrTyp *ins = ch->instrPtr;
 	assert(ins != NULL);
@@ -732,127 +829,127 @@ static void setEnvelopePos(stmTyp *ch, uint8_t param)
 	// *** VOLUME ENVELOPE ***
 	if (ins->envVTyp & 1)
 	{
-		ch->envVCnt = param - 1;
+		ch->envVCnt = param-1;
 
-		envPos = 0;
+		point = 0;
 		envUpdate = true;
-		newEnvPos = param;
+		tick = param;
 
 		if (ins->envVPAnt > 1)
 		{
-			envPos++;
+			point++;
 			for (int32_t i = 0; i < ins->envVPAnt-1; i++)
 			{
-				if (newEnvPos < ins->envVP[envPos][0])
+				if (tick < ins->envVP[point][0])
 				{
-					envPos--;
+					point--;
 
-					newEnvPos -= ins->envVP[envPos][0];
-					if (newEnvPos == 0)
+					tick -= ins->envVP[point][0];
+					if (tick == 0)
 					{
 						envUpdate = false;
 						break;
 					}
 
-					if (ins->envVP[envPos+1][0] <= ins->envVP[envPos][0])
+					if (ins->envVP[point+1][0] <= ins->envVP[point][0])
 					{
 						envUpdate = true;
 						break;
 					}
 
-					ch->dEnvVIPValue = (double)(ins->envVP[envPos+1][1] - ins->envVP[envPos][1]) / (ins->envVP[envPos+1][0] - ins->envVP[envPos][0]);
-					ch->dEnvVAmp = (ch->dEnvVIPValue * (newEnvPos - 1)) + (ins->envVP[envPos][1] & 0xFF);
+					ch->envVIPValue = ((ins->envVP[point+1][1] - ins->envVP[point][1]) << 16) / (ins->envVP[point+1][0] - ins->envVP[point][0]);
+					ch->envVAmp = (ch->envVIPValue * (tick-1)) + (ins->envVP[point][1] << 16);
 
-					envPos++;
+					point++;
 
 					envUpdate = false;
 					break;
 				}
 
-				envPos++;
+				point++;
 			}
 
 			if (envUpdate)
-				envPos--;
+				point--;
 		}
 
 		if (envUpdate)
 		{
-			ch->dEnvVIPValue = 0.0;
-			ch->dEnvVAmp = (double)(ins->envVP[envPos][1] & 0xFF);
+			ch->envVIPValue = 0;
+			ch->envVAmp = ins->envVP[point][1];
 		}
 
-		if (envPos >= ins->envVPAnt)
+		if (point >= ins->envVPAnt)
 		{
-			envPos = ins->envVPAnt - 1;
-			if (envPos < 0)
-				envPos = 0;
+			point = ins->envVPAnt-1;
+			if (point < 0)
+				point = 0;
 		}
 
-		ch->envVPos = envPos;
+		ch->envVPos = point;
 	}
 
 	// *** PANNING ENVELOPE ***
 	if (ins->envVTyp & 2) // probably an FT2 bug
 	{
-		ch->envPCnt = param - 1;
+		ch->envPCnt = param-1;
 
-		envPos = 0;
+		point = 0;
 		envUpdate = true;
-		newEnvPos = param;
+		tick = param;
 
 		if (ins->envPPAnt > 1)
 		{
-			envPos++;
+			point++;
 			for (int32_t i = 0; i < ins->envPPAnt-1; i++)
 			{
-				if (newEnvPos < ins->envPP[envPos][0])
+				if (tick < ins->envPP[point][0])
 				{
-					envPos--;
+					point--;
 
-					newEnvPos -= ins->envPP[envPos][0];
-					if (newEnvPos == 0)
+					tick -= ins->envPP[point][0];
+					if (tick == 0)
 					{
 						envUpdate = false;
 						break;
 					}
 
-					if (ins->envPP[envPos + 1][0] <= ins->envPP[envPos][0])
+					if (ins->envPP[point+1][0] <= ins->envPP[point][0])
 					{
 						envUpdate = true;
 						break;
 					}
 
-					ch->dEnvPIPValue = (double)(ins->envPP[envPos+1][1] - ins->envPP[envPos][1]) / (ins->envPP[envPos+1][0] - ins->envPP[envPos][0]);
-					ch->dEnvPAmp = (ch->dEnvPIPValue * (newEnvPos - 1)) + (ins->envPP[envPos][1] & 0xFF);
+					ch->envPIPValue = ((ins->envPP[point+1][1] - ins->envPP[point][1]) << 16) / (ins->envPP[point+1][0] - ins->envPP[point][0]);
+					ch->envPAmp = (ch->envPIPValue * (tick-1)) + (ins->envPP[point][1] << 16);
 
-					envPos++;
+					point++;
 
 					envUpdate = false;
 					break;
 				}
 
-				envPos++;
+				point++;
 			}
 
 			if (envUpdate)
-				envPos--;
+				point--;
 		}
 
 		if (envUpdate)
 		{
-			ch->dEnvPIPValue = 0.0;
-			ch->dEnvPAmp = (double)(ins->envPP[envPos][1] & 0xFF);
+			ch->envPIPValue = 0;
+			ch->envPAmp = ins->envPP[point][1];
 		}
 
-		if (envPos >= ins->envPPAnt)
+		if (point >= ins->envPPAnt)
 		{
-			envPos = ins->envPPAnt - 1;
-			if (envPos < 0)
-				envPos = 0;
+			point = ins->envPPAnt-1;
+			if (point < 0)
+				point = 0;
 		}
 
-		ch->envPPos = envPos;
+		ch->envPPos = point;
 	}
 }
 
@@ -1192,7 +1289,7 @@ static void fixTonePorta(stmTyp *ch, const tonTyp *p, uint8_t inst)
 		}
 		else
 		{
-			const uint16_t note = ((((p->ton - 1) + ch->relTonNr) & 0xFF) * 16) + (((ch->fineTune >> 3) + 16) & 0xFF);
+			const uint16_t note = (((p->ton-1) + ch->relTonNr) << 4) + (((int8_t)ch->fineTune >> 3) + 16);
 			if (note < MAX_NOTES)
 			{
 				assert(note2Period != NULL);
@@ -1335,7 +1432,8 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 	uint8_t envPos;
 	int16_t autoVibVal;
 	uint16_t autoVibAmp;
-	double dVol, dEnvVal;
+	int32_t envVal;
+	double dVol;
 
 	instrTyp *ins = ch->instrPtr;
 	assert(ins != NULL);
@@ -1360,7 +1458,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 	if (!ch->mute)
 	{
 		// *** VOLUME ENVELOPE ***
-		dEnvVal = 0.0;
+		envVal = 0;
 		if (ins->envVTyp & 1)
 		{
 			envDidInterpolate = false;
@@ -1368,7 +1466,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 
 			if (++ch->envVCnt == ins->envVP[envPos][0])
 			{
-				ch->dEnvVAmp = ins->envVP[envPos][1];
+				ch->envVAmp = ins->envVP[envPos][1] << 16;
 
 				envPos++;
 				if (ins->envVTyp & 4)
@@ -1381,7 +1479,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 						{
 							envPos = ins->envVRepS;
 							ch->envVCnt = ins->envVP[envPos][0];
-							ch->dEnvVAmp = ins->envVP[envPos][1];
+							ch->envVAmp = ins->envVP[envPos][1] << 16;
 						}
 					}
 
@@ -1396,7 +1494,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 						if (envPos-1 == ins->envVSust)
 						{
 							envPos--;
-							ch->dEnvVIPValue = 0.0;
+							ch->envVIPValue = 0;
 							envInterpolateFlag = false;
 						}
 					}
@@ -1405,50 +1503,49 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 					{
 						ch->envVPos = envPos;
 
-						ch->dEnvVIPValue = 0.0;
+						ch->envVIPValue = 0;
 						if (ins->envVP[envPos][0] > ins->envVP[envPos-1][0])
 						{
-							ch->dEnvVIPValue = (double)(ins->envVP[envPos][1] - ins->envVP[envPos-1][1]) / (ins->envVP[envPos][0] - ins->envVP[envPos-1][0]);
+							ch->envVIPValue = ((ins->envVP[envPos][1] - ins->envVP[envPos-1][1]) << 16) / (ins->envVP[envPos][0] - ins->envVP[envPos-1][0]);
 
-							dEnvVal = ch->dEnvVAmp;
+							envVal = ch->envVAmp;
 							envDidInterpolate = true;
 						}
 					}
 				}
 				else
 				{
-					ch->dEnvVIPValue = 0.0;
+					ch->envVIPValue = 0;
 				}
 			}
 
 			if (!envDidInterpolate)
 			{
-				ch->dEnvVAmp += ch->dEnvVIPValue;
+				ch->envVAmp += ch->envVIPValue;
 
-				dEnvVal = ch->dEnvVAmp;
-				if (dEnvVal > 64.0)
+				envVal = ch->envVAmp;
+				if (envVal > 64<<16)
 				{
-					if (dEnvVal > 128.0)
-						dEnvVal = 64.0;
+					if (envVal > 128<<16)
+						envVal = 64<<16;
 					else
-						dEnvVal = 0.0;
+						envVal = 0;
 
-					ch->dEnvVIPValue = 0.0;
+					ch->envVIPValue = 0;
 				}
 			}
 
-			dVol  = song.globVol   * (1.0 / 64.0);
-			dVol *= ch->outVol     * (1.0 / 64.0);
-			dVol *= ch->fadeOutAmp * (1.0 / 32768.0);
-			dVol *= dEnvVal        * (1.0 / 64.0);
+			const int32_t vol = song.globVol * ch->outVol * ch->fadeOutAmp;
+
+			dVol = vol * (1.0 / (64.0 * 64.0 * 32768.0));
+			dVol *= (int32_t)envVal * (1.0 / (64.0 * (1 << 16)));
 
 			ch->status |= IS_Vol; // update vol every tick because vol envelope is enabled
 		}
 		else
 		{
-			dVol  = song.globVol   * (1.0 / 64.0);
-			dVol *= ch->outVol     * (1.0 / 64.0);
-			dVol *= ch->fadeOutAmp * (1.0 / 32768.0);
+			const int32_t vol = song.globVol * ch->outVol * ch->fadeOutAmp;
+			dVol = vol * (1.0 / (64.0 * 64.0 * 32768.0));
 		}
 
 		if (dVol > 1.0) // shouldn't happen, but just in case...
@@ -1463,7 +1560,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 
 	// *** PANNING ENVELOPE ***
 
-	dEnvVal = 0.0;
+	envVal = 0;
 	if (ins->envPTyp & 1)
 	{
 		envDidInterpolate = false;
@@ -1471,7 +1568,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 
 		if (++ch->envPCnt == ins->envPP[envPos][0])
 		{
-			ch->dEnvPAmp = ins->envPP[envPos][1];
+			ch->envPAmp = ins->envPP[envPos][1] << 16;
 
 			envPos++;
 			if (ins->envPTyp & 4)
@@ -1485,7 +1582,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 						envPos = ins->envPRepS;
 
 						ch->envPCnt = ins->envPP[envPos][0];
-						ch->dEnvPAmp = ins->envPP[envPos][1];
+						ch->envPAmp = ins->envPP[envPos][1] << 16;
 					}
 				}
 
@@ -1500,7 +1597,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 					if (envPos-1 == ins->envPSust)
 					{
 						envPos--;
-						ch->dEnvPIPValue = 0.0;
+						ch->envPIPValue = 0;
 						envInterpolateFlag = false;
 					}
 				}
@@ -1509,41 +1606,42 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 				{
 					ch->envPPos = envPos;
 
-					ch->dEnvPIPValue = 0.0;
+					ch->envPIPValue = 0;
 					if (ins->envPP[envPos][0] > ins->envPP[envPos-1][0])
 					{
-						ch->dEnvPIPValue = (double)(ins->envPP[envPos][1] - ins->envPP[envPos-1][1]) / (ins->envPP[envPos][0] - ins->envPP[envPos-1][0]);
+						ch->envPIPValue = ((ins->envPP[envPos][1] - ins->envPP[envPos-1][1]) << 16) / (ins->envPP[envPos][0] - ins->envPP[envPos-1][0]);
 
-						dEnvVal = ch->dEnvPAmp;
+						envVal = ch->envPAmp;
 						envDidInterpolate = true;
 					}
 				}
 			}
 			else
 			{
-				ch->dEnvPIPValue = 0.0;
+				ch->envPIPValue = 0;
 			}
 		}
 
 		if (!envDidInterpolate)
 		{
-			ch->dEnvPAmp += ch->dEnvPIPValue;
+			ch->envPAmp += ch->envPIPValue;
 
-			dEnvVal = ch->dEnvPAmp;
-			if (dEnvVal > 64.0)
+			envVal = ch->envPAmp;
+			if (envVal > 64<<16)
 			{
-				if (dEnvVal > 128.0)
-					dEnvVal = 64.0;
+				if (envVal > 128<<16)
+					envVal = 64<<16;
 				else
-					dEnvVal = 0.0;
+					envVal = 0;
 
-				ch->dEnvPIPValue = 0.0;
+				ch->envPIPValue = 0;
 			}
 		}
 
-		const int32_t panTmp = 128 - ABS(ch->outPan - 128);
-		const double dPanEnv = dEnvVal - 32.0;
-		const int32_t panAdd = (int32_t)round((panTmp * dPanEnv) * (1.0 / 32.0)); // -128..124
+		envVal -= 32<<16; // center panning envelope value
+
+		const int32_t pan = 128 - ABS(ch->outPan-128);
+		const int32_t panAdd = (pan * envVal) >> (16+5);
 		ch->finalPan = (uint8_t)CLAMP(ch->outPan + panAdd, 0, 255);
 
 		ch->status |= IS_Pan; // update pan every tick because pan envelope is enabled
