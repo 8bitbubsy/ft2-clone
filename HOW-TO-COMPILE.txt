@@ -38,11 +38,11 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
  6. Compile (make sure it's in Release mode. Also note x86/x64)
 
 
-== COMPILING ON MAC OS X 10.7 OR NEWER ==
+== COMPILING ON MAC OS X 10.15 OR NEWER ==
  1. Download and install the "Command Line Tools" XCode package (google it)
- 2. Download the SDL 2.0.12 framework here:
-    https://www.libsdl.org/release/SDL2-2.0.12.dmg
+ 2. Download the SDL 2.0.14 framework here:
+    https://www.libsdl.org/release/SDL2-2.0.14.dmg
  3. Inside the package, copy SDL2.framework to /Library/Frameworks/
- 4. Compile the FT2 clone:     (folder: "ft2-clone"):
+ 4. Compile the FT2 clone:      (folder: "ft2-clone")
     chmod +x make-macos.sh      (only needed once)
    ./make-macos.sh
