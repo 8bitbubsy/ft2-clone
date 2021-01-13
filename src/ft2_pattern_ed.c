@@ -362,10 +362,7 @@ void cursorChannelLeft(void)
 	{
 		cursor.ch = (uint8_t)(song.antChn - 1);
 		if (ui.pattChanScrollShown)
-		{
-			scrollBars[SB_CHAN_SCROLL].oldPos = UINT32_MAX; // kludge
 			setScrollBarPos(SB_CHAN_SCROLL, song.antChn, true);
-		}
 	}
 	else
 	{
@@ -386,10 +383,7 @@ void cursorChannelRight(void)
 	{
 		cursor.ch = 0;
 		if (ui.pattChanScrollShown)
-		{
-			scrollBars[SB_CHAN_SCROLL].oldPos = UINT32_MAX; // kludge
 			setScrollBarPos(SB_CHAN_SCROLL, 0, true);
-		}
 	}
 	else
 	{
@@ -603,11 +597,6 @@ static void updatePatternEditorGUI(void)
 			p->y = iSwitchY[i & 7];
 		}
 	}
-
-	// force update even if new values were to be the same as the old ones
-	scrollBars[SB_POS_ED].oldEnd = UINT32_MAX;
-	scrollBars[SB_POS_ED].oldPage = UINT32_MAX;
-	scrollBars[SB_POS_ED].oldPos = UINT32_MAX;
 }
 
 void patternEditorExtended(void)

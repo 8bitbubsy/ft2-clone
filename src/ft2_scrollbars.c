@@ -377,11 +377,6 @@ void setScrollBarPos(uint16_t scrollBarID, uint32_t pos, bool triggerCallBack)
 	assert(scrollBarID < NUM_SCROLLBARS);
 	scrollBar_t *scrollBar = &scrollBars[scrollBarID];
 
-	if (scrollBar->oldPos == pos)
-		return;
-
-	scrollBar->oldPos = pos;
-
 	if (scrollBar->page == 0)
 	{
 		scrollBar->pos = 0;
@@ -429,11 +424,6 @@ void setScrollBarEnd(uint16_t scrollBarID, uint32_t end)
 	if (end < 1)
 		end = 1;
 
-	if (scrollBar->oldEnd == end)
-		return;
-
-	scrollBar->oldEnd = end;
-
 	scrollBar->end = end;
 	
 	bool setPos = false;
@@ -465,11 +455,6 @@ void setScrollBarPageLength(uint16_t scrollBarID, uint32_t pageLength)
 
 	if (pageLength < 1)
 		pageLength = 1;
-
-	if (scrollBar->oldPage == pageLength)
-		return;
-
-	scrollBar->oldPage = pageLength;
 
 	scrollBar->page = pageLength;
 	if (scrollBar->end > 0)
@@ -675,14 +660,6 @@ void handleScrollBarsWhileMouseDown(void)
 
 void initializeScrollBars(void)
 {
-	scrollBar_t *scrollBar = scrollBars;
-	for (int32_t i = 0; i < NUM_SCROLLBARS; i++, scrollBar++)
-	{
-		scrollBar->oldEnd = UINT32_MAX;
-		scrollBar->oldPage = UINT32_MAX;
-		scrollBar->oldPos = UINT32_MAX;
-	}
-
 	// pattern editor
 	setScrollBarPageLength(SB_CHAN_SCROLL, 8);
 	setScrollBarEnd(SB_CHAN_SCROLL, 8);
