@@ -114,7 +114,6 @@ static const uint8_t mx2PianoKey[77] =
 	9,9,9,9,10,10,10,10,10,10,10,11,11,11,11,11,11,11,11
 };
 
-
 // thread data
 static uint16_t saveInstrNr;
 static SDL_Thread *thread;
@@ -438,6 +437,23 @@ static void drawPanning(void)
 	hexOutBg(505, 191, PAL_FORGRND, PAL_DESKTOP, s->pan, 2);
 }
 
+void drawC4Rate(void)
+{
+	fillRect(465, 299, 71, 8, PAL_DESKTOP);
+
+	int32_t C4Hz = 0;
+	if (editor.curInstr != 0)
+	{
+		instrTyp *ins = instr[editor.curInstr];
+		if (ins != NULL)
+			C4Hz = (int32_t)(getSampleC4Rate(&ins->samp[editor.curSmp]) + 0.5); // rounded
+	}
+
+	char str[64];
+	sprintf(str, "%dHz", C4Hz);
+	textOut(465, 299, PAL_FORGRND, str);
+}
+
 static void drawFineTune(void)
 {
 	sampleTyp *s;
@@ -505,7 +521,7 @@ static void drawRelTone(void)
 
 	if (instr[editor.curInstr] == NULL)
 	{
-		fillRect(598, 299, 8*3, 8, PAL_BCKGRND);
+		fillRect(600, 299, 8*3, 8, PAL_BCKGRND);
 		return;
 	}
 
@@ -528,9 +544,9 @@ static void drawRelTone(void)
 
 	const char octaChar = '0' + (note2 / 12);
 
-	charOutBg(598, 299, PAL_FORGRND, PAL_BCKGRND, noteChar1);
-	charOutBg(606, 299, PAL_FORGRND, PAL_BCKGRND, noteChar2);
-	charOutBg(614, 299, PAL_FORGRND, PAL_BCKGRND, octaChar);
+	charOutBg(600, 299, PAL_FORGRND, PAL_BCKGRND, noteChar1);
+	charOutBg(608, 299, PAL_FORGRND, PAL_BCKGRND, noteChar2);
+	charOutBg(616, 299, PAL_FORGRND, PAL_BCKGRND, octaChar);
 }
 
 static void setStdVolEnvelope(instrTyp *ins, uint8_t num)
@@ -723,6 +739,7 @@ void relToneOctUp(void)
 		s->relTon = 71;
 
 	drawRelTone();
+	drawC4Rate();
 	setSongModifiedFlag();
 }
 
@@ -739,6 +756,7 @@ void relToneOctDown(void)
 		s->relTon = -48;
 
 	drawRelTone();
+	drawC4Rate();
 	setSongModifiedFlag();
 }
 
@@ -753,6 +771,7 @@ void relToneUp(void)
 	{
 		s->relTon++;
 		drawRelTone();
+		drawC4Rate();
 		setSongModifiedFlag();
 	}
 }
@@ -768,6 +787,7 @@ void relToneDown(void)
 	{
 		s->relTon--;
 		drawRelTone();
+		drawC4Rate();
 		setSongModifiedFlag();
 	}
 }
@@ -1283,6 +1303,7 @@ void setFinetuneScroll(uint32_t pos)
 	{
 		s->fine = (int8_t)(pos - 128);
 		drawFineTune();
+		drawC4Rate();
 		setSongModifiedFlag();
 	}
 }
@@ -1945,55 +1966,6 @@ static void writeEnvelope(int32_t nr)
 	}
 }
 
-static void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color)
-{
-	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	while (*str != '\0')
-	{
-		const char chr = *str++;
-		if (chr < '0' || chr > '9')
-		{
-			dstPtr += FONT3_CHAR_W;
-			continue;
-		}
-
-		const uint8_t *srcPtr = &bmp.font3[(chr - '0') * FONT3_CHAR_W];
-		for (int32_t y = 0; y < FONT3_CHAR_H; y++)
-		{
-			for (int32_t x = 0; x < FONT3_CHAR_W; x++)
-			{
-#ifdef __arm__
-				if (srcPtr[x] != 0)
-					dstPtr[x] = color;
-#else
-				// carefully written like this to generate conditional move instructions (font data is hard to predict)
-				uint32_t tmp = dstPtr[x];
-				if (srcPtr[x] != 0) tmp = color;
-				dstPtr[x] = tmp;
-#endif
-			}
-
-			srcPtr += FONT3_WIDTH;
-			dstPtr += SCREEN_W;
-		}
-
-		dstPtr -= (SCREEN_W * FONT3_CHAR_H) - FONT3_CHAR_W;
-	}
-}
-
-static void textOutTinyOutline(int32_t xPos, int32_t yPos, char *str)
-{
-	const uint32_t bgColor = video.palette[PAL_BCKGRND];
-	const uint32_t fgColor = video.palette[PAL_FORGRND];
-
-	textOutTiny(xPos-1, yPos,   str, bgColor);
-	textOutTiny(xPos,   yPos-1, str, bgColor);
-	textOutTiny(xPos+1, yPos,   str, bgColor);
-	textOutTiny(xPos,   yPos+1, str, bgColor);
-
-	textOutTiny(xPos, yPos, str, fgColor);
-}
-
 static void drawVolEnvCoords(int16_t tick, int16_t val)
 {
 	char str[4];
@@ -2053,7 +2025,7 @@ void handleInstEditorRedrawing(void)
 		tick = 0;
 		val = 0;
 
-		if (ins != NULL)
+		if (ins != NULL && ins->envVPAnt > 0)
 		{
 			tick = ins->envVP[editor.currVolEnvPoint][0];
 			val = ins->envVP[editor.currVolEnvPoint][1];
@@ -2070,7 +2042,7 @@ void handleInstEditorRedrawing(void)
 		tick = 0;
 		val = 32;
 
-		if (ins != NULL)
+		if (ins != NULL && ins->envPPAnt > 0)
 		{
 			tick = ins->envPP[editor.currPanEnvPoint][0];
 			val = ins->envPP[editor.currPanEnvPoint][1];
@@ -2201,6 +2173,7 @@ void updateInstEditor(void)
 	drawVibSpeed();
 	drawVibDepth();
 	drawVibSweep();
+	drawC4Rate();
 	drawRelTone();
 
 	// set scroll bars
@@ -2271,7 +2244,7 @@ void showInstEditor(void)
 	drawFramework(2,   188, 337,  70, FRAMEWORK_TYPE2);
 	drawFramework(2,   275, 337,  70, FRAMEWORK_TYPE2);
 	drawFramework(2,   349, 628,  49, FRAMEWORK_TYPE2);
-	drawFramework(590, 296,  40,  15, FRAMEWORK_TYPE2);
+	drawFramework(593, 296,  36,  15, FRAMEWORK_TYPE2);
 
 	textOutShadow(20,  176, PAL_FORGRND, PAL_DSKTOP2, "Volume envelope:");
 	textOutShadow(153, 176, PAL_FORGRND, PAL_DSKTOP2, "Predef.");
@@ -2294,7 +2267,8 @@ void showInstEditor(void)
 	textOutShadow(442, 236, PAL_FORGRND, PAL_DSKTOP2, "Vib.speed");
 	textOutShadow(442, 250, PAL_FORGRND, PAL_DSKTOP2, "Vib.depth");
 	textOutShadow(442, 264, PAL_FORGRND, PAL_DSKTOP2, "Vib.sweep");
-	textOutShadow(453, 299, PAL_FORGRND, PAL_DSKTOP2, "Tone relative to C-4:");
+	textOutShadow(442, 299, PAL_FORGRND, PAL_DSKTOP2, "C4=");
+	textOutShadow(537, 299, PAL_FORGRND, PAL_DSKTOP2, "Rel. note");
 
 	showScrollBar(SB_INST_VOL);
 	showScrollBar(SB_INST_PAN);

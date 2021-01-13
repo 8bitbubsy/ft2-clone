@@ -6,6 +6,8 @@
 #include "ft2_audio.h"
 #include "ft2_unicode.h"
 
+void drawC4Rate(void);
+
 void saveInstr(UNICHAR *filenameU, int16_t nr);
 void loadInstr(UNICHAR *filenameU);
 void copyInstr(void); // dstInstr = srcInstr

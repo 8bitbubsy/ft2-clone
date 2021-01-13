@@ -460,11 +460,7 @@ void clearCopyBuffer(void)
 
 int32_t getSampleMiddleCRate(sampleTyp *s)
 {
-	const int32_t realFineTune = (int32_t)s->fine >> 3; // the FT2 replayer is ASR'ing the finetune to the right by 3
-	const double dFTune = realFineTune / 16.0; // new range is -16..15
-
-	const double dFreq = 8363.0 * exp2((s->relTon + dFTune) / 12.0);
-	return (int32_t)(dFreq + 0.5); // rounded
+	return (int32_t)(getSampleC4Rate(s) + 0.5); // rounded
 }
 
 int32_t getSampleRangeStart(void)
