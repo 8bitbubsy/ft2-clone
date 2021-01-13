@@ -149,7 +149,7 @@ static void starfield(void)
 			if (g < 0)
 				g = 0;
 
-			int32_t b = d + 78;
+			int32_t b = d + 64;
 			if (b > 255)
 				b = 255;
 
