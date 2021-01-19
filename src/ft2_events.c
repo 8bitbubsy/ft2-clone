@@ -424,7 +424,7 @@ static void handleInput(void)
 		if (editor.busy)
 		{
 			const uint32_t eventType = event.type;
-			const SDL_Keycode key = event.key.keysym.scancode;
+			const SDL_Scancode key = event.key.keysym.scancode;
 
 			/* The Echo tool in Smp. Ed. can take forever if abused, let
 			** mouse buttons/ESC/SIGTERM force-stop it.

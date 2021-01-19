@@ -127,7 +127,7 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample
 {
 	#define NOTE_C4 (4*12)
 	#define MIN_PERIOD (0)
-	#define MAX_PERIOD (((10*12*16)-1)-1) /* -1 (because of bugged amigaPeriods table values */
+	#define MAX_PERIOD (((10*12*16)-1)-1) /* -1 (because of bugged amigaPeriods table values) */
 
 	if (midCFreq <= 0 || note2Period == NULL)
 	{
@@ -499,7 +499,7 @@ int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote) // fo
 
 	finetune = ((int8_t)finetune >> 3) + 16;
 	
-	// this is not 100% accurate for all periods, but should be much faster than using log2()
+	// this is not 100% accurate for all periods, but should be faster than using log2() and floating-point arithmetics
 
 	int32_t hiPeriod = (10*12*16)+16;
 	int32_t loPeriod = 0;
