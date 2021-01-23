@@ -5,7 +5,7 @@
 #include "ft2_center_mix.h"
 
 /*
-** -------------------- doubleing point audio channel mixer ---------------------
+** ------------ double-precision floating-point audio channel mixer ------------
 **            (Note: Mixing macros can be found in ft2_mix_macros.h)
 **
 ** Specifications:
