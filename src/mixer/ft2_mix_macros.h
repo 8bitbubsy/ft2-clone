@@ -129,46 +129,37 @@
 
 // 2-tap linear interpolation (like FT2)
 
-#define LINEAR_INTERPOLATION8(s, f) \
+#define LINEAR_INTERPOLATION(s, f, scale) \
 { \
 	/* uint32_t -> int32_t for less SIMD overhead when doing int->double conversion */ \
 	const int32_t frac = (uint32_t)(f) >> 1; /* (2^32)-1 -> (2^31)-1 */ \
 	\
 	const double dFrac = (double)(frac * (1.0 / (INT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
-	dSample = ((s[0] + (s[1]-s[0]) * dFrac)) * (1.0 / 128.0); \
-} \
-
-#define LINEAR_INTERPOLATION16(s, f) \
-{ \
-	/* uint32_t -> int32_t for less SIMD overhead when doing int->double conversion */ \
-	const int32_t frac = (uint32_t)(f) >> 1; /* (2^32)-1 -> (2^31)-1 */ \
-	\
-	const double dFrac = (double)(frac * (1.0 / (INT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
-	dSample = ((s[0] + (s[1]-s[0]) * dFrac)) * (1.0 / 32768.0); \
+	dSample = ((s[0] + (s[1]-s[0]) * dFrac)) * (1.0 / scale); \
 } \
 
 #define RENDER_8BIT_SMP_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	LINEAR_INTERPOLATION8(smpPtr, posFrac) \
+	LINEAR_INTERPOLATION(smpPtr, posFrac, 128) \
 	*dMixBufferL++ += dSample * dVolL; \
 	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_8BIT_SMP_MONO_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	LINEAR_INTERPOLATION8(smpPtr, posFrac) \
+	LINEAR_INTERPOLATION(smpPtr, posFrac, 128) \
 	dSample *= dVolL; \
 	*dMixBufferL++ += dSample; \
 	*dMixBufferR++ += dSample; \
 
 #define RENDER_16BIT_SMP_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	LINEAR_INTERPOLATION16(smpPtr, posFrac) \
+	LINEAR_INTERPOLATION(smpPtr, posFrac, 32768) \
 	*dMixBufferL++ += dSample * dVolL; \
 	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_16BIT_SMP_MONO_LINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	LINEAR_INTERPOLATION16(smpPtr, posFrac) \
+	LINEAR_INTERPOLATION(smpPtr, posFrac, 32768) \
 	dSample *= dVolL; \
 	*dMixBufferL++ += dSample; \
 	*dMixBufferR++ += dSample; \
@@ -183,7 +174,7 @@
 **
 */
 
-#define WINDOWED_SINC_INTERPOLATION8(s, f) \
+#define WINDOWED_SINC_INTERPOLATION(s, f, scale) \
 { \
 	const double *t = v->dSincLUT + (((uint32_t)f >> SINC_FSHIFT) & SINC_FMASK); \
 	dSample = ((s[-3] * t[0]) + \
@@ -193,44 +184,31 @@
 	           ( s[1] * t[4]) + \
 	           ( s[2] * t[5]) + \
 	           ( s[3] * t[6]) + \
-	           ( s[4] * t[7])) * (1.0 / 128.0); \
-} \
-
-#define WINDOWED_SINC_INTERPOLATION16(s, f) \
-{ \
-	const double *t = v->dSincLUT + (((uint32_t)f >> SINC_FSHIFT) & SINC_FMASK); \
-	dSample = ((s[-3] * t[0]) + \
-	           (s[-2] * t[1]) + \
-	           (s[-1] * t[2]) + \
-	           ( s[0] * t[3]) + \
-	           ( s[1] * t[4]) + \
-	           ( s[2] * t[5]) + \
-	           ( s[3] * t[6]) + \
-	           ( s[4] * t[7])) * (1.0 / 32768.0); \
+	           ( s[4] * t[7])) * (1.0 / scale); \
 } \
 
 #define RENDER_8BIT_SMP_SINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	WINDOWED_SINC_INTERPOLATION8(smpPtr, posFrac) \
+	WINDOWED_SINC_INTERPOLATION(smpPtr, posFrac, 128) \
 	*dMixBufferL++ += dSample * dVolL; \
 	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_8BIT_SMP_MONO_SINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	WINDOWED_SINC_INTERPOLATION8(smpPtr, posFrac) \
+	WINDOWED_SINC_INTERPOLATION(smpPtr, posFrac, 128) \
 	dSample *= dVolL; \
 	*dMixBufferL++ += dSample; \
 	*dMixBufferR++ += dSample; \
 
 #define RENDER_16BIT_SMP_SINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	WINDOWED_SINC_INTERPOLATION16(smpPtr, posFrac) \
+	WINDOWED_SINC_INTERPOLATION(smpPtr, posFrac, 32768) \
 	*dMixBufferL++ += dSample * dVolL; \
 	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_16BIT_SMP_MONO_SINTRP \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
-	WINDOWED_SINC_INTERPOLATION16(smpPtr, posFrac) \
+	WINDOWED_SINC_INTERPOLATION(smpPtr, posFrac, 32768) \
 	dSample *= dVolL; \
 	*dMixBufferL++ += dSample; \
 	*dMixBufferR++ += dSample; \
@@ -242,14 +220,14 @@
 #define RENDER_8BIT_SMP_SINTRP_TAP_FIX  \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC_INTERPOLATION8(smpTapPtr, posFrac) \
+	WINDOWED_SINC_INTERPOLATION(smpTapPtr, posFrac, 128) \
 	*dMixBufferL++ += dSample * dVolL; \
 	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_8BIT_SMP_MONO_SINTRP_TAP_FIX \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC_INTERPOLATION8(smpTapPtr, posFrac) \
+	WINDOWED_SINC_INTERPOLATION(smpTapPtr, posFrac, 128) \
 	dSample *= dVolL; \
 	*dMixBufferL++ += dSample; \
 	*dMixBufferR++ += dSample; \
@@ -257,14 +235,14 @@
 #define RENDER_16BIT_SMP_SINTRP_TAP_FIX \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC_INTERPOLATION16(smpTapPtr, posFrac) \
+	WINDOWED_SINC_INTERPOLATION(smpTapPtr, posFrac, 32768) \
 	*dMixBufferL++ += dSample * dVolL; \
 	*dMixBufferR++ += dSample * dVolR; \
 
 #define RENDER_16BIT_SMP_MONO_SINTRP_TAP_FIX \
 	assert(smpPtr >= base && smpPtr < base+v->end); \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC_INTERPOLATION16(smpTapPtr, posFrac) \
+	WINDOWED_SINC_INTERPOLATION(smpTapPtr, posFrac, 32768) \
 	dSample *= dVolL; \
 	*dMixBufferL++ += dSample; \
 	*dMixBufferR++ += dSample; \
