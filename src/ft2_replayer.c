@@ -28,7 +28,7 @@
 */
 
 // non-FT2 precalced stuff (these are kinda big...)
-static double dPeriod2HzTab[65536], dLogTab[768], dLogMulTab[32], dHz2MixDeltaMul;
+static double dPeriod2HzTab[65536], dLogTab[768], dExp2MulTab[32], dHz2MixDeltaMul;
 static uint32_t revMixDeltaTab[65536];
 static bool bxxOverflow;
 static tonTyp nilPatternLine[MAX_VOICES];
@@ -274,9 +274,8 @@ static void calcPeriod2HzTable(void) // called every time "linear/amiga frequenc
 			const uint16_t invPeriod = (12 * 192 * 4) - (uint16_t)i; // this intentionally 16-bit-underflows to be accurate to FT2
 			const int32_t octave = invPeriod / 768;
 			const int32_t period = invPeriod % 768;
-			const int32_t invOct = (14 - octave) & 0x1F; // accurate to FT2
 
-			dPeriod2HzTab[i] = dLogTab[period] * dLogMulTab[invOct]; // x = y / 2^invOct
+			dPeriod2HzTab[i] = dLogTab[period] * dExp2MulTab[(14-octave) & 31]; // x = y >> ((14-octave) & 31)
 		}
 	}
 	else
@@ -314,10 +313,10 @@ void calcRevMixDeltaTable(void)
 double getSampleC4Rate(sampleTyp *s)
 {
 	int32_t note = (96/2) + s->relTon;
-	if (note >= (12*10)-1)
+	if (note >= (10*12)-1)
 		return -1; // B-9 (from relTon) = illegal! (won't play in replayer)
 
-	const int32_t C4Period = (note * 16) + (((int8_t)s->fine >> 3) + 16);
+	const int32_t C4Period = (note << 4) + (((int8_t)s->fine >> 3) + 16);
 
 	const uint16_t period = audio.linearFreqTable ? linearPeriods[C4Period] : amigaPeriods[C4Period];
 	return dPeriod2Hz(period);
@@ -430,11 +429,11 @@ void keyOff(stmTyp *ch)
 
 void calcReplayerLogTab(void)
 {
-	for (uint32_t i = 0; i < 32; i++)
-		dLogMulTab[i] = 1.0 / (1UL << i);
+	for (int32_t i = 0; i < 32; i++)
+		dExp2MulTab[i] = 1.0 / exp2(i); // 1/2^i
 
 	for (int32_t i = 0; i < 768; i++)
-		dLogTab[i] = exp2(i * (1.0 / 768.0)) * (8363.0 * 256.0);
+		dLogTab[i] = 8363.0 * 256.0 * exp2(i * (1.0 / 768.0));
 }
 
 void calcReplayerVars(int32_t audioFreq)
@@ -562,7 +561,7 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 	ch->relTonNr = s->relTon;
 
 	ton += ch->relTonNr;
-	if (ton >= 12*10)
+	if (ton >= 10*12)
 		return;
 
 	ch->oldVol = s->vol;
@@ -598,7 +597,7 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 	}
 }
 
-static void volume(stmTyp *ch, uint8_t param); // actually volume slide
+static void volume(stmTyp *ch, uint8_t param); // volume slide
 static void vibrato2(stmTyp *ch);
 static void tonePorta(stmTyp *ch, uint8_t param);
 
@@ -632,8 +631,8 @@ static void finePortaDown(stmTyp *ch, uint8_t param)
 	ch->fPortaDownSpeed = param;
 
 	ch->realPeriod += param << 2;
-	if ((int16_t)ch->realPeriod > 32000-1)
-		ch->realPeriod = 32000-1;
+	if ((int16_t)ch->realPeriod > MAX_FRQ-1) // FT2 bug, should've been unsigned comparison
+		ch->realPeriod = MAX_FRQ-1;
 
 	ch->outPeriod = ch->realPeriod;
 	ch->status |= IS_Period;
@@ -1181,8 +1180,8 @@ static void xFinePorta(stmTyp *ch, uint8_t param)
 		uint16_t newPeriod = ch->realPeriod;
 
 		newPeriod += param;
-		if ((int16_t)newPeriod > 32000-1)
-			newPeriod = 32000-1;
+		if ((int16_t)newPeriod > MAX_FRQ-1) // FT2 bug, should've been unsigned comparison
+			newPeriod = MAX_FRQ-1;
 
 		ch->outPeriod = ch->realPeriod = newPeriod;
 		ch->status |= IS_Period;
@@ -1696,7 +1695,7 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 		uint16_t tmpPeriod = (autoVibVal * (int16_t)autoVibAmp) >> 16;
 
 		tmpPeriod += ch->outPeriod;
-		if (tmpPeriod > 32000-1)
+		if (tmpPeriod > MAX_FRQ-1)
 			tmpPeriod = 0; // yes, FT2 does this (!)
 
 #ifdef HAS_MIDI
@@ -1727,7 +1726,12 @@ static uint16_t relocateTon(uint16_t period, uint8_t arpNote, stmTyp *ch)
 	int32_t tmpPeriod;
 
 	const int32_t fineTune = ((int8_t)ch->fineTune >> 3) + 16;
-	int32_t hiPeriod = 1536; // FT2 bug: should've been 1935
+
+	/* FT2 bug, should've been 10*12*16. Notes above B-7 (95) will have issues.
+	** You can only achieve such high notes by having a high relative note setting.
+	*/
+	int32_t hiPeriod = 8*12*16;
+
 	int32_t loPeriod = 0;
 
 	for (int32_t i = 0; i < 8; i++)
@@ -1736,7 +1740,7 @@ static uint16_t relocateTon(uint16_t period, uint8_t arpNote, stmTyp *ch)
 
 		int32_t lookUp = tmpPeriod - 8;
 		if (lookUp < 0)
-			lookUp = 0; // 8bitbubsy: safety fix (C-0 w/ finetune <= -65)
+			lookUp = 0; // safety fix (C-0 w/ finetune <= -65). This buggy read seems to return 0 in FT2 (TODO: Verify...)
 
 		if (period >= note2Period[lookUp])
 			hiPeriod = (tmpPeriod - fineTune) & ~15;
@@ -1745,8 +1749,8 @@ static uint16_t relocateTon(uint16_t period, uint8_t arpNote, stmTyp *ch)
 	}
 
 	tmpPeriod = loPeriod + fineTune + (arpNote << 4);
-	if (tmpPeriod >= 1550) // FT2 bugs: off-by-one edge case, and should've been 1935 (1936)
-		tmpPeriod = 1551;
+	if (tmpPeriod >= (8*12*16+15)-1) // FT2 bug, should've been 10*12*16+16 (also notice the +2 difference)
+		tmpPeriod = (8*12*16+16)-1;
 
 	return note2Period[tmpPeriod];
 }
@@ -1829,8 +1833,8 @@ static void portaDown(stmTyp *ch, uint8_t param)
 	ch->portaDownSpeed = param;
 
 	ch->realPeriod += param << 2;
-	if ((int16_t)ch->realPeriod > 32000-1) // FT2 bug, should've been unsigned comparison
-		ch->realPeriod = 32000-1;
+	if ((int16_t)ch->realPeriod > MAX_FRQ-1) // FT2 bug, should've been unsigned comparison
+		ch->realPeriod = MAX_FRQ-1;
 
 	ch->outPeriod = ch->realPeriod;
 	ch->status |= IS_Period;
@@ -1959,7 +1963,7 @@ static void tremolo(stmTyp *ch, uint8_t param)
 	ch->tremPos += ch->tremSpeed;
 }
 
-static void volume(stmTyp *ch, uint8_t param) // actually volume slide
+static void volume(stmTyp *ch, uint8_t param) // volume slide
 {
 	if (param == 0)
 		param = ch->volSlideSpeed;

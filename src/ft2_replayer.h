@@ -42,7 +42,8 @@ enum
 #define MAX_BPM 999
 #define MAX_VOICES 32
 #define TRACK_WIDTH (5 * MAX_VOICES)
-#define MAX_NOTES ((12 * 10 * 16) + 16)
+#define MAX_FRQ 32000
+#define MAX_NOTES (10*12*16+16)
 #define MAX_PATTERNS 256
 #define MAX_PATT_LEN 256
 #define MAX_INST 128
