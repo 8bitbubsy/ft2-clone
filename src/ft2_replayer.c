@@ -135,7 +135,7 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample
 		return;
 	}
 
-	// handle frequency boundaries
+	// handle frequency boundaries first...
 
 	if (midCFreq <= (int32_t)dPeriod2HzTab[note2Period[MIN_PERIOD]])
 	{
@@ -151,8 +151,7 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample
 		return;
 	}
 
-	// check if midCFreq is matching any of the clean note frequencies (C-0..B-9)
-
+	// check if midCFreq is matching any of the non-finetuned note frequencies (C-0..B-9)
 	for (int8_t i = 0; i < 10*12; i++)
 	{
 		if (midCFreq == (int32_t)dPeriod2HzTab[note2Period[16 + (i<<4)]])
@@ -168,7 +167,7 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample
 	int32_t period = MAX_PERIOD;
 	for (; period >= MIN_PERIOD; period--)
 	{
-		const int32_t curr = (int32_t)dPeriod2HzTab[note2Period[period+0]];
+		const int32_t curr = (int32_t)dPeriod2HzTab[note2Period[period]];
 		if (midCFreq == curr)
 			break;
 
@@ -184,12 +183,6 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample
 			period++;
 			break; // current+1 is the closest
 		}
-	}
-
-	if (period == -1) // frequency was too for period table
-	{
-		s->fine = s->relTon = 0;
-		return;
 	}
 
 	s->fine = ((period & 31) - 16) << 3;
