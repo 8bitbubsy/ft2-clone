@@ -436,7 +436,7 @@ Right ctrl.  @T160Play song.
 >F1..F7 @T160Select octave.
 >Key below Esc @T160Increase cursoradd.
 >Sh+(1/2) @T160Decrease cursoradd.
->CapsLock @T160Enter Keyoff-"note".
+>CapsLock or <> @T160Enter Keyoff-"note".
 >Sh+Left @T160Increase song position.
 >Sh+Right @T160Decrease song position.
 >Ctrl+Left @T160Increase pattern number.
