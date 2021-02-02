@@ -47,6 +47,27 @@ void recordNote(uint8_t note, int8_t vol);
 static bool testNoteKeys(SDL_Scancode scancode)
 {
 	const int8_t noteNum = scancodeKeyToNote(scancode);
+	if (noteNum == 97)
+	{
+		// inserts "note off" if editing song
+		if (playMode == PLAYMODE_EDIT || playMode == PLAYMODE_RECPATT || playMode == PLAYMODE_RECSONG)
+		{
+			if (!allocatePattern(editor.editPattern))
+				return true; // key pressed
+
+			patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch].ton = 97;
+
+			const uint16_t pattLen = pattLens[editor.editPattern];
+			if (playMode == PLAYMODE_EDIT && pattLen >= 1)
+				setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
+
+			ui.updatePatternEditor = true;
+			setSongModifiedFlag();
+		}
+
+		return true; // key pressed
+	}
+
 	if (noteNum > 0 && noteNum <= 96)
 	{
 		recordNote(noteNum, -1);

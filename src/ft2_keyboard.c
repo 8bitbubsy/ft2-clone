@@ -331,27 +331,6 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		}
 		break;
 
-		// note off
-		case SDLK_LESS:
-		case SDLK_CAPSLOCK:
-		{
-			if (playMode == PLAYMODE_EDIT || playMode == PLAYMODE_RECPATT || playMode == PLAYMODE_RECSONG)
-			{
-				if (!allocatePattern(editor.editPattern))
-					break;
-
-				patt[editor.editPattern][(editor.pattPos * MAX_VOICES) + cursor.ch].ton = 97;
-
-				const uint16_t pattLen = pattLens[editor.editPattern];
-				if (playMode == PLAYMODE_EDIT && pattLen >= 1)
-					setPos(-1, (editor.pattPos + editor.ID_Add) % pattLen, true);
-
-				ui.updatePatternEditor = true;
-				setSongModifiedFlag();
-			}
-		}
-		break;
-
 		// This is maybe not an ideal key for this anymore...
 		//case SDLK_PRINTSCREEN: togglePatternEditorExtended(); break;
 
