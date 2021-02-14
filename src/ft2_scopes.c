@@ -589,12 +589,12 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 		if (time64 < timeNext64)
 		{
 			time64 = timeNext64 - time64;
-			if (time64 > UINT32_MAX)
-				time64 = UINT32_MAX;
+			if (time64 > INT32_MAX)
+				time64 = INT32_MAX;
 
-			const uint32_t diff32 = (uint32_t)time64;
+			const int32_t diff32 = (int32_t)time64;
 
-			// convert to microseconds and round to integer
+			// convert and round to microseconds
 			const int32_t time32 = (int32_t)((diff32 * editor.dPerfFreqMulMicro) + 0.5);
 
 			// delay until we have reached the next frame

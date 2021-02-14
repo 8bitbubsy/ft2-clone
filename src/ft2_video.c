@@ -717,10 +717,10 @@ void waitVBL(void)
 	if (time64 < timeNext64)
 	{
 		time64 = timeNext64 - time64;
-		if (time64 > UINT32_MAX)
-			time64 = UINT32_MAX;
+		if (time64 > INT32_MAX)
+			time64 = INT32_MAX;
 
-		const uint32_t diff32 = (uint32_t)time64;
+		const int32_t diff32 = (int32_t)time64;
 
 		// convert and round to microseconds
 		const int32_t time32 = (int32_t)((diff32 * editor.dPerfFreqMulMicro) + 0.5);

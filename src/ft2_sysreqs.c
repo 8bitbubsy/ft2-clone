@@ -8,6 +8,7 @@
 #include "ft2_video.h"
 #include "ft2_sysreqs.h"
 #include "ft2_structs.h"
+#include "ft2_events.h"
 
 #define SYSTEM_REQUEST_H 67
 #define SYSTEM_REQUEST_Y 249
@@ -22,7 +23,7 @@ static char *buttonText[NUM_SYSREQ_TYPES][5] =
 	{ "OK", "","","","" },
 	{ "OK", "Cancel", "","","" },
 	{ "Yes", "No", "","","" },
-	{ "=(", "Rules","","","" },
+	{ "","","","","" }, // deprecated
 	{ "All", "Song", "Instruments", "Cancel", "" },
 	{ "Read left", "Read right", "Convert", "", "" },
 	{ "OK", "","","","" },
@@ -36,7 +37,7 @@ static SDL_Keycode shortCut[NUM_SYSREQ_TYPES][5] =
 	{ SDLK_o, 0,      0,      0,      0 },
 	{ SDLK_o, SDLK_c, 0,      0,      0 },
 	{ SDLK_y, SDLK_n, 0,      0,      0 },
-	{ SDLK_s, SDLK_r, 0,      0,      0 },
+	{ 0, 0, 0, 0, 0 }, // deprecated
 	{ SDLK_a, SDLK_s, SDLK_i, SDLK_c, 0 },
 	{ SDLK_l, SDLK_r, SDLK_c, 0,      0 },
 	{ SDLK_o, 0,      0,      0,      0 },
@@ -51,27 +52,22 @@ typedef struct quitType_t
 	uint8_t typ;
 } quitType_t;
 
-#define QUIT_MESSAGES 16
+#define QUIT_MESSAGES 11
 
-// 8bitbubsy: Removed the MS-DOS ones...
+// 8bitbubsy: Removed unsuitable/offensive ones...
 static quitType_t quitMessage[QUIT_MESSAGES] =
 {
 	{ "Do you really want to quit?", 2 },
-	{ "Musicians, press >Cancel<.  Lamers, press >OK<", 1 },
 	{ "Tired already?", 2 },
 	{ "Dost thou wish to leave with such hasty abandon?", 2 },
 	{ "So, you think you can quit this easily, huh?", 2 },
 	{ "Hey, what is the matter? You are not quiting now, are you?", 2 },
 	{ "Rome was not built in one day! Quit really?", 2 },
-	{ "For Work and Worry, press YES.  For Delectation and Demos, press NO.", 2 },
 	{ "Did you really press the right key?", 2 },
-	{ "You are a lamer, aren't you? Press >OK< to confirm.", 1 },
 	{ "Hope ya did some good. Press >OK< to quit.", 1 },
 	{ "Quit? Only for a good reason you are allowed to press >OK<.", 1 },
 	{ "Are we at the end of a Fasttracker round?", 2 },
-	{ "Are you just another boring user?", 2 },
 	{ "Hope you're doing the compulsory \"Exit ceremony\" before pressing >OK<.", 1 },
-	{ "Fasttracker...", 3 }
 };
 
 static void drawWindow(uint16_t w)
@@ -266,6 +262,8 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 
 		while (SDL_PollEvent(&inputEvent))
 		{
+			handleWaitVblQuirk(&inputEvent);
+
 			if (inputEvent.type == SDL_KEYDOWN)
 			{
 				if (inputEvent.key.keysym.sym == SDLK_ESCAPE)
@@ -479,6 +477,8 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 
 		while (SDL_PollEvent(&inputEvent))
 		{
+			handleWaitVblQuirk(&inputEvent);
+
 			if (inputEvent.type == SDL_TEXTINPUT)
 			{
 				if (editor.editTextFlag)

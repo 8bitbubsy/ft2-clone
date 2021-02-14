@@ -54,7 +54,7 @@ static NTSTATUS (__stdcall *NtDelayExecution)(BOOL Alertable, PLARGE_INTEGER Del
 
 static void handleInput(void);
 
-// usleep() implementation for Windows
+// usleep() implementation for Windows (Warning: This might not be future-safe!)
 #ifdef _WIN32
 void usleep(uint32_t usec)
 {
@@ -392,6 +392,29 @@ void setupCrashHandler(void)
 #endif
 }
 
+void handleWaitVblQuirk(SDL_Event *event)
+{
+	if (event->type == SDL_WINDOWEVENT)
+	{
+		if (event->window.event == SDL_WINDOWEVENT_HIDDEN)
+			video.windowHidden = true;
+		else if (event->window.event == SDL_WINDOWEVENT_SHOWN)
+			video.windowHidden = false;
+
+		if (video.vsync60HzPresent)
+		{
+			/* If we minimize the window and vsync is present, vsync is temporarily turned off.
+			** recalc waitVBL() vars so that it can sleep properly in said mode.
+			*/
+			if (event->window.event == SDL_WINDOWEVENT_MINIMIZED ||
+				event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+			{
+				setupWaitVBL();
+			}
+		}
+	}
+}
+
 static void handleInput(void)
 {
 	SDL_Event event;
@@ -401,25 +424,7 @@ static void handleInput(void)
 
 	while (SDL_PollEvent(&event))
 	{
-		if (event.type == SDL_WINDOWEVENT)
-		{
-			if (event.window.event == SDL_WINDOWEVENT_HIDDEN)
-				video.windowHidden = true;
-			else if (event.window.event == SDL_WINDOWEVENT_SHOWN)
-				video.windowHidden = false;
-
-			if (video.vsync60HzPresent)
-			{
-				/* if we minimize the window and vsync is present, vsync is temporarily turned off.
-				** recalc waitVBL() vars so that it can sleep properly in said mode.
-				*/
-				if (event.window.event == SDL_WINDOWEVENT_MINIMIZED ||
-					event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
-				{
-					setupWaitVBL();
-				}
-			}
-		}
+		handleWaitVblQuirk(&event);
 
 		if (editor.busy)
 		{
