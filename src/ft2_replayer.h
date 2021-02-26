@@ -265,7 +265,11 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag);
 
 void calcRevMixDeltaTable(void);
 void calcReplayerLogTab(void);
-double dPeriod2Hz(uint16_t period);
+
+double linearPeriod2Hz(int32_t period);
+double amigaPeriod2Hz(int32_t period);
+
+double dPeriod2Hz(uint16_t period); // uses LUT for fast operation
 
 int64_t getMixerDelta(uint16_t period);
 uint32_t getRevMixerDelta(uint16_t period);

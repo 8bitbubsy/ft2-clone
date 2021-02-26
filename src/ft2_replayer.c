@@ -130,7 +130,9 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag)
 	#define MIN_PERIOD (0)
 	#define MAX_PERIOD (((10*12*16)-1)-1) /* -1 (because of bugged amigaPeriods table values) */
 
+	double (*dGetHzFromPeriod)(int32_t) = linearPeriodsFlag ? &linearPeriod2Hz : &amigaPeriod2Hz;
 	const uint16_t *periodTab = linearPeriodsFlag ? linearPeriods : amigaPeriods;
+
 	if (midCFreq <= 0 || periodTab == NULL)
 	{
 		s->fine = s->relTon = 0;
@@ -139,14 +141,14 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag)
 
 	// handle frequency boundaries first...
 
-	if (midCFreq <= (int32_t)dPeriod2HzTab[periodTab[MIN_PERIOD]])
+	if (midCFreq <= (int32_t)dGetHzFromPeriod(periodTab[MIN_PERIOD]))
 	{
 		s->fine = -128;
 		s->relTon = -48;
 		return;
 	}
 
-	if (midCFreq >= (int32_t)dPeriod2HzTab[periodTab[MAX_PERIOD]])
+	if (midCFreq >= (int32_t)dGetHzFromPeriod(periodTab[MAX_PERIOD]))
 	{
 		s->fine = 127;
 		s->relTon = 71;
@@ -154,9 +156,10 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag)
 	}
 
 	// check if midCFreq is matching any of the non-finetuned note frequencies (C-0..B-9)
+
 	for (int8_t i = 0; i < 10*12; i++)
 	{
-		if (midCFreq == (int32_t)dPeriod2HzTab[periodTab[16 + (i<<4)]])
+		if (midCFreq == (int32_t)dGetHzFromPeriod(periodTab[16 + (i<<4)]))
 		{
 			s->fine = 0;
 			s->relTon = i - NOTE_C4;
@@ -169,13 +172,13 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag)
 	int32_t period = MAX_PERIOD;
 	for (; period >= MIN_PERIOD; period--)
 	{
-		const int32_t curr = (int32_t)dPeriod2HzTab[periodTab[period]];
+		const int32_t curr = (int32_t)dGetHzFromPeriod(periodTab[period]);
 		if (midCFreq == curr)
 			break;
 
 		if (midCFreq > curr)
 		{
-			const int32_t next = (int32_t)dPeriod2HzTab[periodTab[period+1]];
+			const int32_t next = (int32_t)dGetHzFromPeriod(periodTab[period+1]);
 			const int32_t errorCurr = ABS(curr-midCFreq);
 			const int32_t errorNext = ABS(next-midCFreq);
 
@@ -257,27 +260,39 @@ int16_t getRealUsedSamples(int16_t nr)
 	return i+1;
 }
 
+double linearPeriod2Hz(int32_t period)
+{
+	if (period == 0)
+		return 0.0; // in FT2, a period of 0 gives 0Hz
+
+	const uint16_t invPeriod = (uint16_t)(12 * 192 * 4) - (uint16_t)period; // this intentionally 16-bit-underflows to be accurate to FT2
+	const int32_t quotient = invPeriod / 768;
+	const int32_t remainder = invPeriod % 768;
+
+	return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y >> ((14-octave) & 31)
+}
+
+double amigaPeriod2Hz(int32_t period)
+{
+	if (period == 0)
+		return 0.0; // in FT2, a period of 0 gives 0Hz
+
+	return (double)(8363*1712) / period;
+}
+
 static void calcPeriod2HzTable(void) // called every time "linear/amiga frequency" mode is changed
 {
-	dPeriod2HzTab[0] = 0.0; // in FT2, a period of 0 converts to 0Hz
-
 	if (audio.linearPeriodsFlag)
 	{
 		// linear periods
-		for (int32_t i = 1; i < 65536; i++)
-		{
-			const uint16_t invPeriod = (12 * 192 * 4) - (uint16_t)i; // this intentionally 16-bit-underflows to be accurate to FT2
-			const int32_t octave = invPeriod / 768;
-			const int32_t period = invPeriod % 768;
-
-			dPeriod2HzTab[i] = dLogTab[period] * dExp2MulTab[(14-octave) & 31]; // x = y >> ((14-octave) & 31)
-		}
+		for (int32_t i = 0; i < 65536; i++)
+			dPeriod2HzTab[i] = linearPeriod2Hz(i);
 	}
 	else
 	{
 		// Amiga periods
-		for (int32_t i = 1; i < 65536; i++)
-			dPeriod2HzTab[i] = (8363.0 * 1712.0) / i;
+		for (int32_t i = 0; i < 65536; i++)
+			dPeriod2HzTab[i] = amigaPeriod2Hz(i);
 	}
 }
 
@@ -466,7 +481,7 @@ void calcReplayerVars(int32_t audioFreq)
 	}
 }
 
-double dPeriod2Hz(uint16_t period)
+double dPeriod2Hz(uint16_t period) // uses LUT for fast operation
 {
 	return dPeriod2HzTab[period];
 }
