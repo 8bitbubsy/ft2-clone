@@ -929,7 +929,7 @@ static bool loadMusicSTM(FILE *f, uint32_t fileLength, bool externalThreadFlag)
 			s->pek = s->origPek + SMP_DAT_OFFSET;
 
 			s->len = h_STM.instr[i].len;
-			tuneSample(s, h_STM.instr[i].rate);
+			tuneSample(s, h_STM.instr[i].rate, false);
 			s->vol = h_STM.instr[i].vol;
 			s->repS = h_STM.instr[i].repS;
 			s->repL = h_STM.instr[i].repE - h_STM.instr[i].repS;
@@ -1541,7 +1541,7 @@ static bool loadMusicS3M(FILE *f, uint32_t dataLength, bool externalThreadFlag)
 				if (h_S3MInstr.c2Spd > 65535) // ST3 (and OpenMPT) does this
 					h_S3MInstr.c2Spd = 65535;
 
-				tuneSample(s, h_S3MInstr.c2Spd);
+				tuneSample(s, h_S3MInstr.c2Spd, false);
 
 				s->len = h_S3MInstr.len;
 				s->vol = h_S3MInstr.vol;

@@ -844,7 +844,7 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 
 	// FREQUENCY TABLE
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_FREQ_TABLE);
-	tmpID = audio.linearFreqTable ? RB_CONFIG_FREQ_LINEAR : RB_CONFIG_FREQ_AMIGA;
+	tmpID = audio.linearPeriodsFlag ? RB_CONFIG_FREQ_LINEAR : RB_CONFIG_FREQ_AMIGA;
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
 	// show result

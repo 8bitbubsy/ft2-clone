@@ -259,7 +259,9 @@ void resetReplayerState(void);
 void fixSongName(void); // removes spaces from right side of song name
 void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
 void calcReplayerVars(int32_t rate);
-void tuneSample(sampleTyp *s, const int32_t midCFreq);
+
+// used on external sample load and during sample loading in some module formats
+void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag);
 
 void calcRevMixDeltaTable(void);
 void calcReplayerLogTab(void);

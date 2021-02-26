@@ -80,7 +80,7 @@ bool saveXM(UNICHAR *filenameU)
 		ai--;
 	h.antInstrs = ai;
 
-	h.flags = audio.linearFreqTable;
+	h.flags = audio.linearPeriodsFlag;
 	memcpy(h.songTab, song.songTab, sizeof (song.songTab));
 
 	if (fwrite(&h, sizeof (h), 1, f) != 1)
@@ -266,7 +266,7 @@ static bool saveMOD(UNICHAR *filenameU)
 	incompatEfx = false;
 	noteUnderflow = false;
 
-	if (audio.linearFreqTable)
+	if (audio.linearPeriodsFlag)
 		okBoxThreadSafe(0, "System message", "Linear frequency table used!");
 
 	// sanity checking

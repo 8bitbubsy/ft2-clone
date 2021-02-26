@@ -28,7 +28,7 @@ typedef struct audio_t
 	char *currInputDevice, *currOutputDevice, *lastWorkingAudioDeviceName;
 	char *inputDeviceNames[MAX_AUDIO_DEVICES], *outputDeviceNames[MAX_AUDIO_DEVICES];
 	volatile bool locked, resetSyncTickTimeFlag, volumeRampingFlag;
-	bool linearFreqTable, rescanAudioDevicesSupported;
+	bool linearPeriodsFlag, rescanAudioDevicesSupported;
 	volatile uint8_t interpolationType;
 	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
 	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;

@@ -3372,7 +3372,7 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 
 				const double dFreq = (1.0 + (ih_PATWave.fineTune / 512.0)) * ih_PATWave.sampleRate;
 				int32_t freq = (const int32_t)(dFreq + 0.5);
-				tuneSample(s, freq);
+				tuneSample(s, freq, audio.linearPeriodsFlag);
 
 				a = s->relTon - (getPATNote(ih_PATWave.rootFrq) - (12 * 3));
 				s->relTon = (uint8_t)CLAMP(a, -48, 71);

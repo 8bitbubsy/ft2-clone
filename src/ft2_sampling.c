@@ -387,7 +387,7 @@ void startSampling(void)
 	freeSample(editor.curInstr, editor.curSmp);
 	s->typ |= 16; // we always sample in 16-bit
 
-	tuneSample(s, samplingRate); // tune sample (relTone/finetune) to the sampling frequency we obtained
+	tuneSample(s, samplingRate, audio.linearPeriodsFlag); // tune sample (relTone/finetune) to the sampling frequency we obtained
 
 	if (sampleInStereo)
 	{
@@ -409,7 +409,7 @@ void startSampling(void)
 			nextSmp->typ |= 16; // we always sample in 16-bit
 			nextSmp->pan = 255;
 
-			tuneSample(nextSmp, samplingRate); // tune sample (relTone/finetune) to the sampling frequency we obtained
+			tuneSample(nextSmp, samplingRate, audio.linearPeriodsFlag); // tune sample (relTone/finetune) to the sampling frequency we obtained
 		}
 	}
 	else

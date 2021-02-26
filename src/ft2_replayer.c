@@ -123,13 +123,15 @@ void removeSongModifiedFlag(void)
 	editor.updateWindowTitle = true;
 }
 
-void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample load (not when loading module)
+// used on external sample load and during sample loading in some module formats
+void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag)
 {
 	#define NOTE_C4 (4*12)
 	#define MIN_PERIOD (0)
 	#define MAX_PERIOD (((10*12*16)-1)-1) /* -1 (because of bugged amigaPeriods table values) */
 
-	if (midCFreq <= 0 || note2Period == NULL)
+	const uint16_t *periodTab = linearPeriodsFlag ? linearPeriods : amigaPeriods;
+	if (midCFreq <= 0 || periodTab == NULL)
 	{
 		s->fine = s->relTon = 0;
 		return;
@@ -137,14 +139,14 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample
 
 	// handle frequency boundaries first...
 
-	if (midCFreq <= (int32_t)dPeriod2HzTab[note2Period[MIN_PERIOD]])
+	if (midCFreq <= (int32_t)dPeriod2HzTab[periodTab[MIN_PERIOD]])
 	{
 		s->fine = -128;
 		s->relTon = -48;
 		return;
 	}
 
-	if (midCFreq >= (int32_t)dPeriod2HzTab[note2Period[MAX_PERIOD]])
+	if (midCFreq >= (int32_t)dPeriod2HzTab[periodTab[MAX_PERIOD]])
 	{
 		s->fine = 127;
 		s->relTon = 71;
@@ -154,7 +156,7 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample
 	// check if midCFreq is matching any of the non-finetuned note frequencies (C-0..B-9)
 	for (int8_t i = 0; i < 10*12; i++)
 	{
-		if (midCFreq == (int32_t)dPeriod2HzTab[note2Period[16 + (i<<4)]])
+		if (midCFreq == (int32_t)dPeriod2HzTab[periodTab[16 + (i<<4)]])
 		{
 			s->fine = 0;
 			s->relTon = i - NOTE_C4;
@@ -167,13 +169,13 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq) // used on external sample
 	int32_t period = MAX_PERIOD;
 	for (; period >= MIN_PERIOD; period--)
 	{
-		const int32_t curr = (int32_t)dPeriod2HzTab[note2Period[period]];
+		const int32_t curr = (int32_t)dPeriod2HzTab[periodTab[period]];
 		if (midCFreq == curr)
 			break;
 
 		if (midCFreq > curr)
 		{
-			const int32_t next = (int32_t)dPeriod2HzTab[note2Period[period+1]];
+			const int32_t next = (int32_t)dPeriod2HzTab[periodTab[period+1]];
 			const int32_t errorCurr = ABS(curr-midCFreq);
 			const int32_t errorNext = ABS(next-midCFreq);
 
@@ -259,7 +261,7 @@ static void calcPeriod2HzTable(void) // called every time "linear/amiga frequenc
 {
 	dPeriod2HzTab[0] = 0.0; // in FT2, a period of 0 converts to 0Hz
 
-	if (audio.linearFreqTable)
+	if (audio.linearPeriodsFlag)
 	{
 		// linear periods
 		for (int32_t i = 1; i < 65536; i++)
@@ -311,7 +313,7 @@ double getSampleC4Rate(sampleTyp *s)
 
 	const int32_t C4Period = (note << 4) + (((int8_t)s->fine >> 3) + 16);
 
-	const uint16_t period = audio.linearFreqTable ? linearPeriods[C4Period] : amigaPeriods[C4Period];
+	const uint16_t period = audio.linearPeriodsFlag ? linearPeriods[C4Period] : amigaPeriods[C4Period];
 	return dPeriod2Hz(period);
 }
 
@@ -319,9 +321,9 @@ void setFrqTab(bool linear)
 {
 	pauseAudio();
 
-	audio.linearFreqTable = linear;
+	audio.linearPeriodsFlag = linear;
 
-	if (audio.linearFreqTable)
+	if (audio.linearPeriodsFlag)
 		note2Period = linearPeriods;
 	else
 		note2Period = amigaPeriods;
@@ -2839,7 +2841,7 @@ bool setupReplayer(void)
 	editor.tempo = song.tempo = 6;
 	editor.globalVol = song.globVol = 64;
 	song.initialTempo = song.tempo;
-	audio.linearFreqTable = true;
+	audio.linearPeriodsFlag = true;
 	note2Period = linearPeriods;
 
 	if (!calcWindowedSincTables())

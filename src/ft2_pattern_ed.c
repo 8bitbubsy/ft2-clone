@@ -2613,7 +2613,7 @@ static void zapSong(void)
 
 	resetPlaybackTime();
 
-	if (!audio.linearFreqTable)
+	if (!audio.linearPeriodsFlag)
 		setFrqTab(true);
 
 	clearPattMark();

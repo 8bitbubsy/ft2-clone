@@ -650,7 +650,7 @@ static int32_t SDLCALL loadAIFFSample(void *ptr)
 	tmpSmp.vol = 64;
 	tmpSmp.pan = 128;
 
-	tuneSample(&tmpSmp, sampleRate);
+	tuneSample(&tmpSmp, sampleRate, audio.linearPeriodsFlag);
 
 	// set sample name
 	char *tmpFilename = unicharToCp437(filename, true);
@@ -916,7 +916,7 @@ static int32_t SDLCALL loadIFFSample(void *ptr)
 	tmpSmp.vol = (uint8_t)sampleVol;
 	tmpSmp.pan = 128;
 
-	tuneSample(&tmpSmp, sampleRate);
+	tuneSample(&tmpSmp, sampleRate, audio.linearPeriodsFlag);
 
 	// set name
 	if (namePtr != 0 && nameLen > 0)
@@ -1788,7 +1788,7 @@ static int32_t SDLCALL loadWAVSample(void *ptr)
 		tmpSmp.pek = tmpSmp.origPek + SMP_DAT_OFFSET;
 	}
 
-	tuneSample(&tmpSmp, sampleRate);
+	tuneSample(&tmpSmp, sampleRate, audio.linearPeriodsFlag);
 
 	tmpSmp.vol = 64;
 	tmpSmp.pan = 128;

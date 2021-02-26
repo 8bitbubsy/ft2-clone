@@ -312,7 +312,7 @@ static void initializeVars(void)
 	editor.diskOpReadOnOpen = true;
 	editor.programRunning = true;
 
-	audio.linearFreqTable = true;
+	audio.linearPeriodsFlag = true;
 
 	calcReplayerLogTab();
 }
