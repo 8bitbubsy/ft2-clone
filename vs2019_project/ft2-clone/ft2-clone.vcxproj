@@ -342,6 +342,12 @@
     <ClCompile Include="..\..\src\mixer\ft2_mix.c" />
     <ClCompile Include="..\..\src\mixer\ft2_center_mix.c" />
     <ClCompile Include="..\..\src\mixer\ft2_silence_mix.c" />
+    <ClCompile Include="..\..\src\modloaders\ft2_load_digi.c" />
+    <ClCompile Include="..\..\src\modloaders\ft2_load_mod.c" />
+    <ClCompile Include="..\..\src\modloaders\ft2_load_s3m.c" />
+    <ClCompile Include="..\..\src\modloaders\ft2_load_stk.c" />
+    <ClCompile Include="..\..\src\modloaders\ft2_load_stm.c" />
+    <ClCompile Include="..\..\src\modloaders\ft2_load_xm.c" />
     <ClCompile Include="..\..\src\rtmidi\RtMidi.cpp">
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Sync</ExceptionHandling>
       <ExceptionHandling Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Sync</ExceptionHandling>
@@ -358,6 +364,10 @@
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4245;4996;4267</DisableSpecificWarnings>
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4245;4996;4267</DisableSpecificWarnings>
     </ClCompile>
+    <ClCompile Include="..\..\src\smploaders\ft2_load_aiff.c" />
+    <ClCompile Include="..\..\src\smploaders\ft2_load_iff.c" />
+    <ClCompile Include="..\..\src\smploaders\ft2_load_raw.c" />
+    <ClCompile Include="..\..\src\smploaders\ft2_load_wav.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\ft2_about.h" />
@@ -412,6 +422,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\src\ft2-clone.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\dos\unreal ][.s3m" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

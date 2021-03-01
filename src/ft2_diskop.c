@@ -1187,6 +1187,38 @@ void testDiskOpMouseRelease(void)
 	}
 }
 
+static bool moduleExtensionAccepted(char *extPtr)
+{
+	int32_t i = 0;
+	while (true)
+	{
+		const char *str = supportedModExtensions[i++];
+		if (!_stricmp(str, "END_OF_LIST"))
+			return false;
+
+		if (!_stricmp(str, extPtr))
+			break;
+	}
+
+	return true;
+}
+
+static bool sampleExtensionAccepted(char *extPtr)
+{
+	int32_t i = 0;
+	while (true)
+	{
+		const char *str = supportedSmpExtensions[i++];
+		if (!_stricmp(str, "END_OF_LIST"))
+			return false;
+
+		if (!_stricmp(str, extPtr))
+			break;
+	}
+
+	return true;
+}
+
 static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 {
 	// skip if illegal name or filesize >32-bit
@@ -1223,12 +1255,13 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 	}
 	else if (!FReq_ShowAllFiles)
 	{
-		const int32_t extOffset = getExtOffset(name, nameLen);
+		int32_t extOffset = getExtOffset(name, nameLen);
 		if (extOffset == -1)
 			goto skipEntry;
+		extOffset++; // skip '.'
 
 		const int32_t extLen = (int32_t)strlen(&name[extOffset]);
-		if (extLen < 3 || extLen > 5)
+		if (extLen < 2 || extLen > 6)
 			goto skipEntry; // no possibly known extensions to filter out
 
 		char *extPtr = &name[extOffset];
@@ -1239,117 +1272,46 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 			default:
 			case DISKOP_ITEM_MODULE:
 			{
-				if (extLen == 3)
-				{
-					if (_stricmp(".xm", extPtr) && _stricmp(".ft", extPtr))
-						goto skipEntry; // skip, none of the extensions above
-				}
-				else if (extLen == 4)
-				{
-					if (editor.moduleSaveMode == MOD_SAVE_MODE_WAV)
-					{
-						if (_stricmp(".nst", extPtr) && _stricmp(".mod", extPtr) &&
-							_stricmp(".s3m", extPtr) && _stricmp(".stm", extPtr) &&
-							_stricmp(".fst", extPtr) && _stricmp(".wav", extPtr))
-						{
-							goto skipEntry; // skip, none of the extensions above
-						}
-					}
-					else
-					{
-						if (_stricmp(".nst", extPtr) && _stricmp(".mod", extPtr) &&
-							_stricmp(".s3m", extPtr) && _stricmp(".stm", extPtr) &&
-							_stricmp(".fst", extPtr))
-						{
-							goto skipEntry; // skip, none of the extensions above
-						}
-					}
-				}
-				else
-				{
+				if (editor.moduleSaveMode == MOD_SAVE_MODE_WAV && !_stricmp("wav", extPtr))
+					break; // show .wav files when save mode is "WAV"
+
+				if (!moduleExtensionAccepted(extPtr))
 					goto skipEntry;
-				}
 			}
 			break;
 
 			case DISKOP_ITEM_INSTR:
 			{
-				if (extLen == 3)
-				{
-					if (_stricmp(".xi", extPtr))
-						goto skipEntry; // skip, none of the extensions above
-				}
-				else if (extLen == 4)
-				{
-					if (_stricmp(".iff", extPtr) && _stricmp(".raw", extPtr) &&
-						_stricmp(".wav", extPtr) && _stricmp(".snd", extPtr) &&
-						_stricmp(".smp", extPtr) && _stricmp(".sam", extPtr) &&
-						_stricmp(".aif", extPtr) && _stricmp(".pat", extPtr))
-					{
-						goto skipEntry; // skip, none of the extensions above
-					}
-				}
-				else if (extLen == 5)
-				{
-					if (_stricmp(".aiff", extPtr))
-						goto skipEntry; // skip, not the extension above
-				}
-				else
-				{
+				if (!_stricmp("xi", extPtr))
+					break;
+
+				if (!sampleExtensionAccepted(extPtr))
 					goto skipEntry;
-				}
 			}
 			break;
 
 			case DISKOP_ITEM_SAMPLE:
 			{
-				if (extLen == 4)
-				{
-					if (_stricmp(".iff", extPtr) && _stricmp(".raw", extPtr) &&
-						_stricmp(".wav", extPtr) && _stricmp(".snd", extPtr) &&
-						_stricmp(".smp", extPtr) && _stricmp(".sam", extPtr) &&
-						_stricmp(".aif", extPtr))
-					{
-						goto skipEntry; // skip, none of the extensions above
-					}
-				}
-				else if (extLen == 5)
-				{
-					if (_stricmp(".aiff", extPtr))
-						goto skipEntry; // skip, not the extension above
-				}
-				else
-				{
+				if (!sampleExtensionAccepted(extPtr))
 					goto skipEntry;
-				}
 			}
 			break;
 
 			case DISKOP_ITEM_PATTERN:
 			{
-				if (extLen == 3)
-				{
-					if (_stricmp(".xp", extPtr))
-						goto skipEntry; // skip, not the extension above
-				}
-				else
-				{
-					goto skipEntry;
-				}
+				if (!_stricmp("xp", extPtr))
+					break;
+
+				goto skipEntry;
 			}
 			break;
 
 			case DISKOP_ITEM_TRACK:
 			{
-				if (extLen == 3)
-				{
-					if (_stricmp(".xt", extPtr))
-						goto skipEntry;  // skip, not the extension above
-				}
-				else
-				{
-					goto skipEntry;
-				}
+				if (!_stricmp("xt", extPtr))
+					break;
+
+				goto skipEntry;
 			}
 			break;
 		}

@@ -1,3 +1,4 @@
+#include <stdio.h> // vsnprintf()
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_config.h"
@@ -16,7 +17,11 @@
 
 #define NUM_SYSREQ_TYPES 10
 
-okBoxData_t okBoxData; // globalized
+// globalized
+okBoxData_t okBoxData;
+void (*loaderMsgBox)(const char *, ...);
+int16_t (*loaderSysReq)(int16_t, const char *, const char *);
+// ----------------
 
 static char *buttonText[NUM_SYSREQ_TYPES][5] =
 {
@@ -69,6 +74,32 @@ static quitType_t quitMessage[QUIT_MESSAGES] =
 	{ "Are we at the end of a Fasttracker round?", 2 },
 	{ "Hope you're doing the compulsory \"Exit ceremony\" before pressing >OK<.", 1 },
 };
+
+void myLoaderMsgBoxThreadSafe(const char *fmt, ...)
+{
+	char strBuf[512];
+	va_list args;
+
+	// format the text string
+	va_start(args, fmt);
+	vsnprintf(strBuf, sizeof (strBuf), fmt, args);
+	va_end(args);
+
+	okBoxThreadSafe(0, "System message", fmt);
+}
+
+void myLoaderMsgBox(const char *fmt, ...)
+{
+	char strBuf[512];
+	va_list args;
+
+	// format the text string
+	va_start(args, fmt);
+	vsnprintf(strBuf, sizeof (strBuf), fmt, args);
+	va_end(args);
+
+	okBox(0, "System message", fmt);
+}
 
 static void drawWindow(uint16_t w)
 {

@@ -23,8 +23,6 @@
 #include "ft2_tables.h"
 #include "ft2_structs.h"
 
-#define SCOPE_HEIGHT 36
-
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
 static uint32_t scopeTimeLen, scopeTimeLenFrac;
 static uint64_t timeNext64, timeNext64Frac;
@@ -38,9 +36,9 @@ void resetCachedScopeVars(void)
 	volatile scope_t *sc = scope;
 	for (int32_t i = 0; i < MAX_VOICES; i++, sc++)
 	{
-		sc->oldPeriod = -1;
-		sc->oldDrawDelta = 0;
+		sc->dOldHz = -1.0;
 		sc->oldDelta = 0;
+		sc->oldDrawDelta = 0;
 	}
 }
 
@@ -353,10 +351,13 @@ static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 		return;
 	}
 
-	// these has to be read
+	// these has to be copied so that they are not lost
 	tempState.wasCleared = sc->wasCleared;
 	tempState.delta = sc->delta;
+	tempState.oldDelta = sc->oldDelta;
 	tempState.drawDelta = sc->drawDelta;
+	tempState.oldDrawDelta = sc->oldDrawDelta;
+	tempState.dOldHz = sc->dOldHz;
 	tempState.vol = sc->vol;
 
 	tempState.active = true;
@@ -367,6 +368,7 @@ static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 	** the trigger never happens. So far I have never seen it happen,
 	** so it's probably very rare. Yes, this is not good coding...
 	*/
+
 	*sc = tempState;
 }
 
@@ -386,8 +388,8 @@ static void updateScopes(void)
 		// scope position update
 
 		s.posFrac += s.delta;
-		const int32_t wholeSamples = (int32_t)(s.posFrac >> SCOPE_FRAC_BITS);
-		s.posFrac &= SCOPE_FRAC_MASK;
+		const int32_t wholeSamples = s.posFrac >> 32;
+		s.posFrac &= 0xFFFFFFFF;
 
 		if (s.direction == 1)
 			s.pos += wholeSamples; // forwards
@@ -522,23 +524,20 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 		const uint8_t status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
-			sc->vol = (int32_t)((ch->dFinalVol * SCOPE_HEIGHT) + 0.5); // rounded
+			sc->vol = ((ch->vol * SCOPE_HEIGHT) + 128) >> 8; // rounded
 
 		if (status & IS_Period)
 		{
-			// use cached values if possible
-
-			const uint16_t period = ch->finalPeriod;
-			if (period != sc->oldPeriod)
+			// use cached values when possible
+			if (ch->dHz != sc->dOldHz)
 			{
-				sc->oldPeriod = period;
-				const double dHz = dPeriod2Hz(period);
+				sc->dOldHz = ch->dHz;
 
-				const double dScopeRateFactor = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-				sc->oldDelta = (int64_t)((dHz * dScopeRateFactor) + 0.5); // Hz -> rounded fixed-point delta
+				const double dHz2ScopeDeltaMul = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
+				sc->oldDelta = (int64_t)((ch->dHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> 32.32fp delta (rounded)
 
-				const double dRelativeHz = dHz * (1.0 / (8363.0 / 2.0));
-				sc->oldDrawDelta = (int32_t)((dRelativeHz * SCOPE_DRAW_FRAC_SCALE) + 0.5); // Hz -> rounded fixed-point draw delta
+				const double dRelativeHz = ch->dHz * (1.0 / (8363.0 / 2.0));
+				sc->oldDrawDelta = (int32_t)((dRelativeHz * SCOPE_DRAW_FRAC_SCALE) + 0.5); // Hz -> 13.19fp draw delta (rounded)
 			}
 
 			sc->delta = sc->oldDelta;

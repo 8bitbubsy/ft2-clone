@@ -47,8 +47,8 @@ void resetCachedMixerVars(void)
 	voice_t *v = voice;
 	for (int32_t i = 0; i < MAX_VOICES*2; i++, v++)
 	{
+		v->dOldHz = 0.0;
 		v->oldDelta = 0;
-		v->oldRevDelta = UINT32_MAX;
 	}
 }
 
@@ -109,7 +109,6 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 		return false;
 	}
 
-	calcRevMixDeltaTable();
 	resumeAudio();
 
 	setWavRenderFrequency(audio.freq);
@@ -140,10 +139,7 @@ void setNewAudioFreq(uint32_t freq) // for song-to-WAV rendering
 
 	const bool mustRecalcTables = audio.freq != oldAudioFreq;
 	if (mustRecalcTables)
-	{
 		calcReplayerVars(audio.freq);
-		calcRevMixDeltaTable();
-	}
 }
 
 void setBackOldAudioFreq(void) // for song-to-WAV rendering
@@ -153,10 +149,7 @@ void setBackOldAudioFreq(void) // for song-to-WAV rendering
 	audio.freq = oldAudioFreq;
 
 	if (mustRecalcTables)
-	{
 		calcReplayerVars(audio.freq);
-		calcRevMixDeltaTable();
-	}
 }
 
 void P_SetSpeed(uint16_t bpm)
@@ -383,26 +376,29 @@ void updateVoices(void)
 
 		if (status & IS_Period)
 		{
-			// use cached values if possible
+			// use cached values when possible
 			if (ch->finalPeriod != ch->oldFinalPeriod)
 			{
 				ch->oldFinalPeriod = ch->finalPeriod;
 
 				if (ch->finalPeriod == 0) // in FT2, period 0 -> delta 0
 				{
+					v->dOldHz = 0.0;
 					v->oldDelta = 0;
-					v->oldRevDelta = UINT32_MAX;
 					v->dSincLUT = gKaiserSinc;
 				}
 				else
 				{
-					v->oldDelta = getMixerDelta(ch->finalPeriod);
-					v->oldRevDelta = getRevMixerDelta(ch->finalPeriod); // for calc'ing max samples in inner mix loop before sample end/loop end
+					const double dHz = dPeriod2Hz(ch->finalPeriod);
+					const uint64_t delta64 = (int64_t)((dHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> rounded 32.32 fixed-point
+
+					v->dOldHz = dHz;
+					v->oldDelta = delta64;
 
 					// decide which sinc LUT to use according to resampling ratio
-					if (v->oldDelta <= 0x130000000) // 1.1875 (32.32 fixed-point)
+					if (delta64 <= 0x130000000) // 1.1875 (32.32fp)
 						v->dSincLUT = gKaiserSinc;
-					else if (v->oldDelta <= 0x180000000) // 1.5 (32.32 fixed-point)
+					else if (delta64 <= 0x180000000) // 1.5 (32.32fp)
 						v->dSincLUT = gDownSample1;
 					else
 						v->dSincLUT = gDownSample2;
@@ -410,7 +406,7 @@ void updateVoices(void)
 			}
 
 			v->delta = v->oldDelta;
-			v->revDelta = v->oldRevDelta;
+			v->dHz = v->dOldHz;
 		}
 
 		if (status & IS_NyTon)
@@ -878,18 +874,24 @@ static void fillVisualsSyncBuffer(void)
 
 	syncedChannel_t *c = chSyncData.channels;
 	stmTyp *s = stm;
+	voice_t *v = voice;
 
-	for (int32_t i = 0; i < song.antChn; i++, c++, s++)
+	for (int32_t i = 0; i < song.antChn; i++, c++, s++, v++)
 	{
-		c->finalPeriod = s->finalPeriod;
-		c->fineTune = s->fineTune;
-		c->relTonNr = s->relTonNr;
+		c->vol = s->finalVol;
+		c->dHz = v->dHz;
 		c->instrNr = s->instrNr;
 		c->sampleNr = s->sampleNr;
-		c->envSustainActive = s->envSustainActive;
 		c->status = s->tmpStatus;
-		c->dFinalVol = s->dFinalVol;
-		c->smpStartPos = s->smpStartPos;
+		c->smpStartPos = (uint16_t)s->smpStartPos;
+
+		c->pianoNoteNr = 255; // no piano key
+		if (songPlaying && (c->status & IS_Period) && s->envSustainActive)
+		{
+			const int32_t note = getPianoKey(s->finalPeriod, s->fineTune, s->relTonNr);
+			if (note >= 0 && note <= 95)
+				c->pianoNoteNr = (uint8_t)note;
+		}
 	}
 
 	chSyncData.timestamp = audio.tickTime64;

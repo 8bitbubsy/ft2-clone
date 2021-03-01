@@ -8,6 +8,8 @@
 
 void drawC4Rate(void);
 
+bool fileIsInstr(UNICHAR *filenameU);
+
 void saveInstr(UNICHAR *filenameU, int16_t nr);
 void loadInstr(UNICHAR *filenameU);
 void copyInstr(void); // dstInstr = srcInstr

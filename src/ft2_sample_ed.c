@@ -47,12 +47,57 @@ static SDL_Thread *thread;
 // globals
 int32_t smpEd_Rx1 = 0, smpEd_Rx2 = 0;
 
+// allocs sample with proper alignment and padding for branchless resampling interpolation
+bool allocateTmpSmpData(sampleTyp *s, int32_t length)
+{
+	s->origPek = (int8_t *)malloc(length + LOOP_FIX_LEN);
+	if (s->origPek == NULL)
+	{
+		s->pek = NULL;
+		return false;
+	}
+
+	s->pek = s->origPek + SMP_DAT_OFFSET;
+	return true;
+}
+
+// reallocs sample with proper alignment and padding for branchless resampling interpolation
+bool reallocateTmpSmpData(sampleTyp *s, int32_t length)
+{
+	if (s->origPek == NULL)
+		return allocateTmpSmpData(s, length);
+
+	s->origPek = (int8_t *)realloc(s->origPek, length + LOOP_FIX_LEN);
+	if (s->origPek == NULL)
+	{
+		s->pek = NULL;
+		return false;
+	}
+
+	s->pek = s->origPek + SMP_DAT_OFFSET;
+	return true;
+}
+
 sampleTyp *getCurSample(void)
 {
 	if (editor.curInstr == 0 || instr[editor.curInstr] == NULL)
 		return NULL;
 
 	return &instr[editor.curInstr]->samp[editor.curSmp];
+}
+
+void checkSampleRepeat(sampleTyp *s)
+{
+	if (s->repS < 0) s->repS = 0;
+	if (s->repL < 0) s->repL = 0;
+	if (s->repS > s->len) s->repS = s->len;
+	if (s->repS+s->repL > s->len) s->repL = s->len - s->repS;
+
+	if (s->repL == 0) // non-FT2 fix: disable loop if loop length is 0
+	{
+		s->repS = 0;
+		s->typ &= ~3;
+	}
 }
 
 // modifies samples before index 0, and after loop/end (for branchless mixer interpolation (kinda))

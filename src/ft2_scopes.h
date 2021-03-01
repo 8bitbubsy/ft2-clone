@@ -5,6 +5,8 @@
 #include "ft2_header.h"
 #include "ft2_audio.h"
 
+#define SCOPE_HEIGHT 36
+
 #define SCOPE_FRAC_BITS 32
 #define SCOPE_FRAC_SCALE (1ULL << SCOPE_FRAC_BITS)
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
@@ -31,9 +33,11 @@ typedef struct scope_t
 	const int16_t *base16;
 	bool wasCleared, sampleIs16Bit;
 	uint8_t loopType;
-	int32_t vol, loopStart, loopLength, end, pos, direction, oldPeriod;
+	int32_t vol, loopStart, loopLength, end, pos, direction;
 	uint32_t drawDelta, oldDrawDelta;
-	uint64_t delta, posFrac, oldDelta;
+	uint64_t delta, oldDelta, posFrac;
+
+	double dOldHz;
 } scope_t;
 
 typedef struct lastChInstr_t

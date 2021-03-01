@@ -87,6 +87,36 @@
     <ClCompile Include="..\..\src\mixer\ft2_windowed_sinc.c">
       <Filter>mixer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\modloaders\ft2_load_mod.c">
+      <Filter>modloaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\modloaders\ft2_load_s3m.c">
+      <Filter>modloaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\modloaders\ft2_load_stm.c">
+      <Filter>modloaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\modloaders\ft2_load_xm.c">
+      <Filter>modloaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\modloaders\ft2_load_stk.c">
+      <Filter>modloaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\modloaders\ft2_load_digi.c">
+      <Filter>modloaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\smploaders\ft2_load_raw.c">
+      <Filter>smploaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\smploaders\ft2_load_iff.c">
+      <Filter>smploaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\smploaders\ft2_load_aiff.c">
+      <Filter>smploaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\smploaders\ft2_load_wav.c">
+      <Filter>smploaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\rtmidi\RtMidi.h">
@@ -250,8 +280,17 @@
     <Filter Include="mixer">
       <UniqueIdentifier>{5c40c417-c4bb-4cf2-b71b-c557bf0a86cd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="modloaders">
+      <UniqueIdentifier>{9948839a-30e1-4ef0-a25a-e88002c0ace3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="smploaders">
+      <UniqueIdentifier>{62e7f7c0-f7ae-4b85-bd62-2c83f74e3953}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\src\ft2-clone.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="D:\dos\unreal ][.s3m" />
   </ItemGroup>
 </Project>

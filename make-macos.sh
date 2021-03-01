@@ -36,7 +36,7 @@ fi
 #
 function compile() {
     rm $1 &> /dev/null
-    clang $VERBOSE $CFLAGS -F /Library/Frameworks -g0 -DNDEBUG -DHAS_MIDI -D__MACOSX_CORE__ -stdlib=libc++ src/rtmidi/*.cpp src/gfxdata/*.c src/mixer/*.c src/*.c -Winit-self -Wno-deprecated -Wextra -Wunused -mno-ms-bitfields -Wno-missing-field-initializers -Wswitch-default $LDFLAGS -L /Library/Frameworks -framework SDL2 -framework CoreMidi -framework CoreAudio -framework Cocoa -liconv -lpthread -lm -lstdc++ -o $1
+    clang $VERBOSE $CFLAGS -F /Library/Frameworks -g0 -DNDEBUG -DHAS_MIDI -D__MACOSX_CORE__ -stdlib=libc++ src/rtmidi/*.cpp src/gfxdata/*.c src/mixer/*.c src/modloaders/*.c src/smploaders/*.c src/*.c -Winit-self -Wno-deprecated -Wextra -Wunused -mno-ms-bitfields -Wno-missing-field-initializers -Wswitch-default $LDFLAGS -L /Library/Frameworks -framework SDL2 -framework CoreMidi -framework CoreAudio -framework Cocoa -liconv -lpthread -lm -lstdc++ -o $1
     return $?
 }
 

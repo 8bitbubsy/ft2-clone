@@ -100,17 +100,6 @@ __attribute__ ((packed))
 #endif
 songMODInstrHeaderTyp;
 
-typedef struct songMOD15HeaderTyp_t
-{
-	char name[20];
-	songMODInstrHeaderTyp instr[15];
-	uint8_t len, repS, songTab[128];
-}
-#ifdef __GNUC__
-__attribute__ ((packed))
-#endif
-songMOD15HeaderTyp;
-
 typedef struct songMOD31HeaderTyp_t
 {
 	char name[20];
@@ -214,11 +203,12 @@ typedef struct stmTyp_t
 	int16_t midiPitch;
 	uint16_t outPeriod, realPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
 	uint16_t envVCnt, envPCnt, eVibAmp, eVibSweep;
-	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;	
+	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;
 	int32_t envVIPValue, envPIPValue, envVAmp, envPAmp;
 	int32_t oldFinalPeriod, smpStartPos;
 
-	double dFinalVol;
+	uint8_t finalVol; // 0..255 (for visuals)
+	double dFinalVol; // 0.0 .. 1.0 (for mixer)
 
 	sampleTyp *smpPtr;
 	instrTyp *instrPtr;
@@ -241,38 +231,48 @@ typedef struct tonTyp_t
 	uint8_t ton, instr, vol, effTyp, eff;
 } tonTyp;
 
+#ifdef _MSC_VER
+#pragma pack(push)
+#pragma pack(1)
+#endif
+
 typedef struct syncedChannel_t // used for audio/video sync queue
 {
-	bool envSustainActive;
-	int8_t fineTune, relTonNr;
-	uint8_t status, sampleNr, instrNr;
-	uint16_t finalPeriod;
-	int32_t smpStartPos;
-	double dFinalVol;
-} syncedChannel_t;
+	uint8_t status;
+	uint8_t pianoNoteNr;
+	uint8_t sampleNr, instrNr;
+	uint16_t smpStartPos;
+	uint8_t vol;
+	double dHz;
+}
+#ifdef __GNUC__
+__attribute__ ((packed))
+#endif
+syncedChannel_t;
+
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 double getSampleC4Rate(sampleTyp *s);
 
 void setNewSongPos(int32_t pos);
 void resetReplayerState(void);
 
-void fixSongName(void); // removes spaces from right side of song name
-void fixSampleName(int16_t nr); // removes spaces from right side of ins/smp names
+void fixString(char *str, int32_t lastChrPos); // removes leading spaces and 0x1A chars
+void fixSongName(void);
+void fixInstrAndSampleNames(int16_t nr);
+
 void calcReplayerVars(int32_t rate);
 
 // used on external sample load and during sample loading in some module formats
 void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag);
 
-void calcRevMixDeltaTable(void);
 void calcReplayerLogTab(void);
 
-double linearPeriod2Hz(int32_t period);
-double amigaPeriod2Hz(int32_t period);
-
-double dPeriod2Hz(uint16_t period); // uses LUT for fast operation
-
-int64_t getMixerDelta(uint16_t period);
-uint32_t getRevMixerDelta(uint16_t period);
+double dLinearPeriod2Hz(int32_t period);
+double dAmigaPeriod2Hz(int32_t period);
+double dPeriod2Hz(int32_t period);
 
 int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
 

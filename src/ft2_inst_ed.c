@@ -18,7 +18,6 @@
 #include "ft2_video.h"
 #include "ft2_sample_loader.h"
 #include "ft2_diskop.h"
-#include "ft2_module_loader.h"
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
@@ -1657,12 +1656,8 @@ void drawPiano(chSyncData_t *chSyncData)
 			syncedChannel_t *c = chSyncData->channels;
 			for (int32_t i = 0; i < song.antChn; i++, c++)
 			{
-				if (c->instrNr == editor.curInstr && c->envSustainActive)
-				{
-					const int32_t note = getPianoKey(c->finalPeriod, c->fineTune, c->relTonNr);
-					if (note >= 0 && note <= 95)
-						newStatus[note] = true;
-				}
+				if (c->instrNr == editor.curInstr && c->pianoNoteNr <= 95)
+					newStatus[c->pianoNoteNr] = true;
 			}
 		}
 		else // song is not playing (jamming from keyboard/MIDI)
@@ -3412,7 +3407,7 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 loadDone:
 	fclose(f);
 
-	fixSampleName(editor.curInstr);
+	fixInstrAndSampleNames(editor.curInstr);
 	editor.updateCurInstr = true; // setMouseBusy(false) is called in the input/video thread when done
 
 	if (ih.antSamp > MAX_SMP_PER_INST)
@@ -3426,14 +3421,13 @@ loadDone:
 	(void)ptr;
 }
 
-static bool fileIsInstr(UNICHAR *filename)
+bool fileIsInstr(UNICHAR *filenameU)
 {
-	char header[22];
-
-	FILE *f = UNICHAR_FOPEN(filename, "rb");
+	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
 	if (f == NULL)
 		return false;
 
+	char header[22];
 	fread(header, 1, sizeof (header), f);
 	fclose(f);
 

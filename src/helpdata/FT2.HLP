@@ -20,21 +20,27 @@
 >- Full screen edit mode.
 >- Improved editing facilities.
 
-@X040@C001FT2 supports the following file formats:
+@X040@C001The FT2 clone supports the following file formats:
 
 @X040@C001Modules:
 >@X060@C002
->- Standard modules (15- > 31-instruments). (MOD,NST)
->- Fasttracker v1.0 2,4,6,8..32-channel formats. (MOD)
->- ScreamTracker modules. (STM,S3M)
+>- Standard modules (15/31 samples). (MOD,NST,STK)
+>- Fasttracker II modules. (XM,MOD)
+>- Fasttracker modules. (MOD/FST)
+>
+@X040@C001Experimental module support:
+>@X060@C002
+>- Scream Tracker 3 modules. (S3M)
+>- Scream Tracker 2 modules. (STM)
+>- DIGI Booster (non-Pro) modules. (DIGI)
 >
 @X040@C001Samples:
 >@X060@C002
 >- Gravis Ultrasound Patches, PAT.
 >- SMP/SAM/RAW/SND data files, signed and unsigned.
->- Windows WAV-files.
->- Amiga IFF-files. (Interchange File Format)
->- Apple AIFF-files.
+>- WAV files.
+>- Amiga IFF.
+>- Apple AIFF.
 
 @X040@C001FT2 introduces several new file formats:
 >@X060@C002

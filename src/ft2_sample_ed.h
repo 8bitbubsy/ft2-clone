@@ -7,7 +7,14 @@
 #define SAMPLE_AREA_WIDTH 632
 #define SAMPLE_AREA_Y_CENTER 250
 
+// allocs sample with proper alignment and padding for branchless resampling interpolation
+bool allocateTmpSmpData(sampleTyp *s, int32_t length);
+
+// reallocs sample with proper alignment and padding for branchless resampling interpolation
+bool reallocateTmpSmpData(sampleTyp *s, int32_t length);
+
 sampleTyp *getCurSample(void);
+void checkSampleRepeat(sampleTyp *s);
 void fixSample(sampleTyp *s); // modifies samples before index 0, and after loop/end (for branchless mixer interpolation)
 void restoreSample(sampleTyp *s); // restores samples after loop/end
 void clearSample(void);

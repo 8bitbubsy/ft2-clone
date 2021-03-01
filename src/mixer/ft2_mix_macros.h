@@ -253,18 +253,9 @@
 
 #define LIMIT_MIX_NUM \
 	i = (v->end - 1) - pos; \
-	if (i > 65535) \
-		i = 65535; \
+	const uint64_t tmp64 = ((uint64_t)i << 32) | ((uint32_t)posFrac ^ 0xFFFFFFFF); \
 	\
-	i = (i << 16) | ((uint32_t)(posFrac >> 16) ^ 0xFFFF); \
-	\
-	/* This is hackish, but fast. This is sometimes off by one (-1), so */ \
-	/* we need to do another cycle to reach the end of the sample. The */ \
-	/* error is never +1, it's always below (safe). */ \
-	\
-	samplesToMix = ((int64_t)i * v->revDelta) >> 32; \
-	samplesToMix++; \
-	\
+	samplesToMix = (uint32_t)(tmp64 / (uint64_t)v->delta) + 1; /* this can be slow on 32-bit systems... */ \
 	if (samplesToMix > samplesLeft) \
 		samplesToMix = samplesLeft; \
 

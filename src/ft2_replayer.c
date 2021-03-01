@@ -27,9 +27,7 @@
 ** If something looks to be off, it probably isn't!
 */
 
-// non-FT2 precalced stuff (these are kinda big...)
-static double dPeriod2HzTab[65536], dLogTab[768], dExp2MulTab[32], dHz2MixDeltaMul;
-static uint32_t revMixDeltaTab[65536];
+static double dLogTab[768], dExp2MulTab[32];
 static bool bxxOverflow;
 static tonTyp nilPatternLine[MAX_VOICES];
 
@@ -49,41 +47,31 @@ instrTyp *instr[132];
 tonTyp *patt[MAX_PATTERNS];
 // ----------------------------------
 
-void fixSongName(void) // removes spaces from right side of song name
+void fixString(char *str, int32_t lastChrPos) // removes leading spaces and 0x1A chars
 {
-	for (int32_t i = 20; i >= 0; i--)
+	for (int32_t i = lastChrPos; i >= 0; i--)
 	{
-		if (song.name[i] == ' ')
-			song.name[i] = '\0';
-		else
+		if (str[i] == ' ' || str[i] == 0x1A)
+			str[i] = '\0';
+		else if (str[i] != '\0')
 			break;
 	}
+	str[lastChrPos+1] = '\0';
 }
 
-void fixSampleName(int16_t nr) // removes spaces from right side of ins/smp names
+void fixSongName(void)
 {
-	for (int32_t i = 21; i >= 0; i--)
-	{
-		if (song.instrName[nr][i] == ' ')
-			song.instrName[nr][i] = '\0';
-		else
-			break;
-	}
+	fixString(song.name, 19);
+}
 
+void fixInstrAndSampleNames(int16_t nr)
+{
+	fixString(song.instrName[nr], 21);
 	if (instr[nr] != NULL)
 	{
 		sampleTyp *s = instr[nr]->samp;
 		for (int32_t i = 0; i < MAX_SMP_PER_INST; i++, s++)
-		{
-			for (int16_t j = 21; j >= 0; j--)
-			{
-				if (s->name[j] == ' ')
-					s->name[j] = '\0';
-				else
-					break;
-			}
-			s->name[22] = '\0'; // just in case (for tracker, not present in sample header when saving)
-		}
+			fixString(s->name, 21);
 	}
 }
 
@@ -130,7 +118,7 @@ void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag)
 	#define MIN_PERIOD (0)
 	#define MAX_PERIOD (((10*12*16)-1)-1) /* -1 (because of bugged amigaPeriods table values) */
 
-	double (*dGetHzFromPeriod)(int32_t) = linearPeriodsFlag ? &linearPeriod2Hz : &amigaPeriod2Hz;
+	double (*dGetHzFromPeriod)(int32_t) = linearPeriodsFlag ? dLinearPeriod2Hz : dAmigaPeriod2Hz;
 	const uint16_t *periodTab = linearPeriodsFlag ? linearPeriods : amigaPeriods;
 
 	if (midCFreq <= 0 || periodTab == NULL)
@@ -260,66 +248,32 @@ int16_t getRealUsedSamples(int16_t nr)
 	return i+1;
 }
 
-double linearPeriod2Hz(int32_t period)
+double dLinearPeriod2Hz(int32_t period)
 {
 	if (period == 0)
-		return 0.0; // in FT2, a period of 0 gives 0Hz
+		return 0.0; // in FT2, a period of 0 results in 0Hz
 
-	const uint16_t invPeriod = (uint16_t)(12 * 192 * 4) - (uint16_t)period; // this intentionally 16-bit-underflows to be accurate to FT2
+	const uint16_t invPeriod = (12 * 192 * 4) - (uint16_t)period; // intentionally underflows (uint16_t) to be FT2-accurate
 	const int32_t quotient = invPeriod / 768;
 	const int32_t remainder = invPeriod % 768;
 
-	return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y >> ((14-octave) & 31)
+	return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y / 2^((14-quotient) & 31)
 }
 
-double amigaPeriod2Hz(int32_t period)
+double dAmigaPeriod2Hz(int32_t period)
 {
 	if (period == 0)
-		return 0.0; // in FT2, a period of 0 gives 0Hz
+		return 0.0; // in FT2, a period of 0 results in 0Hz
 
-	return (double)(8363*1712) / period;
+	return (double)(8363 * 1712) / period;
 }
 
-static void calcPeriod2HzTable(void) // called every time "linear/amiga frequency" mode is changed
+double dPeriod2Hz(int32_t period)
 {
-	if (audio.linearPeriodsFlag)
-	{
-		// linear periods
-		for (int32_t i = 0; i < 65536; i++)
-			dPeriod2HzTab[i] = linearPeriod2Hz(i);
-	}
-	else
-	{
-		// Amiga periods
-		for (int32_t i = 0; i < 65536; i++)
-			dPeriod2HzTab[i] = amigaPeriod2Hz(i);
-	}
+	return audio.linearPeriodsFlag ? dLinearPeriod2Hz(period) : dAmigaPeriod2Hz(period);
 }
 
-/* Called every time "linear/amiga frequency" mode or audio frequency is changed.
-**
-** Used to replace a DIV with a MUL in the outside audio mixer loop. This can actually
-** be beneficial if you are playing VERY tightly looped samples, and/or if the CPU has
-** no DIV instruction (certain ARM CPUs, for instance).
-**
-** A bit hackish and extreme considering it's 65536*4 bytes long, but why not.
-*/
-void calcRevMixDeltaTable(void)
-{
-	for (int32_t i = 0; i < 65536; i++)
-	{
-		const uint16_t period = (uint16_t)i;
-		const uint64_t delta = getMixerDelta(period);
-
-		uint32_t revDelta = UINT32_MAX;
-		if (delta != 0)
-			revDelta = (uint32_t)((UINT64_MAX / delta) >> 16); // MUST be truncated, not rounded!
-
-		revMixDeltaTab[i] = revDelta;
-	}
-}
-
-// returns *exact* FT2 C-4 voice rate (depending on finetune, relative note and Amiga/linear mode)
+// returns *exact* FT2 C-4 voice rate (depending on finetune, relative note and linear/Amiga period mode)
 double getSampleC4Rate(sampleTyp *s)
 {
 	int32_t note = (96/2) + s->relTon;
@@ -343,16 +297,14 @@ void setFrqTab(bool linear)
 	else
 		note2Period = amigaPeriods;
 
-	calcPeriod2HzTable();
-	calcRevMixDeltaTable();
-
 	resumeAudio();
 
-	// update "frequency table" radiobutton, if it's shown
 	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
 	{
-		setConfigIORadioButtonStates();
+		// update "frequency table" radiobutton, if it's shown
+		setConfigIORadioButtonStates(); 
 
+		// update mid-C freq. in instr. editor (it can slightly differ between Amiga/linear)
 		if (ui.instEditorShown)
 			drawC4Rate();
 	}
@@ -452,7 +404,7 @@ void calcReplayerVars(int32_t audioFreq)
 	if (audioFreq <= 0)
 		return;
 
-	dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
+	audio.dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
 	audio.quickVolRampSamples = (int32_t)((audioFreq / 200.0) + 0.5); // rounded
 	audio.dRampQuickVolMul = 1.0 / audio.quickVolRampSamples;
 
@@ -481,35 +433,27 @@ void calcReplayerVars(int32_t audioFreq)
 	}
 }
 
-double dPeriod2Hz(uint16_t period) // uses LUT for fast operation
-{
-	return dPeriod2HzTab[period];
-}
-
-int64_t getMixerDelta(uint16_t period)
-{
-	/* Precision has been tested for most extreme case (Amiga period 1, 44100Hz),
-	** and there is no precision loss using 64-bit double-precision here, even
-	** though we can get VERY big numbers.
-	*/
-	return (int64_t)((dPeriod2Hz(period) * dHz2MixDeltaMul) + 0.5); // Hz -> rounded 32.32 fixed-point mixer delta
-}
-
-// used for calculating the max safe amount of samples to mix before entering inner mix loop
-uint32_t getRevMixerDelta(uint16_t period)
-{
-	return revMixDeltaTab[period];
-}
-
 int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote) // for piano in Instr. Ed.
 {
-	if (period > note2Period[0]) // don't show periods below C-0 (w/ lowest finetune) on piano
-		return -1;
+	assert(note2Period != NULL);
 
+	if (period > note2Period[0])
+		return -1; // out of lower range on piano
+
+	if (audio.linearPeriodsFlag)
+	{
+		int32_t note = ((10*12*16*4+64) - (period + 16*2)) >> 2;
+		note -= ((int8_t)finetune >> 3) + 16;
+		note = ((note >> 4) + 1) - relativeNote;
+
+		return note;
+	}
+
+	/* Amiga periods require a slower method...
+	** This is not 100% accurate for all periods, but should be faster
+	** than using log2() and floating-point arithmetics.
+	*/
 	finetune = ((int8_t)finetune >> 3) + 16;
-	
-	// this is not 100% accurate for all periods, but should be faster than using log2() and floating-point arithmetics
-
 	int32_t hiPeriod = (10*12*16)+16;
 	int32_t loPeriod = 0;
 
@@ -1561,10 +1505,12 @@ static void fixaEnvelopeVibrato(stmTyp *ch)
 			dVol = 1.0;
 
 		ch->dFinalVol = dVol;
+		ch->finalVol = (uint8_t)(int32_t)((ch->dFinalVol * 255) + 0.5); // 0.0 .. 1.0 -> 0..255 rounded, used for visuals
 	}
 	else
 	{
 		ch->dFinalVol = 0.0;
+		ch->finalVol = 0;
 	}
 
 	// *** PANNING ENVELOPE ***
@@ -2865,8 +2811,6 @@ bool setupReplayer(void)
 		return false;
 	}
 
-	calcPeriod2HzTable();
-	calcRevMixDeltaTable();
 	calcPanningTable();
 
 	setPos(0, 0, true);

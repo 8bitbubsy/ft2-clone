@@ -34,7 +34,7 @@ typedef struct audio_t
 	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;
 	uint64_t tickTime64, tickTime64Frac, tickTimeTab[MAX_BPM+1];
 	double dRampQuickVolMul, dRampTickMul, dRampTickMulTab[MAX_BPM+1];
-	double *dMixBufferL, *dMixBufferR, *dMixBufferLUnaligned, *dMixBufferRUnaligned;
+	double *dMixBufferL, *dMixBufferR, *dMixBufferLUnaligned, *dMixBufferRUnaligned, dHz2MixDeltaMul;
 	double dAudioLatencyMs, dSamplesPerTick, dTickSampleCounter, dSamplesPerTickTab[MAX_BPM+1];
 
 	SDL_AudioDeviceID dev;
@@ -47,8 +47,8 @@ typedef struct
 	const int16_t *base16, *revBase16;
 	bool active, backwards, isFadeOutVoice, hasLooped;
 	uint8_t mixFuncOffset, pan, loopType;
-	int32_t pos, end, loopStart, loopLength;
-	uint32_t volRampSamples, revDelta, oldRevDelta;
+	int32_t pos, end, loopStart, loopLength, oldPeriod;
+	uint32_t volRampSamples;
 	uint64_t posFrac, delta, oldDelta;
 
 	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_LEFT_TAPS) readFixedTapsFromThisPointer();
@@ -56,7 +56,7 @@ typedef struct
 	const int16_t *leftEdgeTaps16;
 
 	const double *dSincLUT;
-	double dVol, dDestVolL, dDestVolR, dVolL, dVolR, dVolDeltaL, dVolDeltaR;
+	double dOldHz, dHz, dVol, dDestVolL, dDestVolR, dVolL, dVolR, dVolDeltaL, dVolDeltaR;
 } voice_t;
 
 typedef struct pattSyncData_t
