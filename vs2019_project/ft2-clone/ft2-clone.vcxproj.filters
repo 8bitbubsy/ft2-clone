@@ -290,7 +290,4 @@
   <ItemGroup>
     <ResourceCompile Include="..\..\src\ft2-clone.rc" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="D:\dos\unreal ][.s3m" />
-  </ItemGroup>
 </Project>
