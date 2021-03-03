@@ -1,5 +1,5 @@
 # ft2-clone
-Fasttracker II clone for Windows/macOS/Linux
+Fasttracker II clone for Windows/macOS/Linux, by [8bitbubsy](https://16-bits.org).
 
 Aims to be a **highly accurate** clone of the classic Fasttracker II software for MS-DOS. \
 The XM player itself has been directly ported from the original source code, for maximum accuracy.
@@ -20,6 +20,7 @@ If these don't work for you, you'll have to compile the code manually.
 - The waveform display in the sample editor shows peak based data when zoomed out
 - Text boxes has a text marking option, where you can cut/copy/paste
 - MOD/STM/S3M import has been slightly improved (S3M import is still not ideal, as it's not compatible with XM)
+- Supports loading DIGI Booster (non-Pro) modules
 - It supports loading XMs with stereo samples, uneven amount of channels, more than 32 channels, more than 16 samples per instrument, more than 128 patterns etc. The unsupported data will be mixed to mono/truncated.
 - It has some small additions to make life easier (C4/middle-C Hz display in Instr. Ed., envelope point coordinate display, etc).
 
