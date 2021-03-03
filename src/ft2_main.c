@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
 #endif
 
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+	SDL_EnableScreenSaver(); // allow screensaver to activate
 
 	initializeVars();
 	setupCrashHandler();
