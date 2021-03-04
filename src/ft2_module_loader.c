@@ -101,6 +101,10 @@ static int8_t detectModule(FILE *f)
 	if (isdigit(I[0]) && I[0] != '0' && I[1] == 'C' && I[2] == 'H' && I[3] == 'N') // xCHN
 		return FORMAT_MOD;
 
+	// Digital Tracker (Atari Falcon)
+	if (I[0] == 'F' && I[1] == 'A' && I[2] == '0' && I[3] >= '4' && I[3] <= '8') // FA0x (x=4..8)
+		return FORMAT_MOD;
+
 	// Generic multi-channel MOD (10..99 channels)
 	if (isdigit(I[0]) && isdigit(I[1]) && I[0] != '0' && I[2] == 'C' && I[3] == 'H') // xxCH
 		return FORMAT_MOD;
@@ -109,11 +113,13 @@ static int8_t detectModule(FILE *f)
 	if (isdigit(I[0]) && isdigit(I[1]) && I[0] != '0' && I[2] == 'C' && I[3] == 'N') // xxCN (same as xxCH)
 		return FORMAT_MOD;
 	
-	// Generic 4-channel MOD (NoiseTracker/ProTracker or compatible)
+	// ProTracker and generic MOD formats
 	if (!memcmp("M.K.", I, 4) || !memcmp("M!K!", I, 4) || !memcmp("NSMS", I, 4) ||
-		!memcmp("LARD", I, 4) || !memcmp("PATT", I, 4) || !memcmp("PATT", I, 4) ||
-		!memcmp("FLT4", I, 4) || !memcmp("FLT8", I, 4) || !memcmp("N.T.", I, 4) ||
-		!memcmp("M&K!", I, 4) || !memcmp("FEST", I, 4))
+		!memcmp("LARD", I, 4) || !memcmp("PATT", I, 4) || !memcmp("FLT4", I, 4) ||
+		!memcmp("FLT8", I, 4) || !memcmp("EXO4", I, 4) || !memcmp("EXO8", I, 4) ||
+		!memcmp("N.T.", I, 4) || !memcmp("M&K!", I, 4) || !memcmp("FEST", I, 4) ||
+		!memcmp("CD61", I, 4) || !memcmp("CD81", I, 4) || !memcmp("OKTA", I, 4) ||
+		!memcmp("OCTA", I, 4))
 	{
 		return FORMAT_MOD;
 	}

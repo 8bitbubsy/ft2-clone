@@ -54,7 +54,9 @@ bool loadMOD(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	songTmp.antChn = numChannels;
+	bool hasMoreThan32Chans = numChannels > 32;
+
+	songTmp.antChn = hasMoreThan32Chans ? 32 : numChannels;
 	songTmp.len = h_MOD31.len;
 	songTmp.repS = h_MOD31.repS;
 	songTmp.initialTempo = songTmp.tempo = 6;
@@ -131,6 +133,12 @@ bool loadMOD(FILE *f, uint32_t filesize)
 					ton->instr = (bytes[0] & 0xF0) | (bytes[2] >> 4);
 					ton->effTyp = bytes[2] & 0x0F;
 					ton->eff = bytes[3];
+				}
+
+				if (hasMoreThan32Chans)
+				{
+					int32_t remainingChans = numChannels-songTmp.antChn;
+					fseek(f, remainingChans*4, SEEK_CUR);
 				}
 			}
 
@@ -356,6 +364,9 @@ bool loadMOD(FILE *f, uint32_t filesize)
 		}
 	}
 
+	if (hasMoreThan32Chans)
+		loaderMsgBox("Warning: The module has >32 channels. Only 32 were loaded!");
+
 	return true;
 }
 
@@ -366,33 +377,47 @@ static uint8_t getModType(uint8_t *numChannels, const char *id)
 	uint8_t modFormat = FORMAT_UNKNOWN;
 	*numChannels = 4;
 
-	if (IS_ID("M.K.", id) || IS_ID("M!K!", id) || IS_ID("NSMS", id) ||
-		IS_ID("LARD", id) || IS_ID("PATT", id))
+	if (IS_ID("M.K.", id) || IS_ID("M!K!", id) || IS_ID("NSMS", id) || IS_ID("LARD", id) || IS_ID("PATT", id))
 	{
 		modFormat = FORMAT_MK; // ProTracker or compatible
 	}
 	else if (isdigit(id[0]) && id[1] == 'C' && id[2] == 'H' && id[3] == 'N') // xCHN
 	{
-		modFormat = FORMAT_FT2; // FT2 or compatible (multi-channel)
+		modFormat = FORMAT_FT2;
 		*numChannels = id[0] - '0';
 	}
 	else if (isdigit(id[0]) && isdigit(id[1]) && id[2] == 'C' && id[3] == 'H') // xxCH
 	{
-		modFormat = FORMAT_FT2; // FT2 or compatible (multi-channel)
+		modFormat = FORMAT_FT2;
 		*numChannels = ((id[0] - '0') * 10) + (id[1] - '0');
 	}
 	else if (isdigit(id[0]) && isdigit(id[1]) && id[2] == 'C' && id[3] == 'N') // xxCN (load as xxCH)
 	{
-		modFormat = FORMAT_FT2; // FT2 or compatible (multi-channel)
+		modFormat = FORMAT_FT2;
 		*numChannels = ((id[0] - '0') * 10) + (id[1] - '0');
 	}
-	else if (IS_ID("FLT4", id))
+	else if (IS_ID("CD61", id) || IS_ID("CD81", id)) // Octalyser (Atari)
 	{
-		modFormat = FORMAT_FLT4; // StarTrekker (4ch modules)
+		modFormat = FORMAT_FT2;
+		*numChannels = id[2] - '0';
 	}
-	else if (IS_ID("FLT8", id))
+	else if (id[0] == 'F' && id[1] == 'A' && id[2] == '0' && id[3] >= '4' && id[3] <= '8') // FA0x (Digital Tracker, Atari)
 	{
-		modFormat = FORMAT_FLT8; // StarTrekker (8ch modules)
+		modFormat = FORMAT_FT2;
+		*numChannels = id[3] - '0';
+	}
+	else if (IS_ID("OKTA", id) || IS_ID("OCTA", id)) // Oktalyzer (as .MOD format)
+	{
+		modFormat = FORMAT_FT2;
+		*numChannels = 8;
+	}
+	else if (IS_ID("FLT4", id) || IS_ID("EXO4", id)) // StarTrekker 4ch
+	{
+		modFormat = FORMAT_FLT4;
+	}
+	else if (IS_ID("FLT8", id) || IS_ID("EXO8", id)) // StarTrekker 8ch
+	{
+		modFormat = FORMAT_FLT8;
 		*numChannels = 8;
 	}
 	else if (IS_ID("N.T.", id))
