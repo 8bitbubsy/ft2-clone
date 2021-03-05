@@ -47,8 +47,10 @@ enum
 // file extensions accepted by Disk Op. in module mode
 char *supportedModExtensions[] =
 {
-	"xm", "ft", "nst", "stk", "mod", "s3m", "stm", "fst", "digi",
+	"xm", "ft", "nst", "stk", "mod", "s3m", "stm", "fst",
+	"digi",
 
+	// IMPORTANT: Remember comma after last entry above
 	"END_OF_LIST" // do NOT move, remove or edit this line!
 };
 
@@ -415,6 +417,9 @@ static void setupLoadedModule(void)
 
 	// we are the owners of the allocated memory ptrs set by the loader thread now
 
+	if (song.antChn == 0)
+		song.antChn = 2;
+
 	// support non-even channel numbers
 	if (song.antChn & 1)
 	{
@@ -430,6 +435,36 @@ static void setupLoadedModule(void)
 		song.repS = 0;
 
 	song.globVol = 64;
+
+	// remove overflown stuff in pattern data (FT2 doesn't do this)
+	for (int32_t i = 0; i < MAX_PATTERNS; i++)
+	{
+		if (pattLens[i] <= 0)
+			pattLens[i] = 64;
+
+		if (pattLens[i] > MAX_PATT_LEN)
+			pattLens[i] = MAX_PATT_LEN;
+
+		tonTyp *p = patt[i];
+		if (p == NULL)
+			continue;
+
+		tonTyp *note = p;
+		for (int32_t j = 0; j < MAX_PATT_LEN * MAX_VOICES; j++, note++)
+		{
+			if (note->ton > 97)
+				note->ton = 0;
+
+			if (note->instr > 128)
+				note->instr = 0;
+
+			if (note->effTyp > 35)
+			{
+				note->effTyp = 0;
+				note->eff = 0;
+			}
+		}
+	}
 
 	setScrollBarEnd(SB_POS_ED, (song.len - 1) + 5);
 	setScrollBarPos(SB_POS_ED, 0, false);

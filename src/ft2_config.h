@@ -65,7 +65,7 @@ enum
 	DIFFICULTY_PRO = 2,
 	DIFFICULTY_MANIAC = 3,
 
-	DONT_SHOW_S3M_LOAD_WARNING_FLAG = 64,
+	DONT_SHOW_IMPORT_WARNING_FLAG = 64,
 	DONT_SHOW_NOT_YET_APPLIED_WARNING_FLAG = 32,
 
 	// specialFlags
@@ -184,7 +184,7 @@ void showConfigScreen(void);
 void hideConfigScreen(void);
 void exitConfigScreen(void);
 void setConfigIORadioButtonStates(void);
-void configToggleS3MLoadWarning(void);
+void configToggleImportWarning(void);
 void configToggleNotYetAppliedWarning(void);
 void drawAudioOutputList(void);
 void drawAudioInputList(void);

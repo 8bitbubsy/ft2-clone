@@ -365,7 +365,7 @@ bool loadMOD(FILE *f, uint32_t filesize)
 	}
 
 	if (hasMoreThan32Chans)
-		loaderMsgBox("Warning: The module has >32 channels. Only 32 were loaded!");
+		loaderMsgBox("Warning: Module contains >32 channels. The extra channels will be discarded!");
 
 	return true;
 }

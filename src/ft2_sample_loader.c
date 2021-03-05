@@ -32,8 +32,10 @@ enum
 // file extensions accepted by Disk Op. in sample mode
 char *supportedSmpExtensions[] =
 {
-	"iff", "raw", "wav", "snd", "smp", "sam", "aif", "pat", "aiff",
+	"iff", "raw", "wav", "snd", "smp", "sam", "aif", "pat",
+	"aiff",
 
+	// IMPORTANT: Remember comma after last entry above
 	"END_OF_LIST" // do NOT move, remove or edit this line!
 };
 

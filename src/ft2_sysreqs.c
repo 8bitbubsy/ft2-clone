@@ -259,7 +259,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 		if (typ == 6)
 		{
 			// S3M load warning
-			c->callbackFunc = configToggleS3MLoadWarning;
+			c->callbackFunc = configToggleImportWarning;
 		}
 		else if (typ == 7)
 		{

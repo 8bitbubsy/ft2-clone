@@ -177,14 +177,14 @@ bool loadXM(FILE *f, uint32_t filesize)
 	if (songTmp.antChn > MAX_VOICES)
 	{
 		songTmp.antChn = MAX_VOICES;
-		loaderMsgBox("Warning: This XM contains >32 channels. The extra channels will be discarded!");
+		loaderMsgBox("Warning: Module contains >32 channels. The extra channels will be discarded!");
 	}
 
 	if (h.antInstrs > MAX_INST)
-		loaderMsgBox("Warning: This XM contains >128 instruments. The extra instruments will be discarded!");
+		loaderMsgBox("Warning: Module contains >128 instruments. The extra instruments will be discarded!");
 
 	if (instrHasMoreThan16Samples)
-		loaderMsgBox("Warning: This XM contains instrument(s) with >16 samples. The extra samples will be discarded!");
+		loaderMsgBox("Warning: Module contains instrument(s) with >16 samples. The extra samples will be discarded!");
 
 	return true;
 }
@@ -543,17 +543,6 @@ static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 				*dst++ = *src++;
 				*dst++ = *src++;
 				*dst++ = *src++;
-			}
-
-			// if note is overflowing (>97), remove it
-			if (*(dst-5) > 97)
-				*(dst-5) = 0;
-
-			// non-FT2 security fix: if effect is above 35 (Z), clear effect and parameter
-			if (*(dst-2) > 35)
-			{
-				*(dst-2) = 0;
-				*(dst-1) = 0;
 			}
 
 			srcIdx += sizeof (tonTyp);

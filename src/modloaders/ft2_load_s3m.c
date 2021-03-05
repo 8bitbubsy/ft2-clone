@@ -484,12 +484,6 @@ bool loadS3M(FILE *f, uint32_t filesize)
 					if (ton.instr != 0 && ton.effTyp != 0x3)
 						s3mLastGInstr[ii] = ton.instr;
 
-					if (ton.effTyp > 35)
-					{
-						ton.effTyp = 0;
-						ton.eff = 0;
-					}
-
 					pattTmp[i][(kk * MAX_VOICES) + ii] = ton;
 				}
 			}
@@ -630,8 +624,8 @@ bool loadS3M(FILE *f, uint32_t filesize)
 	if (adlibInsWarn)
 		loaderMsgBox("Warning: The module contains unsupported AdLib instruments!");
 
-	if (!(config.dontShowAgainFlags & DONT_SHOW_S3M_LOAD_WARNING_FLAG))
-		loaderSysReq(6, "System message", "Warning: S3M channel panning is ignored because it's not compatible with FT2.");
+	if (!(config.dontShowAgainFlags & DONT_SHOW_IMPORT_WARNING_FLAG))
+		loaderSysReq(6, "System message", "Loading of this format is not fully supported and can have issues.");
 
 	return true;
 }

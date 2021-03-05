@@ -27,13 +27,13 @@
 >- Standard modules (15/31 samples). (MOD,NST,STK)
 >- Fasttracker II modules. (XM,MOD)
 >- Fasttracker modules. (MOD/FST)
->
-@X040@C001Experimental module support:
+
+@X040@C001Experimental (imperfect) module support:
 >@X060@C002
 >- Scream Tracker 3 modules. (S3M)
 >- Scream Tracker 2 modules. (STM)
 >- DIGI Booster (non-Pro) modules. (DIGI)
->
+
 @X040@C001Samples:
 >@X060@C002
 >- Gravis Ultrasound Patches, PAT.

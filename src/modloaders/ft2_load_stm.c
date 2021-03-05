@@ -178,12 +178,6 @@ bool loadSTM(FILE *f, uint32_t filesize)
 					ton->eff = 0;
 				}
 
-				if (ton->effTyp > 35)
-				{
-					ton->effTyp = 0;
-					ton->eff = 0;
-				}
-
 				a += 4;
 			}
 		}

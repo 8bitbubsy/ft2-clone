@@ -1499,9 +1499,9 @@ void exitConfigScreen(void)
 
 // CONFIG AUDIO
 
-void configToggleS3MLoadWarning(void)
+void configToggleImportWarning(void)
 {
-	config.dontShowAgainFlags ^= DONT_SHOW_S3M_LOAD_WARNING_FLAG;
+	config.dontShowAgainFlags ^= DONT_SHOW_IMPORT_WARNING_FLAG;
 }
 
 void configToggleNotYetAppliedWarning(void)
