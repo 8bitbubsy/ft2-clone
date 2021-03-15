@@ -33,16 +33,13 @@
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
 
-// globals
-config_t config;
-config_t *defConfig = (config_t *)defConfigData;
+config_t config; // globalized
 
-// hide POSIX warnings
-#ifdef _MSC_VER
+#ifdef _MSC_VER // hide POSIX warnings
 #pragma warning(disable: 4996)
 #endif
 
-uint8_t configBuffer[CONFIG_FILE_SIZE];
+static uint8_t configBuffer[CONFIG_FILE_SIZE];
 
 static void xorConfigBuffer(uint8_t *ptr8)
 {
@@ -50,7 +47,7 @@ static void xorConfigBuffer(uint8_t *ptr8)
 		ptr8[i] ^= i*7;
 }
 
-static int32_t calcChecksum(uint8_t *p, uint16_t len) // for nibbles highscore data
+static int32_t calcChecksum(const uint8_t *p, uint16_t len) // for Nibbles highscore data
 {
 	if (len == 0)
 		return 0;
@@ -58,40 +55,37 @@ static int32_t calcChecksum(uint8_t *p, uint16_t len) // for nibbles highscore d
 	uint16_t data = 0;
 	uint32_t checksum = 0;
 
-	do
+	for (uint16_t i = len; i > 0; i--)
 	{
-		data = ((data | *p++) + len) ^ len;
+		data = ((data | *p++) + i) ^ i;
 		checksum += data;
 		data <<= 8;
 	}
-	while (--len != 0);
 
 	return checksum;
 }
 
 static void loadConfigFromBuffer(void)
 {
-	int32_t i;
-
 	lockMixerCallback();
 
 	memcpy(&config, configBuffer, CONFIG_FILE_SIZE);
 
-	// if Nibbles highscore table checksum is incorrect, load default highscore table instead
-	const int32_t checksum = calcChecksum((uint8_t *)&config.NI_HighScore, sizeof (config.NI_HighScore));
-	if (config.NI_HighScoreChecksum != checksum)
-	{
+	// if Nibbles highscore checksum is incorrect, load default highscores instead
+	const int32_t newChecksum = calcChecksum((uint8_t *)&config.NI_HighScore, sizeof (config.NI_HighScore));
+	if (newChecksum != config.NI_HighScoreChecksum)
 		memcpy(&config.NI_HighScore, &defConfigData[636], sizeof (config.NI_HighScore));
-		for (i = 0; i < 10; i++)
-		{
-			config.NI_HighScore[i].name[21] = '\0';
-			if (config.NI_HighScore[i].nameLen > 21)
-				config.NI_HighScore[i].nameLen = 21;
-		}
+
+	// sanitize Nibbles highscore names
+	for (int32_t i = 0; i < 10; i++)
+	{
+		config.NI_HighScore[i].name[21] = '\0';
+		if (config.NI_HighScore[i].nameLen > 21)
+			config.NI_HighScore[i].nameLen = 21;
 	}
 
 	// clamp user palette values
-	for (i = 0; i < 16; i++)
+	for (int32_t i = 0; i < 16; i++)
 	{
 		config.userPal->r = palMax(config.userPal->r);
 		config.userPal->g = palMax(config.userPal->g);
@@ -206,7 +200,7 @@ static void setDefaultConfigSettings(void)
 
 void resetConfig(void)
 {
-	if (okBox(2, "System request", "Are you sure you want to completely reset your FT2 configuration?") != 1)
+	if (okBox(2, "System request", "Are you sure you want to reset your FT2 configuration?") != 1)
 		return;
 
 	const uint8_t oldWindowFlags = config.windowFlags;
@@ -278,8 +272,8 @@ bool loadConfig(bool showErrorFlag)
 		return false;
 	}
 
-	FILE *in = UNICHAR_FOPEN(editor.configFileLocation, "rb");
-	if (in == NULL)
+	FILE *f = UNICHAR_FOPEN(editor.configFileLocation, "rb");
+	if (f == NULL)
 	{
 		if (showErrorFlag)
 			okBox(0, "System message", "Error opening config file for reading!");
@@ -287,46 +281,36 @@ bool loadConfig(bool showErrorFlag)
 		return false;
 	}
 
-	fseek(in, 0, SEEK_END);
-	const size_t fileSize = ftell(in);
-	rewind(in);
+	fseek(f, 0, SEEK_END);
+	const size_t fileSize = ftell(f);
+	rewind(f);
 
-	if (fileSize > CONFIG_FILE_SIZE)
-	{
-		fclose(in);
-		if (showErrorFlag)
-			okBox(0, "System message", "Error loading config: the config file is not valid!");
-
-		return false;
-	}
-
-	// not a valid FT2 config file (FT2.CFG filesize varies depending on version)
+	// check if it's a valid FT2 config file (FT2.CFG filesize varies depending on version)
 	if (fileSize < 1732 || fileSize > CONFIG_FILE_SIZE)
 	{
-		fclose(in);
+		fclose(f);
 		if (showErrorFlag)
 			okBox(0, "System message", "Error loading config: the config file is not valid!");
 
 		return false;
 	}
 
-	if (fileSize < CONFIG_FILE_SIZE)
+	if (fileSize < CONFIG_FILE_SIZE) // old version, make sure unloaded entries are zeroed out
 		memset(configBuffer, 0, CONFIG_FILE_SIZE);
 
 	// read to config buffer and close file handle
-	if (fread(configBuffer, fileSize, 1, in) != 1)
+	if (fread(configBuffer, fileSize, 1, f) != 1)
 	{
-		fclose(in);
+		fclose(f);
 		if (showErrorFlag)
 			okBox(0, "System message", "Error opening config file for reading!");
 
 		return false;
 	}
 
-	fclose(in);
+	fclose(f);
 
-	// decrypt config buffer
-	xorConfigBuffer(configBuffer);
+	xorConfigBuffer(configBuffer); // decrypt config buffer
 
 	if (memcmp(&configBuffer[0], CFG_ID_STR, 35) != 0)
 	{
@@ -378,16 +362,15 @@ bool saveConfig(bool showErrorFlag)
 	}
 
 	saveAudioDevicesToConfig(audio.currOutputDevice, audio.currInputDevice);
-
 #ifdef HAS_MIDI
 	saveMidiInputDeviceToConfig();
 #endif
 
-	FILE *out = UNICHAR_FOPEN(editor.configFileLocation, "wb");
-	if (out == NULL)
+	FILE *f = UNICHAR_FOPEN(editor.configFileLocation, "wb");
+	if (f == NULL)
 	{
 		if (showErrorFlag)
-			okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+			okBox(0, "System message", "General I/O error during config saving! Is the file in use?");
 
 		return false;
 	}
@@ -404,23 +387,21 @@ bool saveConfig(bool showErrorFlag)
 	// copy over user palette
 	memcpy(config.userPal, palTable[11], sizeof (pal16) * 16);
 
+	// copy config to buffer and encrypt it
 	memcpy(configBuffer, &config, CONFIG_FILE_SIZE);
-
-	// encrypt config buffer
 	xorConfigBuffer(configBuffer);
 
-	// write config buffer and close file handle
-	if (fwrite(configBuffer, 1, CONFIG_FILE_SIZE, out) != CONFIG_FILE_SIZE)
+	if (fwrite(configBuffer, 1, CONFIG_FILE_SIZE, f) != CONFIG_FILE_SIZE)
 	{
-		fclose(out);
+		fclose(f);
 
 		if (showErrorFlag)
-			okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+			okBox(0, "System message", "General I/O error during config saving! Is the file in use?");
 
 		return false;
 	}
 
-	fclose(out);
+	fclose(f);
 	return true;
 }
 
@@ -499,17 +480,12 @@ static UNICHAR *getFullMidiDevConfigPath(void) // kinda hackish
 
 static void setConfigFileLocation(void) // kinda hackish
 {
-	int32_t ft2DotCfgStrLen;
-	FILE *f;
-
 	// Windows
 #ifdef _WIN32
-	UNICHAR *tmpPath, *oldPath;
+	int32_t ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN(L"FT2.CFG");
 
-	ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN(L"FT2.CFG");
-
-	oldPath = (UNICHAR *)calloc(PATH_MAX + 8 + 2, sizeof (UNICHAR));
-	tmpPath = (UNICHAR *)calloc(PATH_MAX + 8 + 2, sizeof (UNICHAR));
+	UNICHAR *oldPath = (UNICHAR *)calloc(PATH_MAX + 8 + 2, sizeof (UNICHAR));
+	UNICHAR *tmpPath = (UNICHAR *)calloc(PATH_MAX + 8 + 2, sizeof (UNICHAR));
 	editor.configFileLocation = (UNICHAR *)calloc(PATH_MAX + ft2DotCfgStrLen + 2, sizeof (UNICHAR));
 
 	if (oldPath == NULL || tmpPath == NULL || editor.configFileLocation == NULL)
@@ -535,7 +511,9 @@ static void setConfigFileLocation(void) // kinda hackish
 	}
 
 	UNICHAR_STRCPY(editor.configFileLocation, oldPath);
-	if ((f = fopen("FT2.CFG", "rb")) == NULL)
+
+	FILE *f = fopen("FT2.CFG", "rb");
+	if (f == NULL) // FT2.CFG not found in current dir, try default config dir
 	{
 		int32_t result = SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, tmpPath);
 		if (result == S_OK)
@@ -567,7 +545,7 @@ static void setConfigFileLocation(void) // kinda hackish
 
 	// OS X / macOS
 #elif defined __APPLE__
-	ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
+	int32_t ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
 
 	editor.configFileLocation = (UNICHAR *)calloc(PATH_MAX + ft2DotCfgStrLen + 2, sizeof (UNICHAR));
 	if (editor.configFileLocation == NULL)
@@ -584,7 +562,8 @@ static void setConfigFileLocation(void) // kinda hackish
 		return;
 	}
 
-	if ((f = fopen("FT2.CFG", "rb")) == NULL)
+	FILE *f = fopen("FT2.CFG", "rb");
+	if (f == NULL) // FT2.CFG not found in current dir, try default config dir
 	{
 		if (chdir(getenv("HOME")) == 0)
 		{
@@ -612,7 +591,7 @@ static void setConfigFileLocation(void) // kinda hackish
 
 	// Linux etc
 #else
-	ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
+	int32_t ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
 
 	editor.configFileLocation = (UNICHAR *)calloc(PATH_MAX + ft2DotCfgStrLen + 2, sizeof (UNICHAR));
 	if (editor.configFileLocation == NULL)
@@ -629,29 +608,31 @@ static void setConfigFileLocation(void) // kinda hackish
 		return;
 	}
 
-	if ((f = fopen("FT2.CFG", "rb")) == NULL)
+	FILE *f = fopen("FT2.CFG", "rb");
+	if (f == NULL) // FT2.CFG not found in current dir, try default config dir
 	{
-		if (chdir(getenv("HOME")) == 0)
+		int32_t result = -1;
+
+		// try to use $XDG_CONFIG_HOME first. If not set, use $HOME
+		const char *xdgConfigHome = getenv("XDG_CONFIG_HOME");
+		const char *home = getenv("HOME");
+
+		if (xdgConfigHome != NULL)
+			result = chdir(xdgConfigHome);
+		else if (home != NULL && chdir(home) == 0)
+			result = chdir(".config");
+
+		if (result == 0)
 		{
-			int32_t result = chdir(".config");
+			result = chdir("FT2 clone");
 			if (result != 0)
 			{
-				mkdir(".config", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-				result = chdir(".config");
+				mkdir("FT2 clone", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+				result = chdir("FT2 clone");
 			}
 
 			if (result == 0)
-			{
-				result = chdir("FT2 clone");
-				if (result != 0)
-				{
-					mkdir("FT2 clone", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-					result = chdir("FT2 clone");
-				}
-
-				if (result == 0)
-					getcwd(editor.configFileLocation, PATH_MAX - ft2DotCfgStrLen - 1);
-			}
+				getcwd(editor.configFileLocation, PATH_MAX - ft2DotCfgStrLen - 1);
 		}
 	}
 	else
@@ -669,28 +650,27 @@ static void setConfigFileLocation(void) // kinda hackish
 void loadConfigOrSetDefaults(void)
 {
 	setConfigFileLocation();
-
 	if (editor.configFileLocation == NULL)
 	{
 		setDefaultConfigSettings();
 		return;
 	}
 
-	FILE *in = UNICHAR_FOPEN(editor.configFileLocation, "rb");
-	if (in == NULL)
+	FILE *f = UNICHAR_FOPEN(editor.configFileLocation, "rb");
+	if (f == NULL)
 	{
 		setDefaultConfigSettings();
 		return;
 	}
 
-	fseek(in, 0, SEEK_END);
-	size_t fileSize = ftell(in);
-	rewind(in);
+	fseek(f, 0, SEEK_END);
+	const size_t fileSize = ftell(f);
+	rewind(f);
 
 	// not a valid FT2 config file (FT2.CFG filesize varies depending on version)
 	if (fileSize < 1732 || fileSize > CONFIG_FILE_SIZE)
 	{
-		fclose(in);
+		fclose(f);
 		setDefaultConfigSettings();
 		showErrorMsgBox("The configuration file (FT2.CFG) was corrupt, default settings were loaded.");
 		return;
@@ -699,15 +679,15 @@ void loadConfigOrSetDefaults(void)
 	if (fileSize < CONFIG_FILE_SIZE)
 		memset(configBuffer, 0, CONFIG_FILE_SIZE);
 
-	if (fread(configBuffer, fileSize, 1, in) != 1)
+	if (fread(configBuffer, fileSize, 1, f) != 1)
 	{
-		fclose(in);
+		fclose(f);
 		setDefaultConfigSettings();
 		showErrorMsgBox("I/O error while reading FT2.CFG, default settings were loaded.");
 		return;
 	}
 
-	fclose(in);
+	fclose(f);
 
 	// decrypt config buffer
 	xorConfigBuffer(configBuffer);
@@ -721,6 +701,8 @@ void loadConfigOrSetDefaults(void)
 
 	loadConfigFromBuffer();
 }
+
+// GUI-related code
 
 static void drawQuantValue(void)
 {

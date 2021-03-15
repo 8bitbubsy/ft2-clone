@@ -282,4 +282,3 @@ void sbMasterVol(uint32_t pos);
 void sbMIDISens(uint32_t pos);
 
 extern config_t config;
-extern config_t *defConfig;
