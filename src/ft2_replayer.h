@@ -55,15 +55,16 @@ enum
 #define MAX_SAMPLE_LEN 0x3FFFFFFF
 #define PROG_NAME_STR "Fasttracker II clone"
 
-/* Some of the following structs must be packed (e.g. not padded) since they
-** are loaded directly into with fread and stuff.
+/* Some of the following structs MUST be packed!
+** Please do NOT edit these structs unless you
+** absolutely know what you are doing!
 */
 
 #ifdef _MSC_VER
 #pragma pack(push)
 #pragma pack(1)
 #endif
-typedef struct songHeaderTyp_t // DO NOT TOUCH!
+typedef struct songHeaderTyp_t
 {
 	char sig[17], name[21], progName[20];
 	uint16_t ver;
@@ -76,7 +77,7 @@ __attribute__ ((packed))
 #endif
 songHeaderTyp;
 
-typedef struct patternHeaderTyp_t // DO NOT TOUCH!
+typedef struct patternHeaderTyp_t
 {
 	int32_t patternHeaderSize;
 	uint8_t typ;
@@ -112,7 +113,7 @@ __attribute__ ((packed))
 #endif
 songMOD31HeaderTyp;
 
-typedef struct sampleHeaderTyp_t // DO NOT TOUCH!
+typedef struct sampleHeaderTyp_t
 {
 	int32_t len, repS, repL;
 	uint8_t vol;
@@ -127,7 +128,7 @@ __attribute__ ((packed))
 #endif
 sampleHeaderTyp;
 
-typedef struct instrHeaderTyp_t // DO NOT TOUCH!
+typedef struct instrHeaderTyp_t
 {
 	uint32_t instrSize;
 	char name[22];
@@ -152,6 +153,29 @@ typedef struct instrHeaderTyp_t // DO NOT TOUCH!
 __attribute__ ((packed))
 #endif
 instrHeaderTyp;
+
+typedef struct tonTyp_t // must be packed on some systems, even though it consists of bytes only
+{
+	uint8_t ton, instr, vol, effTyp, eff;
+}
+#ifdef __GNUC__
+__attribute__ ((packed))
+#endif
+tonTyp;
+
+typedef struct syncedChannel_t // used for audio/video sync queue (pack to save RAM)
+{
+	uint8_t status;
+	uint8_t pianoNoteNr;
+	uint8_t sampleNr, instrNr;
+	uint16_t smpStartPos;
+	uint8_t vol;
+	double dHz;
+}
+#ifdef __GNUC__
+__attribute__ ((packed))
+#endif
+syncedChannel_t;
 
 #ifdef _MSC_VER
 #pragma pack(pop)
@@ -225,34 +249,6 @@ typedef struct songTyp_t
 	uint16_t len, repS, speed, tempo, globVol, timer, ver, initialTempo;
 	uint64_t musicTime64;
 } songTyp;
-
-typedef struct tonTyp_t
-{
-	uint8_t ton, instr, vol, effTyp, eff;
-} tonTyp;
-
-#ifdef _MSC_VER
-#pragma pack(push)
-#pragma pack(1)
-#endif
-
-typedef struct syncedChannel_t // used for audio/video sync queue
-{
-	uint8_t status;
-	uint8_t pianoNoteNr;
-	uint8_t sampleNr, instrNr;
-	uint16_t smpStartPos;
-	uint8_t vol;
-	double dHz;
-}
-#ifdef __GNUC__
-__attribute__ ((packed))
-#endif
-syncedChannel_t;
-
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
 double getSampleC4Rate(sampleTyp *s);
 
