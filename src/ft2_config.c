@@ -631,6 +631,10 @@ static void setConfigFileLocation(void) // kinda hackish
 
 	if ((f = fopen("FT2.CFG", "rb")) == NULL)
 	{
+		char *configHome = getenv("XDG_CONFIG_HOME");
+		if (configHome != NULL && chdir(configHome) == 0)
+			goto inCfg;
+
 		if (chdir(getenv("HOME")) == 0)
 		{
 			int32_t result = chdir(".config");
@@ -642,6 +646,7 @@ static void setConfigFileLocation(void) // kinda hackish
 
 			if (result == 0)
 			{
+inCfg:
 				result = chdir("FT2 clone");
 				if (result != 0)
 				{
