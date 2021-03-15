@@ -226,15 +226,19 @@ typedef struct songTyp_t
 	uint64_t musicTime64;
 } songTyp;
 
-typedef struct tonTyp_t
-{
-	uint8_t ton, instr, vol, effTyp, eff;
-} tonTyp;
-
 #ifdef _MSC_VER
 #pragma pack(push)
 #pragma pack(1)
 #endif
+
+typedef struct tonTyp_t
+{
+	uint8_t ton, instr, vol, effTyp, eff;
+}
+#ifdef __GNUC__
+__attribute__ ((packed))
+#endif
+tonTyp;
 
 typedef struct syncedChannel_t // used for audio/video sync queue
 {
