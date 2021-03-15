@@ -155,7 +155,7 @@ static int8_t detectModule(FILE *f)
 	fread(D, 1, 2, f);
 	rewind(f);
 
-	if (D[0] >= 0 && D[0] <= 128 && D[1] <= 220)
+	if (D[0] <= 128 && D[1] <= 220)
 		return FORMAT_POSSIBLY_STK;
 
 	return FORMAT_UNKNOWN;
