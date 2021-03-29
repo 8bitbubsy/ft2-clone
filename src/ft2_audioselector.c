@@ -54,6 +54,11 @@ char *getAudioOutputDeviceFromConfig(void)
 			devString[devStringLen-1]  = '\0';
 		devString[devStringLen+1] = '\0'; // UTF-8 needs double null termination
 
+#if defined(__APPLE__)
+		if (devString[0] == '\0')
+			return NULL; // macOS SDL2 locks up indefinitely if fed an empty string for device name
+#endif
+
 		fclose(f);
 	}
 
