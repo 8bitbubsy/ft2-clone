@@ -2106,7 +2106,7 @@ static void setDiskOpItem(uint8_t item)
 	}
 
 	const int32_t pathLen = (int32_t)UNICHAR_STRLEN(FReq_CurPathU);
-	if (pathLen == 0)
+	if (pathLen == 0 && FReq_ModCurPathU[0] != '\0')
 	{
 		memset(FReq_CurPathU, 0, (PATH_MAX + 2) * sizeof (UNICHAR));
 		UNICHAR_STRCPY(FReq_CurPathU, FReq_ModCurPathU);
