@@ -923,10 +923,6 @@ END
 and you need to press a key or click the mouse to abort the render when you want
 it to.
 >@X010
->@C001Mouse / keyboard:
->
->@C002- Linux: The mouse cursor graphics can be glitchy at times...
->@X010
 >@C001Video:
 >@C002
 >@X010- Fullscreen mode can be unbearably slow on a Raspberry Pi (even on RPi 4)

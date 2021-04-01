@@ -21,6 +21,7 @@ enum
 	SMP_SAVE_MODE_WAV = 2
 };
 
+bool setupExecutablePath(void);
 int32_t getFileSize(UNICHAR *fileNameU);
 uint8_t getDiskOpItem(void);
 void updateCurrSongFilename(void); // for window title
@@ -41,6 +42,7 @@ int32_t getExtOffset(char *s, int32_t stringLen); // get byte offset of file ext
 bool testDiskOpMouseDown(bool mouseHeldDown);
 void testDiskOpMouseRelease(void);
 void diskOp_StartDirReadThread(void);
+void diskOp_DrawFilelist(void);
 void diskOp_DrawDirectory(void);
 void showDiskOpScreen(void);
 void hideDiskOpScreen(void);

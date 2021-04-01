@@ -57,15 +57,14 @@ char *cp437ToUtf8(char *src)
 		return NULL;
 	}
 
-	char *x = (char *)malloc((reqSize + 2) * sizeof (char));
+	char *x = (char *)malloc((reqSize + 1) * sizeof (char));
 	if (x == NULL)
 	{
 		free(w);
 		return NULL;
 	}
 
-	x[reqSize+0] = '\0';
-	x[reqSize+1] = '\0';
+	x[reqSize] = '\0';
 
 	retVal = WideCharToMultiByte(CP_UTF8, 0, w, srcLen, x, reqSize, 0, 0);
 	free(w);
@@ -148,7 +147,7 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 		return NULL;
 	}
 
-	char *x = (char *)calloc(reqSize + 1, sizeof (char));
+	char *x = (char *)malloc((reqSize + 1) * sizeof (char));
 	if (x == NULL)
 	{
 		free(w);
@@ -216,7 +215,7 @@ char *unicharToCp437(UNICHAR *src, bool removeIllegalChars)
 		{
 			const int8_t ch = (const int8_t)x[i];
 			if (ch < 32 && ch != 0 && ch != -124 && ch != -108 &&
-			    ch != -122 && ch != -114 && ch != -103 && ch != -113)
+				ch != -122 && ch != -114 && ch != -103 && ch != -113)
 			{
 				x[i] = ' '; // character not allowed, turn it into space
 			}
@@ -244,7 +243,7 @@ char *cp437ToUtf8(char *src)
 
 	size_t outLen = srcLen * 2; // should be sufficient
 
-	char *outBuf = (char *)calloc(outLen + 2, sizeof (char));
+	char *outBuf = (char *)malloc((outLen + 1) * sizeof (char));
 	if (outBuf == NULL)
 		return NULL;
 
@@ -265,6 +264,8 @@ char *cp437ToUtf8(char *src)
 		free(outBuf);
 		return NULL;
 	}
+
+	outBuf[outLen] = '\0';
 
 	return outBuf;
 }
@@ -290,7 +291,7 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 
 	size_t outLen = srcLen * 2; // should be sufficient
 
-	char *outBuf = (char *)calloc(outLen + 1, sizeof (char));
+	char *outBuf = (char *)malloc((outLen + 1) * sizeof (char));
 	if (outBuf == NULL)
 		return NULL;
 
@@ -312,6 +313,8 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 		return NULL;
 	}
 
+	outBuf[outLen] = '\0';
+
 	if (removeIllegalChars)
 	{
 		// remove illegal characters (only allow certain nordic ones)
@@ -319,7 +322,7 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 		{
 			const int8_t ch = (const int8_t)outBuf[i];
 			if (ch < 32 && ch != 0 && ch != -124 && ch != -108 &&
-			    ch != -122 && ch != -114 && ch != -103 && ch != -113)
+				ch != -122 && ch != -114 && ch != -103 && ch != -113)
 			{
 				outBuf[i] = ' '; // character not allowed, turn it into space
 			}

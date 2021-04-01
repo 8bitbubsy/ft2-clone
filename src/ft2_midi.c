@@ -18,6 +18,8 @@
 #include "ft2_structs.h"
 #include "rtmidi/rtmidi_c.h"
 
+#define MAX_DEV_STR_LEN 256
+
 // hide POSIX warnings
 #ifdef _MSC_VER
 #pragma warning(disable: 4996)
@@ -265,7 +267,7 @@ bool saveMidiInputDeviceToConfig(void)
 	if (midiInStr == NULL)
 		return false;
 
-	FILE *f = UNICHAR_FOPEN(editor.midiConfigFileLocation, "w");
+	FILE *f = UNICHAR_FOPEN(editor.midiConfigFileLocationU, "w");
 	if (f == NULL)
 	{
 		free(midiInStr);
@@ -281,8 +283,6 @@ bool saveMidiInputDeviceToConfig(void)
 
 bool setMidiInputDeviceFromConfig(void)
 {
-#define MAX_DEV_STR_LEN 1024
-
 	uint32_t i;
 
 	if (midi.inputDeviceName != NULL)
@@ -292,16 +292,18 @@ bool setMidiInputDeviceFromConfig(void)
 	if (numDevices == 0)
 		goto setDefMidiInputDev;
 
-	FILE *f = UNICHAR_FOPEN(editor.midiConfigFileLocation, "r");
+	FILE *f = UNICHAR_FOPEN(editor.midiConfigFileLocationU, "r");
 	if (f == NULL)
 		goto setDefMidiInputDev;
 
-	char *devString = (char *)calloc(MAX_DEV_STR_LEN+4, sizeof (char));
+	char *devString = (char *)malloc((MAX_DEV_STR_LEN+4) * sizeof (char));
 	if (devString == NULL)
 	{
 		fclose(f);
 		goto setDefMidiInputDev;
 	}
+
+	devString[0] = '\0';
 
 	if (fgets(devString, MAX_DEV_STR_LEN, f) == NULL)
 	{

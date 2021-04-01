@@ -264,7 +264,7 @@ bool loadConfig(bool showErrorFlag)
 	}
 #endif
 
-	if (editor.configFileLocation == NULL)
+	if (editor.configFileLocationU == NULL)
 	{
 		if (showErrorFlag)
 			okBox(0, "System message", "Error opening config file for reading!");
@@ -272,7 +272,7 @@ bool loadConfig(bool showErrorFlag)
 		return false;
 	}
 
-	FILE *f = UNICHAR_FOPEN(editor.configFileLocation, "rb");
+	FILE *f = UNICHAR_FOPEN(editor.configFileLocationU, "rb");
 	if (f == NULL)
 	{
 		if (showErrorFlag)
@@ -353,7 +353,7 @@ void loadConfig2(void) // called by "Load config" button
 
 bool saveConfig(bool showErrorFlag)
 {
-	if (editor.configFileLocation == NULL)
+	if (editor.configFileLocationU == NULL)
 	{
 		if (showErrorFlag)
 			okBox(0, "System message", "General I/O error during saving! Is the file in use?");
@@ -366,7 +366,7 @@ bool saveConfig(bool showErrorFlag)
 	saveMidiInputDeviceToConfig();
 #endif
 
-	FILE *f = UNICHAR_FOPEN(editor.configFileLocation, "wb");
+	FILE *f = UNICHAR_FOPEN(editor.configFileLocationU, "wb");
 	if (f == NULL)
 	{
 		if (showErrorFlag)
@@ -410,14 +410,14 @@ void saveConfig2(void) // called by "Save config" button
 	saveConfig(CONFIG_SHOW_ERRORS);
 }
 
-static UNICHAR *getFullAudDevConfigPath(void) // kinda hackish
+static UNICHAR *getFullAudDevConfigPathU(void) // kinda hackish
 {
 	int32_t audiodevDotIniStrLen, ft2DotCfgStrLen;
 
-	if (editor.configFileLocation == NULL)
+	if (editor.configFileLocationU == NULL)
 		return NULL;
 
-	const int32_t ft2ConfPathLen = (int32_t)UNICHAR_STRLEN(editor.configFileLocation);
+	const int32_t ft2ConfPathLen = (int32_t)UNICHAR_STRLEN(editor.configFileLocationU);
 
 #ifdef _WIN32
 	audiodevDotIniStrLen = (int32_t)UNICHAR_STRLEN(L"audiodev.ini");
@@ -427,31 +427,29 @@ static UNICHAR *getFullAudDevConfigPath(void) // kinda hackish
 	ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
 #endif
 
-	UNICHAR *filePath = (UNICHAR *)calloc(ft2ConfPathLen + audiodevDotIniStrLen + 2, sizeof (UNICHAR));
+	UNICHAR *filePathU = (UNICHAR *)malloc((ft2ConfPathLen + audiodevDotIniStrLen + 1) * sizeof (UNICHAR));
+	filePathU[0] = 0;
 
-	UNICHAR_STRCPY(filePath, editor.configFileLocation);
-
-	const int32_t stringOffset = ft2ConfPathLen - ft2DotCfgStrLen;
-	filePath[stringOffset+0] = '\0';
-	filePath[stringOffset+1] = '\0';
+	UNICHAR_STRCPY(filePathU, editor.configFileLocationU);
+	filePathU[ft2ConfPathLen-ft2DotCfgStrLen] = 0;
 
 #ifdef _WIN32
-	UNICHAR_STRCAT(filePath, L"audiodev.ini");
+	UNICHAR_STRCAT(filePathU, L"audiodev.ini");
 #else
-	UNICHAR_STRCAT(filePath, "audiodev.ini");
+	UNICHAR_STRCAT(filePathU, "audiodev.ini");
 #endif
 
-	return filePath;
+	return filePathU;
 }
 
-static UNICHAR *getFullMidiDevConfigPath(void) // kinda hackish
+static UNICHAR *getFullMidiDevConfigPathU(void) // kinda hackish
 {
 	int32_t mididevDotIniStrLen, ft2DotCfgStrLen;
 
-	if (editor.configFileLocation == NULL)
+	if (editor.configFileLocationU == NULL)
 		return NULL;
 
-	const int32_t ft2ConfPathLen = (int32_t)UNICHAR_STRLEN(editor.configFileLocation);
+	const int32_t ft2ConfPathLen = (int32_t)UNICHAR_STRLEN(editor.configFileLocationU);
 
 #ifdef _WIN32
 	mididevDotIniStrLen = (int32_t)UNICHAR_STRLEN(L"mididev.ini");
@@ -461,21 +459,19 @@ static UNICHAR *getFullMidiDevConfigPath(void) // kinda hackish
 	ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
 #endif
 
-	UNICHAR *filePath = (UNICHAR *)calloc(ft2ConfPathLen + mididevDotIniStrLen + 2, sizeof (UNICHAR));
+	UNICHAR *filePathU = (UNICHAR *)malloc((ft2ConfPathLen + mididevDotIniStrLen + 1) * sizeof (UNICHAR));
+	filePathU[0] = 0;
 
-	UNICHAR_STRCPY(filePath, editor.configFileLocation);
-
-	const int32_t stringOffset = ft2ConfPathLen - ft2DotCfgStrLen;
-	filePath[stringOffset+0] = '\0';
-	filePath[stringOffset+1] = '\0';
+	UNICHAR_STRCPY(filePathU, editor.configFileLocationU);
+	filePathU[ft2ConfPathLen-ft2DotCfgStrLen] = 0;
 
 #ifdef _WIN32
-	UNICHAR_STRCAT(filePath, L"mididev.ini");
+	UNICHAR_STRCAT(filePathU, L"mididev.ini");
 #else
-	UNICHAR_STRCAT(filePath, "mididev.ini");
+	UNICHAR_STRCAT(filePathU, "mididev.ini");
 #endif
 
-	return filePath;
+	return filePathU;
 }
 
 static void setConfigFileLocation(void) // kinda hackish
@@ -484,41 +480,44 @@ static void setConfigFileLocation(void) // kinda hackish
 #ifdef _WIN32
 	int32_t ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN(L"FT2.CFG");
 
-	UNICHAR *oldPath = (UNICHAR *)calloc(PATH_MAX + 8 + 2, sizeof (UNICHAR));
-	UNICHAR *tmpPath = (UNICHAR *)calloc(PATH_MAX + 8 + 2, sizeof (UNICHAR));
-	editor.configFileLocation = (UNICHAR *)calloc(PATH_MAX + ft2DotCfgStrLen + 2, sizeof (UNICHAR));
+	UNICHAR *oldPathU = (UNICHAR *)malloc((PATH_MAX + 8 + 1) * sizeof (UNICHAR));
+	UNICHAR *tmpPathU = (UNICHAR *)malloc((PATH_MAX + 8 + 1) * sizeof (UNICHAR));
+	editor.configFileLocationU = (UNICHAR *)malloc((PATH_MAX + ft2DotCfgStrLen + 1) * sizeof (UNICHAR));
 
-	if (oldPath == NULL || tmpPath == NULL || editor.configFileLocation == NULL)
+	if (oldPathU == NULL || tmpPathU == NULL || editor.configFileLocationU == NULL)
 	{
-		if (oldPath != NULL) free(oldPath);
-		if (tmpPath != NULL) free(tmpPath);
-		if (editor.configFileLocation != NULL) free(editor.configFileLocation);
+		if (oldPathU != NULL) free(oldPathU);
+		if (tmpPathU != NULL) free(tmpPathU);
+		if (editor.configFileLocationU != NULL) free(editor.configFileLocationU);
 
-		editor.configFileLocation = NULL;
+		editor.configFileLocationU = NULL;
 		showErrorMsgBox("Error: Couldn't set config file location. You can't load/save the config!");
 		return;
 	}
 
-	if (GetCurrentDirectoryW(PATH_MAX - ft2DotCfgStrLen - 1, oldPath) == 0)
-	{
-		free(oldPath);
-		free(tmpPath);
-		free(editor.configFileLocation);
+	oldPathU[0] = 0;
+	tmpPathU[0] = 0;
 
-		editor.configFileLocation = NULL;
+	if (GetCurrentDirectoryW(PATH_MAX - ft2DotCfgStrLen - 1, oldPathU) == 0)
+	{
+		free(oldPathU);
+		free(tmpPathU);
+		free(editor.configFileLocationU);
+
+		editor.configFileLocationU = NULL;
 		showErrorMsgBox("Error: Couldn't set config file location. You can't load/save the config!");
 		return;
 	}
 
-	UNICHAR_STRCPY(editor.configFileLocation, oldPath);
+	UNICHAR_STRCPY(editor.configFileLocationU, oldPathU);
 
 	FILE *f = fopen("FT2.CFG", "rb");
 	if (f == NULL) // FT2.CFG not found in current dir, try default config dir
 	{
-		int32_t result = SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, tmpPath);
+		int32_t result = SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, tmpPathU);
 		if (result == S_OK)
 		{
-			if (SetCurrentDirectoryW(tmpPath) != 0)
+			if (SetCurrentDirectoryW(tmpPathU) != 0)
 			{
 				result = chdir("FT2 clone");
 				if (result != 0)
@@ -528,7 +527,7 @@ static void setConfigFileLocation(void) // kinda hackish
 				}
 
 				if (result == 0)
-					GetCurrentDirectoryW(PATH_MAX - ft2DotCfgStrLen - 1, editor.configFileLocation); // we can, set it
+					GetCurrentDirectoryW(PATH_MAX - ft2DotCfgStrLen - 1, editor.configFileLocationU); // we can, set it
 			}
 		}
 	}
@@ -537,27 +536,29 @@ static void setConfigFileLocation(void) // kinda hackish
 		fclose(f);
 	}
 
-	free(tmpPath);
-	SetCurrentDirectoryW(oldPath);
-	free(oldPath);
+	free(tmpPathU);
+	SetCurrentDirectoryW(oldPathU);
+	free(oldPathU);
 
-	UNICHAR_STRCAT(editor.configFileLocation, L"\\FT2.CFG");
+	UNICHAR_STRCAT(editor.configFileLocationU, L"\\FT2.CFG");
 
 	// OS X / macOS
 #elif defined __APPLE__
 	int32_t ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
 
-	editor.configFileLocation = (UNICHAR *)calloc(PATH_MAX + ft2DotCfgStrLen + 2, sizeof (UNICHAR));
-	if (editor.configFileLocation == NULL)
+	editor.configFileLocationU = (UNICHAR *)malloc((PATH_MAX + ft2DotCfgStrLen + 1) * sizeof (UNICHAR));
+	if (editor.configFileLocationU == NULL)
 	{
 		showErrorMsgBox("Error: Couldn't set config file location. You can't load/save the config!");
 		return;
 	}
 
-	if (getcwd(editor.configFileLocation, PATH_MAX - ft2DotCfgStrLen - 1) == NULL)
+	editor.configFileLocationU[0] = 0;
+
+	if (getcwd(editor.configFileLocationU, PATH_MAX - ft2DotCfgStrLen - 1) == NULL)
 	{
-		free(editor.configFileLocation);
-		editor.configFileLocation = NULL;
+		free(editor.configFileLocationU);
+		editor.configFileLocationU = NULL;
 		showErrorMsgBox("Error: Couldn't set config file location. You can't load/save the config!");
 		return;
 	}
@@ -578,7 +579,7 @@ static void setConfigFileLocation(void) // kinda hackish
 				}
 
 				if (result == 0)
-					getcwd(editor.configFileLocation, PATH_MAX - ft2DotCfgStrLen - 1);
+					getcwd(editor.configFileLocationU, PATH_MAX - ft2DotCfgStrLen - 1);
 			}
 		}
 	}
@@ -587,23 +588,25 @@ static void setConfigFileLocation(void) // kinda hackish
 		fclose(f);
 	}
 
-	strcat(editor.configFileLocation, "/FT2.CFG");
+	strcat(editor.configFileLocationU, "/FT2.CFG");
 
 	// Linux etc
 #else
 	int32_t ft2DotCfgStrLen = (int32_t)UNICHAR_STRLEN("FT2.CFG");
 
-	editor.configFileLocation = (UNICHAR *)calloc(PATH_MAX + ft2DotCfgStrLen + 2, sizeof (UNICHAR));
-	if (editor.configFileLocation == NULL)
+	editor.configFileLocationU = (UNICHAR *)malloc((PATH_MAX + ft2DotCfgStrLen + 1) * sizeof (UNICHAR));
+	if (editor.configFileLocationU == NULL)
 	{
 		showErrorMsgBox("Error: Couldn't set config file location. You can't load/save the config!");
 		return;
 	}
 
-	if (getcwd(editor.configFileLocation, PATH_MAX - ft2DotCfgStrLen - 1) == NULL)
+	editor.configFileLocationU[0] = 0;
+
+	if (getcwd(editor.configFileLocationU, PATH_MAX - ft2DotCfgStrLen - 1) == NULL)
 	{
-		free(editor.configFileLocation);
-		editor.configFileLocation = NULL;
+		free(editor.configFileLocationU);
+		editor.configFileLocationU = NULL;
 		showErrorMsgBox("Error: Couldn't set config file location. You can't load/save the config!");
 		return;
 	}
@@ -632,7 +635,7 @@ static void setConfigFileLocation(void) // kinda hackish
 			}
 
 			if (result == 0)
-				getcwd(editor.configFileLocation, PATH_MAX - ft2DotCfgStrLen - 1);
+				getcwd(editor.configFileLocationU, PATH_MAX - ft2DotCfgStrLen - 1);
 		}
 	}
 	else
@@ -640,23 +643,23 @@ static void setConfigFileLocation(void) // kinda hackish
 		fclose(f);
 	}
 
-	strcat(editor.configFileLocation, "/FT2.CFG");
+	strcat(editor.configFileLocationU, "/FT2.CFG");
 #endif
 
-	editor.midiConfigFileLocation = getFullMidiDevConfigPath();
-	editor.audioDevConfigFileLocation = getFullAudDevConfigPath();
+	editor.midiConfigFileLocationU = getFullMidiDevConfigPathU();
+	editor.audioDevConfigFileLocationU = getFullAudDevConfigPathU();
 }
 
 void loadConfigOrSetDefaults(void)
 {
 	setConfigFileLocation();
-	if (editor.configFileLocation == NULL)
+	if (editor.configFileLocationU == NULL)
 	{
 		setDefaultConfigSettings();
 		return;
 	}
 
-	FILE *f = UNICHAR_FOPEN(editor.configFileLocation, "rb");
+	FILE *f = UNICHAR_FOPEN(editor.configFileLocationU, "rb");
 	if (f == NULL)
 	{
 		setDefaultConfigSettings();

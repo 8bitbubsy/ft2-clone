@@ -13,53 +13,75 @@
 #include "ft2_audioselector.h"
 #include "ft2_structs.h"
 
-char *getAudioOutputDeviceFromConfig(void)
+enum
 {
+	INPUT_DEVICE = 0,
+	OUTPUT_DEVICE = 1
+};
+
 #define MAX_DEV_STR_LEN 256
 
-	char *devString = (char *)calloc(MAX_DEV_STR_LEN + 1, sizeof (char));
-	if (devString == NULL)
+// hide POSIX warnings
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)
+#endif
+
+static char *getReasonableAudioDevice(int32_t iscapture) // can and will return NULL
+{
+	int32_t numAudioDevs = SDL_GetNumAudioDevices(iscapture);
+	if (numAudioDevs == 0 || numAudioDevs > 1)
+		return NULL; // we don't know which audio output device is the default device
+
+	const char *devName = SDL_GetAudioDeviceName(0, iscapture);
+	if (devName == NULL)
 		return NULL;
 
-	FILE *f = UNICHAR_FOPEN(editor.audioDevConfigFileLocation, "r");
-	if (f == NULL)
-	{
-#if defined(__APPLE__)
-		return NULL; // SDL doesn't return devices in any appreciable order, and device 0 is most certainly not guaranteed to be the current default device
-#else
-		const char *devStringTmp = SDL_GetAudioDeviceName(0, false);
-		if (devStringTmp == NULL)
-		{
-			free(devString);
-			return NULL;
-		}
+	return strdup(devName);
+}
 
-		const uint32_t devStringLen = (uint32_t)strlen(devStringTmp);
-		if (devStringLen > 0)
-			strncpy(devString, devStringTmp, MAX_DEV_STR_LEN);
-		devString[devStringLen+1] = '\0'; // UTF-8 needs double null termination
-#endif
-	}
-	else
+char *getAudioOutputDeviceFromConfig(void)
+{
+	bool audioDeviceRead = false;
+	char *devString = NULL;
+
+	FILE *f = UNICHAR_FOPEN(editor.audioDevConfigFileLocationU, "r");
+	if (f != NULL)
 	{
-		if (fgets(devString, MAX_DEV_STR_LEN, f) == NULL)
+		devString = (char *)malloc(MAX_DEV_STR_LEN+1);
+		if (devString == NULL)
 		{
-			free(devString);
 			fclose(f);
-			return NULL;
+			return NULL; // out of memory
 		}
 
-		const uint32_t devStringLen = (uint32_t)strlen(devString);
-		if (devString[devStringLen-1] == '\n')
-			devString[devStringLen-1]  = '\0';
-		devString[devStringLen+1] = '\0'; // UTF-8 needs double null termination
-
-#if defined(__APPLE__)
-		if (devString[0] == '\0')
-			return NULL; // macOS SDL2 locks up indefinitely if fed an empty string for device name
-#endif
-
+		devString[0] = '\0';
+		fgets(devString, MAX_DEV_STR_LEN, f);
 		fclose(f);
+
+		const int32_t devStringLen = (int32_t)strlen(devString);
+		if (devStringLen > 0)
+		{
+			if (devString[devStringLen-1] == '\n')
+				devString[devStringLen-1] = ' ';
+
+			if (!(devStringLen == 1 && devString[0] == ' ')) // space only = no device
+				audioDeviceRead = true;
+		}
+	}
+
+	if (!audioDeviceRead)
+	{
+		if (devString != NULL)
+			free(devString);
+
+		devString = getReasonableAudioDevice(OUTPUT_DEVICE);
+	}
+
+	// SDL_OpenAudioDevice() doesn't seem to like an empty audio device string
+	if (devString != NULL && devString[0] == '\0')
+	{
+		free(devString);
+		return NULL;
 	}
 
 	return devString;
@@ -67,50 +89,48 @@ char *getAudioOutputDeviceFromConfig(void)
 
 char *getAudioInputDeviceFromConfig(void)
 {
-#define MAX_DEV_STR_LEN 256
+	bool audioDeviceRead = false;
+	char *devString = NULL;
 
-	char *devString = (char *)calloc(MAX_DEV_STR_LEN + 1, sizeof (char));
-	if (devString == NULL)
-		return NULL;
-
-	FILE *f = UNICHAR_FOPEN(editor.audioDevConfigFileLocation, "r");
-	if (f == NULL)
+	FILE *f = UNICHAR_FOPEN(editor.audioDevConfigFileLocationU, "r");
+	if (f != NULL)
 	{
-		const char *devStringTmp = SDL_GetAudioDeviceName(0, true);
-		if (devStringTmp == NULL)
+		devString = (char *)malloc(MAX_DEV_STR_LEN+1);
+		if (devString == NULL)
 		{
-			free(devString);
-			return NULL;
-		}
-
-		const uint32_t devStringLen = (uint32_t)strlen(devStringTmp);
-		if (devStringLen > 0)
-			strncpy(devString, devStringTmp, MAX_DEV_STR_LEN);
-		devString[devStringLen+1] = '\0'; // UTF-8 needs double null termination
-	}
-	else
-	{
-		if (fgets(devString, MAX_DEV_STR_LEN, f) == NULL)
-		{
-			free(devString);
 			fclose(f);
-			return NULL;
+			return NULL; // out of memory
 		}
 
-		// do it one more time (next line)
-		if (fgets(devString, MAX_DEV_STR_LEN, f) == NULL)
-		{
-			free(devString);
-			fclose(f);
-			return NULL;
-		}
-
-		const uint32_t devStringLen = (uint32_t)strlen(devString);
-		if (devString[devStringLen-1] == '\n')
-			devString[devStringLen-1]  = '\0';
-		devString[devStringLen+1] = '\0'; // UTF-8 needs double null termination
-
+		devString[0] = '\0';
+		fgets(devString, MAX_DEV_STR_LEN, f); // skip first line (we want the input device)
+		fgets(devString, MAX_DEV_STR_LEN, f);
 		fclose(f);
+
+		const int32_t devStringLen = (int32_t)strlen(devString);
+		if (devStringLen > 0)
+		{
+			if (devString[devStringLen-1] == '\n')
+				devString[devStringLen-1] = ' ';
+
+			if (!(devStringLen == 1 && devString[0] == ' ')) // space only = no device
+				audioDeviceRead = true;
+		}
+	}
+
+	if (!audioDeviceRead)
+	{
+		if (devString != NULL)
+			free(devString);
+
+		devString = getReasonableAudioDevice(INPUT_DEVICE);
+	}
+
+	// SDL_OpenAudioDevice() doesn't seem to like an empty audio device string
+	if (devString != NULL && devString[0] == '\0')
+	{
+		free(devString);
+		return NULL;
 	}
 
 	return devString;
@@ -118,15 +138,21 @@ char *getAudioInputDeviceFromConfig(void)
 
 bool saveAudioDevicesToConfig(const char *outputDevice, const char *inputDevice)
 {
-	FILE *f = UNICHAR_FOPEN(editor.audioDevConfigFileLocation, "w");
+	FILE *f = UNICHAR_FOPEN(editor.audioDevConfigFileLocationU, "w");
 	if (f == NULL)
 		return false;
 
 	if (outputDevice != NULL)
 		fputs(outputDevice, f);
+	else
+		fputc(' ', f);
+
 	fputc('\n', f);
+
 	if (inputDevice != NULL)
 		fputs(inputDevice, f);
+	else
+		fputc(' ', f);
 
 	fclose(f);
 	return true;
@@ -231,13 +257,14 @@ bool testAudioDeviceListsMouseDown(void)
 
 			const uint32_t devStringLen = (uint32_t)strlen(devString);
 
-			audio.currOutputDevice = (char *)malloc(devStringLen + 2);
+			audio.currOutputDevice = (char *)malloc(devStringLen+1);
 			if (audio.currOutputDevice == NULL)
 				return true;
 
+			audio.currOutputDevice[0] = '\0';
+
 			if (devStringLen > 0)
 				strcpy(audio.currOutputDevice, devString);
-			audio.currOutputDevice[devStringLen+1] = '\0'; // UTF-8 needs double null termination
 
 			if (!setNewAudioSettings())
 				okBox(0, "System message", "Couldn't open audio input device!");
@@ -263,13 +290,14 @@ bool testAudioDeviceListsMouseDown(void)
 
 			const uint32_t devStringLen = (uint32_t)strlen(devString);
 
-			audio.currInputDevice = (char *)malloc(devStringLen + 2);
+			audio.currInputDevice = (char *)malloc(devStringLen+1);
 			if (audio.currInputDevice == NULL)
 				return true;
 
+			audio.currInputDevice[0] = '\0';
+
 			if (devStringLen > 0)
 				strcpy(audio.currInputDevice, devString);
-			audio.currInputDevice[devStringLen+1] = '\0'; // UTF-8 needs double null termination
 
 			drawAudioInputList();
 		}
@@ -303,10 +331,10 @@ void freeAudioDeviceLists(void)
 
 void freeAudioDeviceSelectorBuffers(void)
 {
-	if (editor.audioDevConfigFileLocation != NULL)
+	if (editor.audioDevConfigFileLocationU != NULL)
 	{
-		free(editor.audioDevConfigFileLocation);
-		editor.audioDevConfigFileLocation = NULL;
+		free(editor.audioDevConfigFileLocationU);
+		editor.audioDevConfigFileLocationU = NULL;
 	}
 
 	if (audio.currOutputDevice != NULL)
@@ -352,14 +380,12 @@ void setToDefaultAudioOutputDevice(void)
 		audio.currOutputDevice = NULL;
 	}
 
-	audio.currOutputDevice = (char *)malloc(stringLen + 2);
+	audio.currOutputDevice = (char *)malloc(stringLen + 1);
 	if (audio.currOutputDevice == NULL)
 		return;
 
 	if (stringLen > 0)
 		strcpy(audio.currOutputDevice, devString);
-
-	audio.currOutputDevice[stringLen+1] = '\0'; // UTF-8 needs double null termination
 }
 
 void setToDefaultAudioInputDevice(void)
@@ -384,14 +410,12 @@ void setToDefaultAudioInputDevice(void)
 		audio.currInputDevice = NULL;
 	}
 
-	audio.currInputDevice = (char *)malloc(stringLen + 2);
+	audio.currInputDevice = (char *)malloc(stringLen + 1);
 	if (audio.currInputDevice == NULL)
 		return;
 
 	if (stringLen > 0)
 		strcpy(audio.currInputDevice, devString);
-
-	audio.currInputDevice[stringLen+1] = '\0'; // UTF-8 needs double null termination
 }
 
 void rescanAudioDevices(void)
@@ -417,14 +441,12 @@ void rescanAudioDevices(void)
 
 		const uint32_t stringLen = (uint32_t)strlen(deviceName);
 
-		audio.outputDeviceNames[i] = (char *)malloc(stringLen + 2);
+		audio.outputDeviceNames[i] = (char *)malloc(stringLen + 1);
 		if (audio.outputDeviceNames[i] == NULL)
 			break;
 
 		if (stringLen > 0)
 			strcpy(audio.outputDeviceNames[i], deviceName);
-
-		audio.outputDeviceNames[i][stringLen+1] = '\0'; // UTF-8 needs double null termination
 	}
 
 	// GET AUDIO INPUT DEVICES
@@ -444,14 +466,12 @@ void rescanAudioDevices(void)
 
 		const uint32_t stringLen = (uint32_t)strlen(deviceName);
 
-		audio.inputDeviceNames[i] = (char *)malloc(stringLen + 2);
+		audio.inputDeviceNames[i] = (char *)malloc(stringLen + 1);
 		if (audio.inputDeviceNames[i] == NULL)
 			break;
 
 		if (stringLen > 0)
 			strcpy(audio.inputDeviceNames[i], deviceName);
-
-		audio.inputDeviceNames[i][stringLen+1] = '\0'; // UTF-8 needs double null termination
 	}
 
 	setScrollBarEnd(SB_AUDIO_OUTPUT_SCROLL, audio.outputDeviceNum);

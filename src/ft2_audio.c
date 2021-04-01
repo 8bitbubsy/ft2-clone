@@ -20,6 +20,11 @@
 #include "mixer/ft2_silence_mix.h"
 // --------------------------------
 
+// hide POSIX warnings
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)
+#endif
+
 #define INITIAL_DITHER_SEED 0x12345000
 
 static int8_t pmpCountDiv, pmpChannels = 2;
@@ -87,14 +92,7 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 				audio.currOutputDevice = NULL;
 			}
 
-			const uint32_t stringLen = (uint32_t)strlen(audio.lastWorkingAudioDeviceName);
-
-			audio.currOutputDevice = (char *)malloc(stringLen + 2);
-			if (audio.currOutputDevice != NULL)
-			{
-				strcpy(audio.currOutputDevice, audio.lastWorkingAudioDeviceName);
-				audio.currOutputDevice[stringLen + 1] = '\0'; // UTF-8 needs double null termination
-			}
+			audio.currOutputDevice = strdup(audio.lastWorkingAudioDeviceName);
 		}
 
 		// also update config audio radio buttons if we're on that screen at the moment
@@ -1050,17 +1048,7 @@ static void setLastWorkingAudioDevName(void)
 	}
 
 	if (audio.currOutputDevice != NULL)
-	{
-		const uint32_t stringLen = (uint32_t)strlen(audio.currOutputDevice);
-
-		audio.lastWorkingAudioDeviceName = (char *)malloc(stringLen + 2);
-		if (audio.lastWorkingAudioDeviceName != NULL)
-		{
-			if (stringLen > 0)
-				strcpy(audio.lastWorkingAudioDeviceName, audio.currOutputDevice);
-			audio.lastWorkingAudioDeviceName[stringLen + 1] = '\0'; // UTF-8 needs double null termination
-		}
-	}
+		audio.lastWorkingAudioDeviceName = strdup(audio.currOutputDevice);
 }
 
 bool setupAudio(bool showErrorMsg)

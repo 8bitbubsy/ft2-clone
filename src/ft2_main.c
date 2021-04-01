@@ -147,9 +147,7 @@ int main(int argc, char *argv[])
 #ifdef __APPLE__
 	osxSetDirToProgramDirFromArgs(argv);
 #endif
-	UNICHAR_GETCWD(editor.binaryPathU, PATH_MAX);
-
-	if (!loadBMPs())
+	if (!setupExecutablePath() || !loadBMPs())
 	{
 		cleanUpAndExit();
 		return 1;
@@ -351,22 +349,28 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	}
 #endif
 
-	if (editor.audioDevConfigFileLocation != NULL)
+	if (editor.audioDevConfigFileLocationU != NULL)
 	{
-		free(editor.audioDevConfigFileLocation);
-		editor.audioDevConfigFileLocation = NULL;
+		free(editor.audioDevConfigFileLocationU);
+		editor.audioDevConfigFileLocationU = NULL;
 	}
 
-	if (editor.configFileLocation != NULL)
+	if (editor.configFileLocationU != NULL)
 	{
-		free(editor.configFileLocation);
-		editor.configFileLocation = NULL;
+		free(editor.configFileLocationU);
+		editor.configFileLocationU = NULL;
 	}
 
-	if (editor.midiConfigFileLocation != NULL)
+	if (editor.midiConfigFileLocationU != NULL)
 	{
-		free(editor.midiConfigFileLocation);
-		editor.midiConfigFileLocation = NULL;
+		free(editor.midiConfigFileLocationU);
+		editor.midiConfigFileLocationU = NULL;
+	}
+
+	if (editor.binaryPathU != NULL)
+	{
+		free(editor.binaryPathU);
+		editor.binaryPathU = NULL;
 	}
 
 #ifdef _WIN32

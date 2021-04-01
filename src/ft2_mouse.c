@@ -301,7 +301,7 @@ static void changeCursorIfOverTextBoxes(void)
 	textBox_t *t = textBoxes;
 	for (i = 0; i < NUM_TEXTBOXES; i++, t++)
 	{
-		if (ui.sysReqShown && i > 0)
+		if (ui.sysReqShown && i != 0) // Sys. Req can only have one (special) text box
 			continue;
 
 		if (!t->visible)
@@ -313,7 +313,10 @@ static void changeCursorIfOverTextBoxes(void)
 		if (my >= t->y && my < t->y+t->h && mx >= t->x && mx < t->x+t->w)
 		{
 			mouse.mouseOverTextBox = true;
-			setTextEditMouse();
+
+			if (mouseShape != MOUSE_IDLE_TEXT_EDIT)
+				setTextEditMouse();
+
 			return;
 		}
 	}

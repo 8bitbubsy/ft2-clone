@@ -299,8 +299,11 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 			{
 				if (inputEvent.key.keysym.sym == SDLK_ESCAPE)
 				{
-					returnVal = 0;
-					ui.sysReqShown = false;
+					if (!inputEvent.key.repeat) // don't let previously held-down ESC immediately close the box
+					{
+						returnVal = 0;
+						ui.sysReqShown = false;
+					}
 				}
 				else if (inputEvent.key.keysym.sym == SDLK_RETURN)
 				{

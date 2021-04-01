@@ -127,20 +127,21 @@ void unstuckLastUsedGUIElement(void)
 
 bool setupGUI(void)
 {
-	int32_t i;
-
 	// all memory will be NULL-tested and free'd if we return false somewhere in this function
 
-	editor.tmpFilenameU = (UNICHAR *)calloc(PATH_MAX + 1, sizeof (UNICHAR));
-	editor.tmpInstrFilenameU = (UNICHAR *)calloc(PATH_MAX + 1, sizeof (UNICHAR));
+	editor.tmpFilenameU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
+	editor.tmpInstrFilenameU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
 
 	if (editor.tmpFilenameU == NULL || editor.tmpInstrFilenameU == NULL)
 		goto setupGUI_OOM;
 
+	editor.tmpFilenameU[0] = 0;
+	editor.tmpInstrFilenameU[0] = 0;
+
 	// set uninitialized GUI struct entries
 
 	textBox_t *t = &textBoxes[1]; // skip first entry, it's reserved for inputBox())
-	for (i = 1; i < NUM_TEXTBOXES; i++, t++)
+	for (int32_t i = 1; i < NUM_TEXTBOXES; i++, t++)
 	{
 		t->visible = false;
 		t->bufOffset = 0;
@@ -156,7 +157,7 @@ bool setupGUI(void)
 	}
 
 	pushButton_t *p = pushButtons;
-	for (i = 0; i < NUM_PUSHBUTTONS; i++, p++)
+	for (int32_t i = 0; i < NUM_PUSHBUTTONS; i++, p++)
 	{
 		p->state = 0;
 		p->visible = false;
@@ -174,7 +175,7 @@ bool setupGUI(void)
 	}
 
 	checkBox_t *c = checkBoxes;
-	for (i = 0; i < NUM_CHECKBOXES; i++, c++)
+	for (int32_t i = 0; i < NUM_CHECKBOXES; i++, c++)
 	{
 		c->state = 0;
 		c->checked = false;
@@ -182,14 +183,14 @@ bool setupGUI(void)
 	}
 
 	radioButton_t *r = radioButtons;
-	for (i = 0; i < NUM_RADIOBUTTONS; i++, r++)
+	for (int32_t i = 0; i < NUM_RADIOBUTTONS; i++, r++)
 	{
 		r->state = 0;
 		r->visible = false;
 	}
 
 	scrollBar_t *s = scrollBars;
-	for (i = 0; i < NUM_SCROLLBARS; i++, s++)
+	for (int32_t i = 0; i < NUM_SCROLLBARS; i++, s++)
 	{
 		s->visible = false;
 		s->state = 0;

@@ -52,7 +52,7 @@ textBox_t textBoxes[NUM_TEXTBOXES] =
 
 	// ------ DISK OP. TEXTBOXES ------
 	// x,   y,   w,   h,  tx,ty, maxc,       rmb,   cmc
-	{   31, 158, 134,  12, 2, 1, PATH_MAX-1, false, true },
+	{   31, 158, 134,  12, 2, 1, PATH_MAX,   false, true },
 
 	// ------ CONFIG TEXTBOXES ------
 	// x,   y,   w,   h,  tx,ty, maxc,       rmb,   cmc

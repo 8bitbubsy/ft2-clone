@@ -46,7 +46,7 @@ static const uint8_t textCursorData[12] =
 video_t video; // globalized
 
 static bool songIsModified;
-static char wndTitle[128 + PATH_MAX];
+static char wndTitle[256];
 static uint64_t timeNext64, timeNext64Frac;
 static sprite_t sprites[SPRITE_NUM];
 
@@ -845,10 +845,14 @@ void updateWindowTitle(bool forceUpdate)
 	char *songTitle = getCurrSongFilename();
 	if (songTitle != NULL)
 	{
+		char songTitleTrunc[128];
+		strncpy(songTitleTrunc, songTitle, sizeof (songTitleTrunc)-1);
+		songTitleTrunc[sizeof (songTitleTrunc)-1] = '\0';
+
 		if (song.isModified)
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\" (unsaved)", PROG_VER_STR, songTitle);
+			sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\" (unsaved)", PROG_VER_STR, songTitleTrunc);
 		else
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\"", PROG_VER_STR, songTitle);
+			sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\"", PROG_VER_STR, songTitleTrunc);
 	}
 	else
 	{

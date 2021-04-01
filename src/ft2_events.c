@@ -35,13 +35,14 @@
 
 #define CRASH_TEXT "Oh no!\nThe Fasttracker II clone has crashed...\n\nA backup .xm was hopefully " \
                    "saved to the current module directory.\n\nPlease report this bug if you can.\n" \
-                   "Try to mention what you did before the crash happened."
+                   "Try to mention what you did before the crash happened.\n" \
+                   "My email can be found at the bottom of 16-bits.org."
 
 static bool backupMadeAfterCrash;
 
 #ifdef _WIN32
-#define SYSMSG_FILE_ARG (WM_USER + 1)
-#define ARGV_SHARED_MEM_MAX_LEN ((MAX_PATH * 2) + 2)
+#define SYSMSG_FILE_ARG (WM_USER+1)
+#define ARGV_SHARED_MEM_MAX_LEN ((PATH_MAX+1) * sizeof (WCHAR))
 #define SHARED_HWND_NAME TEXT("Local\\FT2CloneHwnd")
 #define SHARED_FILENAME TEXT("Local\\FT2CloneFilename")
 static HWND hWnd;

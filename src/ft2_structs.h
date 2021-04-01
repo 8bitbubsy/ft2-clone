@@ -11,9 +11,8 @@ typedef struct cpu_t
 
 typedef struct editor_t
 {
-	UNICHAR binaryPathU[PATH_MAX + 2];
-	UNICHAR *tmpFilenameU, *tmpInstrFilenameU; // used by saving/loading threads
-	UNICHAR *configFileLocation, *audioDevConfigFileLocation, *midiConfigFileLocation;
+	UNICHAR *binaryPathU, *tmpFilenameU, *tmpInstrFilenameU; // used by saving/loading threads
+	UNICHAR *configFileLocationU, *audioDevConfigFileLocationU, *midiConfigFileLocationU;
 
 	volatile bool mainLoopOngoing;
 	volatile bool busy, scopeThreadMutex, programRunning, wavIsRendering, wavReachedEndFlag;

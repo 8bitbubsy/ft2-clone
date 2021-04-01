@@ -526,9 +526,7 @@ static void setupLoadedModule(void)
 
 bool handleModuleLoadFromArg(int argc, char **argv)
 {
-	UNICHAR tmpPathU[PATH_MAX+2];
-
-	// this is crude, we always expect only one parameter, and that it is the module.
+	// we always expect only one parameter, and that it is the module
 
 	if (argc != 2 || argv[1] == NULL || argv[1][0] == '\0')
 		return false;
@@ -540,15 +538,26 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 
 	const uint32_t filenameLen = (const uint32_t)strlen(argv[1]);
 
-	UNICHAR *filenameU = (UNICHAR *)calloc(filenameLen+1, sizeof (UNICHAR));
-	if (filenameU == NULL)
+	UNICHAR *tmpPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
+	if (tmpPathU == NULL)
 	{
 		okBox(0, "System message", "Not enough memory!");
 		return false;
 	}
 
+	UNICHAR *filenameU = (UNICHAR *)malloc((filenameLen + 1) * sizeof (UNICHAR));
+	if (filenameU == NULL)
+	{
+		free(tmpPathU);
+		okBox(0, "System message", "Not enough memory!");
+		return false;
+	}
+
+	tmpPathU[0] = 0;
+	filenameU[0] = 0;
+
 #ifdef _WIN32
-	MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, filenameU, filenameLen);
+	MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, filenameU, filenameLen+1);
 #else
 	strcpy(filenameU, argv[1]);
 #endif
@@ -562,9 +571,11 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 	const int32_t filesize = getFileSize(filenameU);
 	if (filesize == -1 || filesize >= 512L*1024*1024) // 1) >=2GB   2) >=512MB
 	{
-		okBox(0, "System message", "Error: The module is too big to be loaded!");
 		free(filenameU);
 		UNICHAR_CHDIR(tmpPathU); // set old path back
+		free(tmpPathU);
+
+		okBox(0, "System message", "Error: The module is too big to be loaded!");
 		return false;
 	}
 
@@ -572,6 +583,8 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 
 	free(filenameU);
 	UNICHAR_CHDIR(tmpPathU); // set old path back
+	free(tmpPathU);
+
 	return result;
 }
 
@@ -642,15 +655,17 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 	if (fullPathLen == 0)
 		return;
 
-	UNICHAR *fullPathU = (UNICHAR *)calloc(fullPathLen + 2, sizeof (UNICHAR));
+	UNICHAR *fullPathU = (UNICHAR *)malloc((fullPathLen + 1) * sizeof (UNICHAR));
 	if (fullPathU == NULL)
 	{
 		okBox(0, "System message", "Not enough memory!");
 		return;
 	}
 
+	fullPathU[0] = 0;
+
 #ifdef _WIN32
-	MultiByteToWideChar(CP_UTF8, 0, fullPathUTF8, -1, fullPathU, fullPathLen);
+	MultiByteToWideChar(CP_UTF8, 0, fullPathUTF8, -1, fullPathU, fullPathLen+1);
 #else
 	strcpy(fullPathU, fullPathUTF8);
 #endif

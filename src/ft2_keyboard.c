@@ -122,7 +122,8 @@ void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepea
 			return; // do NOT repeat keys in Nibbles or if keyRepeat is disabled
 	}
 
-	keyb.keyRepeat = true;
+	if (scancode != SDL_SCANCODE_ESCAPE)
+		keyb.keyRepeat = true;
 
 	// handle certain keys (home/end/left/right etc) when editing text
 	if (editor.editTextFlag)
@@ -669,6 +670,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 		case SDLK_KP_ENTER:
 		case SDLK_RETURN:
+		{
 			if (keyb.leftAltPressed)
 			{
 				toggleFullScreen();
@@ -679,9 +681,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 #endif
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_F9:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				startPlaying(PLAYMODE_PATT, editor.ptnJumpPos[0]);
@@ -692,9 +696,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				editor.ptnJumpPos[0] = (uint8_t)editor.pattPos;
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_F10:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				startPlaying(PLAYMODE_PATT, editor.ptnJumpPos[1]);
@@ -705,9 +711,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				editor.ptnJumpPos[1] = (uint8_t)editor.pattPos;
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_F11:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				startPlaying(PLAYMODE_PATT, editor.ptnJumpPos[2]);
@@ -718,9 +726,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				editor.ptnJumpPos[2] = (uint8_t)editor.pattPos;
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_F12:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				startPlaying(PLAYMODE_PATT, editor.ptnJumpPos[3]);
@@ -731,9 +741,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				editor.ptnJumpPos[3] = (uint8_t)editor.pattPos;
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_a:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				if (ui.sampleEditorShown)
@@ -752,9 +764,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_b:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				if (!ui.aboutScreenShown)
@@ -762,9 +776,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_c:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (ui.sampleEditorShown)
@@ -793,9 +809,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_d:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(10);
@@ -808,9 +826,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_e:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(2);
@@ -826,9 +846,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				showSampleEditorExt();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_f:
+		{
 #ifdef __APPLE__
 			if (keyb.leftCommandPressed && keyb.leftCtrlPressed)
 			{
@@ -854,17 +876,21 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				jumpToChannel(11);
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_g:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(12);
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_h:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(13);
@@ -875,9 +901,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				showHelpScreen();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_i:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(7);
@@ -888,25 +916,31 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				showInstEditor();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_j:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(14);
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_k:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(15);
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_m:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				if (ui.aboutScreenShown)  hideAboutScreen();
@@ -918,17 +952,21 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_n:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				showNibblesScreen();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_p:
+		{
 			if (keyb.leftCtrlPressed)
 			{
 				if (!ui.patternEditorShown)
@@ -942,17 +980,21 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_q:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(0);
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_r:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (ui.sampleEditorShown)
@@ -967,9 +1009,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				showTrimScreen();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_s:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (ui.sampleEditorShown)
@@ -984,9 +1028,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				showSampleEditor();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_t:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(4);
@@ -997,17 +1043,21 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				showTranspose();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_u:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(6);
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_v:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (ui.sampleEditorShown)
@@ -1036,17 +1086,21 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_w:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(1);
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_x:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (ui.sampleEditorShown)
@@ -1080,17 +1134,21 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_y:
+		{
 			if (keyb.leftAltPressed)
 			{
 				jumpToChannel(5);
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_z:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (ui.sampleEditorShown)
@@ -1103,9 +1161,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				togglePatternEditorExtended();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_1:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1123,9 +1183,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_2:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1143,9 +1205,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_3:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1163,9 +1227,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_4:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1185,9 +1251,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				return true;
 			}
 #endif
-			break;
+		}
+		break;
 
 		case SDLK_5:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1197,9 +1265,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_6:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1209,9 +1279,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_7:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1221,9 +1293,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_8:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1233,9 +1307,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_9:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1245,9 +1321,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_0:
+		{
 			if (keyb.leftAltPressed)
 			{
 				if (keyb.leftShiftPressed)
@@ -1257,9 +1335,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_LEFT:
+		{
 			if (keyb.leftShiftPressed)
 			{
 				decSongPos();
@@ -1275,9 +1355,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				keybPattMarkLeft();
 				return true;
 			}
-			break;
+		}
+		break;
 
 		case SDLK_RIGHT:
+		{
 			if (keyb.leftShiftPressed)
 			{
 				incSongPos();
@@ -1293,7 +1375,8 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				keybPattMarkRight();
 				return true;
 			}
-			break;
+		}
+		break;
 	}
 
 	return false;

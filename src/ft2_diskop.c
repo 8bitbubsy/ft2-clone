@@ -72,7 +72,7 @@ typedef struct DirRec
 	int32_t filesize;
 } DirRec;
 
-static char FReq_SysReqText[196], *FReq_FileName, *FReq_NameTemp;
+static char FReq_SysReqText[256], *FReq_FileName, *FReq_NameTemp;
 static char *modTmpFName, *insTmpFName, *smpTmpFName, *patTmpFName, *trkTmpFName;
 static char *modTmpFNameUTF8; // for window title
 static uint8_t FReq_Item;
@@ -83,6 +83,18 @@ static DirRec *FReq_Buffer;
 static SDL_Thread *thread;
 
 static void setDiskOpItem(uint8_t item);
+
+bool setupExecutablePath(void)
+{
+	editor.binaryPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
+	if (editor.binaryPathU == NULL)
+		return false;
+
+	editor.binaryPathU[0] = 0;
+	UNICHAR_GETCWD(editor.binaryPathU, PATH_MAX);
+
+	return true;
+}
 
 int32_t getFileSize(UNICHAR *fileNameU) // returning -1 = filesize over 2GB
 {
@@ -173,56 +185,70 @@ static void setupInitialPaths(void)
 
 #ifdef _WIN32
 	if (config.modulesPath[0] != '\0')
+	{
 		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.modulesPath, -1, FReq_ModCurPathU, 80);
+		FReq_ModCurPathU[80] = 0;
+	}
 
 	if (config.instrPath[0] != '\0')
 	{
 		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.instrPath, -1, FReq_InsCurPathU, 80);
+		FReq_InsCurPathU[80] = 0;
 		insPathSet = true;
 	}
 
 	if (config.samplesPath[0] != '\0')
 	{
 		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.samplesPath, -1, FReq_SmpCurPathU, 80);
+		FReq_SmpCurPathU[80] = 0;
 		smpPathSet = true;
 	}
 
 	if (config.patternsPath[0] != '\0')
 	{
 		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.patternsPath, -1, FReq_PatCurPathU, 80);
+		FReq_PatCurPathU[80] = 0;
 		patPathSet = true;
 	}
 
 	if (config.tracksPath[0] != '\0')
 	{
 		MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, config.tracksPath, -1, FReq_TrkCurPathU, 80);
+		FReq_TrkCurPathU[80] = 0;
 		trkPathSet = true;
 	}
 #else
 	if (config.modulesPath[0] != '\0')
+	{
 		strncpy(FReq_ModCurPathU, config.modulesPath, 80);
+		FReq_ModCurPathU[80] = 0;
+	}
 
 	if (config.instrPath[0] != '\0')
 	{
 		strncpy(FReq_InsCurPathU, config.instrPath, 80);
+		FReq_InsCurPathU[80] = 0;
 		insPathSet = true;
 	}
 
 	if (config.samplesPath[0] != '\0')
 	{
 		strncpy(FReq_SmpCurPathU, config.samplesPath, 80);
+		FReq_SmpCurPathU[80] = 0;
 		smpPathSet = true;
 	}
 
 	if (config.patternsPath[0] != '\0')
 	{
 		strncpy(FReq_PatCurPathU, config.patternsPath, 80);
+		FReq_PatCurPathU[80] = 0;
 		patPathSet = true;
 	}
 
 	if (config.tracksPath[0] != '\0')
 	{
 		strncpy(FReq_TrkCurPathU, config.tracksPath, 80);
+		FReq_TrkCurPathU[80] = 0;
 		trkPathSet = true;
 	}
 #endif
@@ -277,27 +303,41 @@ void freeDiskOp(void)
 
 bool setupDiskOp(void)
 {
-	modTmpFName = (char *)calloc(PATH_MAX + 1, sizeof (char));
-	insTmpFName = (char *)calloc(PATH_MAX + 1, sizeof (char));
-	smpTmpFName = (char *)calloc(PATH_MAX + 1, sizeof (char));
-	patTmpFName = (char *)calloc(PATH_MAX + 1, sizeof (char));
-	trkTmpFName = (char *)calloc(PATH_MAX + 1, sizeof (char));
-	FReq_NameTemp = (char *)calloc(PATH_MAX + 1, sizeof (char));
-	FReq_ModCurPathU = (UNICHAR *)calloc(PATH_MAX + 2, sizeof (UNICHAR));
-	FReq_InsCurPathU = (UNICHAR *)calloc(PATH_MAX + 2, sizeof (UNICHAR));
-	FReq_SmpCurPathU = (UNICHAR *)calloc(PATH_MAX + 2, sizeof (UNICHAR));
-	FReq_PatCurPathU = (UNICHAR *)calloc(PATH_MAX + 2, sizeof (UNICHAR));
-	FReq_TrkCurPathU = (UNICHAR *)calloc(PATH_MAX + 2, sizeof (UNICHAR));
+	modTmpFName = (char *)malloc((PATH_MAX + 1) * sizeof (char));
+	insTmpFName = (char *)malloc((PATH_MAX + 1) * sizeof (char));
+	smpTmpFName = (char *)malloc((PATH_MAX + 1) * sizeof (char));
+	patTmpFName = (char *)malloc((PATH_MAX + 1) * sizeof (char));
+	trkTmpFName = (char *)malloc((PATH_MAX + 1) * sizeof (char));
+	FReq_NameTemp = (char *)malloc((PATH_MAX + 1) * sizeof (char));
 
-	if (modTmpFName == NULL || insTmpFName == NULL || smpTmpFName == NULL || patTmpFName == NULL ||
-		trkTmpFName == NULL || FReq_NameTemp == NULL || FReq_ModCurPathU == NULL ||
-		FReq_InsCurPathU == NULL || FReq_SmpCurPathU == NULL || FReq_PatCurPathU == NULL ||
-		FReq_TrkCurPathU == NULL)
+	FReq_ModCurPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
+	FReq_InsCurPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
+	FReq_SmpCurPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
+	FReq_PatCurPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
+	FReq_TrkCurPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
+
+	if (modTmpFName      == NULL || insTmpFName      == NULL || smpTmpFName      == NULL ||
+		patTmpFName      == NULL || trkTmpFName      == NULL || FReq_NameTemp    == NULL ||
+		FReq_ModCurPathU == NULL || FReq_InsCurPathU == NULL || FReq_SmpCurPathU == NULL ||
+		FReq_PatCurPathU == NULL || FReq_TrkCurPathU == NULL)
 	{
 		// allocated memory is free'd lateron
 		showErrorMsgBox("Not enough memory!");
 		return false;
 	}
+
+	// clear first entry of strings
+	modTmpFName[0] = '\0';
+	insTmpFName[0] = '\0';
+	smpTmpFName[0] = '\0';
+	patTmpFName[0] = '\0';
+	trkTmpFName[0] = '\0';
+	FReq_NameTemp[0] = '\0';
+	FReq_ModCurPathU[0] = 0;
+	FReq_InsCurPathU[0] = 0;
+	FReq_SmpCurPathU[0] = 0;
+	FReq_PatCurPathU[0] = 0;
+	FReq_TrkCurPathU[0] = 0;
 
 	strcpy(modTmpFName, "untitled.xm");
 	strcpy(insTmpFName, "untitled.xi");
@@ -602,7 +642,7 @@ void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 	char *filename = getFilenameFromPath(ansiPath);
 	uint32_t filenameLen = (uint32_t)strlen(filename);
 
-	if (filenameLen > PATH_MAX-1)
+	if (filenameLen > PATH_MAX)
 	{
 		free(ansiPath);
 		return; // filename is too long, don't bother to copy it over
@@ -693,9 +733,9 @@ static void openFile(UNICHAR *filenameU, bool songModifiedCheck)
 		{
 			if (songModifiedCheck && song.isModified)
 			{
-				// remove file selection
+				// remove file selection before okBox() opens up
 				FReq_EntrySelected = -1;
-				diskOp_DrawDirectory();
+				diskOp_DrawFilelist();
 
 				if (okBox(2, "System request", "You have unsaved changes in your song. Load new song and lose all changes?") != 1)
 					return;
@@ -758,8 +798,6 @@ void changeFilenameExt(char *name, char *ext, int32_t nameMaxLen)
 void diskOpChangeFilenameExt(char *ext)
 {
 	changeFilenameExt(FReq_FileName, ext, PATH_MAX);
-	if (ui.diskOpShown)
-		diskOp_DrawDirectory();
 }
 
 void trimEntryName(char *name, bool isDir)
@@ -1011,7 +1049,7 @@ static void fileListPressed(int32_t index)
 
 	// remove file selection
 	FReq_EntrySelected = -1;
-	diskOp_DrawDirectory();
+	diskOp_DrawFilelist();
 
 	DirRec *dirEntry = &FReq_Buffer[entryIndex];
 	switch (mode)
@@ -1077,15 +1115,16 @@ static void fileListPressed(int32_t index)
 				if (nameTmp == NULL)
 					break;
 
-				strncpy(FReq_NameTemp, nameTmp, PATH_MAX - 1);
+				strncpy(FReq_NameTemp, nameTmp, PATH_MAX);
+				FReq_NameTemp[PATH_MAX] = '\0';
 				free(nameTmp);
 
 				// in case of UTF8 -> CP437 encoding failure, there can be question marks. Remove them...
 				removeQuestionmarksFromString(FReq_NameTemp);
 
-				if (inputBox(1, dirEntry->isDir ? "Enter new directory name:" : "Enter new filename:", FReq_NameTemp, PATH_MAX - 1) == 1)
+				if (inputBox(1, dirEntry->isDir ? "Enter new directory name:" : "Enter new filename:", FReq_NameTemp, PATH_MAX) == 1)
 				{
-					if ((FReq_NameTemp == NULL) || (FReq_NameTemp[0] == '\0'))
+					if (FReq_NameTemp == NULL || FReq_NameTemp[0] == '\0')
 					{
 						okBox(0, "System message", "New name can't be empty!");
 						break;
@@ -1120,7 +1159,7 @@ bool testDiskOpMouseDown(bool mouseHeldDlown)
 	if (max > DISKOP_ENTRY_NUM) // needed kludge when mouse-scrolling
 		max = DISKOP_ENTRY_NUM;
 
-	if (!mouseHeldDlown)
+	if (!mouseHeldDlown) // select file
 	{
 		FReq_EntrySelected = -1;
 
@@ -1130,7 +1169,7 @@ bool testDiskOpMouseDown(bool mouseHeldDlown)
 			if (tmpEntry >= 0 && tmpEntry < max)
 			{
 				FReq_EntrySelected = tmpEntry;
-				diskOp_DrawDirectory();
+				diskOp_DrawFilelist();
 			}
 
 			mouse.lastUsedObjectType = OBJECT_DISKOPLIST;
@@ -1161,7 +1200,7 @@ bool testDiskOpMouseDown(bool mouseHeldDlown)
 	if (mouse.x < 169 || mouse.x > 331 || mouse.y < 4 || tmpEntry < 0 || tmpEntry >= max)
 	{
 		FReq_EntrySelected = -1;
-		diskOp_DrawDirectory();
+		diskOp_DrawFilelist();
 
 		return true;
 	}
@@ -1169,7 +1208,7 @@ bool testDiskOpMouseDown(bool mouseHeldDlown)
 	if (tmpEntry != FReq_EntrySelected)
 	{
 		FReq_EntrySelected = tmpEntry;
-		diskOp_DrawDirectory();
+		diskOp_DrawFilelist();
 	}
 
 	return true;
@@ -1183,7 +1222,7 @@ void testDiskOpMouseRelease(void)
 			fileListPressed((mouse.y - 4) / (FONT1_CHAR_H + 1));
 
 		FReq_EntrySelected = -1;
-		diskOp_DrawDirectory();
+		diskOp_DrawFilelist();
 	}
 }
 
@@ -1537,7 +1576,7 @@ static char *ach(int32_t rad) // used for sortDirectory()
 		return NULL;
 	}
 
-	char *p = (char *)malloc(nameLen + 2);
+	char *p = (char *)malloc(nameLen+1+1);
 	if (p == NULL)
 	{
 		free(name);
@@ -1701,6 +1740,9 @@ static void displayCurrPath(void)
 {
 	fillRect(4, 145, 162, 10, PAL_DESKTOP);
 
+	if (FReq_CurPathU == NULL)
+		return;
+
 	const uint32_t pathLen = (uint32_t)UNICHAR_STRLEN(FReq_CurPathU);
 	if (pathLen == 0)
 		return;
@@ -1722,11 +1764,14 @@ static void displayCurrPath(void)
 	{
 		// path doesn't fit, print drive + ".." + last directory
 
-		memset(FReq_NameTemp, 0, PATH_MAX + 1);
 #ifdef _WIN32
-		strncpy(FReq_NameTemp, p, 3);
+		memcpy(FReq_NameTemp, p, 3); // get drive (f.ex. C:\)
+		FReq_NameTemp[3] = '\0';
+
 		strcat(FReq_NameTemp, ".\001"); // special character in font
+		FReq_NameTemp[5] = '\0';
 #else
+		FReq_NameTemp[0] = '\0';
 		strcpy(FReq_NameTemp, "/");
 		strcat(FReq_NameTemp, "..");
 #endif
@@ -1735,7 +1780,7 @@ static void displayCurrPath(void)
 		if (delimiter != NULL)
 		{
 #ifdef _WIN32
-			strcat(FReq_NameTemp, delimiter + 1);
+			strcat(FReq_NameTemp, delimiter+1);
 #else
 			strcat(FReq_NameTemp, delimiter);
 #endif
@@ -1749,9 +1794,9 @@ static void displayCurrPath(void)
 			p = FReq_NameTemp;
 			while (j >= 6 && textWidth(p) >= 162)
 			{
-				p[j - 2] = '.';
-				p[j - 1] = '.';
-				p[j - 0] = '\0';
+				p[j-2] = '.';
+				p[j-1] = '.';
+				p[j-0] = '\0';
 				j--;
 			}
 		}
@@ -1762,24 +1807,19 @@ static void displayCurrPath(void)
 	free(asciiPath);
 }
 
-void diskOp_DrawDirectory(void)
+void diskOp_DrawFilelist(void)
 {
-	clearRect(FILENAME_TEXT_X - 1, 4, 162, 164);
-	drawTextBox(TB_DISKOP_FILENAME);
+	clearRect(FILENAME_TEXT_X-1, 4, 162, 164);
 
+	if (FReq_FileCount == 0)
+		return;
+
+	// draw "selected file" rectangle
 	if (FReq_EntrySelected != -1)
 	{
 		const uint16_t y = 4 + (uint16_t)((FONT1_CHAR_H + 1) * FReq_EntrySelected);
 		fillRect(FILENAME_TEXT_X - 1, y, 162, FONT1_CHAR_H, PAL_PATTEXT);
 	}
-
-	displayCurrPath();
-#ifdef _WIN32
-	setupDiskOpDrives();
-#endif
-
-	if (FReq_FileCount == 0)
-		return;
 
 	for (uint16_t i = 0; i < DISKOP_ENTRY_NUM; i++)
 	{
@@ -1817,9 +1857,21 @@ void diskOp_DrawDirectory(void)
 		if (!FReq_Buffer[bufEntry].isDir)
 			printFormattedFilesize(FILESIZE_TEXT_X, y, bufEntry);
 	}
+}
 
-	setScrollBarPos(SB_DISKOP_LIST, FReq_DirPos, true);
+void diskOp_DrawDirectory(void)
+{
+	drawTextBox(TB_DISKOP_FILENAME);
+
+	displayCurrPath();
+#ifdef _WIN32
+	setupDiskOpDrives();
+#endif
+
 	setScrollBarEnd(SB_DISKOP_LIST, FReq_FileCount);
+	setScrollBarPos(SB_DISKOP_LIST, FReq_DirPos, false);
+
+	diskOp_DrawFilelist();
 }
 
 static DirRec *bufferCreateEmptyDir(void) // special case: creates a dir entry with a ".." directory
@@ -2035,7 +2087,7 @@ static void setDiskOpItem(uint8_t item)
 			// FReq_ModCurPathU is always set at this point
 
 			FReq_CurPathU = FReq_ModCurPathU;
-			if (FReq_CurPathU != NULL)
+			if (FReq_CurPathU != NULL && FReq_CurPathU[0] != '\0')
 				UNICHAR_CHDIR(FReq_CurPathU);
 		}
 		break;
@@ -2044,7 +2096,7 @@ static void setDiskOpItem(uint8_t item)
 		{
 			FReq_FileName = insTmpFName;
 
-			if (!insPathSet)
+			if (!insPathSet && FReq_CurPathU != NULL && FReq_CurPathU[0] != '\0')
 			{
 				UNICHAR_STRCPY(FReq_InsCurPathU, FReq_CurPathU);
 				insPathSet = true;
@@ -2060,7 +2112,7 @@ static void setDiskOpItem(uint8_t item)
 		{
 			FReq_FileName = smpTmpFName;
 
-			if (!smpPathSet)
+			if (!smpPathSet && FReq_CurPathU != NULL && FReq_CurPathU[0] != '\0')
 			{
 				UNICHAR_STRCPY(FReq_SmpCurPathU, FReq_CurPathU);
 				smpPathSet = true;
@@ -2076,7 +2128,7 @@ static void setDiskOpItem(uint8_t item)
 		{
 			FReq_FileName = patTmpFName;
 
-			if (!patPathSet)
+			if (!patPathSet && FReq_CurPathU != NULL && FReq_CurPathU[0] != '\0')
 			{
 				UNICHAR_STRCPY(FReq_PatCurPathU, FReq_CurPathU);
 				patPathSet = true;
@@ -2092,7 +2144,7 @@ static void setDiskOpItem(uint8_t item)
 		{
 			FReq_FileName = trkTmpFName;
 
-			if (!trkPathSet)
+			if (!trkPathSet && FReq_CurPathU != NULL && FReq_CurPathU[0] != '\0')
 			{
 				UNICHAR_STRCPY(FReq_TrkCurPathU, FReq_CurPathU);
 				trkPathSet = true;
@@ -2105,15 +2157,13 @@ static void setDiskOpItem(uint8_t item)
 		break;
 	}
 
-	const int32_t pathLen = (int32_t)UNICHAR_STRLEN(FReq_CurPathU);
-	if (pathLen == 0 && FReq_ModCurPathU[0] != '\0')
+	if (FReq_CurPathU != NULL && FReq_ModCurPathU != NULL)
 	{
-		memset(FReq_CurPathU, 0, (PATH_MAX + 2) * sizeof (UNICHAR));
-		UNICHAR_STRCPY(FReq_CurPathU, FReq_ModCurPathU);
+		if (FReq_CurPathU[0] == '\0' && FReq_ModCurPathU[0] != '\0')
+			UNICHAR_STRCPY(FReq_CurPathU, FReq_ModCurPathU);
 	}
 
 	textBoxes[TB_DISKOP_FILENAME].textPtr = FReq_FileName;
-
 	FReq_ShowAllFiles = false;
 
 	if (ui.diskOpShown)
@@ -2199,14 +2249,15 @@ void showDiskOpScreen(void)
 		assert(FReq_ModCurPathU != NULL);
 
 		// first test if we can change the dir to the one stored in the config (if present)
-		if (UNICHAR_STRLEN(FReq_ModCurPathU) == 0 || UNICHAR_CHDIR(FReq_ModCurPathU) != 0)
+		if (FReq_ModCurPathU[0] == '\0' || UNICHAR_CHDIR(FReq_ModCurPathU) != 0)
 		{
 			// nope, couldn't do that, set Disk Op. path to user/home directory
 #ifdef _WIN32
 			SHGetFolderPathW(NULL, CSIDL_PROFILE, NULL, 0, FReq_ModCurPathU);
 #else
-			if (getenv("HOME") != NULL)
-				UNICHAR_STRCPY(FReq_ModCurPathU, getenv("HOME"));
+			char *home = getenv("HOME");
+			if (home != NULL)
+				UNICHAR_STRCPY(FReq_ModCurPathU, home);
 #endif
 			UNICHAR_CHDIR(FReq_ModCurPathU);
 		}
@@ -2285,7 +2336,7 @@ void sbDiskOpSetPos(uint32_t pos)
 	if ((int32_t)pos != FReq_DirPos && FReq_FileCount > DISKOP_ENTRY_NUM)
 	{
 		FReq_DirPos = (int32_t)pos;
-		diskOp_DrawDirectory();
+		diskOp_DrawFilelist();
 	}
 }
 
@@ -2345,7 +2396,7 @@ void pbDiskOpRename(void)
 void pbDiskOpMakeDir(void)
 {
 	FReq_NameTemp[0] = '\0';
-	if (inputBox(1, "Enter directory name:", FReq_NameTemp, PATH_MAX - 1) == 1)
+	if (inputBox(1, "Enter directory name:", FReq_NameTemp, PATH_MAX) == 1)
 	{
 		if (FReq_NameTemp[0] == '\0')
 		{
@@ -2371,7 +2422,7 @@ void pbDiskOpRefresh(void)
 void pbDiskOpSetPath(void)
 {
 	FReq_NameTemp[0] = '\0';
-	if (inputBox(1, "Enter new directory path:", FReq_NameTemp, PATH_MAX - 1) == 1)
+	if (inputBox(1, "Enter new directory path:", FReq_NameTemp, PATH_MAX) == 1)
 	{
 		if (FReq_NameTemp[0] == '\0')
 		{
