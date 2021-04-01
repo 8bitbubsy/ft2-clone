@@ -528,8 +528,8 @@ static void startTone(uint8_t ton, uint8_t effTyp, uint8_t eff, stmTyp *ch)
 
 	if (ton != 0)
 	{
-		const uint16_t tmpTon = ((ton-1) << 4) + (((int8_t)ch->fineTune >> 3) + 16);
-		if (tmpTon < MAX_NOTES)
+		const uint16_t tmpTon = ((ton-1) << 4) + (((int8_t)ch->fineTune >> 3) + 16); // 0..1935
+		if (tmpTon < MAX_NOTES) // tmpTon is *always* below MAX_NOTES here, so this check is not really needed
 		{
 			assert(note2Period != NULL);
 			ch->outPeriod = ch->realPeriod = note2Period[tmpTon];
