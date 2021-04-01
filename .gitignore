@@ -22,3 +22,4 @@ vs2019_project/ft2-clone/Debug/ft2-clone.vcxproj.FileListAbsolute.txt
 *.db-wal
 *.recipe
 vs2019_project/ft2-clone/Release/ft2-clone-win64.iobj
+vs2019_project/ft2-clone/Release/ft2-clone-win32.iobj

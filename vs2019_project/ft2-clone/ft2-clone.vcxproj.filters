@@ -274,9 +274,6 @@
     <Filter Include="graphics">
       <UniqueIdentifier>{c6fad604-509b-4072-b181-d47835f08428}</UniqueIdentifier>
     </Filter>
-    <Filter Include="rtmidi">
-      <UniqueIdentifier>{95e882a1-e589-4684-a3cb-48e0a1d073aa}</UniqueIdentifier>
-    </Filter>
     <Filter Include="mixer">
       <UniqueIdentifier>{5c40c417-c4bb-4cf2-b71b-c557bf0a86cd}</UniqueIdentifier>
     </Filter>
@@ -285,6 +282,9 @@
     </Filter>
     <Filter Include="smploaders">
       <UniqueIdentifier>{62e7f7c0-f7ae-4b85-bd62-2c83f74e3953}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="rtmidi">
+      <UniqueIdentifier>{95e882a1-e589-4684-a3cb-48e0a1d073aa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
