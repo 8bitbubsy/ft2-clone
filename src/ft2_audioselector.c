@@ -24,6 +24,9 @@ char *getAudioOutputDeviceFromConfig(void)
 	FILE *f = UNICHAR_FOPEN(editor.audioDevConfigFileLocation, "r");
 	if (f == NULL)
 	{
+#if defined(__APPLE__)
+		return NULL; // SDL doesn't return devices in any appreciable order, and device 0 is most certainly not guaranteed to be the current default device
+#else
 		const char *devStringTmp = SDL_GetAudioDeviceName(0, false);
 		if (devStringTmp == NULL)
 		{
@@ -35,6 +38,7 @@ char *getAudioOutputDeviceFromConfig(void)
 		if (devStringLen > 0)
 			strncpy(devString, devStringTmp, MAX_DEV_STR_LEN);
 		devString[devStringLen+1] = '\0'; // UTF-8 needs double null termination
+#endif
 	}
 	else
 	{
@@ -49,6 +53,11 @@ char *getAudioOutputDeviceFromConfig(void)
 		if (devString[devStringLen-1] == '\n')
 			devString[devStringLen-1]  = '\0';
 		devString[devStringLen+1] = '\0'; // UTF-8 needs double null termination
+
+#if defined(__APPLE__)
+		if (devString[0] == '\0')
+			return NULL; // macOS SDL2 locks up indefinitely if fed an empty string for device name
+#endif
 
 		fclose(f);
 	}
