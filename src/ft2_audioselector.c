@@ -62,7 +62,7 @@ char *getAudioOutputDeviceFromConfig(void)
 		if (devStringLen > 0)
 		{
 			if (devString[devStringLen-1] == '\n')
-				devString[devStringLen-1] = ' ';
+				devString[devStringLen-1] = '\0';
 
 			if (!(devStringLen == 1 && devString[0] == ' ')) // space only = no device
 				audioDeviceRead = true;
@@ -111,7 +111,7 @@ char *getAudioInputDeviceFromConfig(void)
 		if (devStringLen > 0)
 		{
 			if (devString[devStringLen-1] == '\n')
-				devString[devStringLen-1] = ' ';
+				devString[devStringLen-1] = '\0';
 
 			if (!(devStringLen == 1 && devString[0] == ' ')) // space only = no device
 				audioDeviceRead = true;
