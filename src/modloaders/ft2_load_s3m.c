@@ -287,10 +287,14 @@ bool loadS3M(FILE *f, uint32_t filesize)
 							case 1: // A
 							{
 								ton.effTyp = 0xF;
-								if (ton.eff == 0 || ton.eff > 0x1F)
+								if (ton.eff == 0)
 								{
 									ton.effTyp = 0;
 									ton.eff = 0;
+								}
+								else if (ton.eff > 0x1F)
+								{
+									ton.eff = 0x1F;
 								}
 							}
 							break;
