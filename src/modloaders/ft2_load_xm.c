@@ -1,4 +1,8 @@
-// Fasttracker II (or compatible) XM loader
+/* Fasttracker II (or compatible) XM loader
+**
+** Note: Data sanitation is done in the last stage
+** of module loading, so you don't need to do that here.
+*/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -20,14 +24,13 @@ static uint32_t extraSampleLengths[32-MAX_SMP_PER_INST];
 static bool loadInstrHeader(FILE *f, uint16_t i);
 static bool loadInstrSample(FILE *f, uint16_t i);
 static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn);
-static bool loadPatterns(FILE *f, uint16_t antPtn);
+static bool loadPatterns(FILE *f, uint16_t antPtn, uint16_t xmVersion);
 static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn);
-static void sanitizeInstrument(instrTyp *ins);
+static void loadADPCMSample(FILE *f, sample_t *s); // ModPlug Tracker
 
 bool loadXM(FILE *f, uint32_t filesize)
 {
-	uint16_t i;
-	songHeaderTyp h;
+	xmHdr_t h;
 
 	if (filesize < sizeof (h))
 	{
@@ -41,31 +44,31 @@ bool loadXM(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	if (h.ver < 0x0102 || h.ver > 0x0104)
+	if (h.version < 0x0102 || h.version > 0x0104)
 	{
-		loaderMsgBox("Error loading XM: Unsupported file version (v%01X.%02X).", (h.ver >> 8) & 15, h.ver & 0xFF);
+		loaderMsgBox("Error loading XM: Unsupported file version (v%01X.%02X).", (h.version >> 8) & 15, h.version & 0xFF);
 		return false;
 	}
 
-	if (h.len > MAX_ORDERS)
+	if (h.numOrders > MAX_ORDERS)
 	{
 		loaderMsgBox("Error loading XM: The song has more than 256 orders!");
 		return false;
 	}
 
-	if (h.antPtn > MAX_PATTERNS)
+	if (h.numPatterns > MAX_PATTERNS)
 	{
 		loaderMsgBox("Error loading XM: The song has more than 256 patterns!");
 		return false;
 	}
 
-	if (h.antChn == 0)
+	if (h.numChannels == 0)
 	{
 		loaderMsgBox("Error loading XM: This file is corrupt.");
 		return false;
 	}
 
-	if (h.antInstrs > 256) // if >128 instruments, we fake-load up to 128 extra instruments and discard them
+	if (h.numInstr > 256) // if >128 instruments, we fake-load up to 128 extra instruments and discard them
 	{
 		loaderMsgBox("Error loading XM: This file is corrupt.");
 		return false;
@@ -79,52 +82,48 @@ bool loadXM(FILE *f, uint32_t filesize)
 	}
 
 	memcpy(songTmp.name, h.name, 20);
+	songTmp.name[20] = '\0';
 
-	songTmp.len = h.len;
-	songTmp.repS = h.repS;
-	songTmp.antChn = (uint8_t)h.antChn;
-	songTmp.speed = h.defSpeed;
-	songTmp.tempo = h.defTempo;
-	songTmp.ver = h.ver;
+	songTmp.songLength = h.numOrders;
+	songTmp.songLoopStart = h.songLoopStart;
+	songTmp.numChannels = (uint8_t)h.numChannels;
+	songTmp.BPM = h.BPM;
+	songTmp.speed = h.speed;
 	tmpLinearPeriodsFlag = h.flags & 1;
 
-	// non-FT2: clamp to max numbers that are okay for GUI
-	songTmp.speed = CLAMP(songTmp.speed, 1, 999);
-	songTmp.initialTempo = songTmp.tempo = CLAMP(songTmp.tempo, 1, 99);
-
-	if (songTmp.len == 0)
-		songTmp.len = 1; // songTmp.songTab is already empty
+	if (songTmp.songLength == 0)
+		songTmp.songLength = 1; // songTmp.songTab is already empty
 	else
-		memcpy(songTmp.songTab, h.songTab, songTmp.len);
+		memcpy(songTmp.orders, h.orders, songTmp.songLength);
 
 	// some strange XMs have the order list padded with 0xFF, remove them!
 	for (int16_t j = 255; j >= 0; j--)
 	{
-		if (songTmp.songTab[j] != 0xFF)
+		if (songTmp.orders[j] != 0xFF)
 			break;
 
-		if (songTmp.len > j)
-			songTmp.len = j;
+		if (songTmp.songLength > j)
+			songTmp.songLength = j;
 	}
 
 	// even though XM supports 256 orders, FT2 supports only 255...
-	if (songTmp.len > 0xFF)
-		songTmp.len = 0xFF;
+	if (songTmp.songLength > 255)
+		songTmp.songLength = 255;
 
-	if (songTmp.ver < 0x0104)
+	if (h.version < 0x0104)
 	{
 		// XM v1.02 and XM v1.03
 
-		for (i = 1; i <= h.antInstrs; i++)
+		for (uint16_t i = 1; i <= h.numInstr; i++)
 		{
 			if (!loadInstrHeader(f, i))
 				return false;
 		}
 
-		if (!loadPatterns(f, h.antPtn))
+		if (!loadPatterns(f, h.numPatterns, h.version))
 			return false;
 
-		for (i = 1; i <= h.antInstrs; i++)
+		for (uint16_t i = 1; i <= h.numInstr; i++)
 		{
 			if (!loadInstrSample(f, i))
 				return false;
@@ -134,10 +133,10 @@ bool loadXM(FILE *f, uint32_t filesize)
 	{
 		// XM v1.04 (latest version)
 
-		if (!loadPatterns(f, h.antPtn))
+		if (!loadPatterns(f, h.numPatterns, h.version))
 			return false;
 
-		for (i = 1; i <= h.antInstrs; i++)
+		for (uint16_t i = 1; i <= h.numInstr; i++)
 		{
 			if (!loadInstrHeader(f, i))
 				return false;
@@ -148,9 +147,9 @@ bool loadXM(FILE *f, uint32_t filesize)
 	}
 
 	// if we temporarily loaded more than 128 instruments, clear the extra allocated memory
-	if (h.antInstrs > MAX_INST)
+	if (h.numInstr > MAX_INST)
 	{
-		for (i = MAX_INST+1; i <= h.antInstrs; i++)
+		for (int32_t i = MAX_INST+1; i <= h.numInstr; i++)
 		{
 			if (instrTmp[i] != NULL)
 			{
@@ -165,22 +164,22 @@ bool loadXM(FILE *f, uint32_t filesize)
 	** back to max 16 in the headers before loading is done.
 	*/
 	bool instrHasMoreThan16Samples = false;
-	for (i = 1; i <= MAX_INST; i++)
+	for (int32_t i = 1; i <= MAX_INST; i++)
 	{
-		if (instrTmp[i] != NULL && instrTmp[i]->antSamp > MAX_SMP_PER_INST)
+		if (instrTmp[i] != NULL && instrTmp[i]->numSamples > MAX_SMP_PER_INST)
 		{
 			instrHasMoreThan16Samples = true;
-			instrTmp[i]->antSamp = MAX_SMP_PER_INST;
+			instrTmp[i]->numSamples = MAX_SMP_PER_INST;
 		}
 	}
 
-	if (songTmp.antChn > MAX_VOICES)
+	if (songTmp.numChannels > MAX_CHANNELS)
 	{
-		songTmp.antChn = MAX_VOICES;
+		songTmp.numChannels = MAX_CHANNELS;
 		loaderMsgBox("Warning: Module contains >32 channels. The extra channels will be discarded!");
 	}
 
-	if (h.antInstrs > MAX_INST)
+	if (h.numInstr > MAX_INST)
 		loaderMsgBox("Warning: Module contains >128 instruments. The extra instruments will be discarded!");
 
 	if (instrHasMoreThan16Samples)
@@ -191,37 +190,35 @@ bool loadXM(FILE *f, uint32_t filesize)
 
 static bool loadInstrHeader(FILE *f, uint16_t i)
 {
-	uint8_t j;
 	uint32_t readSize;
-	instrHeaderTyp ih;
-	instrTyp *ins;
-	sampleHeaderTyp *src;
-	sampleTyp *s;
+	xmInsHdr_t ih;
+	instr_t *ins;
+	xmSmpHdr_t *src;
+	sample_t *s;
 
 	memset(extraSampleLengths, 0, sizeof (extraSampleLengths));
 	memset(&ih, 0, sizeof (ih));
-	fread(&ih.instrSize, 4, 1, f);
 
-	readSize = ih.instrSize;
+	fread(&readSize, 4, 1, f);
+	fseek(f, -4, SEEK_CUR);
 
 	// yes, some XMs can have a header size of 0, and it usually means 263 bytes (INSTR_HEADER_SIZE)
 	if (readSize == 0 || readSize > INSTR_HEADER_SIZE)
 		readSize = INSTR_HEADER_SIZE;
 
-	if (readSize < 4)
+	if ((int32_t)readSize < 0)
 	{
-		loaderMsgBox("Error loading XM: This file is corrupt (or not supported)!");
+		loaderMsgBox("Error loading XM: This file is corrupt!");
 		return false;
 	}
 
-	// load instrument data into temp buffer
-	fread(ih.name, readSize-4, 1, f); // -4 = skip ih.instrSize
+	fread(&ih, readSize, 1, f); // read instrument header
 
 	// FT2 bugfix: skip instrument header data if instrSize is above INSTR_HEADER_SIZE
 	if (ih.instrSize > INSTR_HEADER_SIZE)
 		fseek(f, ih.instrSize-INSTR_HEADER_SIZE, SEEK_CUR);
 
-	if (ih.antSamp < 0 || ih.antSamp > 32)
+	if (ih.numSamples < 0 || ih.numSamples > 32)
 	{
 		loaderMsgBox("Error loading XM: This file is corrupt (or not supported)!");
 		return false;
@@ -230,7 +227,7 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 	if (i <= MAX_INST) // copy over instrument names
 		memcpy(songTmp.instrName[i], ih.name, 22);
 
-	if (ih.antSamp > 0)
+	if (ih.numSamples > 0 && ih.numSamples <= 32)
 	{
 		if (!allocateTmpInstr(i))
 		{
@@ -241,78 +238,77 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 		// copy instrument header elements to our instrument struct
 
 		ins = instrTmp[i];
-		memcpy(ins->ta, ih.ta, 96);
-		memcpy(ins->envVP, ih.envVP, 12*2*sizeof(int16_t));
-		memcpy(ins->envPP, ih.envPP, 12*2*sizeof(int16_t));
-		ins->envVPAnt = ih.envVPAnt;
-		ins->envPPAnt = ih.envPPAnt;
-		ins->envVSust = ih.envVSust;
-		ins->envVRepS = ih.envVRepS;
-		ins->envVRepE = ih.envVRepE;
-		ins->envPSust = ih.envPSust;
-		ins->envPRepS = ih.envPRepS;
-		ins->envPRepE = ih.envPRepE;
-		ins->envVTyp = ih.envVTyp;
-		ins->envPTyp = ih.envPTyp;
-		ins->vibTyp = ih.vibTyp;
+		memcpy(ins->note2SampleLUT, ih.note2SampleLUT, 96);
+		memcpy(ins->volEnvPoints, ih.volEnvPoints, 12*2*sizeof(int16_t));
+		memcpy(ins->panEnvPoints, ih.panEnvPoints, 12*2*sizeof(int16_t));
+		ins->volEnvLength = ih.volEnvLength;
+		ins->panEnvLength = ih.panEnvLength;
+		ins->volEnvSustain = ih.volEnvSustain;
+		ins->volEnvLoopStart = ih.volEnvLoopStart;
+		ins->volEnvLoopEnd = ih.volEnvLoopEnd;
+		ins->panEnvSustain = ih.panEnvSustain;
+		ins->panEnvLoopStart = ih.panEnvLoopStart;
+		ins->panEnvLoopEnd = ih.panEnvLoopEnd;
+		ins->volEnvFlags = ih.volEnvFlags;
+		ins->panEnvFlags = ih.panEnvFlags;
+		ins->vibType = ih.vibType;
 		ins->vibSweep = ih.vibSweep;
 		ins->vibDepth = ih.vibDepth;
 		ins->vibRate = ih.vibRate;
-		ins->fadeOut = ih.fadeOut;
+		ins->fadeout = ih.fadeout;
 		ins->midiOn = (ih.midiOn == 1) ? true : false;
 		ins->midiChannel = ih.midiChannel;
 		ins->midiProgram = ih.midiProgram;
 		ins->midiBend = ih.midiBend;
 		ins->mute = (ih.mute == 1) ? true : false; // correct logic, don't change this!
-		ins->antSamp = ih.antSamp; // used in loadInstrSample()
+		ins->numSamples = ih.numSamples; // used in loadInstrSample()
 
-		sanitizeInstrument(ins);
-
-		int32_t sampleHeadersToRead = ih.antSamp;
+		int32_t sampleHeadersToRead = ih.numSamples;
 		if (sampleHeadersToRead > MAX_SMP_PER_INST)
 			sampleHeadersToRead = MAX_SMP_PER_INST;
 
-		if (fread(ih.samp, sampleHeadersToRead * sizeof (sampleHeaderTyp), 1, f) != 1)
+		if (fread(ih.smp, sampleHeadersToRead * sizeof (xmSmpHdr_t), 1, f) != 1)
 		{
 			loaderMsgBox("General I/O error during loading!");
 			return false;
 		}
 
 		// if instrument contains more than 16 sample headers (unsupported), skip them
-		if (ih.antSamp > MAX_SMP_PER_INST) // can only be 0..32 at this point
+		if (ih.numSamples > MAX_SMP_PER_INST) // can only be 0..32 at this point
 		{
-			const int32_t samplesToSkip = ih.antSamp-MAX_SMP_PER_INST;
-			for (j = 0; j < samplesToSkip; j++)
+			const int32_t samplesToSkip = ih.numSamples-MAX_SMP_PER_INST;
+			for (int32_t j = 0; j < samplesToSkip; j++)
 			{
 				fread(&extraSampleLengths[j], 4, 1, f); // used for skipping data in loadInstrSample()
-				fseek(f, sizeof (sampleHeaderTyp)-4, SEEK_CUR);
+				fseek(f, sizeof (xmSmpHdr_t)-4, SEEK_CUR);
 			}
 		}
 
-		for (j = 0; j < sampleHeadersToRead; j++)
+		for (int32_t j = 0; j < sampleHeadersToRead; j++)
 		{
-			s = &instrTmp[i]->samp[j];
-			src = &ih.samp[j];
+			s = &instrTmp[i]->smp[j];
+			src = &ih.smp[j];
 
 			// copy sample header elements to our sample struct
 
-			s->len = src->len;
-			s->repS = src->repS;
-			s->repL = src->repL;
-			s->vol = src->vol;
-			s->fine = src->fine;
-			s->typ = src->typ;
-			s->pan = src->pan;
-			s->relTon = src->relTon;
+			s->length = src->length;
+			s->loopStart = src->loopStart;
+			s->loopLength = src->loopLength;
+			s->volume = src->volume;
+			s->finetune = src->finetune;
+			s->flags = src->flags;
+			s->panning = src->panning;
+			s->relativeNote = src->relativeNote;
+
+			/* If the sample is 8-bit mono and nameLength (reserved) is 0xAD,
+			** then this is a 4-bit ADPCM compressed sample (ModPlug Tracker).
+			*/
+			if (src->nameLength == 0xAD && !(src->flags & (SAMPLE_16BIT | SAMPLE_STEREO)))
+				s->flags |= SAMPLE_ADPCM;
+
 			memcpy(s->name, src->name, 22);
 
-			// dst->pek is set up later
-
-			// sanitize stuff broken/unsupported samples (FT2 doesn't do this, but we do!)
-			if (s->vol > 64)
-				s->vol = 64;
-
-			s->relTon = CLAMP(s->relTon, -48, 71);
+			// dst->dataPtr is set up later
 		}
 	}
 
@@ -324,90 +320,90 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 	if (instrTmp[i] == NULL)
 		return true; // empty instrument, let's just pretend it got loaded successfully
 
-	uint16_t k = instrTmp[i]->antSamp;
+	uint16_t k = instrTmp[i]->numSamples;
 	if (k > MAX_SMP_PER_INST)
 		k = MAX_SMP_PER_INST;
 
-	sampleTyp *s = instrTmp[i]->samp;
+	sample_t *s = instrTmp[i]->smp;
 
 	if (i > MAX_INST) // insNum > 128, just skip sample data
 	{
 		for (uint16_t j = 0; j < k; j++, s++)
 		{
-			if (s->len > 0)
-				fseek(f, s->len, SEEK_CUR);
+			if (s->length > 0)
+				fseek(f, s->length, SEEK_CUR);
 		}
 	}
 	else
 	{
 		for (uint16_t j = 0; j < k; j++, s++)
 		{
-			// FT2: a sample with both forward loop and pingpong loop set results in pingpong
-			if ((s->typ & 3) == 3)
-				s->typ &= 0xFE; // remove forward loop flag
-
-			int32_t l = s->len;
-			if (l <= 0)
+			if (s->length <= 0)
 			{
-				s->len = 0;
-				s->repL = 0;
-				s->repS = 0;
-
-				if (s->typ & 32) // remove stereo flag if present
-					s->typ &= ~32;
+				s->length = 0;
+				s->loopStart = 0;
+				s->loopLength = 0;
+				s->flags = 0;
 			}
 			else
 			{
-				int32_t bytesToSkip = 0;
-				if (l > MAX_SAMPLE_LEN)
+				const int32_t lengthInFile = s->length;
+
+				bool sample16Bit = !!(s->flags & SAMPLE_16BIT);
+				bool stereoSample = !!(s->flags & SAMPLE_STEREO);
+				bool adpcmSample = !!(s->flags & SAMPLE_ADPCM); // ModPlug Tracker
+
+				if (sample16Bit) // we use units of samples (not bytes like in FT2)
 				{
-					bytesToSkip = l - MAX_SAMPLE_LEN;
-					l = MAX_SAMPLE_LEN;
+					s->length >>= 1;
+					s->loopStart >>= 1;
+					s->loopLength >>= 1;
 				}
 
-				if (!allocateTmpSmpData(s, l))
+				if (s->length > MAX_SAMPLE_LEN)
+					s->length = MAX_SAMPLE_LEN;
+
+				if (!allocateSmpData(s, s->length, sample16Bit))
 				{
 					loaderMsgBox("Not enough memory!");
 					return false;
 				}
 
-				const int32_t bytesRead = (int32_t)fread(s->pek, 1, l, f);
-				if (bytesRead < l)
+				if (adpcmSample)
 				{
-					const int32_t bytesToClear = l - bytesRead;
-					memset(&s->pek[bytesRead], 0, bytesToClear);
+					loadADPCMSample(f, s);
 				}
-
-				if (bytesToSkip > 0)
-					fseek(f, bytesToSkip, SEEK_CUR);
-
-				delta2Samp(s->pek, l, s->typ);
-
-				if (s->typ & 32) // stereo sample - already downmixed to mono in delta2samp()
+				else
 				{
-					s->typ &= ~32; // remove stereo flag
+					const int32_t sampleLengthInBytes = SAMPLE_LENGTH_BYTES(s);
+					fread(s->dataPtr, 1, sampleLengthInBytes, f);
 
-					s->len >>= 1;
-					s->repL >>= 1;
-					s->repS >>= 1;
+					if (sampleLengthInBytes < lengthInFile)
+						fseek(f, lengthInFile-sampleLengthInBytes, SEEK_CUR);
 
-					reallocateTmpSmpData(s, s->len); // dealloc unused memory
+					delta2Samp(s->dataPtr, s->length, s->flags);
+
+					if (stereoSample) // stereo sample - already downmixed to mono in delta2samp()
+					{
+						s->length >>= 1;
+						s->loopStart >>= 1;
+						s->loopLength >>= 1;
+
+						reallocateSmpData(s, s->length, sample16Bit); // dealloc unused memory
+					}
 				}
 			}
 
-			// NON-FT2 FIX: Align to 2-byte if 16-bit sample
-			if (s->typ & 16)
-			{
-				s->repL &= 0xFFFFFFFE;
-				s->repS &= 0xFFFFFFFE;
-				s->len &= 0xFFFFFFFE;
-			}
+			// remove stereo flag if present (already handled)
+			if (s->flags & SAMPLE_STEREO)
+				s->flags &= ~SAMPLE_STEREO;
 		}
 	}
 
-	if (instrTmp[i]->antSamp > MAX_SMP_PER_INST)
+	// skip sample headers if we have more than 16 samples in instrument
+	if (instrTmp[i]->numSamples > MAX_SMP_PER_INST)
 	{
-		const int32_t samplesToSkip = instrTmp[i]->antSamp-MAX_SMP_PER_INST;
+		const int32_t samplesToSkip = instrTmp[i]->numSamples-MAX_SMP_PER_INST;
 		for (i = 0; i < samplesToSkip; i++)
 		{
 			if (extraSampleLengths[i] > 0)
@@ -418,80 +414,80 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 	return true;
 }
 
-static bool loadPatterns(FILE *f, uint16_t antPtn)
+static bool loadPatterns(FILE *f, uint16_t antPtn, uint16_t xmVersion)
 {
 	uint8_t tmpLen;
-	patternHeaderTyp ph;
+	xmPatHdr_t ph;
 
 	bool pattLenWarn = false;
 	for (uint16_t i = 0; i < antPtn; i++)
 	{
-		if (fread(&ph.patternHeaderSize, 4, 1, f) != 1)
+		if (fread(&ph.headerSize, 4, 1, f) != 1)
 			goto pattCorrupt;
 
-		if (fread(&ph.typ, 1, 1, f) != 1)
+		if (fread(&ph.type, 1, 1, f) != 1)
 			goto pattCorrupt;
 
-		ph.pattLen = 0;
-		if (songTmp.ver == 0x0102)
+		ph.numRows = 0;
+		if (xmVersion == 0x0102)
 		{
 			if (fread(&tmpLen, 1, 1, f) != 1)
 				goto pattCorrupt;
 
-			if (fread(&ph.dataLen, 2, 1, f) != 1)
+			if (fread(&ph.dataSize, 2, 1, f) != 1)
 				goto pattCorrupt;
 
-			ph.pattLen = tmpLen + 1; // +1 in v1.02
+			ph.numRows = tmpLen + 1; // +1 in v1.02
 
-			if (ph.patternHeaderSize > 8)
-				fseek(f, ph.patternHeaderSize - 8, SEEK_CUR);
+			if (ph.headerSize > 8)
+				fseek(f, ph.headerSize - 8, SEEK_CUR);
 		}
 		else
 		{
-			if (fread(&ph.pattLen, 2, 1, f) != 1)
+			if (fread(&ph.numRows, 2, 1, f) != 1)
 				goto pattCorrupt;
 
-			if (fread(&ph.dataLen, 2, 1, f) != 1)
+			if (fread(&ph.dataSize, 2, 1, f) != 1)
 				goto pattCorrupt;
 
-			if (ph.patternHeaderSize > 9)
-				fseek(f, ph.patternHeaderSize - 9, SEEK_CUR);
+			if (ph.headerSize > 9)
+				fseek(f, ph.headerSize - 9, SEEK_CUR);
 		}
 
 		if (feof(f))
 			goto pattCorrupt;
 
-		pattLensTmp[i] = ph.pattLen;
-		if (pattLensTmp[i] > MAX_PATT_LEN)
+		patternNumRowsTmp[i] = ph.numRows;
+		if (patternNumRowsTmp[i] > MAX_PATT_LEN)
 		{
-			pattLensTmp[i] = MAX_PATT_LEN;
+			patternNumRowsTmp[i] = MAX_PATT_LEN;
 			pattLenWarn = true;
 		}
 
-		if (ph.dataLen > 0)
+		if (ph.dataSize > 0)
 		{
-			if (!allocateTmpPatt(i, pattLensTmp[i]))
+			if (!allocateTmpPatt(i, patternNumRowsTmp[i]))
 			{
 				loaderMsgBox("Not enough memory!");
 				return false;
 			}
 
-			if (fread(packedPattData, 1, ph.dataLen, f) != ph.dataLen)
+			if (fread(packedPattData, 1, ph.dataSize, f) != ph.dataSize)
 				goto pattCorrupt;
 
-			unpackPatt((uint8_t *)pattTmp[i], packedPattData, pattLensTmp[i], songTmp.antChn);
-			clearUnusedChannels(pattTmp[i], pattLensTmp[i], songTmp.antChn);
+			unpackPatt((uint8_t *)patternTmp[i], packedPattData, patternNumRowsTmp[i], songTmp.numChannels);
+			clearUnusedChannels(patternTmp[i], patternNumRowsTmp[i], songTmp.numChannels);
 		}
 
 		if (tmpPatternEmpty(i))
 		{
-			if (pattTmp[i] != NULL)
+			if (patternTmp[i] != NULL)
 			{
-				free(pattTmp[i]);
-				pattTmp[i] = NULL;
+				free(patternTmp[i]);
+				patternTmp[i] = NULL;
 			}
 
-			pattLensTmp[i] = 64;
+			patternNumRowsTmp[i] = 64;
 		}
 	}
 
@@ -512,14 +508,14 @@ static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 	if (dst == NULL)
 		return;
 
-	const int32_t srcEnd = len * (sizeof (tonTyp) * antChn);
+	const int32_t srcEnd = len * (sizeof (note_t) * antChn);
 	int32_t srcIdx = 0;
 
 	int32_t numChannels = antChn;
-	if (numChannels > MAX_VOICES)
-		numChannels = MAX_VOICES;
+	if (numChannels > MAX_CHANNELS)
+		numChannels = MAX_CHANNELS;
 
-	const int32_t pitch = sizeof (tonTyp) * (MAX_VOICES - antChn);
+	const int32_t pitch = sizeof (note_t) * (MAX_CHANNELS - antChn);
 	for (int32_t i = 0; i < len; i++)
 	{
 		for (j = 0; j < numChannels; j++)
@@ -545,7 +541,7 @@ static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 				*dst++ = *src++;
 			}
 
-			srcIdx += sizeof (tonTyp);
+			srcIdx += sizeof (note_t);
 		}
 
 		// if more than 32 channels, skip rest of the channels for this row
@@ -571,45 +567,32 @@ static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 				src++;
 			}
 
-			srcIdx += sizeof (tonTyp);
+			srcIdx += sizeof (note_t);
 		}
 
 		// if song has <32 channels, align pointer to next row (skip unused channels)
-		if (antChn < MAX_VOICES)
+		if (antChn < MAX_CHANNELS)
 			dst += pitch;
 	}
 }
 
-static void sanitizeInstrument(instrTyp *ins) // FT2 doesn't do this, but we do!
+static void loadADPCMSample(FILE *f, sample_t *s) // ModPlug Tracker
 {
-	ins->midiProgram = CLAMP(ins->midiProgram, 0, 127);
-	ins->midiBend = CLAMP(ins->midiBend, 0, 36);
+	int8_t deltaLUT[16];
+	fread(deltaLUT, 1, 16, f);
 
-	if (ins->midiChannel > 15) ins->midiChannel = 15;
-	if (ins->vibDepth > 0x0F) ins->vibDepth = 0x0F;
-	if (ins->vibRate > 0x3F) ins->vibRate = 0x3F;
-	if (ins->vibTyp > 3) ins->vibTyp = 0;
+	int8_t *dataPtr = s->dataPtr;
+	const int32_t dataLength = (s->length + 1) / 2;
 
-	for (int32_t i = 0; i < 96; i++)
+	int8_t currSample = 0;
+	for (int32_t i = 0; i < dataLength; i++)
 	{
-		if (ins->ta[i] >= MAX_SMP_PER_INST)
-			ins->ta[i] = MAX_SMP_PER_INST-1;
-	}
+		const uint8_t nibbles = (uint8_t)fgetc(f);
 
-	if (ins->envVPAnt > 12) ins->envVPAnt = 12;
-	if (ins->envVRepS > 11) ins->envVRepS = 11;
-	if (ins->envVRepE > 11) ins->envVRepE = 11;
-	if (ins->envVSust > 11) ins->envVSust = 11;
-	if (ins->envPPAnt > 12) ins->envPPAnt = 12;
-	if (ins->envPRepS > 11) ins->envPRepS = 11;
-	if (ins->envPRepE > 11) ins->envPRepE = 11;
-	if (ins->envPSust > 11) ins->envPSust = 11;
+		currSample += deltaLUT[nibbles & 0x0F];
+		*dataPtr++ = currSample;
 
-	for (int32_t  i= 0; i < 12; i++)
-	{
-		if ((uint16_t)ins->envVP[i][0] > 32767) ins->envVP[i][0] = 32767;
-		if ((uint16_t)ins->envPP[i][0] > 32767) ins->envPP[i][0] = 32767;
-		if ((uint16_t)ins->envVP[i][1] > 64) ins->envVP[i][1] = 64;
-		if ((uint16_t)ins->envPP[i][1] > 63) ins->envPP[i][1] = 63;
+		currSample += deltaLUT[nibbles >> 4];
+		*dataPtr++ = currSample;
 	}
 }

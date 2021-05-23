@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "ft2_palette.h" // pal16 typedef
 #include "ft2_pattern_ed.h" // pattCoord_t/pattCoord2_t/pattCoordsMouse_t/markCoord_t typedef
-#include "ft2_header.h" // MAX_VOICES
+#include "ft2_header.h" // MAX_CHANNELS
 #include "ft2_config.h" // CONFIG_FILE_SIZE
 
 #define KEY2VOL_ENTRIES (signed)(sizeof (key2VolTab) / sizeof (SDL_Keycode))
@@ -37,8 +37,8 @@ extern const pattCoord2_t pattCoord2Table[2][2][2];
 extern const markCoord_t markCoordTable[2][2][2];
 extern const uint8_t pattCursorXTab[2 * 4 * 8];
 extern const uint8_t pattCursorWTab[2 * 4 * 8];
-extern const char chDecTab1[MAX_VOICES+1];
-extern const char chDecTab2[MAX_VOICES+1];
+extern const char chDecTab1[MAX_CHANNELS+1];
+extern const char chDecTab2[MAX_CHANNELS+1];
 extern const SDL_Keycode key2VolTab[16];
 extern const SDL_Keycode key2EfxTab[36];
 extern const SDL_Keycode key2HexTab[16];
@@ -49,4 +49,4 @@ extern const uint16_t scopeLenTab[16][32];
 
 extern const uint8_t defConfigData[CONFIG_FILE_SIZE];
 
-extern const uint64_t musicTimeTab64[MAX_BPM+1];
+extern const uint64_t musicTimeTab64[(MAX_BPM-MIN_BPM)+1];

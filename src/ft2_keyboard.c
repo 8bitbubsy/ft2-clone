@@ -4,6 +4,8 @@
 #endif
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
 #include "ft2_header.h"
 #include "ft2_keyboard.h"
 #include "ft2_gui.h"
@@ -43,7 +45,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode);
 int8_t scancodeKeyToNote(SDL_Scancode scancode)
 {
 	if (scancode == SDL_SCANCODE_CAPSLOCK || scancode == SDL_SCANCODE_NONUSBACKSLASH)
-		return 97; // key off
+		return NOTE_OFF;
 
 	// translate key to note
 	int8_t note = 0;
@@ -161,7 +163,7 @@ void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepea
 static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 {
 	// if we're holding numpad plus but not pressing bank keys, don't check any other key
-	if (keyb.numPadPlusPressed)
+	if (keyb.numPadPlusPressed && !keyb.leftCtrlPressed)
 	{
 		if (scanKey != SDL_SCANCODE_NUMLOCKCLEAR && scanKey != SDL_SCANCODE_KP_DIVIDE &&
 			scanKey != SDL_SCANCODE_KP_MULTIPLY  && scanKey != SDL_SCANCODE_KP_MINUS)
@@ -234,19 +236,49 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 		case SDL_SCANCODE_KP_MINUS:
 		{
-			if (keyb.numPadPlusPressed)
+			if (keyb.leftCtrlPressed) // non-FT2 feature: Decrease master volume by 16
 			{
-				if (editor.instrBankSwapped)
-					pbSetInstrBank16();
+				if (config.masterVol >= 16)
+					config.masterVol -= 16;
 				else
-					pbSetInstrBank8();
+					config.masterVol = 0;
+
+				setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
+				if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+					showConfigScreen();
 			}
 			else
 			{
-				if (editor.instrBankSwapped)
-					pbSetInstrBank12();
+				if (keyb.numPadPlusPressed)
+				{
+					if (editor.instrBankSwapped)
+						pbSetInstrBank16();
+					else
+						pbSetInstrBank8();
+				}
 				else
-					pbSetInstrBank4();
+				{
+					if (editor.instrBankSwapped)
+						pbSetInstrBank12();
+					else
+						pbSetInstrBank4();
+				}
+			}
+		}
+		return;
+
+		case SDL_SCANCODE_KP_PLUS:
+		{
+			if (keyb.leftCtrlPressed) // non-FT2 feature: Increase master volume by 16
+			{
+				if (config.masterVol <= 256-16)
+					config.masterVol += 16;
+				else
+					config.masterVol = 256;
+
+				setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
+				if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+					showConfigScreen();
 			}
 		}
 		return;
@@ -267,6 +299,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 					if (okBox(1, "System request", "Clear instrument?") == 1)
 					{
 						freeInstr(editor.curInstr);
+						memset(song.instrName[editor.curInstr], 0, sizeof(song.instrName[editor.curInstr]));
 						updateNewInstrument();
 						setSongModifiedFlag();
 					}
@@ -290,18 +323,18 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (keyb.leftShiftPressed)
 			{
 				// decrease edit skip
-				if (editor.ID_Add == 0)
-					editor.ID_Add = 16;
+				if (editor.editRowSkip == 0)
+					editor.editRowSkip = 16;
 				else
-					editor.ID_Add--;
+					editor.editRowSkip--;
 			}
 			else
 			{
 				// increase edit skip
-				if (editor.ID_Add == 16)
-					editor.ID_Add = 0;
+				if (editor.editRowSkip == 16)
+					editor.editRowSkip = 0;
 				else
-					editor.ID_Add++;
+					editor.editRowSkip++;
 			}
 
 			if (!ui.nibblesShown     && !ui.configScreenShown &&
@@ -459,13 +492,13 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		{
 			lockAudio();
 
-			song.pattPos = editor.ptnJumpPos[0];
-			if (song.pattPos >= song.pattLen)
-				song.pattPos = song.pattLen - 1;
+			song.row = editor.ptnJumpPos[0];
+			if (song.row >= song.currNumRows)
+				song.row = song.currNumRows - 1;
 
 			if (!songPlaying)
 			{
-				editor.pattPos = (uint8_t)song.pattPos;
+				editor.row = (uint8_t)song.row;
 				ui.updatePatternEditor = true;
 			}
 
@@ -477,13 +510,13 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		{
 			lockAudio();
 
-			song.pattPos = editor.ptnJumpPos[1];
-			if (song.pattPos >= song.pattLen)
-				song.pattPos = song.pattLen - 1;
+			song.row = editor.ptnJumpPos[1];
+			if (song.row >= song.currNumRows)
+				song.row = song.currNumRows - 1;
 
 			if (!songPlaying)
 			{
-				editor.pattPos = (uint8_t)song.pattPos;
+				editor.row = (uint8_t)song.row;
 				ui.updatePatternEditor = true;
 			}
 
@@ -495,13 +528,13 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		{
 			lockAudio();
 
-			song.pattPos = editor.ptnJumpPos[2];
-			if (song.pattPos >= song.pattLen)
-				song.pattPos  = song.pattLen - 1;
+			song.row = editor.ptnJumpPos[2];
+			if (song.row >= song.currNumRows)
+				song.row  = song.currNumRows - 1;
 
 			if (!songPlaying)
 			{
-				editor.pattPos = (uint8_t)song.pattPos;
+				editor.row = (uint8_t)song.row;
 				ui.updatePatternEditor = true;
 			}
 
@@ -513,13 +546,13 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		{
 			lockAudio();
 
-			song.pattPos = editor.ptnJumpPos[3];
-			if (song.pattPos >= song.pattLen)
-				song.pattPos = song.pattLen - 1;
+			song.row = editor.ptnJumpPos[3];
+			if (song.row >= song.currNumRows)
+				song.row = song.currNumRows - 1;
 
 			if (!songPlaying)
 			{
-				editor.pattPos = (uint8_t)song.pattPos;
+				editor.row = (uint8_t)song.row;
 				ui.updatePatternEditor = true;
 			}
 
@@ -585,14 +618,14 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (audioWasntLocked)
 				lockAudio();
 
-			if (song.pattPos >= 16)
-				song.pattPos -= 16;
+			if (song.row >= 16)
+				song.row -= 16;
 			else
-				song.pattPos = 0;
+				song.row = 0;
 
 			if (!songPlaying)
 			{
-				editor.pattPos = (uint8_t)song.pattPos;
+				editor.row = (uint8_t)song.row;
 				ui.updatePatternEditor = true;
 			}
 
@@ -607,14 +640,14 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (audioWasntLocked)
 				lockAudio();
 
-			if (song.pattPos < (song.pattLen - 16))
-				song.pattPos += 16;
+			if (song.row < song.currNumRows-16)
+				song.row += 16;
 			else
-				song.pattPos = song.pattLen - 1;
+				song.row = song.currNumRows-1;
 
 			if (!songPlaying)
 			{
-				editor.pattPos = (uint8_t)song.pattPos;
+				editor.row = (uint8_t)song.row;
 				ui.updatePatternEditor = true;
 			}
 
@@ -629,10 +662,10 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (audioWasntLocked)
 				lockAudio();
 
-			song.pattPos = 0;
+			song.row = 0;
 			if (!songPlaying)
 			{
-				editor.pattPos = (uint8_t)song.pattPos;
+				editor.row = (uint8_t)song.row;
 				ui.updatePatternEditor = true;
 			}
 
@@ -647,10 +680,10 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (audioWasntLocked)
 				lockAudio();
 
-			song.pattPos = pattLens[song.pattNr] - 1;
+			song.row = patternNumRows[song.pattNum] - 1;
 			if (!songPlaying)
 			{
-				editor.pattPos = (uint8_t)song.pattPos;
+				editor.row = (uint8_t)song.row;
 				ui.updatePatternEditor = true;
 			}
 
@@ -693,7 +726,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			}
 			else if (keyb.leftShiftPressed)
 			{
-				editor.ptnJumpPos[0] = (uint8_t)editor.pattPos;
+				editor.ptnJumpPos[0] = (uint8_t)editor.row;
 				return true;
 			}
 		}
@@ -708,7 +741,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			}
 			else if (keyb.leftShiftPressed)
 			{
-				editor.ptnJumpPos[1] = (uint8_t)editor.pattPos;
+				editor.ptnJumpPos[1] = (uint8_t)editor.row;
 				return true;
 			}
 		}
@@ -723,7 +756,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			}
 			else if (keyb.leftShiftPressed)
 			{
-				editor.ptnJumpPos[2] = (uint8_t)editor.pattPos;
+				editor.ptnJumpPos[2] = (uint8_t)editor.row;
 				return true;
 			}
 		}
@@ -738,7 +771,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			}
 			else if (keyb.leftShiftPressed)
 			{
-				editor.ptnJumpPos[3] = (uint8_t)editor.pattPos;
+				editor.ptnJumpPos[3] = (uint8_t)editor.row;
 				return true;
 			}
 		}
@@ -793,7 +826,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 					pattMark.markX1 = cursor.ch;
 					pattMark.markX2 = pattMark.markX1;
 					pattMark.markY1 = 0;
-					pattMark.markY2 = pattLens[editor.editPattern];
+					pattMark.markY2 = patternNumRows[editor.editPattern];
 
 					ui.updatePatternEditor = true;
 				}

@@ -360,62 +360,42 @@ void freeAudioDeviceSelectorBuffers(void)
 
 void setToDefaultAudioOutputDevice(void)
 {
-	const char *devString = SDL_GetAudioDeviceName(0, false);
-	if (devString == NULL)
-	{
-		if (audio.currOutputDevice != NULL)
-		{
-			free(audio.currOutputDevice);
-			audio.currOutputDevice = NULL;
-		}
-
-		return;
-	}
-
-	const uint32_t stringLen = (uint32_t)strlen(devString);
-
 	if (audio.currOutputDevice != NULL)
 	{
 		free(audio.currOutputDevice);
 		audio.currOutputDevice = NULL;
 	}
 
-	audio.currOutputDevice = (char *)malloc(stringLen + 1);
-	if (audio.currOutputDevice == NULL)
-		return;
-
-	if (stringLen > 0)
-		strcpy(audio.currOutputDevice, devString);
+	/* If we have more than one device, we can't know which one
+	** is the default (and thus not get its device name).
+	** SDL2 ought to have a function for this!
+	*/
+	if (SDL_GetNumAudioDevices(false) == 1)
+	{
+		const char *devName = SDL_GetAudioDeviceName(0, false);
+		if (devName != NULL)
+			audio.currOutputDevice = strdup(devName);
+	}
 }
 
 void setToDefaultAudioInputDevice(void)
 {
-	const char *devString = SDL_GetAudioDeviceName(0, true);
-	if (devString == NULL)
-	{
-		if (audio.currInputDevice != NULL)
-		{
-			free(audio.currInputDevice);
-			audio.currInputDevice = NULL;
-		}
-
-		return;
-	}
-
-	const uint32_t stringLen = (uint32_t)strlen(devString);
-
 	if (audio.currInputDevice != NULL)
 	{
 		free(audio.currInputDevice);
 		audio.currInputDevice = NULL;
 	}
 
-	audio.currInputDevice = (char *)malloc(stringLen + 1);
-	if (audio.currInputDevice == NULL)
-		return;
-
-	if (stringLen > 0)
-		strcpy(audio.currInputDevice, devString);
+	/* If we have more than one device, we can't know which one
+	** is the default (and thus not get its device name).
+	** SDL2 ought to have a function for this!
+	*/
+	if (SDL_GetNumAudioDevices(true) == 1)
+	{
+		const char *devName = SDL_GetAudioDeviceName(0, true);
+		if (devName != NULL)
+			audio.currInputDevice = strdup(devName);
+	}
 }
 
 void rescanAudioDevices(void)

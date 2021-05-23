@@ -1,4 +1,8 @@
-// DIGI Booster (non-Pro) module loader
+/* DIGI Booster (non-Pro) module loader
+**
+** Note: Data sanitation is done in the last stage
+** of module loading, so you don't need to do that here.
+*/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -13,15 +17,15 @@
 #pragma pack(push)
 #pragma pack(1)
 #endif
-typedef struct digiHeaderTyp_t
+typedef struct digiHdr_t
 {
-	char sig[20];
+	char ID[20];
 	char verStr[4];
-	uint8_t ver;
+	uint8_t version;
 	uint8_t numChannels;
 	uint8_t packedPatternsFlag;
 	char reserved[19];
-	uint8_t numPats;
+	uint8_t numPatterns;
 	uint8_t numOrders;
 	uint8_t orders[128];
 	uint32_t smpLength[31];
@@ -35,58 +39,58 @@ typedef struct digiHeaderTyp_t
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-digiHeaderTyp;
+digiHdr_t;
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif
 
-static void readPatternNote(FILE *f, tonTyp *ton);
+static void readPatternNote(FILE *f, note_t *p);
 
 bool loadDIGI(FILE *f, uint32_t filesize)
 {
 	int16_t i, j, k;
-	tonTyp *ton;
-	sampleTyp *s;
-	digiHeaderTyp h_DIGI;
+	sample_t *s;
+	digiHdr_t hdr;
 
 	tmpLinearPeriodsFlag = false; // use Amiga periods
 
-	if (filesize < sizeof (h_DIGI))
+	if (filesize < sizeof (hdr))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	memset(&h_DIGI, 0, sizeof (digiHeaderTyp));
-	if (fread(&h_DIGI, 1, sizeof (h_DIGI), f) != sizeof (h_DIGI))
+	memset(&hdr, 0, sizeof (hdr));
+	if (fread(&hdr, 1, sizeof (hdr), f) != sizeof (hdr))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	if (h_DIGI.numChannels < 1 || h_DIGI.numChannels > 8)
+	if (hdr.numChannels < 1 || hdr.numChannels > 8)
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	h_DIGI.numOrders++;
-	h_DIGI.numPats++;
+	hdr.numOrders++;
+	hdr.numPatterns++;
 
-	if (h_DIGI.numOrders < 1 || h_DIGI.numOrders > 128)
+	if (hdr.numOrders < 1 || hdr.numOrders > 128)
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	songTmp.antChn = h_DIGI.numChannels;
-	songTmp.len = h_DIGI.numOrders;
-	songTmp.initialTempo = songTmp.tempo = 6;
-	songTmp.speed = 125;
-	memcpy(songTmp.songTab, h_DIGI.orders, 128);
+	memcpy(songTmp.orders, hdr.orders, 128);
+
+	songTmp.numChannels = hdr.numChannels;
+	songTmp.songLength = hdr.numOrders;
+	songTmp.BPM = 125;
+	songTmp.speed = 6;
 
 	// load pattern data
-	for (i = 0; i < h_DIGI.numPats; i++)
+	for (i = 0; i < hdr.numPatterns; i++)
 	{
 		if (!allocateTmpPatt(i, 64))
 		{
@@ -94,7 +98,7 @@ bool loadDIGI(FILE *f, uint32_t filesize)
 			return false;
 		}
 
-		if (h_DIGI.packedPatternsFlag)
+		if (hdr.packedPatternsFlag)
 		{
 			uint16_t pattSize;
 			uint8_t bitMasks[64];
@@ -105,61 +109,58 @@ bool loadDIGI(FILE *f, uint32_t filesize)
 			for (j = 0; j < 64; j++)
 			{
 				uint8_t bit = 128;
-				for (k = 0; k < songTmp.antChn; k++, bit >>= 1)
+				for (k = 0; k < songTmp.numChannels; k++, bit >>= 1)
 				{
-					ton = &pattTmp[i][(j * MAX_VOICES) + k];
+					note_t *p = &patternTmp[i][(j * MAX_CHANNELS) + k];
 					if (bitMasks[j] & bit)
-						readPatternNote(f, ton);
+						readPatternNote(f, p);
 				}
 			}
 		}
 		else
 		{
-			for (j = 0; j < songTmp.antChn; j++)
+			for (j = 0; j < songTmp.numChannels; j++)
 			{
 				for (k = 0; k < 64; k++)
-				{
-					ton = &pattTmp[i][(k * MAX_VOICES) + j];
-					readPatternNote(f, ton);
-				}
+					readPatternNote(f, &patternTmp[i][(k * MAX_CHANNELS) + j]);
 			}
 		}
 
 		if (tmpPatternEmpty(i))
 		{
-			if (pattTmp[i] != NULL)
+			if (patternTmp[i] != NULL)
 			{
-				free(pattTmp[i]);
-				pattTmp[i] = NULL;
+				free(patternTmp[i]);
+				patternTmp[i] = NULL;
 			}
 		}
 	}
 
 	// pattern command handling
-	for (i = 0; i < h_DIGI.numPats; i++)
+	for (i = 0; i < hdr.numPatterns; i++)
 	{
-		if (pattTmp[i] == NULL)
+		if (patternTmp[i] == NULL)
 			continue;
 
 		for (j = 0; j < 64; j++)
 		{
-			for (k = 0; k < songTmp.antChn; k++)
+			for (k = 0; k < songTmp.numChannels; k++)
 			{
-				ton = &pattTmp[i][(j * MAX_VOICES) + k];
+				note_t *p = &patternTmp[i][(j * MAX_CHANNELS) + k];
 
-				if (ton->effTyp == 0x8) // Robot effect (not supported)
+				if (p->efx == 0x8) // Robot effect (not supported)
 				{
-					ton->effTyp = 0;
-					ton->eff = 0;
+					p->efx = 0;
+					p->efxData = 0;
 				}
-				else if (ton->effTyp == 0xE)
+				else if (p->efx == 0xE)
 				{
-					switch (ton->eff >> 4)
+					switch (p->efxData >> 4)
 					{
-						case 0x3: ton->effTyp = ton->eff = 0; break; // backwards play (not supported)
-						case 0x4: ton->eff = 0xC0; break; // stop sample (convert to EC0)
-						case 0x8: ton->effTyp = ton->eff = 0; break; // high sample offset (not supported)
-						case 0x9: ton->effTyp = ton->eff = 0; break; // retrace (not supported)
+						case 0x3: p->efx = p->efxData = 0;    break; // backwards play (not supported)
+						case 0x4:          p->efxData = 0xC0; break; // stop sample (convert to EC0)
+						case 0x8: p->efx = p->efxData = 0;    break; // high sample offset (not supported)
+						case 0x9: p->efx = p->efxData = 0;    break; // retrace (not supported)
 						default: break;
 					}
 				}
@@ -170,8 +171,8 @@ bool loadDIGI(FILE *f, uint32_t filesize)
 	// load sample data
 	for (i = 0; i < 31; i++)
 	{
-		memcpy(songTmp.instrName[1+i], h_DIGI.smpName[i], 22);
-		if (h_DIGI.smpLength[i] == 0)
+		memcpy(songTmp.instrName[1+i], hdr.smpName[i], 22);
+		if (hdr.smpLength[i] == 0)
 			continue;
 
 		if (!allocateTmpInstr(1+i))
@@ -182,63 +183,60 @@ bool loadDIGI(FILE *f, uint32_t filesize)
 
 		setNoEnvelope(instrTmp[1+i]);
 
-		s = &instrTmp[1+i]->samp[0];
-		memcpy(s->name, h_DIGI.smpName[i], 22);
+		s = &instrTmp[1+i]->smp[0];
+		memcpy(s->name, hdr.smpName[i], 22);
 
-		s->len = SWAP32(h_DIGI.smpLength[i]);
-		s->fine = 8 * ((2 * ((h_DIGI.smpFinetune[i] & 0xF) ^ 8)) - 16);
-		s->vol = h_DIGI.smpVolume[i];
-		s->repS = SWAP32(h_DIGI.smpLoopStart[i]);
-		s->repL = SWAP32(h_DIGI.smpLoopLength[i]);
+		s->length = SWAP32(hdr.smpLength[i]);
+		s->finetune = FINETUNE_MOD2XM(hdr.smpFinetune[i]);
+		s->volume = hdr.smpVolume[i];
+		s->loopStart = SWAP32(hdr.smpLoopStart[i]);
+		s->loopLength = SWAP32(hdr.smpLoopLength[i]);
 
-		if (s->vol > 64)
-			s->vol = 64;
-
-		if (s->repL < 2)
-			s->repL = 2;
+		if (s->loopLength < 2)
+			s->loopLength = 2;
 
 		// fix overflown loop
-		if (s->repS+s->repL > s->len)
+		if (s->loopStart+s->loopLength > s->length)
 		{
-			if (s->repS >= s->len)
+			if (s->loopStart >= s->length)
 			{
-				s->repS = 0;
-				s->repL = 0;
+				s->loopStart = 0;
+				s->loopLength = 0;
 			}
 			else
 			{
-				s->repL = s->len - s->repS;
+				s->loopLength = s->length - s->loopStart;
 			}
 		}
 
-		if (s->repS+s->repL > 2)
+		if (s->loopStart+s->loopLength > 2)
 		{
-			s->typ = 1; // enable loop
+			s->flags |= LOOP_FWD; // enable loop
 		}
 		else
 		{
-			s->repS = 0;
-			s->repL = 0;
+			s->loopStart = 0;
+			s->loopLength = 0;
 		}
 
-		if (!allocateTmpSmpData(s, s->len))
+		if (!allocateSmpData(s, s->length, false))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 
-		int32_t bytesRead = (int32_t)fread(s->pek, 1, s->len, f);
-		if (bytesRead < s->len)
+		int32_t bytesRead = (int32_t)fread(s->dataPtr, 1, s->length, f);
+		if (bytesRead < s->length)
 		{
-			int32_t bytesToClear = s->len - bytesRead;
-			memset(&s->pek[bytesRead], 0, bytesToClear);
+			int32_t bytesToClear = s->length - bytesRead;
+			memset(&s->dataPtr[bytesRead], 0, bytesToClear);
 		}
 	}
 
 	return true;
 }
 
-static void readPatternNote(FILE *f, tonTyp *ton)
+static void readPatternNote(FILE *f, note_t *p)
 {
 	uint8_t bytes[4];
 	fread(bytes, 1, 4, f);
@@ -249,12 +247,12 @@ static void readPatternNote(FILE *f, tonTyp *ton)
 	{
 		if (period >= ptPeriods[i])
 		{
-			ton->ton = 1 + (3*12) + i;
+			p->note = 1 + (3*12) + i;
 			break;
 		}
 	}
 
-	ton->instr = (bytes[0] & 0xF0) | (bytes[2] >> 4);
-	ton->effTyp = bytes[2] & 0x0F;
-	ton->eff = bytes[3];
+	p->instr = (bytes[0] & 0xF0) | (bytes[2] >> 4);
+	p->efx = bytes[2] & 0x0F;
+	p->efxData = bytes[3];
 }

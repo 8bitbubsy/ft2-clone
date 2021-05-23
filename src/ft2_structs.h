@@ -22,16 +22,16 @@ typedef struct editor_t
 
 	bool autoPlayOnDrop, trimThreadWasDone, throwExit, editTextFlag;
 	bool copyMaskEnable, diskOpReadOnOpen, samplingAudioFlag, editSampleFlag;
-	bool instrBankSwapped, chnMode[MAX_VOICES], NI_Play;
+	bool instrBankSwapped, chnMode[MAX_CHANNELS], NI_Play;
 
 	uint8_t curPlayInstr, curPlaySmp, curSmpChannel, currPanEnvPoint, currVolEnvPoint;
 	uint8_t copyMask[5], pasteMask[5], transpMask[5], smpEd_NoteNr, instrBankOffset, sampleBankOffset;
 	uint8_t srcInstr, curInstr, srcSmp, curSmp, currHelpScreen, currConfigScreen, textCursorBlinkCounter;
-	uint8_t keyOnTab[MAX_VOICES], ID_Add, curOctave;
+	uint8_t keyOnTab[MAX_CHANNELS], editRowSkip, curOctave;
 	uint8_t sampleSaveMode, moduleSaveMode, ptnJumpPos[4];
-	int16_t globalVol, songPos, pattPos;
-	uint16_t tmpPattern, editPattern, speed, tempo, timer, ptnCursorY;
-	int32_t keyOffNr, keyOffTime[MAX_VOICES];
+	int16_t globalVolume, songPos, row;
+	uint16_t tmpPattern, editPattern, BPM, speed, tick, ptnCursorY;
+	int32_t keyOffNr, keyOffTime[MAX_CHANNELS];
 	uint32_t framesPassed, wavRendererTime;
 	double dPerfFreq, dPerfFreqMulMicro, dPerfFreqMulMs;
 } editor_t;

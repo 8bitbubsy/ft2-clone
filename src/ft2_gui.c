@@ -12,7 +12,7 @@
 #include "ft2_nibbles.h"
 #include "ft2_gui.h"
 #include "ft2_pattern_ed.h"
-#include "ft2_scopes.h"
+#include "scopes/ft2_scopes.h"
 #include "ft2_help.h"
 #include "ft2_sample_ed.h"
 #include "ft2_inst_ed.h"
@@ -203,7 +203,7 @@ bool setupGUI(void)
 		s->thumbH = 0;
 	}
 
-	setPal16(palTable[config.cfg_StdPalNr], false);
+	setPal16(palTable[config.cfg_StdPalNum], false);
 	seedAboutScreenRandom((uint32_t)time(NULL));
 	setupInitialTextBoxPointers();
 	setInitialTrimFlags();
@@ -1141,7 +1141,7 @@ void showTopLeftMainScreen(bool restoreScreens)
 		textOutShadow(4, 64, PAL_FORGRND, PAL_DSKTOP2, "Repstart");
 		drawPosEdNums(song.songPos);
 		drawSongLength();
-		drawSongRepS();
+		drawSongLoopStart();
 
 		// logo button
 		showPushButton(PB_LOGO);
@@ -1181,8 +1181,8 @@ void showTopLeftMainScreen(bool restoreScreens)
 		textOutShadow(116, 64, PAL_FORGRND, PAL_DSKTOP2, "Add.");
 		textOutShadow(210, 36, PAL_FORGRND, PAL_DSKTOP2, "Ptn.");
 		textOutShadow(210, 50, PAL_FORGRND, PAL_DSKTOP2, "Ln.");
-		drawSongBPM(song.speed);
-		drawSongSpeed(song.tempo);
+		drawSongBPM(song.BPM);
+		drawSongSpeed(song.speed);
 		drawEditPattern(editor.editPattern);
 		drawPatternLength(editor.editPattern);
 		drawIDAdd();
@@ -1190,7 +1190,7 @@ void showTopLeftMainScreen(bool restoreScreens)
 		// status bar
 		drawFramework(0, 77, 291, 15, FRAMEWORK_TYPE1);
 		textOutShadow(4, 80, PAL_FORGRND, PAL_DSKTOP2, "Global volume");
-		drawGlobalVol(song.globVol);
+		drawGlobalVol(song.globalVolume);
 
 		ui.updatePosSections = true;
 

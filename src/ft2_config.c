@@ -32,6 +32,7 @@
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#include "ft2_cpu.h"
 
 config_t config; // globalized
 
@@ -65,11 +66,17 @@ static int32_t calcChecksum(const uint8_t *p, uint16_t len) // for Nibbles highs
 	return checksum;
 }
 
-static void loadConfigFromBuffer(void)
+static void loadConfigFromBuffer(bool defaults)
 {
 	lockMixerCallback();
 
 	memcpy(&config, configBuffer, CONFIG_FILE_SIZE);
+
+	if (defaults)
+		config.audioFreq = DEFAULT_AUDIO_FREQ;
+
+	if (config.audioFreq > MAX_AUDIO_FREQ)
+		config.audioFreq = MAX_AUDIO_FREQ;
 
 	// if Nibbles highscore checksum is incorrect, load default highscores instead
 	const int32_t newChecksum = calcChecksum((uint8_t *)&config.NI_HighScore, sizeof (config.NI_HighScore));
@@ -125,9 +132,9 @@ static void loadConfigFromBuffer(void)
 	config.ptnMaxChannels = CLAMP(config.ptnMaxChannels, 0, 3);
 	config.ptnFont = CLAMP(config.ptnFont, 0, 3);
 	config.mouseType = CLAMP(config.mouseType, 0, 3);
-	config.cfg_StdPalNr = CLAMP(config.cfg_StdPalNr, 0, 11);
+	config.cfg_StdPalNum = CLAMP(config.cfg_StdPalNum, 0, 11);
 	config.cfg_SortPriority = CLAMP(config.cfg_SortPriority, 0, 1);
-	config.NI_AntPlayers = CLAMP(config.NI_AntPlayers, 0, 1);
+	config.NI_NumPlayers = CLAMP(config.NI_NumPlayers, 0, 1);
 	config.NI_Speed = CLAMP(config.NI_Speed, 0, 3);
 	config.recMIDIVolSens = CLAMP(config.recMIDIVolSens, 0, 200);
 	config.recMIDIChn  = CLAMP(config.recMIDIChn, 1, 16);
@@ -146,8 +153,12 @@ static void loadConfigFromBuffer(void)
 		config.recQuantRes = 16;
 	}
 
+#if CPU_64BIT
 	if (config.audioFreq != 44100 && config.audioFreq != 48000 && config.audioFreq != 96000 && config.audioFreq != 192000)
-		config.audioFreq = 48000;
+#else
+	if (config.audioFreq != 44100 && config.audioFreq != 48000)
+#endif
+		config.audioFreq = DEFAULT_AUDIO_FREQ;
 
 	if (config.audioInputFreq <= 1) // default value from FT2 (this was cdr_Sync) - set defaults
 		config.audioInputFreq = INPUT_FREQ_48KHZ;
@@ -174,12 +185,12 @@ static void loadConfigFromBuffer(void)
 
 	audioSetInterpolationType(config.interpolation);
 	audioSetVolRamp((config.specialFlags & NO_VOLRAMP_FLAG) ? false : true);
-	setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
+	setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
 	setMouseShape(config.mouseType);
 	changeLogoType(config.id_FastLogo);
 	changeBadgeType(config.id_TritonProd);
 	ui.maxVisibleChannels = (uint8_t)(2 + ((config.ptnMaxChannels + 1) * 2));
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	updatePattFontPtrs();
 
 	unlockMixerCallback();
@@ -195,7 +206,7 @@ static void configDrawAmp(void)
 static void setDefaultConfigSettings(void)
 {
 	memcpy(configBuffer, defConfigData, CONFIG_FILE_SIZE);
-	loadConfigFromBuffer();
+	loadConfigFromBuffer(true);
 }
 
 void resetConfig(void)
@@ -320,7 +331,7 @@ bool loadConfig(bool showErrorFlag)
 		return false;
 	}
 
-	loadConfigFromBuffer();
+	loadConfigFromBuffer(false);
 	return true;
 }
 
@@ -702,7 +713,7 @@ void loadConfigOrSetDefaults(void)
 		return;
 	}
 
-	loadConfigFromBuffer();
+	loadConfigFromBuffer(false);
 }
 
 // GUI-related code
@@ -812,8 +823,10 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	{
 		         case 44100:  tmpID = RB_CONFIG_AUDIO_44KHZ;  break;
 		default: case 48000:  tmpID = RB_CONFIG_AUDIO_48KHZ;  break;
+#if CPU_64BIT
 		         case 96000:  tmpID = RB_CONFIG_AUDIO_96KHZ;  break;
 		         case 192000: tmpID = RB_CONFIG_AUDIO_192KHZ; break;
+#endif
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -850,14 +863,14 @@ static void setConfigIOCheckButtonStates(void)
 
 static void setConfigLayoutCheckButtonStates(void)
 {
-	checkBoxes[CB_CONF_PATTSTRETCH].checked = config.ptnUnpressed;
+	checkBoxes[CB_CONF_PATTSTRETCH].checked = config.ptnStretch;
 	checkBoxes[CB_CONF_HEXCOUNT].checked = config.ptnHex;
 	checkBoxes[CB_CONF_ACCIDENTAL].checked = config.ptnAcc ? true : false;
 	checkBoxes[CB_CONF_SHOWZEROES].checked = config.ptnInstrZero;
 	checkBoxes[CB_CONF_FRAMEWORK].checked = config.ptnFrmWrk;
 	checkBoxes[CB_CONF_LINECOLORS].checked = config.ptnLineLight;
 	checkBoxes[CB_CONF_CHANNUMS].checked = config.ptnChnNumbers;
-	checkBoxes[CB_CONF_SHOW_VOLCOL].checked = config.ptnS3M;
+	checkBoxes[CB_CONF_SHOW_VOLCOL].checked = config.ptnShowVolColumn;
 	checkBoxes[CB_CONF_SOFTWARE_MOUSE].checked = (config.specialFlags2 & HARDWARE_MOUSE) ? false : true;
 
 	showCheckBox(CB_CONF_PATTSTRETCH);
@@ -939,12 +952,12 @@ static void setConfigLayoutRadioButtonStates(void)
 
 	// PALETTE ENTRIES
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_PAL_ENTRIES);
-	radioButtons[RB_CONFIG_PAL_PATTERNTEXT + cfg_ColorNr].state = RADIOBUTTON_CHECKED;
+	radioButtons[RB_CONFIG_PAL_PATTERNTEXT + cfg_ColorNum].state = RADIOBUTTON_CHECKED;
 	showRadioButtonGroup(RB_GROUP_CONFIG_PAL_ENTRIES);
 
 	// PALETTE PRESET
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_PAL_PRESET);
-	switch (config.cfg_StdPalNr)
+	switch (config.cfg_StdPalNum)
 	{
 		default:
 		case PAL_ARCTIC:          tmpID = RB_CONFIG_PAL_ARCTIC;          break;
@@ -1141,9 +1154,10 @@ void showConfigScreen(void)
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Mixing frequency:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
 			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz (default)");
+#if CPU_64BIT
 			textOutShadow(525,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
 			textOutShadow(525,  59, PAL_FORGRND, PAL_DSKTOP2, "192000Hz");
-
+#endif
 			textOutShadow(509,  76, PAL_FORGRND, PAL_DSKTOP2, "Frequency table:");
 			textOutShadow(525,  90, PAL_FORGRND, PAL_DSKTOP2, "Amiga freq. table");
 			textOutShadow(525, 104, PAL_FORGRND, PAL_DSKTOP2, "Linear freq. table");
@@ -1605,6 +1619,7 @@ void rbConfigAudio48kHz(void)
 	setNewAudioSettings();
 }
 
+#if CPU_64BIT
 void rbConfigAudio96kHz(void)
 {
 	config.audioFreq = 96000;
@@ -1616,6 +1631,7 @@ void rbConfigAudio192kHz(void)
 	config.audioFreq = 192000;
 	setNewAudioSettings();
 }
+#endif
 
 void rbConfigAudioInput44kHz(void)
 {
@@ -1638,14 +1654,14 @@ void rbConfigAudioInput96kHz(void)
 void rbConfigFreqTableAmiga(void)
 {
 	lockMixerCallback();
-	setFrqTab(false);
+	setFrequencyTable(false);
 	unlockMixerCallback();
 }
 
 void rbConfigFreqTableLinear(void)
 {
 	lockMixerCallback();
-	setFrqTab(true);
+	setFrequencyTable(true);
 	unlockMixerCallback();
 }
 
@@ -1664,7 +1680,7 @@ void cbConfigVolRamp(void)
 static void redrawPatternEditor(void) // called after changing some pattern editor settings in config
 {
 	// if the cursor was on the volume column while we turned volume column off, move it to effect type slot
-	if (!config.ptnS3M && (cursor.object == CURSOR_VOL1 || cursor.object == CURSOR_VOL2))
+	if (!config.ptnShowVolColumn && (cursor.object == CURSOR_VOL1 || cursor.object == CURSOR_VOL2))
 		cursor.object = CURSOR_EFX0;
 
 	updateChanNums();
@@ -1673,7 +1689,7 @@ static void redrawPatternEditor(void) // called after changing some pattern edit
 
 void cbConfigPattStretch(void)
 {
-	config.ptnUnpressed ^= 1;
+	config.ptnStretch ^= 1;
 	redrawPatternEditor();
 }
 
@@ -1716,7 +1732,7 @@ void cbConfigChanNums(void)
 
 void cbConfigShowVolCol(void)
 {
-	config.ptnS3M ^= 1;
+	config.ptnShowVolColumn ^= 1;
 	redrawPatternEditor();
 }
 
@@ -2156,7 +2172,7 @@ void sbAmp(uint32_t pos)
 	if (config.boostLevel != (int8_t)pos + 1)
 	{
 		config.boostLevel = (int8_t)pos + 1;
-		setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
+		setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
 		configDrawAmp();
 		updateWavRendererSettings();
 	}
@@ -2177,7 +2193,7 @@ void sbMasterVol(uint32_t pos)
 	if (config.masterVol != (int16_t)pos)
 	{
 		config.masterVol = (int16_t)pos;
-		setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
+		setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
 	}
 }
 

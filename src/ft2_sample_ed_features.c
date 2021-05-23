@@ -30,8 +30,9 @@ static volatile bool stopThread;
 
 static int8_t smpEd_RelReSmp, mix_Balance = 50;
 static bool echo_AddMemory, exitFlag, outOfMemory;
-static int16_t vol_StartVol = 100, vol_EndVol = 100, echo_nEcho = 1, echo_VolChange = 30;
+static int16_t echo_nEcho = 1, echo_VolChange = 30;
 static int32_t echo_Distance = 0x100;
+static double dVol_StartVol = 100.0, dVol_EndVol = 100.0;
 static SDL_Thread *thread;
 
 static void pbExit(void)
@@ -81,22 +82,22 @@ static void pbResampleTonesUp(void)
 
 static int32_t SDLCALL resampleThread(void *ptr)
 {
+	smpPtr_t sp;
+
 	if (instr[editor.curInstr] == NULL)
 		return true;
 
-	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
+	sample_t *s = &instr[editor.curInstr]->smp[editor.curSmp];
+	bool sample16Bit = !!(s->flags & SAMPLE_16BIT);
 
-	const uint32_t mask = (s->typ & 16) ? 0xFFFFFFFE : 0xFFFFFFFF;
-	const double dRatio = exp2(smpEd_RelReSmp / 12.0);
+	const double dRatio = exp2((int32_t)smpEd_RelReSmp / 12.0);
 
-	double dNewLen = s->len * dRatio;
+	double dNewLen = s->length * dRatio;
 	if (dNewLen > (double)MAX_SAMPLE_LEN)
 		dNewLen = (double)MAX_SAMPLE_LEN;
 
-	const uint32_t newLen = (int32_t)dNewLen & mask;
-
-	int8_t *p2 = (int8_t *)malloc(newLen + LOOP_FIX_LEN);
-	if (p2 == NULL)
+	const uint32_t newLen = (int32_t)floor(dNewLen);
+	if (!allocateSmpDataPtr(&sp, newLen, sample16Bit))
 	{
 		outOfMemory = true;
 		setMouseBusy(false);
@@ -104,15 +105,15 @@ static int32_t SDLCALL resampleThread(void *ptr)
 		return true;
 	}
 
-	int8_t *newPtr = p2 + SMP_DAT_OFFSET;
-	int8_t *p1 = s->pek;
+	int8_t *dst = sp.ptr;
+	int8_t *src = s->dataPtr;
 
 	// 32.32 fixed-point logic
 	const uint64_t delta64 = (const uint64_t)round((UINT32_MAX+1.0) / dRatio);
 	uint64_t posFrac64 = 0;
 
 	pauseAudio();
-	restoreSample(s);
+	unfixSample(s);
 
 	/* Nearest-neighbor resampling (no interpolation).
 	**
@@ -123,57 +124,41 @@ static int32_t SDLCALL resampleThread(void *ptr)
 
 	if (newLen > 0)
 	{
-		if (s->typ & 16)
+		if (sample16Bit)
 		{
-			const int16_t *src16 = (const int16_t *)p1;
-			int16_t *dst16 = (int16_t *)newPtr;
-
-			const uint32_t resampleLen = newLen >> 1;
-			for (uint32_t i = 0; i < resampleLen; i++)
-			{
-				dst16[i] = src16[posFrac64 >> 32];
-				posFrac64 += delta64;
-			}
-		}
-		else
-		{
-			const int8_t *src8 = p1;
-			int8_t *dst8 = newPtr;
+			const int16_t *src16 = (const int16_t *)src;
+			int16_t *dst16 = (int16_t *)dst;
 
 			for (uint32_t i = 0; i < newLen; i++)
 			{
-				dst8[i] = src8[posFrac64 >> 32];
+				const uint32_t position = posFrac64 >> 32;
+				dst16[i] = src16[position];
+				posFrac64 += delta64;
+			}
+		}
+		else // 8-bit
+		{
+			const int8_t *src8 = src;
+			int8_t *dst8 = dst;
+
+			for (uint32_t i = 0; i < newLen; i++)
+			{
+				const uint32_t position = posFrac64 >> 32;
+				dst8[i] = src8[position];
 				posFrac64 += delta64;
 			}
 		}
 	}
 
-	free(s->origPek);
+	freeSmpData(s);
+	setSmpDataPtr(s, &sp);
 
-	s->relTon = CLAMP(s->relTon + smpEd_RelReSmp, -48, 71);
-	s->len = newLen & mask;
-	s->origPek = p2;
-	s->pek = s->origPek + SMP_DAT_OFFSET;
-	s->repS = (int32_t)(s->repS * dRatio);
-	s->repL = (int32_t)(s->repL * dRatio);
-	s->repS &= mask;
-	s->repL &= mask;
+	s->relativeNote += smpEd_RelReSmp;
+	s->length = newLen;
+	s->loopStart = (int32_t)(s->loopStart * dRatio);
+	s->loopLength = (int32_t)(s->loopLength * dRatio);
 
-	if (s->repS >= s->len)
-		s->repS = s->len-1;
-
-	if (s->repS+s->repL > s->len)
-		s->repL = s->len - s->repS;
-
-	if (s->typ & 16)
-	{
-		s->len &= 0xFFFFFFFE;
-		s->repS &= 0xFFFFFFFE;
-		s->repL &= 0xFFFFFFFE;
-	}
-
-	if (s->repL <= 0)
-		s->typ &= ~3; // disable loop
+	sanitizeSample(s);
 
 	fixSample(s);
 	resumeAudio();
@@ -223,18 +208,17 @@ static void drawResampleBox(void)
 	vLine(x + w - 3, y + 2,     h - 4, PAL_BUTTON1);
 	hLine(x + 2,     y + h - 3, w - 4, PAL_BUTTON1);
 
-	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
+	sample_t *s = &instr[editor.curInstr]->smp[editor.curSmp];
 
-	uint32_t mask = (s->typ & 16) ? 0xFFFFFFFE : 0xFFFFFFFF;
 	double dLenMul = exp2(smpEd_RelReSmp * (1.0 / 12.0));
 
-	double dNewLen = s->len * dLenMul;
+	double dNewLen = s->length * dLenMul;
 	if (dNewLen > (double)MAX_SAMPLE_LEN)
 		dNewLen = (double)MAX_SAMPLE_LEN;
 
 	textOutShadow(215, 236, PAL_FORGRND, PAL_BUTTON2, "Rel. h.tones");
 	textOutShadow(215, 250, PAL_FORGRND, PAL_BUTTON2, "New sample size");
-	hexOut(361, 250, PAL_FORGRND, (uint32_t)dNewLen & mask, 8);
+	hexOut(361, 250, PAL_FORGRND, (int32_t)dNewLen, 8);
 
 	     if (smpEd_RelReSmp == 0) sign = ' ';
 	else if (smpEd_RelReSmp  < 0) sign = '-';
@@ -326,7 +310,7 @@ void pbSampleResample(void)
 
 	if (editor.curInstr == 0 ||
 		instr[editor.curInstr] == NULL ||
-		instr[editor.curInstr]->samp[editor.curSmp].pek == NULL)
+		instr[editor.curInstr]->smp[editor.curSmp].dataPtr == NULL)
 	{
 		return;
 	}
@@ -425,23 +409,24 @@ static void pbEchoFadeoutUp(void)
 
 static int32_t SDLCALL createEchoThread(void *ptr)
 {
+	smpPtr_t sp;
+
 	if (echo_nEcho < 1)
 	{
 		ui.sysReqShown = false;
 		return true;
 	}
 
-	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
+	sample_t *s = &instr[editor.curInstr]->smp[editor.curSmp];
 
-	int32_t readLen = s->len;
-	int8_t *readPtr = s->pek;
-	bool is16Bit = (s->typ & 16) ? true : false;
+	int32_t readLen = s->length;
+	int8_t *readPtr = s->dataPtr;
+	bool sample16Bit = !!(s->flags & SAMPLE_16BIT);
 	int32_t distance = echo_Distance * 16;
-
 	double dVolChange = echo_VolChange / 100.0;
 
 	// calculate real number of echoes
-	double dSmp = is16Bit ? 32768.0 : 128.0;
+	double dSmp = sample16Bit ? 32768.0 : 128.0;
 	int32_t k = 0;
 	while (k++ < echo_nEcho && dSmp >= 1.0)
 		dSmp *= dVolChange;
@@ -458,21 +443,15 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 	if (echo_AddMemory)
 	{
 		int64_t tmp64 = (int64_t)distance * (nEchoes - 1);
-		if (is16Bit)
-			tmp64 <<= 1;
 
 		tmp64 += writeLen;
 		if (tmp64 > MAX_SAMPLE_LEN)
 			tmp64 = MAX_SAMPLE_LEN;
 
-		writeLen = (int32_t)tmp64;
-
-		if (is16Bit)
-			writeLen &= 0xFFFFFFFE;
+		writeLen = (uint32_t)tmp64;
 	}
 
-	int8_t *writePtr = (int8_t *)malloc(writeLen + LOOP_FIX_LEN);
-	if (writePtr == NULL)
+	if (!allocateSmpDataPtr(&sp, writeLen, sample16Bit))
 	{
 		outOfMemory = true;
 		setMouseBusy(false);
@@ -481,17 +460,14 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 	}
 
 	pauseAudio();
-	restoreSample(s);
+	unfixSample(s);
 
 	int32_t writeIdx = 0;
 
-	if (is16Bit)
+	if (sample16Bit)
 	{
 		const int16_t *readPtr16 = (const int16_t *)readPtr;
-		int16_t *writePtr16 = (int16_t *)&writePtr[SMP_DAT_OFFSET];
-
-		writeLen >>= 1;
-		readLen >>= 1;
+		int16_t *writePtr16 = (int16_t *)sp.ptr;
 
 		while (writeIdx < writeLen)
 		{
@@ -513,20 +489,16 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 					break;
 			}
 
-			// rounding (faster than calling round())
-			     if (dSmpOut < 0.0) dSmpOut -= 0.5;
-			else if (dSmpOut > 0.0) dSmpOut += 0.5;
+			DROUND(dSmpOut);
 
-			int32_t smpOut = (int32_t)dSmpOut;
-			CLAMP16(smpOut);
-			writePtr16[writeIdx++] = (int16_t)smpOut;
+			int32_t smp32 = (int32_t)dSmpOut;
+			CLAMP16(smp32);
+			writePtr16[writeIdx++] = (int16_t)smp32;
 		}
-
-		writeLen <<= 1;
 	}
-	else
+	else // 8-bit
 	{
-		int8_t *writePtr8 = writePtr + SMP_DAT_OFFSET;
+		int8_t *writePtr8 = sp.ptr;
 		while (writeIdx < writeLen)
 		{
 			double dSmpOut = 0.0;
@@ -547,50 +519,25 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 					break;
 			}
 
-			// rounding (faster than calling round())
-			     if (dSmpOut < 0.0) dSmpOut -= 0.5;
-			else if (dSmpOut > 0.0) dSmpOut += 0.5;
+			DROUND(dSmpOut);
 
-			int32_t smpOut = (int32_t)dSmpOut;
-			     if (smpOut < -128) smpOut = -128;
-			else if (smpOut >  127) smpOut =  127;
-			writePtr8[writeIdx++] = (int8_t)smpOut;
+			int32_t smp32 = (int32_t)dSmpOut;
+			CLAMP8(smp32);
+			writePtr8[writeIdx++] = (int8_t)smp32;
 		}
 	}
 
-	free(s->origPek);
+	freeSmpData(s);
+	setSmpDataPtr(s, &sp);
 
-	if (stopThread)
+	if (stopThread) // we stopped before echo was done, realloc length
 	{
 		writeLen = writeIdx;
-
-		int8_t *newPtr = (int8_t *)realloc(writePtr, writeIdx + LOOP_FIX_LEN);
-		if (newPtr != NULL)
-		{
-			s->origPek = newPtr;
-			s->pek = s->origPek + SMP_DAT_OFFSET;
-		}
-		else
-		{
-			if (writePtr != NULL)
-				free(writePtr);
-
-			s->origPek = s->pek = NULL;
-			writeLen = 0;
-		}
-
+		reallocateSmpData(s, writeLen, sample16Bit);
 		editor.updateCurSmp = true;
 	}
-	else
-	{
-		s->origPek = writePtr;
-		s->pek = s->origPek + SMP_DAT_OFFSET;
-	}
 
-	if (is16Bit)
-		writeLen &= 0xFFFFFFFE;
-
-	s->len = writeLen;
+	s->length = writeLen;
 
 	fixSample(s);
 	resumeAudio();
@@ -651,7 +598,7 @@ static void drawEchoBox(void)
 	charOut(315 + (3 * 7), 226, PAL_FORGRND, '0' + (echo_nEcho % 10));
 
 	assert(echo_Distance <= 0x4000);
-	hexOut(308, 240, PAL_FORGRND, (uint32_t)echo_Distance << 4, 5);
+	hexOut(308, 240, PAL_FORGRND, echo_Distance << 4, 5);
 
 	assert(echo_VolChange <= 100);
 	textOutFixed(312, 254, PAL_FORGRND, PAL_BUTTONS, dec3StrTab[echo_VolChange]);
@@ -816,11 +763,9 @@ void handleEchoToolPanic(void)
 
 void pbSampleEcho(void)
 {
-	uint16_t i;
-
 	if (editor.curInstr == 0 ||
 		instr[editor.curInstr] == NULL ||
-		instr[editor.curInstr]->samp[editor.curSmp].pek == NULL)
+		instr[editor.curInstr]->smp[editor.curSmp].dataPtr == NULL)
 	{
 		return;
 	}
@@ -845,15 +790,15 @@ void pbSampleEcho(void)
 		setScrollBarPos(1, echo_Distance, false);
 		setScrollBarPos(2, echo_VolChange, false);
 		drawCheckBox(0);
-		for (i = 0; i < 8; i++) drawPushButton(i);
-		for (i = 0; i < 3; i++) drawScrollBar(i);
+		for (uint16_t i = 0; i < 8; i++) drawPushButton(i);
+		for (uint16_t i = 0; i < 3; i++) drawScrollBar(i);
 
 		flipFrame();
 	}
 
 	hideCheckBox(0);
-	for (i = 0; i < 8; i++) hidePushButton(i);
-	for (i = 0; i < 3; i++) hideScrollBar(i);
+	for (uint16_t i = 0; i < 8; i++) hidePushButton(i);
+	for (uint16_t i = 0; i < 3; i++) hideScrollBar(i);
 
 	windowClose(echo_AddMemory ? false : true);
 
@@ -863,16 +808,21 @@ void pbSampleEcho(void)
 
 static int32_t SDLCALL mixThread(void *ptr)
 {
-	int8_t *destPtr, *mixPtr;
-	uint8_t mixTyp, destTyp;
-	int32_t destLen, mixLen;
+	smpPtr_t sp;
 
-	int16_t destIns = editor.curInstr;
-	int16_t destSmp = editor.curSmp;
+	int8_t *dstPtr, *mixPtr;
+	uint8_t mixFlags, dstFlags;
+	int32_t dstLen, mixLen;
+
+	int16_t dstIns = editor.curInstr;
+	int16_t dstSmp = editor.curSmp;
 	int16_t mixIns = editor.srcInstr;
 	int16_t mixSmp = editor.srcSmp;
 
-	if (destIns == mixIns && destSmp == mixSmp)
+	sample_t *s = &instr[dstIns]->smp[dstSmp];
+	sample_t *sSrc = &instr[mixIns]->smp[mixSmp];
+
+	if (dstIns == mixIns && dstSmp == mixSmp)
 	{
 		setMouseBusy(false);
 		ui.sysReqShown = false;
@@ -883,65 +833,61 @@ static int32_t SDLCALL mixThread(void *ptr)
 	{
 		mixLen = 0;
 		mixPtr = NULL;
-		mixTyp = 0;
+		mixFlags = 0;
 	}
 	else
 	{
-		mixLen = instr[mixIns]->samp[mixSmp].len;
-		mixPtr = instr[mixIns]->samp[mixSmp].pek;
-		mixTyp = instr[mixIns]->samp[mixSmp].typ;
+		mixLen = sSrc->length;
+		mixPtr = sSrc->dataPtr;
+		mixFlags = sSrc->flags;
 
 		if (mixPtr == NULL)
 		{
 			mixLen = 0;
-			mixTyp = 0;
+			mixFlags = 0;
 		}
 	}
 
-	if (instr[destIns] == NULL)
+	if (instr[dstIns] == NULL)
 	{
-		destLen = 0;
-		destPtr = NULL;
-		destTyp = 0;
+		dstLen = 0;
+		dstPtr = NULL;
+		dstFlags = 0;
 	}
 	else
 	{
-		destLen = instr[destIns]->samp[destSmp].len;
-		destPtr = instr[destIns]->samp[destSmp].pek;
-		destTyp = instr[destIns]->samp[destSmp].typ;
+		dstLen = s->length;
+		dstPtr = s->dataPtr;
+		dstFlags = s->flags;
 
-		if (destPtr == NULL)
+		if (dstPtr == NULL)
 		{
-			destLen = 0;
-			destTyp = 0;
+			dstLen = 0;
+			dstFlags = 0;
 		}
 	}
 
-	bool src16Bits = (mixTyp >> 4) & 1;
-	bool dst16Bits = (destTyp >> 4) & 1;
+	bool src16Bits = !!(mixFlags & SAMPLE_16BIT);
+	bool dst16Bits = !!(dstFlags & SAMPLE_16BIT);
 
-	int32_t mix8Size = src16Bits ? (mixLen >> 1) : mixLen;
-	int32_t dest8Size = dst16Bits ? (destLen >> 1) : destLen;
-	int32_t max8Size = (dest8Size > mix8Size) ? dest8Size : mix8Size;
-	int32_t maxLen = dst16Bits ? (max8Size << 1) : max8Size;
-
-	if (maxLen <= 0)
+	int32_t maxLen = (dstLen > mixLen) ? dstLen : mixLen;
+	if (maxLen == 0)
 	{
 		setMouseBusy(false);
 		ui.sysReqShown = false;
 		return true;
 	}
 
-	int8_t *p = (int8_t *)calloc(maxLen + LOOP_FIX_LEN, sizeof (int8_t));
-	if (p == NULL)
+	if (!allocateSmpDataPtr(&sp, maxLen, dst16Bits))
 	{
 		outOfMemory = true;
 		setMouseBusy(false);
 		ui.sysReqShown = false;
 		return true;
 	}
+	memset(sp.ptr, 0, maxLen);
 
-	if (instr[destIns] == NULL && !allocateInstr(destIns))
+	if (instr[dstIns] == NULL && !allocateInstr(dstIns))
 	{
 		outOfMemory = true;
 		setMouseBusy(false);
@@ -950,65 +896,38 @@ static int32_t SDLCALL mixThread(void *ptr)
 	}
 
 	pauseAudio();
+	unfixSample(s);
 
-	restoreSample(&instr[destIns]->samp[destSmp]);
-
-	// restore source sample
+	// unfix source sample
 	if (instr[mixIns] != NULL)
-		restoreSample(&instr[mixIns]->samp[mixSmp]);
+		unfixSample(sSrc);
 
 	const double dAmp1 = mix_Balance / 100.0;
 	const double dAmp2 = 1.0 - dAmp1;
+	const double dSmp1ScaleMul = src16Bits ? (1.0 / 32768.0) : (1.0 / 128.0);
+	const double dSmp2ScaleMul = dst16Bits ? (1.0 / 32768.0) : (1.0 / 128.0);
+	const double dNormalizeMul = dst16Bits ? 32768.0 : 128.0;
 
-	int8_t *destPek = p + SMP_DAT_OFFSET;
-	for (int32_t i = 0; i < max8Size; i++)
+	for (int32_t i = 0; i < maxLen; i++)
 	{
-		int32_t index16 = i << 1;
+		double dSmp1 = (i >= mixLen) ? 0.0 : (getSampleValue(mixPtr, i, src16Bits) * dSmp1ScaleMul); // -1.0 .. 0.999inf
+		double dSmp2 = (i >= dstLen) ? 0.0 : (getSampleValue(dstPtr, i, dst16Bits) * dSmp2ScaleMul); // -1.0 .. 0.999inf
 
-		int32_t smp1 = (i >= mix8Size) ? 0 : getSampleValue(mixPtr, mixTyp, src16Bits ? index16 : i);
-		int32_t smp2 = (i >= dest8Size) ? 0 : getSampleValue(destPtr, destTyp, dst16Bits ? index16 : i);
-
-		if (!src16Bits) smp1 <<= 8;
-		if (!dst16Bits) smp2 <<= 8;
-
-		double dSmp = (smp1 * dAmp1) + (smp2 * dAmp2);
-		if (!dst16Bits)
-			dSmp *= 1.0 / 256.0;
-
-		// rounding (faster than calling round())
-		     if (dSmp < 0.0) dSmp -= 0.5;
-		else if (dSmp > 0.0) dSmp += 0.5;
-
-		int32_t smp32 = (int32_t)dSmp;
-		if (dst16Bits)
-		{
-			CLAMP16(smp32);
-		}
-		else
-		{
-			     if (smp32 < -128) smp32 = -128;
-			else if (smp32 >  127) smp32 =  127;
-		}
-
-		putSampleValue(destPek, destTyp, dst16Bits ? index16 : i, (int16_t)smp32);
+		const double dSmp = ((dSmp1 * dAmp1) + (dSmp2 * dAmp2)) * dNormalizeMul;
+		putSampleValue(sp.ptr, i, dSmp, dst16Bits);
 	}
 
-	if (instr[destIns]->samp[destSmp].origPek != NULL)
-		free(instr[destIns]->samp[destSmp].origPek);
+	freeSmpData(s);
+	setSmpDataPtr(s, &sp);
 
-	instr[destIns]->samp[destSmp].origPek = p;
-	instr[destIns]->samp[destSmp].pek = instr[destIns]->samp[destSmp].origPek + SMP_DAT_OFFSET;
-	instr[destIns]->samp[destSmp].len = maxLen;
-	instr[destIns]->samp[destSmp].typ = destTyp;
+	s->length = maxLen;
+	s->flags = dstFlags;
 
-	if (dst16Bits)
-		instr[destIns]->samp[destSmp].len &= 0xFFFFFFFE;
+	fixSample(s);
 
-	fixSample(&instr[destIns]->samp[destSmp]);
-
-	// fix source sample
+	// re-fix source sample again
 	if (instr[mixIns] != NULL)
-		fixSample(&instr[mixIns]->samp[mixSmp]);
+		fixSample(sSrc);
 
 	resumeAudio();
 
@@ -1187,64 +1106,60 @@ void pbSampleMix(void)
 
 static void sbSetStartVolPos(uint32_t pos)
 {
-	int16_t val = (int16_t)(pos - 500);
-	if (val != vol_StartVol)
+	int32_t val = (int32_t)(pos - 200);
+	if (val != (int32_t)dVol_StartVol)
 	{
 		     if (ABS(val)       < 10) val =    0;
 		else if (ABS(val - 100) < 10) val =  100;
-		else if (ABS(val - 200) < 10) val =  200;
-		else if (ABS(val - 300) < 10) val =  300;
-		else if (ABS(val - 400) < 10) val =  400;
 		else if (ABS(val + 100) < 10) val = -100;
-		else if (ABS(val + 200) < 10) val = -200;
-		else if (ABS(val + 300) < 10) val = -300;
-		else if (ABS(val + 400) < 10) val = -400;
 
-		vol_StartVol = val;
+		dVol_StartVol = (double)val;
 	}
 }
 
 static void sbSetEndVolPos(uint32_t pos)
 {
-	int16_t val = (int16_t)(pos - 500);
-	if (val != vol_EndVol)
+	int32_t val = (int32_t)(pos - 200);
+	if (val != (int32_t)dVol_EndVol)
 	{
 		     if (ABS(val)       < 10) val =    0;
 		else if (ABS(val - 100) < 10) val =  100;
-		else if (ABS(val - 200) < 10) val =  200;
-		else if (ABS(val - 300) < 10) val =  300;
-		else if (ABS(val - 400) < 10) val =  400;
 		else if (ABS(val + 100) < 10) val = -100;
-		else if (ABS(val + 200) < 10) val = -200;
-		else if (ABS(val + 300) < 10) val = -300;
-		else if (ABS(val + 400) < 10) val = -400;
 
-		vol_EndVol = val;
+		dVol_EndVol = val;
 	}
 }
 
 static void pbSampStartVolDown(void)
 {
-	if (vol_StartVol > -500)
-		vol_StartVol--;
+	if (dVol_StartVol > -200.0)
+		dVol_StartVol -= 1.0;
+
+	dVol_StartVol = floor(dVol_StartVol);
 }
 
 static void pbSampStartVolUp(void)
 {
-	if (vol_StartVol < 500)
-		vol_StartVol++;
+	if (dVol_StartVol < 200.0)
+		dVol_StartVol += 1.0;
+
+	dVol_StartVol = floor(dVol_StartVol);
 }
 
 static void pbSampEndVolDown(void)
 {
-	if (vol_EndVol > -500)
-		vol_EndVol--;
+	if (dVol_EndVol > -200.0)
+		dVol_EndVol -= 1.0;
+
+	dVol_EndVol = floor(dVol_EndVol);
 }
 
 static void pbSampEndVolUp(void)
 {
-	if (vol_EndVol < 500)
-		vol_EndVol++;
+	if (dVol_EndVol < 200.0)
+		dVol_EndVol += 1.0;
+
+	dVol_EndVol = floor(dVol_EndVol);
 }
 
 static int32_t SDLCALL applyVolumeThread(void *ptr)
@@ -1254,84 +1169,94 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 	if (instr[editor.curInstr] == NULL)
 		goto applyVolumeExit;
 
-	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
+	sample_t *s = &instr[editor.curInstr]->smp[editor.curSmp];
 
 	if (smpEd_Rx1 < smpEd_Rx2)
 	{
 		x1 = smpEd_Rx1;
 		x2 = smpEd_Rx2;
 
-		if (x2 > s->len)
-			x2 = s->len;
+		if (x2 > s->length)
+			x2 = s->length;
 
 		if (x1 < 0)
 			x1 = 0;
 
 		if (x2 <= x1)
 			goto applyVolumeExit;
-
-		if (s->typ & 16)
-		{
-			x1 &= 0xFFFFFFFE;
-			x2 &= 0xFFFFFFFE;
-		}
 	}
 	else
 	{
+		// no mark, operate on whole sample
 		x1 = 0;
-		x2 = s->len;
-	}
-
-	if (s->typ & 16)
-	{
-		x1 >>= 1;
-		x2 >>= 1;
+		x2 = s->length;
 	}
 
 	const int32_t len = x2 - x1;
 	if (len <= 0)
 		goto applyVolumeExit;
 
-	const double dVol1 = vol_StartVol / 100.0;
-	const double dVol2 = vol_EndVol / 100.0;
-	const double dPosMul = (dVol2 - dVol1) / len;
+	bool mustInterpolate = (dVol_StartVol != dVol_EndVol);
+	const double dVol = dVol_StartVol / 100.0;
+	const double dPosMul = ((dVol_EndVol / 100.0) - dVol) / len;
 
 	pauseAudio();
-	restoreSample(s);
-	if (s->typ & 16)
+	unfixSample(s);
+	if (s->flags & SAMPLE_16BIT)
 	{
-		int16_t *ptr16 = (int16_t *)s->pek + x1;
-		for (int32_t i = 0; i < len; i++)
+		int16_t *ptr16 = (int16_t *)s->dataPtr + x1;
+		if (mustInterpolate)
 		{
-			const double dAmp = dVol1 + (i * dPosMul); // linear interpolation
+			for (int32_t i = 0; i < len; i++)
+			{
+				double dSmp = (int32_t)ptr16[i] * (dVol + (i * dPosMul)); // linear interpolation
+				DROUND(dSmp);
 
-			double dSmp = ptr16[i] * dAmp;
+				int32_t smp32 = (int32_t)dSmp;
+				CLAMP16(smp32);
+				ptr16[i] = (int16_t)smp32;
+			}
 
-			// rounding (faster than calling round())
-			     if (dSmp < 0.0) dSmp -= 0.5;
-			else if (dSmp > 0.0) dSmp += 0.5;
+		}
+		else // no interpolation needed
+		{
+			for (int32_t i = 0; i < len; i++)
+			{
+				double dSmp = (int32_t)ptr16[i] * dVol;
+				DROUND(dSmp);
 
-			int32_t amp32 = (int32_t)dSmp;
-			CLAMP16(amp32);
-			ptr16[i] = (int16_t)amp32;
+				int32_t smp32 = (int32_t)dSmp;
+				CLAMP16(smp32);
+				ptr16[i] = (int16_t)smp32;
+			}
 		}
 	}
-	else
+	else // 8-bit sample
 	{
-		int8_t *ptr8 = s->pek + x1;
-		for (int32_t i = 0; i < len; i++)
+		int8_t *ptr8 = s->dataPtr + x1;
+		if (mustInterpolate)
 		{
-			const double dAmp = dVol1 + (i * dPosMul); // linear interpolation
+			for (int32_t i = 0; i < len; i++)
+			{
+				double dSmp = (int32_t)ptr8[i] * (dVol + (i * dPosMul)); // linear interpolation
+				DROUND(dSmp);
 
-			double dSmp = ptr8[i] * dAmp;
+				int32_t smp32 = (int32_t)dSmp;
+				CLAMP8(smp32);
+				ptr8[i] = (int8_t)smp32;
+			}
+		}
+		else // no interpolation needed
+		{
+			for (int32_t i = 0; i < len; i++)
+			{
+				double dSmp = (int32_t)ptr8[i] * dVol;
+				DROUND(dSmp);
 
-			// rounding (faster than calling round())
-			     if (dSmp < 0.0) dSmp -= 0.5;
-			else if (dSmp > 0.0) dSmp += 0.5;
-
-			int32_t amp32 = (int32_t)dSmp;
-			CLAMP8(amp32);
-			ptr8[i] = (int8_t)amp32;
+				int32_t smp32 = (int32_t)dSmp;
+				CLAMP8(smp32);
+				ptr8[i] = (int8_t)smp32;
+			}
 		}
 	}
 	fixSample(s);
@@ -1350,7 +1275,7 @@ applyVolumeExit:
 
 static void pbApplyVolume(void)
 {
-	if (vol_StartVol == 100 && vol_EndVol == 100)
+	if (dVol_StartVol == 100.0 && dVol_EndVol == 100.0)
 	{
 		ui.sysReqShown = false;
 		return; // no volume change to be done
@@ -1374,62 +1299,66 @@ static int32_t SDLCALL getMaxScaleThread(void *ptr)
 	if (instr[editor.curInstr] == NULL)
 		goto getScaleExit;
 
-	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
+	sample_t *s = &instr[editor.curInstr]->smp[editor.curSmp];
 
 	if (smpEd_Rx1 < smpEd_Rx2)
 	{
 		x1 = smpEd_Rx1;
 		x2 = smpEd_Rx2;
 
-		if (x2 > s->len)
-			x2 = s->len;
+		if (x2 > s->length)
+			x2 = s->length;
 
 		if (x1 < 0)
 			x1 = 0;
 
 		if (x2 <= x1)
 			goto getScaleExit;
-
-		if (s->typ & 16)
-		{
-			x1 &= 0xFFFFFFFE;
-			x2 &= 0xFFFFFFFE;
-		}
 	}
 	else
 	{
 		// no sample marking, operate on the whole sample
 		x1 = 0;
-		x2 = s->len;
+		x2 = s->length;
 	}
 
 	uint32_t len = x2 - x1;
-	if (s->typ & 16)
-		len >>= 1;
-
 	if (len <= 0)
 	{
-		vol_StartVol = 0;
-		vol_EndVol = 0;
+		dVol_StartVol = dVol_EndVol = 100.0;
 		goto getScaleExit;
 	}
 
-	restoreSample(s);
+	double dVolChange = 100.0;
+
+	/* If sample is looped and the loopEnd point is inside the marked range,
+	** we need to unfix the fixed interpolation sample before scanning,
+	** and fix it again after we're done.
+	*/
+	bool hasLoop = GET_LOOPTYPE(s->flags) != LOOP_OFF;
+	const int32_t loopEnd = s->loopStart + s->loopLength;
+	bool fixedSampleInRange = hasLoop && (x1 <= loopEnd) && (x2 >= loopEnd);
+
+	if (fixedSampleInRange)
+		unfixSample(s);
 
 	int32_t maxAmp = 0;
-	if (s->typ & 16)
+	if (s->flags & SAMPLE_16BIT)
 	{
-		const int16_t *ptr16 = (const int16_t *)&s->pek[x1];
+		const int16_t *ptr16 = (const int16_t *)s->dataPtr + x1;
 		for (uint32_t i = 0; i < len; i++)
 		{
 			const int32_t absSmp = ABS(ptr16[i]);
 			if (absSmp > maxAmp)
 				maxAmp = absSmp;
 		}
+
+		if (maxAmp > 0)
+			dVolChange = (32767.0 / maxAmp) * 100.0;
 	}
-	else
+	else // 8-bit
 	{
-		const int8_t *ptr8 = (const int8_t *)&s->pek[x1];
+		const int8_t *ptr8 = (const int8_t *)&s->dataPtr[x1];
 		for (uint32_t i = 0; i < len; i++)
 		{
 			const int32_t absSmp = ABS(ptr8[i]);
@@ -1437,25 +1366,17 @@ static int32_t SDLCALL getMaxScaleThread(void *ptr)
 				maxAmp = absSmp;
 		}
 
-		maxAmp <<= 8;
+		if (maxAmp > 0)
+			dVolChange = (127.0 / maxAmp) * 100.0;
 	}
 
-	fixSample(s);
+	if (fixedSampleInRange)
+		fixSample(s);
 
-	if (maxAmp <= 0)
-	{
-		vol_StartVol = 0;
-		vol_EndVol = 0;
-	}
-	else
-	{
-		int32_t vol = (100 * 32768) / maxAmp;
-		if (vol > 500)
-			vol = 500;
+	if (dVolChange < 100.0) // yes, this can happen...
+		dVolChange = 100.0;
 
-		vol_StartVol = (int16_t)vol;
-		vol_EndVol = (int16_t)vol;
-	}
+	dVol_StartVol = dVol_EndVol = dVolChange;
 
 getScaleExit:
 	setMouseBusy(false);
@@ -1484,7 +1405,7 @@ static void drawSampleVolumeBox(void)
 	const int16_t y = 230;
 	const int16_t w = 301;
 	const int16_t h = 52;
-	uint16_t val;
+	uint32_t val;
 
 	// main fill
 	fillRect(x + 1, y + 1, w - 2, h - 2, PAL_BUTTONS);
@@ -1506,52 +1427,75 @@ static void drawSampleVolumeBox(void)
 	charOutShadow(282, 236, PAL_FORGRND, PAL_BUTTON2, '%');
 	charOutShadow(282, 250, PAL_FORGRND, PAL_BUTTON2, '%');
 
-	     if (vol_StartVol == 0) sign = ' ';
-	else if (vol_StartVol  < 0) sign = '-';
-	else sign = '+';
+	const int32_t startVol = (int32_t)dVol_StartVol;
+	const int32_t endVol = (int32_t)dVol_EndVol;
 
-	val = ABS(vol_StartVol);
-	if (val > 99)
+	if (startVol > 200)
 	{
-		charOut(253, 236, PAL_FORGRND, sign);
-		charOut(260, 236, PAL_FORGRND, '0' + (char)(val / 100));
-		charOut(267, 236, PAL_FORGRND, '0' + ((val / 10) % 10));
-		charOut(274, 236, PAL_FORGRND, '0' + (val % 10));
-	}
-	else if (val > 9)
-	{
-		charOut(260, 236, PAL_FORGRND, sign);
-		charOut(267, 236, PAL_FORGRND, '0' + (char)(val / 10));
-		charOut(274, 236, PAL_FORGRND, '0' + (val % 10));
+		charOut(253, 236, PAL_FORGRND, '>');
+		charOut(260, 236, PAL_FORGRND, '2');
+		charOut(267, 236, PAL_FORGRND, '0');
+		charOut(274, 236, PAL_FORGRND, '0');
 	}
 	else
 	{
-		charOut(267, 236, PAL_FORGRND, sign);
-		charOut(274, 236, PAL_FORGRND, '0' + (char)val);
+		     if (startVol == 0) sign = ' ';
+		else if (startVol  < 0) sign = '-';
+		else sign = '+';
+
+		val = ABS(startVol);
+		if (val > 99)
+		{
+			charOut(253, 236, PAL_FORGRND, sign);
+			charOut(260, 236, PAL_FORGRND, '0' + (char)(val / 100));
+			charOut(267, 236, PAL_FORGRND, '0' + ((val / 10) % 10));
+			charOut(274, 236, PAL_FORGRND, '0' + (val % 10));
+		}
+		else if (val > 9)
+		{
+			charOut(260, 236, PAL_FORGRND, sign);
+			charOut(267, 236, PAL_FORGRND, '0' + (char)(val / 10));
+			charOut(274, 236, PAL_FORGRND, '0' + (val % 10));
+		}
+		else
+		{
+			charOut(267, 236, PAL_FORGRND, sign);
+			charOut(274, 236, PAL_FORGRND, '0' + (char)val);
+		}
 	}
 
-	     if (vol_EndVol == 0) sign = ' ';
-	else if (vol_EndVol  < 0) sign = '-';
-	else sign = '+';
-
-	val = ABS(vol_EndVol);
-	if (val > 99)
+	if (endVol > 200)
 	{
-		charOut(253, 250, PAL_FORGRND, sign);
-		charOut(260, 250, PAL_FORGRND, '0' + (char)(val / 100));
-		charOut(267, 250, PAL_FORGRND, '0' + ((val / 10) % 10));
-		charOut(274, 250, PAL_FORGRND, '0' + (val % 10));
-	}
-	else if (val > 9)
-	{
-		charOut(260, 250, PAL_FORGRND, sign);
-		charOut(267, 250, PAL_FORGRND, '0' + (char)(val / 10));
-		charOut(274, 250, PAL_FORGRND, '0' + (val % 10));
+		charOut(253, 250, PAL_FORGRND, '>');
+		charOut(260, 250, PAL_FORGRND, '2');
+		charOut(267, 250, PAL_FORGRND, '0');
+		charOut(274, 250, PAL_FORGRND, '0');
 	}
 	else
 	{
-		charOut(267, 250, PAL_FORGRND, sign);
-		charOut(274, 250, PAL_FORGRND, '0' + (char)val);
+		     if (endVol == 0) sign = ' ';
+		else if (endVol  < 0) sign = '-';
+		else sign = '+';
+
+		val = ABS(endVol);
+		if (val > 99)
+		{
+			charOut(253, 250, PAL_FORGRND, sign);
+			charOut(260, 250, PAL_FORGRND, '0' + (char)(val / 100));
+			charOut(267, 250, PAL_FORGRND, '0' + ((val / 10) % 10));
+			charOut(274, 250, PAL_FORGRND, '0' + (val % 10));
+		}
+		else if (val > 9)
+		{
+			charOut(260, 250, PAL_FORGRND, sign);
+			charOut(267, 250, PAL_FORGRND, '0' + (char)(val / 10));
+			charOut(274, 250, PAL_FORGRND, '0' + (val % 10));
+		}
+		else
+		{
+			charOut(267, 250, PAL_FORGRND, sign);
+			charOut(274, 250, PAL_FORGRND, '0' + (char)val);
+		}
 	}
 }
 
@@ -1653,8 +1597,8 @@ static void setupVolumeBoxWidgets(void)
 	s->callbackFunc = sbSetStartVolPos;
 	s->visible = true;
 	setScrollBarPageLength(0, 1);
-	setScrollBarEnd(0, 500 * 2);
-	setScrollBarPos(0, 500, false);
+	setScrollBarEnd(0, 200 * 2);
+	setScrollBarPos(0, 200, false);
 
 	// volume end scrollbar
 	s = &scrollBars[1];
@@ -1666,8 +1610,8 @@ static void setupVolumeBoxWidgets(void)
 	s->callbackFunc = sbSetEndVolPos;
 	s->visible = true;
 	setScrollBarPageLength(1, 1);
-	setScrollBarEnd(1, 500 * 2);
-	setScrollBarPos(1, 500, false);
+	setScrollBarEnd(1, 200 * 2);
+	setScrollBarPos(1, 200, false);
 }
 
 void pbSampleVolume(void)
@@ -1676,7 +1620,7 @@ void pbSampleVolume(void)
 
 	if (editor.curInstr == 0 ||
 		instr[editor.curInstr] == NULL ||
-		instr[editor.curInstr]->samp[editor.curSmp].pek == NULL)
+		instr[editor.curInstr]->smp[editor.curSmp].dataPtr == NULL)
 	{
 		return;
 	}
@@ -1701,8 +1645,12 @@ void pbSampleVolume(void)
 		if (ui.setMouseIdle) mouseAnimOff();
 
 		drawSampleVolumeBox();
-		setScrollBarPos(0, 500 + vol_StartVol, false);
-		setScrollBarPos(1, 500 + vol_EndVol, false);
+
+		const int32_t startVol = (int32_t)dVol_StartVol;
+		const int32_t endVol = (int32_t)dVol_EndVol;
+
+		setScrollBarPos(0, 200 + startVol, false);
+		setScrollBarPos(1, 200 + endVol, false);
 		for (i = 0; i < 7; i++) drawPushButton(i);
 		for (i = 0; i < 2; i++) drawScrollBar(i);
 

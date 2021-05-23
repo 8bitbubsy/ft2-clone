@@ -7,10 +7,9 @@
 #include "ft2_unicode.h"
 
 void drawC4Rate(void);
-
+void sanitizeInstrument(instr_t *ins);
 bool fileIsInstr(UNICHAR *filenameU);
-
-void saveInstr(UNICHAR *filenameU, int16_t nr);
+void saveInstr(UNICHAR *filenameU, int16_t insNum);
 void loadInstr(UNICHAR *filenameU);
 void copyInstr(void); // dstInstr = srcInstr
 void xchgInstr(void); // dstInstr <-> srcInstr
@@ -43,10 +42,10 @@ void panPreDef3(void);
 void panPreDef4(void);
 void panPreDef5(void);
 void panPreDef6(void);
-void relToneOctUp(void);
-void relToneOctDown(void);
-void relToneUp(void);
-void relToneDown(void);
+void relativeNoteOctUp(void);
+void relativeNoteOctDown(void);
+void relativeNoteUp(void);
+void relativeNoteDown(void);
 void volEnvAdd(void);
 void volEnvDel(void);
 void volEnvSusUp(void);

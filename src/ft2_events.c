@@ -33,10 +33,10 @@
 #include "ft2_sample_ed_features.h"
 #include "ft2_structs.h"
 
-#define CRASH_TEXT "Oh no!\nThe Fasttracker II clone has crashed...\n\nA backup .xm was hopefully " \
+#define CRASH_TEXT "Oh no! The Fasttracker II clone has crashed...\nA backup .xm was hopefully " \
                    "saved to the current module directory.\n\nPlease report this bug if you can.\n" \
                    "Try to mention what you did before the crash happened.\n" \
-                   "My email can be found at the bottom of 16-bits.org."
+                   "My email can be found at the bottom of www.16-bits.org."
 
 static bool backupMadeAfterCrash;
 
@@ -100,7 +100,7 @@ void handleThreadEvents(void)
 {
 	if (okBoxData.active)
 	{
-		okBoxData.returnData = okBox(okBoxData.typ, okBoxData.headline, okBoxData.text);
+		okBoxData.returnData = okBox(okBoxData.type, okBoxData.headline, okBoxData.text);
 		okBoxData.active = false;
 	}
 }

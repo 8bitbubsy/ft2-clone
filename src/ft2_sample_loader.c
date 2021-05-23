@@ -16,6 +16,10 @@
 #include "ft2_diskop.h"
 #include "ft2_structs.h"
 
+#ifdef HAS_LIBFLAC
+bool loadFLAC(FILE *f, uint32_t filesize);
+#endif
+
 bool loadAIFF(FILE *f, uint32_t filesize);
 bool loadIFF(FILE *f, uint32_t filesize);
 bool loadRAW(FILE *f, uint32_t filesize);
@@ -26,14 +30,15 @@ enum
 	FORMAT_UNKNOWN = 0,
 	FORMAT_IFF = 1,
 	FORMAT_WAV = 2,
-	FORMAT_AIFF = 3
+	FORMAT_AIFF = 3,
+	FORMAT_FLAC = 4
 };
 
 // file extensions accepted by Disk Op. in sample mode
 char *supportedSmpExtensions[] =
 {
 	"iff", "raw", "wav", "snd", "smp", "sam", "aif", "pat",
-	"aiff",
+	"aiff","flac",
 
 	// IMPORTANT: Remember comma after last entry above
 	"END_OF_LIST" // do NOT move, remove or edit this line!
@@ -43,13 +48,13 @@ char *supportedSmpExtensions[] =
 bool loadAsInstrFlag, smpFilenameSet;
 char *smpFilename;
 uint8_t sampleSlot;
-sampleTyp tmpSmp;
+sample_t tmpSmp;
 // --------------------------
 
 static volatile bool sampleIsLoading;
 static SDL_Thread *thread;
 
-static void freeTmpSample(sampleTyp *s);
+static void freeTmpSample(sample_t *s);
 
 // Crude sample detection routine. These aren't always accurate detections!
 static int8_t detectSample(FILE *f)
@@ -61,6 +66,9 @@ static int8_t detectSample(FILE *f)
 	memset(D, 0, sizeof (D));
 	fread(D, 1, sizeof (D), f);
 	fseek(f, oldPos, SEEK_SET);
+
+	if (!memcmp("fLaC", &D[0], 4)) // XXX: Kinda lousy detection...
+		return FORMAT_FLAC;
 
 	if (!memcmp("FORM", &D[0], 4) && (!memcmp("8SVX", &D[8], 4) || !memcmp("16SV", &D[8], 4)))
 		return FORMAT_IFF;
@@ -105,6 +113,16 @@ static int32_t SDLCALL loadSampleThread(void *ptr)
 	rewind(f);
 	switch (format)
 	{
+		case FORMAT_FLAC:
+		{
+#ifdef HAS_LIBFLAC
+			sampleLoaded = loadFLAC(f, filesize);
+#else
+			loaderMsgBox("Can't load sample: Program is not compiled with FLAC support!");
+#endif
+		}
+		break;
+
 		case FORMAT_IFF: sampleLoaded = loadIFF(f, filesize); break;
 		case FORMAT_WAV: sampleLoaded = loadWAV(f, filesize); break;
 		case FORMAT_AIFF: sampleLoaded = loadAIFF(f, filesize); break;
@@ -116,7 +134,7 @@ static int32_t SDLCALL loadSampleThread(void *ptr)
 		goto loadError;
 
 	// sample loaded successfully!
-	
+
 	if (!smpFilenameSet) // if we didn't set a custom sample name in the loader, set it to its filename
 	{
 		char *tmpFilename = unicharToCp437(editor.tmpFilenameU, true);
@@ -166,10 +184,13 @@ static int32_t SDLCALL loadSampleThread(void *ptr)
 		goto loadError;
 	}
 
-	sampleTyp *s = &instr[editor.curInstr]->samp[sampleSlot];
+	sample_t *s = &instr[editor.curInstr]->smp[sampleSlot];
 
 	freeSample(editor.curInstr, sampleSlot);
-	memcpy(s, &tmpSmp, sizeof (sampleTyp));
+	memcpy(s, &tmpSmp, sizeof (sample_t));
+
+	sanitizeSample(s);
+
 	fixSample(s); // prepares sample for branchless resampling interpolation
 	fixInstrAndSampleNames(editor.curInstr);
 
@@ -191,15 +212,9 @@ loadError:
 	(void)ptr;
 }
 
-static void freeTmpSample(sampleTyp *s)
+static void freeTmpSample(sample_t *s)
 {
-	if (s->origPek != NULL)
-	{
-		free(s->origPek);
-		s->origPek = NULL;
-	}
-
-	s->pek = NULL;
+	freeSmpData(s);
 }
 
 void removeSampleIsLoadingFlag(void)

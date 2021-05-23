@@ -1,3 +1,9 @@
+/* Code taken from the OpenMPT project, which has a BSD
+** license which is compatible with this project.
+**
+** The code has been slightly modified.
+*/
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -5,15 +11,9 @@
 #include "ft2_windowed_sinc.h"
 
 // globalized
-double *gKaiserSinc = NULL;
-double *gDownSample1 = NULL;
-double *gDownSample2 = NULL;
-
-/* Code taken from the OpenMPT project, which has a BSD
-** license which is compatible with this this project.
-**
-** The code has been slightly modified.
-*/
+float *fKaiserSinc = NULL;
+float *fDownSample1 = NULL;
+float *fDownSample2 = NULL;
 
 static double Izero(double y) // Compute Bessel function Izero(y) using a series approximation
 {
@@ -32,7 +32,7 @@ static double Izero(double y) // Compute Bessel function Izero(y) using a series
 	return s;
 }
 
-static void getSinc(double *dLUTPtr, const double beta, const double cutoff)
+static void getSinc(float *fLUTPtr, const double beta, const double cutoff)
 {
 	const double izeroBeta = Izero(beta);
 	const double kPi = 4.0 * atan(1.0) * cutoff; // M_PI can't be trusted
@@ -56,44 +56,43 @@ static void getSinc(double *dLUTPtr, const double beta, const double cutoff)
 			dSinc = sin(xPi) * Izero(beta * sqrt(1.0 - x * x * xMul)) / (izeroBeta * xPi); // Kaiser window
 		}
 
-		dLUTPtr[i] = dSinc * cutoff;
+		fLUTPtr[i] = (float)(dSinc * cutoff);
 	}
 }
 
 bool calcWindowedSincTables(void)
 {
-	gKaiserSinc  = (double *)malloc(SINC_LUT_LEN * sizeof (double));
-	gDownSample1 = (double *)malloc(SINC_LUT_LEN * sizeof (double));
-	gDownSample2 = (double *)malloc(SINC_LUT_LEN * sizeof (double));
+	fKaiserSinc  = (float *)malloc(SINC_LUT_LEN * sizeof (float));
+	fDownSample1 = (float *)malloc(SINC_LUT_LEN * sizeof (float));
+	fDownSample2 = (float *)malloc(SINC_LUT_LEN * sizeof (float));
 
-	if (gKaiserSinc == NULL || gDownSample1 == NULL || gDownSample2 == NULL)
+	if (fKaiserSinc == NULL || fDownSample1 == NULL || fDownSample2 == NULL)
 		return false;
 
-	// OpenMPT parameters
-	getSinc(gKaiserSinc, 9.6377, 0.97);
-	getSinc(gDownSample1, 8.5, 0.5);
-	getSinc(gDownSample2, 2.7625, 0.425);
+	getSinc(fKaiserSinc, 9.6377, 0.97);
+	getSinc(fDownSample1, 8.5, 0.5);
+	getSinc(fDownSample2, 2.7625, 0.425);
 
 	return true;
 }
 
 void freeWindowedSincTables(void)
 {
-	if (gKaiserSinc != NULL)
+	if (fKaiserSinc != NULL)
 	{
-		free(gKaiserSinc);
-		gKaiserSinc = NULL;
+		free(fKaiserSinc);
+		fKaiserSinc = NULL;
 	}
 
-	if (gDownSample1 != NULL)
+	if (fDownSample1 != NULL)
 	{
-		free(gDownSample1);
-		gDownSample1 = NULL;
+		free(fDownSample1);
+		fDownSample1 = NULL;
 	}
 
-	if (gDownSample2 != NULL)
+	if (fDownSample2 != NULL)
 	{
-		free(gDownSample2);
-		gDownSample2 = NULL;
+		free(fDownSample2);
+		fDownSample2 = NULL;
 	}
 }

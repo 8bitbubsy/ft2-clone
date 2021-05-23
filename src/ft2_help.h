@@ -16,7 +16,7 @@ void initFTHelp(void);
 void windUpFTHelp(void);
 void rbHelpFeatures(void);
 void rbHelpEffects(void);
-void rbHelpKeyboard(void);
+void rbHelpKeybindings(void);
 void rbHelpHowToUseFT2(void);
 void rbHelpFAQ(void);
 void rbHelpKnownBugs(void);

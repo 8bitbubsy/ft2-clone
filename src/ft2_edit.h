@@ -4,7 +4,7 @@
 #include <SDL2/SDL.h>
 
 bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode);
-void recordNote(uint8_t note, int8_t vol);
+void recordNote(uint8_t noteNum, int8_t vol);
 void testNoteKeysRelease(SDL_Scancode scancode);
 void writeToMacroSlot(uint8_t slot);
 void writeFromMacroSlot(uint8_t slot);

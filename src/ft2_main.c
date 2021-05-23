@@ -22,7 +22,7 @@
 #include "ft2_config.h"
 #include "ft2_sample_ed.h"
 #include "ft2_diskop.h"
-#include "ft2_scopes.h"
+#include "scopes/ft2_scopes.h"
 #include "ft2_about.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_module_loader.h"
@@ -180,20 +180,23 @@ int main(int argc, char *argv[])
 
 	setupPerfFreq();
 
-	if (!setupAudio(CONFIG_HIDE_ERRORS))
+	if (!setupAudio(CONFIG_HIDE_ERRORS)) // can we open the audio device?
 	{
-		// one LAST attempt (with default audio device and settings)
-		config.audioFreq = 48000;
-
-		// try 48kHz 16-bit audio at 1024 samples
-		config.specialFlags &= ~(BITDEPTH_32 + BUFFSIZE_512 + BUFFSIZE_2048);
-		config.specialFlags |=  (BITDEPTH_16 + BUFFSIZE_1024);
-
+		// nope, try with the default audio device
 		setToDefaultAudioOutputDevice();
-		if (!setupAudio(CONFIG_SHOW_ERRORS))
+
+		if (!setupAudio(CONFIG_HIDE_ERRORS)) // does it work this time?
 		{
-			cleanUpAndExit(); // still no go...
-			return 1;
+			// nope, try safe values (44.1kHz 16-bit @ 1024 samples)
+			config.audioFreq = 44100;
+			config.specialFlags &= ~(BITDEPTH_32 + BUFFSIZE_512 + BUFFSIZE_2048);
+			config.specialFlags |=  (BITDEPTH_16 + BUFFSIZE_1024);
+
+			if (!setupAudio(CONFIG_SHOW_ERRORS)) // this time it surely must work?!
+			{
+				cleanUpAndExit(); // well, nope!
+				return 1;
+			}
 		}
 	}
 
@@ -269,10 +272,10 @@ static void initializeVars(void)
 	memset(&song, 0, sizeof (song));
 
 	// used for scopes and sampling position line (sampler screen)
-	for (int32_t i = 0; i < MAX_VOICES; i++)
+	for (int32_t i = 0; i < MAX_CHANNELS; i++)
 	{
-		lastChInstr[i].instrNr = 255;
-		lastChInstr[i].sampleNr = 255;
+		lastChInstr[i].instrNum = 255;
+		lastChInstr[i].smpNum = 255;
 	}
 
 	// now set data that must be initialized to non-zero values...
@@ -289,7 +292,7 @@ static void initializeVars(void)
 
 	mouse.lastUsedObjectID = OBJECT_ID_NONE;
 
-	editor.ID_Add = 1;
+	editor.editRowSkip = 1;
 	editor.srcInstr = 1;
 	editor.curInstr = 1;
 	editor.curOctave = 4;

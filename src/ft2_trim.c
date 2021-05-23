@@ -10,7 +10,7 @@
 #include "ft2_header.h"
 #include "ft2_sample_ed.h"
 #include "ft2_gui.h"
-#include "ft2_scopes.h"
+#include "scopes/ft2_scopes.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_replayer.h"
 #include "ft2_audio.h"
@@ -24,8 +24,8 @@ static bool removePatt, removeInst, removeSamp, removeChans, removeSmpDataAfterL
 static uint8_t instrUsed[MAX_INST], instrOrder[MAX_INST], pattUsed[MAX_PATTERNS], pattOrder[MAX_PATTERNS];
 static int16_t oldPattLens[MAX_PATTERNS], tmpPattLens[MAX_PATTERNS];
 static int64_t xmSize64 = -1, xmAfterTrimSize64 = -1, spaceSaved64 = -1;
-static tonTyp *oldPatts[MAX_PATTERNS], *tmpPatt[MAX_PATTERNS];
-static instrTyp *tmpInstr[1 + MAX_INST], *tmpInst[MAX_INST]; // tmpInstr[x] = copy of instr[x] for "after trim" size calculation
+static note_t *oldPatts[MAX_PATTERNS], *tmpPatt[MAX_PATTERNS];
+static instr_t *tmpInstr[1 + MAX_INST], *tmpInst[MAX_INST]; // tmpInstr[x] = copy of instr[x] for "after trim" size calculation
 static SDL_Thread *trimThread;
 
 void pbTrimCalc(void);
@@ -52,7 +52,7 @@ static bool setTmpInstruments(void)
 	{
 		if (instr[i] != NULL)
 		{
-			tmpInstr[i] = (instrTyp *)malloc(sizeof (instrTyp));
+			tmpInstr[i] = (instr_t *)malloc(sizeof (instr_t));
 			if (tmpInstr[i] == NULL)
 			{
 				freeTmpInstruments();
@@ -70,29 +70,30 @@ static void remapInstrInSong(uint8_t src, uint8_t dst, int32_t ap)
 {
 	for (int32_t i = 0; i < ap; i++)
 	{
-		tonTyp *pattPtr = patt[i];
+		note_t *pattPtr = pattern[i];
 		if (pattPtr == NULL)
 			continue;
 
-		const int32_t readLen = pattLens[i] * MAX_VOICES;
-		for (int32_t j = 0; j < readLen; j++)
+		const int32_t readLen = patternNumRows[i] * MAX_CHANNELS;
+
+		note_t *p = pattPtr;
+		for (int32_t j = 0; j < readLen; j++, p++)
 		{
-			tonTyp *note = &pattPtr[j];
-			if (note->instr == src)
-				note->instr = dst;
+			if (p->instr == src)
+				p->instr = dst;
 		}
 	}
 }
 
-static int16_t getUsedTempSamples(uint16_t nr)
+static int16_t getUsedTempSamples(uint16_t insNum)
 {
-	if (tmpInstr[nr] == NULL)
+	if (tmpInstr[insNum] == NULL)
 		return 0;
 
-	instrTyp *ins = tmpInstr[nr];
+	instr_t *ins = tmpInstr[insNum];
 
 	int16_t i = 16 - 1;
-	while (i >= 0 && ins->samp[i].pek == NULL && ins->samp[i].name[0] == '\0')
+	while (i >= 0 && ins->smp[i].dataPtr == NULL && ins->smp[i].name[0] == '\0')
 		i--;
 
 	/* Yes, 'i' can be -1 here, and will be set to at least 0
@@ -100,8 +101,8 @@ static int16_t getUsedTempSamples(uint16_t nr)
 	**/
 	for (int16_t j = 0; j < 96; j++)
 	{
-		if (ins->ta[j] > i)
-			i = ins->ta[j];
+		if (ins->note2SampleLUT[j] > i)
+			i = ins->note2SampleLUT[j];
 	}
 
 	return i+1;
@@ -127,15 +128,21 @@ static int64_t getTempInsAndSmpSize(void)
 
 		const int16_t a = getUsedTempSamples(i);
 		if (a > 0)
-			currSize64 += INSTR_HEADER_SIZE + (a * sizeof (sampleHeaderTyp));
+			currSize64 += INSTR_HEADER_SIZE + (a * sizeof (xmSmpHdr_t));
 		else
 			currSize64 += 22+11;
 
-		instrTyp *ins = tmpInstr[j];
+		instr_t *ins = tmpInstr[j];
 		for (int16_t k = 0; k < a; k++)
 		{
-			if (ins->samp[k].pek != NULL)
-				currSize64 += ins->samp[k].len;
+			sample_t *s = &ins->smp[k];
+			if (s->dataPtr != NULL && s->length > 0)
+			{
+				if (s->flags & SAMPLE_16BIT)
+					currSize64 += s->length << 1;
+				else
+					currSize64 += s->length;
+			}
 		}
 	}
 
@@ -144,10 +151,9 @@ static int64_t getTempInsAndSmpSize(void)
 
 static void wipeInstrUnused(bool testWipeSize, int16_t *ai, int32_t ap, int32_t antChn)
 {
-	uint8_t newInst;
-	int16_t pattLen;
+	int16_t numRows;
 	int32_t i, j, k;
-	tonTyp *pattPtr;
+	note_t *p;
 
 	int32_t numInsts = *ai;
 
@@ -157,31 +163,31 @@ static void wipeInstrUnused(bool testWipeSize, int16_t *ai, int32_t ap, int32_t 
 	{
 		if (testWipeSize)
 		{
-			pattPtr = tmpPatt[i];
-			pattLen = tmpPattLens[i];
+			p = tmpPatt[i];
+			numRows = tmpPattLens[i];
 		}
 		else
 		{
-			pattPtr = patt[i];
-			pattLen = pattLens[i];
+			p = pattern[i];
+			numRows = patternNumRows[i];
 		}
 
-		if (pattPtr == NULL)
+		if (p == NULL)
 			continue;
 
-		for (j = 0; j < pattLen; j++)
+		for (j = 0; j < numRows; j++)
 		{
 			for (k = 0; k < antChn; k++)
 			{
-				newInst = pattPtr[(j * MAX_VOICES) + k].instr;
-				if (newInst > 0 && newInst <= MAX_INST)
-					instrUsed[newInst-1] = true;
+				uint8_t ins = p[(j * MAX_CHANNELS) + k].instr;
+				if (ins > 0 && ins <= MAX_INST)
+					instrUsed[ins-1] = true;
 			}
 		}
 	}
 
 	int16_t instToDel = 0;
-	newInst = 0;
+	uint8_t newInst = 0;
 	int16_t newNumInsts = 0;
 
 	memset(instrOrder, 0, numInsts);
@@ -271,15 +277,15 @@ static void wipePattsUnused(bool testWipeSize, int16_t *ap)
 {
 	uint8_t newPatt;
 	int16_t i, *pLens;
-	tonTyp **p;
+	note_t **p;
 
 	int16_t usedPatts = *ap;
 	memset(pattUsed, 0, usedPatts);
 
 	int16_t newUsedPatts = 0;
-	for (i = 0; i < song.len; i++)
+	for (i = 0; i < song.songLength; i++)
 	{
-		newPatt = song.songTab[i];
+		newPatt = song.orders[i];
 		if (newPatt < usedPatts && !pattUsed[newPatt])
 		{
 			pattUsed[newPatt] = true;
@@ -305,13 +311,13 @@ static void wipePattsUnused(bool testWipeSize, int16_t *ap)
 	}
 	else
 	{
-		p = patt;
-		pLens = pattLens;
+		p = pattern;
+		pLens = patternNumRows;
 	}
 
-	memcpy(oldPatts, p, usedPatts * sizeof (tonTyp *));
+	memcpy(oldPatts, p, usedPatts * sizeof (note_t *));
 	memcpy(oldPattLens, pLens, usedPatts * sizeof (int16_t));
-	memset(p, 0, usedPatts * sizeof (tonTyp *));
+	memset(p, 0, usedPatts * sizeof (note_t *));
 	memset(pLens, 0, usedPatts * sizeof (int16_t));
 
 	// relocate patterns
@@ -339,17 +345,17 @@ static void wipePattsUnused(bool testWipeSize, int16_t *ap)
 	{
 		for (i = 0; i < MAX_PATTERNS; i++)
 		{
-			if (patt[i] == NULL)
-				pattLens[i] = 64;
+			if (pattern[i] == NULL)
+				patternNumRows[i] = 64;
 		}
 
 		// reorder order list (and clear unused entries)
 		for (i = 0; i < 256; i++)
 		{
-			if (i < song.len)
-				song.songTab[i] = pattOrder[song.songTab[i]];
+			if (i < song.songLength)
+				song.orders[i] = pattOrder[song.orders[i]];
 			else
-				song.songTab[i] = 0;
+				song.orders[i] = 0;
 		}
 	}
 
@@ -360,8 +366,8 @@ static void wipeSamplesUnused(bool testWipeSize, int16_t ai)
 {
 	uint8_t smpUsed[16], smpOrder[16];
 	int16_t j, k, l;
-	instrTyp *ins;
-	sampleTyp tempSamples[16];
+	instr_t *ins;
+	sample_t tempSamples[16];
 
 	for (int16_t i = 1; i <= ai; i++)
 	{
@@ -389,13 +395,13 @@ static void wipeSamplesUnused(bool testWipeSize, int16_t ai)
 		memset(smpUsed, 0, l);
 		if (l > 0)
 		{
-			sampleTyp *s = ins->samp;
+			sample_t *s = ins->smp;
 			for (j = 0; j < l; j++, s++)
 			{
 				// check if sample is referenced in instrument
 				for (k = 0; k < 96; k++)
 				{
-					if (ins->ta[k] == j)
+					if (ins->note2SampleLUT[k] == j)
 					{
 						smpUsed[j] = true;
 						break; // sample is used
@@ -406,12 +412,10 @@ static void wipeSamplesUnused(bool testWipeSize, int16_t ai)
 				{
 					// sample is unused
 
-					if (s->origPek != NULL && !testWipeSize)
-						free(s->origPek);
+					if (s->dataPtr != NULL && !testWipeSize)
+						freeSmpData(s);
 
-					memset(s, 0, sizeof (sampleTyp));
-					s->origPek = NULL;
-					s->pek = NULL;
+					memset(s, 0, sizeof (sample_t));
 				}
 			}
 
@@ -426,23 +430,23 @@ static void wipeSamplesUnused(bool testWipeSize, int16_t ai)
 
 			// re-order samples
 
-			memcpy(tempSamples, ins->samp, l * sizeof (sampleTyp));
-			memset(ins->samp, 0, l * sizeof (sampleTyp));
+			memcpy(tempSamples, ins->smp, l * sizeof (sample_t));
+			memset(ins->smp, 0, l * sizeof (sample_t));
 
 			for (j = 0; j < l; j++)
 			{
 				if (smpUsed[j])
-					ins->samp[smpOrder[j]] = tempSamples[j];
+					ins->smp[smpOrder[j]] = tempSamples[j];
 			}
 
 			// re-order note->sample list
 			for (j = 0; j < 96; j++)
 			{
-				newSamp = ins->ta[j];
+				newSamp = ins->note2SampleLUT[j];
 				if (smpUsed[newSamp])
-					ins->ta[j] = smpOrder[newSamp];
+					ins->note2SampleLUT[j] = smpOrder[newSamp];
 				else
-					ins->ta[j] = 0;
+					ins->note2SampleLUT[j] = 0;
 			}
 		}
 	}
@@ -451,7 +455,7 @@ static void wipeSamplesUnused(bool testWipeSize, int16_t ai)
 static void wipeSmpDataAfterLoop(bool testWipeSize, int16_t ai)
 {
 	int16_t l;
-	instrTyp *ins;
+	instr_t *ins;
 
 	for (int16_t i = 1; i <= ai; i++)
 	{
@@ -476,33 +480,25 @@ static void wipeSmpDataAfterLoop(bool testWipeSize, int16_t ai)
 			l = getUsedTempSamples(i);
 		}
 
-		sampleTyp *s = ins->samp;
+		sample_t *s = ins->smp;
 		for (int16_t j = 0; j < l; j++, s++)
 		{
-			if (s->origPek != NULL && s->typ & 3 && s->len > 0 && s->len > s->repS+s->repL)
+			if (s->dataPtr != NULL && GET_LOOPTYPE(s->flags) != LOOP_OFF && s->length > 0 && s->length > s->loopStart+s->loopLength)
 			{
 				if (!testWipeSize)
-					restoreSample(s);
+					unfixSample(s);
 
-				s->len = s->repS + s->repL;
+				s->length = s->loopStart + s->loopLength;
 				if (!testWipeSize)
 				{
-					if (s->len <= 0)
+					if (s->length <= 0)
 					{
-						s->len = 0;
-
-						free(s->origPek);
-						s->origPek = NULL;
-						s->pek = NULL;
+						s->length = 0;
+						freeSmpData(s);
 					}
 					else
 					{
-						int8_t *newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
-						if (newPtr != NULL)
-						{
-							s->origPek = newPtr;
-							s->pek = s->origPek + SMP_DAT_OFFSET;
-						}
+						reallocateSmpData(s, s->length, !!(s->flags & SAMPLE_16BIT));
 					}
 				}
 
@@ -516,7 +512,7 @@ static void wipeSmpDataAfterLoop(bool testWipeSize, int16_t ai)
 static void convertSamplesTo8bit(bool testWipeSize, int16_t ai)
 {
 	int16_t k;
-	instrTyp *ins;
+	instr_t *ins;
 
 	for (int16_t i = 1; i <= ai; i++)
 	{
@@ -541,42 +537,28 @@ static void convertSamplesTo8bit(bool testWipeSize, int16_t ai)
 			k = getUsedTempSamples(i);
 		}
 
-		sampleTyp *s = ins->samp;
+		sample_t *s = ins->smp;
 		for (int16_t j = 0; j < k; j++, s++)
 		{
-			if (s->origPek != NULL && (s->typ & 16) && s->len > 0)
+			if (s->dataPtr != NULL && s->length > 0 && (s->flags & SAMPLE_16BIT))
 			{
 				if (testWipeSize)
 				{
-					s->typ &= ~16;
-					s->len >>= 1;
-					s->repL >>= 1;
-					s->repS >>= 1;
+					s->flags &= ~SAMPLE_16BIT;
 				}
 				else
 				{
-					restoreSample(s);
+					unfixSample(s);
 
-					assert(s->pek != NULL);
-					const int16_t *src16 = (const int16_t *)s->pek;
-					int8_t *dst8 = s->pek;
+					const int16_t *src16 = (const int16_t *)s->dataPtr;
+					int8_t *dst8 = s->dataPtr;
 
-					const int32_t newLen = s->len >> 1;
-					for (int32_t a = 0; a < newLen; a++)
+					for (int32_t a = 0; a < s->length; a++)
 						dst8[a] = src16[a] >> 8;
 
-					s->repL >>= 1;
-					s->repS >>= 1;
-					s->len >>= 1;
-					s->typ &= ~16;
+					s->flags &= ~SAMPLE_16BIT;
 
-					int8_t *newPtr = (int8_t *)realloc(s->origPek, s->len + LOOP_FIX_LEN);
-					if (newPtr != NULL)
-					{
-						s->origPek = newPtr;
-						s->pek = s->origPek + SMP_DAT_OFFSET;
-					}
-
+					reallocateSmpData(s, s->length, true);
 					fixSample(s);
 				}
 			}
@@ -584,12 +566,12 @@ static void convertSamplesTo8bit(bool testWipeSize, int16_t ai)
 	}
 }
 
-static uint16_t getPackedPattSize(tonTyp *pattern, int32_t numRows, int32_t antChn)
+static uint16_t getPackedPattSize(note_t *p, int32_t numRows, int32_t antChn)
 {
-	uint8_t bytes[sizeof (tonTyp)];
+	uint8_t bytes[sizeof (note_t)];
 
 	uint16_t totalPackLen = 0;
-	uint8_t *pattPtr = (uint8_t *)pattern;
+	uint8_t *pattPtr = (uint8_t *)p;
 	uint8_t *writePtr = pattPtr;
 
 	for (int32_t row = 0; row < numRows; row++)
@@ -624,30 +606,28 @@ static uint16_t getPackedPattSize(tonTyp *pattern, int32_t numRows, int32_t antC
 		}
 
 		// skip unused channels
-		pattPtr += sizeof (tonTyp) * (MAX_VOICES - antChn);
+		pattPtr += sizeof (note_t) * (MAX_CHANNELS - antChn);
 	}
 
 	return totalPackLen;
 }
 
-static bool tmpPatternEmpty(uint16_t nr, int32_t antChn)
+static bool tmpPatternEmpty(uint16_t pattNum, int32_t numChannels)
 {
-	if (tmpPatt[nr] == NULL)
+	if (tmpPatt[pattNum] == NULL)
 		return true;
 
-	uint8_t *scanPtr = (uint8_t *)tmpPatt[nr];
-	int32_t scanLen = antChn * sizeof (tonTyp);
-	int32_t pattLen = tmpPattLens[nr];
+	uint8_t *scanPtr = (uint8_t *)tmpPatt[pattNum];
+	int32_t scanLen = numChannels * sizeof (note_t);
+	int32_t numRows = tmpPattLens[pattNum];
 
-	for (int32_t i = 0; i < pattLen; i++)
+	for (int32_t i = 0; i < numRows; i++, scanPtr += TRACK_WIDTH)
 	{
 		for (int32_t j = 0; j < scanLen; j++)
 		{
 			if (scanPtr[j] != 0)
 				return false;
 		}
-
-		scanPtr += TRACK_WIDTH;
 	}
 
 	return true;
@@ -656,7 +636,7 @@ static bool tmpPatternEmpty(uint16_t nr, int32_t antChn)
 static int64_t calculateXMSize(void)
 {
 	// count header size in song
-	int64_t currSize64 = sizeof (songHeaderTyp);
+	int64_t currSize64 = sizeof (xmHdr_t);
 
 	// count number of patterns that would be saved
 	int16_t ap = MAX_PATTERNS;
@@ -677,9 +657,9 @@ static int64_t calculateXMSize(void)
 	// count packed pattern data size in song
 	for (int16_t i = 0; i < ap; i++)
 	{
-		currSize64 += sizeof (patternHeaderTyp);
+		currSize64 += sizeof (xmPatHdr_t);
 		if (!patternEmpty(i))
-			currSize64 += getPackedPattSize(patt[i], pattLens[i], song.antChn);
+			currSize64 += getPackedPattSize(pattern[i], patternNumRows[i], song.numChannels);
 	}
 
 	// count instrument and sample data size in song
@@ -693,15 +673,21 @@ static int64_t calculateXMSize(void)
 
 		const int16_t a = getUsedSamples(i);
 		if (a > 0)
-			currSize64 += INSTR_HEADER_SIZE + (a * sizeof (sampleHeaderTyp));
+			currSize64 += INSTR_HEADER_SIZE + (a * sizeof (xmSmpHdr_t));
 		else
 			currSize64 += 22+11;
 
-		instrTyp *ins = instr[j];
+		instr_t *ins = instr[j];
 		for (int16_t k = 0; k < a; k++)
 		{
-			if (ins->samp[k].pek != NULL)
-				currSize64 += ins->samp[k].len;
+			sample_t* s = &ins->smp[k];
+			if (s->dataPtr != NULL && s->length > 0)
+			{
+				if (s->flags & SAMPLE_16BIT)
+					currSize64 += s->length << 1;
+				else
+					currSize64 += s->length;
+			}
 		}
 	}
 
@@ -712,15 +698,15 @@ static int64_t calculateTrimSize(void)
 {
 	int16_t i, j, k;
 
-	int32_t antChn = song.antChn;
+	int32_t numChannels = song.numChannels;
 	int32_t pattDataLen = 0;
 	int32_t newPattDataLen = 0;
 	int64_t bytes64 = 0;
 	int64_t oldInstrSize64 = 0;
 
 	// copy over temp data
-	memcpy(tmpPatt, patt, sizeof (tmpPatt));
-	memcpy(tmpPattLens, pattLens, sizeof (tmpPattLens));
+	memcpy(tmpPatt, pattern, sizeof (tmpPatt));
+	memcpy(tmpPattLens, patternNumRows, sizeof (tmpPattLens));
 	memcpy(tmpInstrName, song.instrName, sizeof (tmpInstrName));
 
 	if (!setTmpInstruments())
@@ -737,7 +723,7 @@ static int64_t calculateTrimSize(void)
 	int16_t ap = MAX_PATTERNS;
 	do
 	{
-		if (tmpPatternEmpty(ap - 1, antChn))
+		if (tmpPatternEmpty(ap - 1, numChannels))
 			ap--;
 		else
 			break;
@@ -763,9 +749,9 @@ static int64_t calculateTrimSize(void)
 	{
 		for (i = 0; i < ap; i++)
 		{
-			pattDataLen += sizeof (patternHeaderTyp);
-			if (!tmpPatternEmpty(i, antChn))
-				pattDataLen += getPackedPattSize(tmpPatt[i], tmpPattLens[i], antChn);
+			pattDataLen += sizeof (xmPatHdr_t);
+			if (!tmpPatternEmpty(i, numChannels))
+				pattDataLen += getPackedPattSize(tmpPatt[i], tmpPattLens[i], numChannels);
 		}
 	}
 
@@ -776,17 +762,17 @@ static int64_t calculateTrimSize(void)
 		int16_t highestChan = -1;
 		for (i = 0; i < ap; i++)
 		{
-			tonTyp *pattPtr = tmpPatt[i];
+			note_t *pattPtr = tmpPatt[i];
 			if (pattPtr == NULL)
 				continue;
 
-			const int16_t pattLen = tmpPattLens[i];
-			for (j = 0; j < pattLen; j++)
+			const int16_t numRows = tmpPattLens[i];
+			for (j = 0; j < numRows; j++)
 			{
-				for (k = 0; k < antChn; k++)
+				for (k = 0; k < numChannels; k++)
 				{
-					tonTyp *note = &pattPtr[(j * MAX_VOICES) + k];
-					if (note->eff || note->effTyp || note->instr || note->ton || note->vol)
+					note_t *p = &pattPtr[(j * MAX_CHANNELS) + k];
+					if (p->note > 0 || p->instr > 0 || p->vol > 0 || p->efx > 0 || p->efxData > 0)
 					{
 						if (k > highestChan)
 							highestChan = k;
@@ -802,7 +788,7 @@ static int64_t calculateTrimSize(void)
 			if (highestChan & 1)
 				highestChan++;
 
-			antChn = (uint8_t)(CLAMP(highestChan, 2, antChn));
+			numChannels = (uint8_t)(CLAMP(highestChan, 2, numChannels));
 		}
 	}
 
@@ -814,9 +800,9 @@ static int64_t calculateTrimSize(void)
 	{
 		for (i = 0; i < ap; i++)
 		{
-			newPattDataLen += sizeof (patternHeaderTyp);
-			if (!tmpPatternEmpty(i, antChn))
-				newPattDataLen += getPackedPattSize(tmpPatt[i], tmpPattLens[i], antChn);
+			newPattDataLen += sizeof (xmPatHdr_t);
+			if (!tmpPatternEmpty(i, numChannels))
+				newPattDataLen += getPackedPattSize(tmpPatt[i], tmpPattLens[i], numChannels);
 		}
 
 		assert(pattDataLen >= newPattDataLen);
@@ -826,9 +812,9 @@ static int64_t calculateTrimSize(void)
 	}
 
 	// calculate "remove unused instruments" size
-	if (removeInst) wipeInstrUnused(true, &ai, ap, antChn);
+	if (removeInst) wipeInstrUnused(true, &ai, ap, numChannels);
 
-	// calculat new instruments and samples size
+	// calculate new instruments and samples size
 	if (removeInst || removeSamp || removeSmpDataAfterLoop || convSmpsTo8Bit)
 	{
 		int64_t newInstrSize64 = getTempInsAndSmpSize();
@@ -889,17 +875,17 @@ static int32_t SDLCALL trimThreadFunc(void *ptr)
 		int16_t highestChan = -1;
 		for (i = 0; i < ap; i++)
 		{
-			tonTyp *pattPtr = patt[i];
+			note_t *pattPtr = pattern[i];
 			if (pattPtr == NULL)
 				continue;
 
-			const int16_t pattLen = pattLens[i];
-			for (j = 0; j < pattLen; j++)
+			const int16_t numRows = patternNumRows[i];
+			for (j = 0; j < numRows; j++)
 			{
-				for (k = 0; k < song.antChn; k++)
+				for (k = 0; k < song.numChannels; k++)
 				{
-					tonTyp *note = &pattPtr[(j * MAX_VOICES) + k];
-					if (note->eff || note->effTyp || note->instr || note->ton || note->vol)
+					note_t *p = &pattPtr[(j * MAX_CHANNELS) + k];
+					if (p->note > 0 || p->vol > 0 || p->instr > 0 || p->efx > 0 || p->efxData > 0)
 					{
 						if (k > highestChan)
 							highestChan = k;
@@ -915,21 +901,21 @@ static int32_t SDLCALL trimThreadFunc(void *ptr)
 			if (highestChan & 1)
 				highestChan++;
 
-			song.antChn = (uint8_t)(CLAMP(highestChan, 2, song.antChn));
+			song.numChannels = (uint8_t)(CLAMP(highestChan, 2, song.numChannels));
 		}
 
 		// clear potentially unused channel data
-		if (song.antChn < MAX_VOICES)
+		if (song.numChannels < MAX_CHANNELS)
 		{
 			for (i = 0; i < MAX_PATTERNS; i++)
 			{
-				tonTyp *pattPtr = patt[i];
-				if (pattPtr == NULL)
+				note_t *p = pattern[i];
+				if (p == NULL)
 					continue;
 
-				const int16_t pattLen = pattLens[i];
-				for (j = 0; j < pattLen; j++)
-					memset(&pattPtr[(j * MAX_VOICES) + song.antChn], 0, sizeof (tonTyp) * (MAX_VOICES - song.antChn));
+				const int16_t numRows = patternNumRows[i];
+				for (j = 0; j < numRows; j++)
+					memset(&p[(j * MAX_CHANNELS) + song.numChannels], 0, sizeof (note_t) * (MAX_CHANNELS - song.numChannels));
 			}
 		}
 	}
@@ -940,20 +926,19 @@ static int32_t SDLCALL trimThreadFunc(void *ptr)
 
 	// remove unused instruments
 	if (removeInst)
-		wipeInstrUnused(false, &ai, ap, song.antChn);
+		wipeInstrUnused(false, &ai, ap, song.numChannels);
 
 	freeTmpInstruments();
 	editor.trimThreadWasDone = true;
 
 	return true;
-
 	(void)ptr;
 }
 
 void trimThreadDone(void)
 {
 	if (removePatt)
-		setPos(song.songPos, song.pattPos, false);
+		setPos(song.songPos, song.row, false);
 
 	if (removeInst)
 	{
@@ -971,8 +956,8 @@ void trimThreadDone(void)
 	{
 		if (ui.patternEditorShown)
 		{
-			if (ui.channelOffset > song.antChn-ui.numChannelsShown)
-				setScrollBarPos(SB_CHAN_SCROLL, song.antChn - ui.numChannelsShown, true);
+			if (ui.channelOffset > song.numChannels-ui.numChannelsShown)
+				setScrollBarPos(SB_CHAN_SCROLL, song.numChannels - ui.numChannelsShown, true);
 		}
 
 		if (cursor.ch >= ui.channelOffset+ui.numChannelsShown)

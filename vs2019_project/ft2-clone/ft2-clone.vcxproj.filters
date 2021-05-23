@@ -11,7 +11,6 @@
     <ClCompile Include="..\..\src\ft2_edit.c" />
     <ClCompile Include="..\..\src\ft2_events.c" />
     <ClCompile Include="..\..\src\ft2_gui.c" />
-    <ClCompile Include="..\..\src\ft2_help.c" />
     <ClCompile Include="..\..\src\ft2_inst_ed.c" />
     <ClCompile Include="..\..\src\ft2_keyboard.c" />
     <ClCompile Include="..\..\src\ft2_main.c" />
@@ -31,8 +30,6 @@
     <ClCompile Include="..\..\src\ft2_sample_loader.c" />
     <ClCompile Include="..\..\src\ft2_sample_saver.c" />
     <ClCompile Include="..\..\src\ft2_sampling.c" />
-    <ClCompile Include="..\..\src\ft2_scopedraw.c" />
-    <ClCompile Include="..\..\src\ft2_scopes.c" />
     <ClCompile Include="..\..\src\ft2_scrollbars.c" />
     <ClCompile Include="..\..\src\ft2_structs.c" />
     <ClCompile Include="..\..\src\ft2_sysreqs.c" />
@@ -49,31 +46,31 @@
       <Filter>rtmidi</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_fonts.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_gui.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_instr.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_logo.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_looppins.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_midi.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_mouse.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_nibbles.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_scopes.c">
-      <Filter>graphics</Filter>
+      <Filter>libflac\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\mixer\ft2_mix.c">
       <Filter>mixer</Filter>
@@ -116,6 +113,55 @@
     </ClCompile>
     <ClCompile Include="..\..\src\smploaders\ft2_load_wav.c">
       <Filter>smploaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\smploaders\ft2_load_flac.c">
+      <Filter>smploaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\bitmath.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\bitreader.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\crc.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\fixed.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\format.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\lpc.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\md5.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\memory.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\metadata_iterators.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\metadata_object.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\stream_decoder.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libflac\window.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ft2_help.c" />
+    <ClCompile Include="..\..\src\libflac\windows_unicode_filenames.c">
+      <Filter>libflac</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\scopes\ft2_scopedraw.c">
+      <Filter>scopes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\scopes\ft2_scopes.c">
+      <Filter>scopes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -221,9 +267,6 @@
     <ClInclude Include="..\..\src\ft2_scopedraw.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\ft2_scopes.h">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\ft2_scrollbars.h">
       <Filter>headers</Filter>
     </ClInclude>
@@ -266,13 +309,22 @@
     <ClInclude Include="..\..\src\mixer\ft2_windowed_sinc.h">
       <Filter>mixer</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\scopes\ft2_scope_macros.h">
+      <Filter>scopes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\scopes\ft2_scopedraw.h">
+      <Filter>scopes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\scopes\ft2_scopes.h">
+      <Filter>scopes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_cpu.h">
+      <Filter>headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="headers">
       <UniqueIdentifier>{559f399e-331e-4688-8a7d-328ca6739456}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="graphics">
-      <UniqueIdentifier>{c6fad604-509b-4072-b181-d47835f08428}</UniqueIdentifier>
     </Filter>
     <Filter Include="mixer">
       <UniqueIdentifier>{5c40c417-c4bb-4cf2-b71b-c557bf0a86cd}</UniqueIdentifier>
@@ -285,6 +337,15 @@
     </Filter>
     <Filter Include="rtmidi">
       <UniqueIdentifier>{95e882a1-e589-4684-a3cb-48e0a1d073aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libflac">
+      <UniqueIdentifier>{13e9047f-28ee-414f-9e23-4ad54deb281e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scopes">
+      <UniqueIdentifier>{8ac888cf-e1a5-4633-bcca-240a8eae2e23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libflac\graphics">
+      <UniqueIdentifier>{c6fad604-509b-4072-b181-d47835f08428}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

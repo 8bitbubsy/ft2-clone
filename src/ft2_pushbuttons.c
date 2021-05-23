@@ -219,7 +219,7 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 300, 382, 50, 16, 0, 0, "X-Fade",           NULL,    NULL,                  sampXFade },
 	{ 430, 348, 54, 16, 0, 0, "Exit",             NULL,    NULL,                  exitSampleEditor },
 	{ 594, 348, 35, 13, 0, 0, "Clr S.",           NULL,    NULL,                  clearSample },
-	{ 594, 360, 35, 13, 0, 0, "Min.",             NULL,    NULL,                  sampMin },
+	{ 594, 360, 35, 13, 0, 0, "Min.",             NULL,    NULL,                  sampMinimize },
 	{ 594, 373, 18, 13, 2, 4, ARROW_UP_STRING,    NULL,    sampRepeatUp,          NULL },
 	{ 611, 373, 18, 13, 2, 4, ARROW_DOWN_STRING,  NULL,    sampRepeatDown,        NULL },
 	{ 594, 385, 18, 13, 2, 4, ARROW_UP_STRING,    NULL,    sampReplenUp,          NULL },
@@ -228,10 +228,10 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	// ------ SAMPLE EDITOR EXTENSION PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,     text #2, funcOnDown, funcOnUp
 	{   3, 138, 52, 16, 0, 0, "Clr. c.bf", NULL,    NULL,       clearCopyBuffer },
-	{  56, 138, 49, 16, 0, 0, "Conv",      NULL,    NULL,       sampleConv },
+	{  56, 138, 49, 16, 0, 0, "Sign",      NULL,    NULL,       sampleChangeSign },
 	{ 106, 138, 49, 16, 0, 0, "Echo",      NULL,    NULL,       pbSampleEcho },
 	{   3, 155, 52, 16, 0, 0, "Backw.",    NULL,    NULL,       sampleBackwards },
-	{  56, 155, 49, 16, 0, 0, "Conv W",    NULL,    NULL,       sampleConvW },
+	{  56, 155, 49, 16, 0, 0, "B. swap",    NULL,    NULL,      sampleByteSwap },
 	{ 106, 155, 49, 16, 0, 0, "Fix DC",    NULL,    NULL,       fixDC },
 	{ 161, 121, 60, 16, 0, 0, "Copy ins.", NULL,    NULL,       copyInstr },
 	{ 222, 121, 66, 16, 0, 0, "Copy smp.", NULL,    NULL,       copySmp },
@@ -285,10 +285,10 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 606, 248, 23, 13, 1, 4, ARROW_RIGHT_STRING, NULL,    vibDepthUp,     NULL },
 	{ 521, 262, 23, 13, 1, 4, ARROW_LEFT_STRING,  NULL,    vibSweepDown,   NULL },
 	{ 606, 262, 23, 13, 1, 4, ARROW_RIGHT_STRING, NULL,    vibSweepUp,     NULL },
-	{ 441, 312, 94, 16, 1, 4, "Octave up",        NULL,    relToneOctUp,   NULL },
-	{ 536, 312, 93, 16, 1, 4, "Halftone up",      NULL,    relToneUp,      NULL },
-	{ 441, 329, 94, 16, 1, 4, "Octave down",      NULL,    relToneOctDown, NULL },
-	{ 536, 329, 93, 16, 1, 4, "Halftone down",    NULL,    relToneDown,    NULL },
+	{ 441, 312, 94, 16, 1, 4, "Octave up",        NULL,    relativeNoteOctUp,   NULL },
+	{ 536, 312, 93, 16, 1, 4, "Halftone up",      NULL,    relativeNoteUp,      NULL },
+	{ 441, 329, 94, 16, 1, 4, "Octave down",      NULL,    relativeNoteOctDown, NULL },
+	{ 536, 329, 93, 16, 1, 4, "Halftone down",    NULL,    relativeNoteDown,    NULL },
 
 	// ------ INSTRUMENT EDITOR EXTENSION PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,            text #2, funcOnDown,   funcOnUp

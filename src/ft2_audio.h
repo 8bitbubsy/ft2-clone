@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include "ft2_replayer.h"
+#include "ft2_cpu.h"
 
 enum
 {
@@ -11,12 +12,15 @@ enum
 	FREQ_TABLE_AMIGA = 1,
 };
 
-#define MIN_AUDIO_FREQ 44100
-#define MAX_AUDIO_FREQ 192000
+#define DEFAULT_AUDIO_FREQ 48000
 
-#define MIXER_FRAC_BITS 32
-#define MIXER_FRAC_SCALE (1ULL << MIXER_FRAC_BITS)
-#define MIXER_FRAC_MASK (MIXER_FRAC_SCALE-1)
+#define MIN_AUDIO_FREQ 44100
+
+#if CPU_64BIT
+#define MAX_AUDIO_FREQ 192000
+#else
+#define MAX_AUDIO_FREQ 48000
+#endif
 
 #define MAX_AUDIO_DEVICES 99
 
@@ -31,11 +35,13 @@ typedef struct audio_t
 	bool linearPeriodsFlag, rescanAudioDevicesSupported;
 	volatile uint8_t interpolationType;
 	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
-	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, musicTimeSpeedVal;
-	uint64_t tickTime64, tickTime64Frac, tickTimeTab[MAX_BPM+1];
-	double dRampQuickVolMul, dRampTickMul, dRampTickMulTab[MAX_BPM+1];
-	double *dMixBufferL, *dMixBufferR, *dMixBufferLUnaligned, *dMixBufferRUnaligned, dHz2MixDeltaMul;
-	double dAudioLatencyMs, dSamplesPerTick, dTickSampleCounter, dSamplesPerTickTab[MAX_BPM+1];
+	uint32_t tickTimeTab[(MAX_BPM-MIN_BPM)+1], tickTimeFracTab[(MAX_BPM-MIN_BPM)+1];
+	int64_t tickSampleCounter64, samplesPerTick64, samplesPerTick64Tab[(MAX_BPM-MIN_BPM)+1];
+	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, samplesPerTickFrac, musicTimeSpeedVal;
+	uint64_t tickTime64, tickTime64Frac;
+	float fRampQuickVolMul, fRampTickMul, fRampTickMulTab[(MAX_BPM-MIN_BPM)+1];
+	float *fMixBufferL, *fMixBufferR, *fMixBufferLUnaligned, *fMixBufferRUnaligned;
+	double dHz2MixDeltaMul, dAudioLatencyMs;
 
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
@@ -45,24 +51,25 @@ typedef struct
 {
 	const int8_t *base8, *revBase8;
 	const int16_t *base16, *revBase16;
-	bool active, backwards, isFadeOutVoice, hasLooped;
-	uint8_t mixFuncOffset, pan, loopType;
-	int32_t pos, end, loopStart, loopLength, oldPeriod;
-	uint32_t volRampSamples;
-	uint64_t posFrac, delta, oldDelta;
+	bool active, samplingBackwards, isFadeOutVoice, hasLooped;
+	uint8_t mixFuncOffset, panning, loopType, scopeVolume;
+	int32_t position, sampleEnd, loopStart, loopLength, oldPeriod;
+	uint32_t volumeRampLength;
 
+	uintCPUWord_t positionFrac, delta, oldDelta, scopeDelta;
+#
 	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;
 	const int16_t *leftEdgeTaps16;
 
-	const double *dSincLUT;
-	double dOldHz, dHz, dVol, dDestVolL, dDestVolR, dVolL, dVolR, dVolDeltaL, dVolDeltaR;
+	const float *fSincLUT;
+	float fVolume, fVolumeL, fVolumeR, fVolumeLDelta, fVolumeRDelta, fVolumeLTarget, fVolumeRTarget;
 } voice_t;
 
 typedef struct pattSyncData_t
 {
-	uint8_t pattern, globalVol, songPos, timer, tempo, patternPos;
-	uint16_t speed;
+	uint8_t pattNum, globalVolume, songPos, tick, speed, row;
+	uint16_t BPM;
 	uint64_t timestamp;
 } pattSyncData_t;
 
@@ -74,7 +81,7 @@ typedef struct pattSync_t
 
 typedef struct chSyncData_t
 {
-	syncedChannel_t channels[MAX_VOICES];
+	syncedChannel_t channels[MAX_CHANNELS];
 	uint64_t timestamp;
 } chSyncData_t;
 
@@ -100,11 +107,14 @@ chSyncData_t *chQueuePeek(void);
 uint64_t getChQueueTimestamp(void);
 void resetSyncQueues(void);
 
+void decreaseMasterVol(void);
+void increaseMasterVol(void);
+
 void calcPanningTable(void);
 void setAudioAmp(int16_t amp, int16_t masterVol, bool bitDepth32Flag);
 void setNewAudioFreq(uint32_t freq);
 void setBackOldAudioFreq(void);
-void P_SetSpeed(uint16_t bpm);
+void setMixerBPM(int32_t bpm);
 void audioSetVolRamp(bool volRamp);
 void audioSetInterpolationType(uint8_t interpolationType);
 void stopVoice(int32_t i);

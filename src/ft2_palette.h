@@ -49,8 +49,6 @@ typedef struct pal16_t
 	uint8_t r, g, b;
 } pal16;
 
-extern uint8_t cfg_ColorNr;
-
 void setCustomPalColor(uint32_t color);
 
 uint8_t palMax(int32_t c);
@@ -88,3 +86,5 @@ void rbConfigPalHeavyMetal(void);
 void rbConfigPalWhyColors(void);
 void rbConfigPalJungle(void);
 void rbConfigPalUserDefined(void);
+
+extern uint8_t cfg_ColorNum;

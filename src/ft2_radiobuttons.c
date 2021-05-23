@@ -33,7 +33,7 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	//x, y,   w,  group,         funcOnUp
 	{ 5, 18,  69, RB_GROUP_HELP, rbHelpFeatures },
 	{ 5, 34,  60, RB_GROUP_HELP, rbHelpEffects },
-	{ 5, 50,  71, RB_GROUP_HELP, rbHelpKeyboard },
+	{ 5, 50,  86, RB_GROUP_HELP, rbHelpKeybindings },
 	{ 5, 66, 109, RB_GROUP_HELP, rbHelpHowToUseFT2 },
 	{ 5, 82, 101, RB_GROUP_HELP, rbHelpFAQ },
 	{ 5, 98,  86, RB_GROUP_HELP, rbHelpKnownBugs },
@@ -74,7 +74,7 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	// ------ CONFIG AUDIO ------
 
 	// audio buffer size
-	//x,   y,   w,  group,                           funcOnUp
+	//x,   y,  w,   group,                           funcOnUp
 	{ 390, 16,  46, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigSbs512  },
 	{ 390, 30, 113, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigSbs1024 },
 	{ 390, 44,  50, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigSbs2048 },
@@ -94,11 +94,13 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	//x,   y,   w,  group,                      funcOnUp
 	{ 509, 16,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
 	{ 509, 30, 121, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
+#if CPU_64BIT
 	{ 509, 44,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio96kHz },
 	{ 509, 58,  73, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio192kHz },
+#endif
 
 	// audio input frequency
-	//x,   y,  w,   group,                            funcOnUp
+	//x,   y,   w,  group,                            funcOnUp
 	{ 180, 156, 60, RB_GROUP_CONFIG_AUDIO_INPUT_FREQ, rbConfigAudioInput44kHz },
 	{ 251, 156, 60, RB_GROUP_CONFIG_AUDIO_INPUT_FREQ, rbConfigAudioInput48kHz },
 	{ 322, 156, 60, RB_GROUP_CONFIG_AUDIO_INPUT_FREQ, rbConfigAudioInput96kHz },
@@ -128,7 +130,7 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	{ 346, 145, 46, RB_GROUP_CONFIG_SCOPE, rbConfigScopeLined },
 
 	// visible pattern channels
-	//x,   y,   w,  group,                        funcOnUp
+	//x,   y,  w,  group,                        funcOnUp
 	{ 257, 42, 78, RB_GROUP_CONFIG_PATTERN_CHANS, rbConfigPatt4Chans },
 	{ 257, 56, 78, RB_GROUP_CONFIG_PATTERN_CHANS, rbConfigPatt6Chans },
 	{ 257, 70, 78, RB_GROUP_CONFIG_PATTERN_CHANS, rbConfigPatt8Chans },

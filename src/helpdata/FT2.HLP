@@ -9,7 +9,7 @@
 >- 12-Point Volume- & Panning Envelope.
 >- Multisamples, up to 16 samples/instrument.
 >- 128 instruments.
->- "Unlimited" sample length. (1GB in this clone)
+>- "Unlimited" sample length. (1GB per sample in this clone)
 >- 8 octaves.
 >- Variable pattern length.
 >- Built in sampler/sample editor.
@@ -150,7 +150,7 @@ to the nearest halftone.
 Syntax: 4 + Rate + Depth
 
 Adds vibrato to the channel with a rate and speed. Set vibrato
-control (E4) can be used to change the vibrato wave form (see
+control (E4) can be used to change the vibrato waveform (see
 below).
 
 @X040@C001Tone portamento + volume slide
@@ -241,11 +241,11 @@ rounded to the nearest halftone.
 >@X060@C002
 Syntax: E4 + Type
 
-This command controls the vibrato wave form.
+This command controls the vibrato waveform.
 
 Type: 0 = Sine       1 = Ramp down       2 = Square
 
-If you add 4 to the type, the wave form will not be retrigged when a
+If you add 4 to the type, the waveform will not be retrigged when a
 new instrument is played.
 
 @X040@C001Set fine-tune
@@ -268,7 +268,7 @@ start.
 Syntax: E7 + Type
 
 This command works exactly as set vibrato control, but the
-tremolo wave form will be changed instead.
+tremolo waveform will be changed instead.
 
 @X040@C001Retrig note
 >@X060@C002
@@ -377,7 +377,7 @@ will be divided by four.
 END
 ;***************************************************************************
 ;***************************************************************************
-@LKeyboard
+@LKeybindings
 
 >@X020@C002
 >If you have an ambition to create music efficiently we strongly recommend
@@ -392,6 +392,11 @@ using this program from the very first minute.
 references to non-ordinary keys might be wrong.
 Sh = shift key.
 >
+@X040@C001Audio:
+>@X060@C002
+>Ctrl & numpad+ @T160Increase master volume by 16.
+>Ctrl & numpad- @T160Decrease master volume by 16.
+
 @X040@C001Video:
 >@X060@C002
 Alt+Enter @T160Toggle fullscreen mode
@@ -600,14 +605,14 @@ A Fasttracker 2 instrument is:
 >   1 Volume envelope
 >   1 Panning envelope
 >   1 Auto-vibrato definition
->   1..16 Sample(s)
+>   1..16 sample(s)
 >   1 Keyboard split definition
 >   1 MIDI definition
 
 >A Fasttracker 2 sample is:
->   1 Volume/Panning/Fine-tune definition
->   1 Relative tone.
->   1 Wave form.
+>   1 Volume/Panning/Finetune definition
+>   1 Relative note
+>   1 Waveform
 
 >@X040@C001The volume envelope:
 >@X060@C002
@@ -632,10 +637,12 @@ vibrato off.
 >Same as above, except from that the vibrato is not connected to
 the panning envelope.
 
->@X040@C001Tune:
+>@X040@C001Tune (finetune):
 >@X060@C002
->The fine-tune resolution has been changed from a signed nibble
+>The finetune resolution has been changed from a signed nibble
 (-8..+7) to a signed byte (-128..+127).
+>NOTE: The last 3 bits are discarded during playback, so the true step
+size is 8 instead of 1.
 
 >@X040@C001Fadeout:
 >@X060@C002
@@ -656,7 +663,7 @@ keyboard.
 
 >@X040@C001Important note:
 >@X060@C002
->The volume, panning, tune and relative tone is defined for EACH
+>The volume, panning, finetune and relative note is defined for EACH
 SAMPLE in an instrument. All other information is defined for the
 entire instrument.
 
@@ -688,11 +695,11 @@ commands correctly.
 
 @X020@C001Sample Editor:
 >
->@X040@C001Play (Wave form, range, display):
+>@X040@C001Play (Waveform, range, display):
 >@X060@C002
->Plays the current sample with tone display above the "stop"
+>Plays the current sample with the note displayed above the "stop"
 button. Note that respect is taken to the particular sample's
-relative tone.
+relative note.
 
 >@X040@C001Save range:
 >@X060@C002
@@ -742,11 +749,11 @@ destination is the current instr./sample.
 >@X060@C002
 >Operates on the range (or the whole sample if no range is set).
 
->@X040@C001Convert:
+>@X040@C001Sign:
 >@X060@C002
->Converts the entire sample from/to signed/unsigned.
+>Converts between signed/unsigned.
 
->@X040@C001Convert W:
+>@X040@C001B. swap (byte swap):
 >@X060@C002
 Swaps the byte order to/from Intel from/to Motorola standard on
 the entire sample.
@@ -765,7 +772,7 @@ fail depending on the sample data.
 
 >@X040@C001Resample:
 >@X060@C002
-Operates on the entire sample. The sample's relative tone is
+Operates on the entire sample. The sample's relative note is
 changed with respect to the resampling rate.
 
 >@X040@C001Mix sample:
@@ -823,7 +830,7 @@ hex counting since there are only 2 digits in the line number column.
 >@X040@C001Scopes:
 >@X060@C002
 "Std." (standard) will show the sample points as pixels (like FT2).
-"Lined" will draw lines between the points, like an oscilloscope.
+"Lined" will draw interpolated samples (linear interpolation.
 
 @X020@C001Configuration, Miscellaneous:
 >

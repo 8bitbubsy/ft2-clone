@@ -2,9 +2,15 @@
 
 #include <stdint.h>
 #include "ft2_header.h"
+#include "ft2_cpu.h"
 
 #define MIN_WAV_RENDER_FREQ 44100
+
+#if CPU_64BIT
 #define MAX_WAV_RENDER_FREQ 192000
+#else
+#define MAX_WAV_RENDER_FREQ 48000
+#endif
 
 #define MAX_WAV_RENDER_SAMPLES_PER_TICK (((MAX_WAV_RENDER_FREQ * 5) / 2) / MIN_BPM)
 
@@ -15,7 +21,6 @@ void drawWavRenderer(void);
 void showWavRenderer(void);
 void hideWavRenderer(void);
 void exitWavRenderer(void);
-void dump_RenderTick(uint32_t samplesPerTick, uint8_t *buffer);
 void pbWavRender(void);
 void pbWavExit(void);
 void pbWavFreqUp(void);

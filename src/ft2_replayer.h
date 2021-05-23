@@ -4,13 +4,14 @@
 #include <stdbool.h>
 #include "ft2_unicode.h"
 #include "mixer/ft2_windowed_sinc.h"
+#include "ft2_cpu.h"
 
 enum
 {
 	// voice flags
 	IS_Vol = 1, // set volume
 	IS_Period = 2, // set resampling rate
-	IS_NyTon = 4, // trigger new sample
+	IS_Trigger = 4, // trigger sample
 	IS_Pan = 8, // set panning
 	IS_QuickVol = 16, // 5ms volramp instead of tick ms
 
@@ -37,12 +38,15 @@ enum
 	CURSOR_EFX2 = 7
 };
 
-// DO NOT TOUCH!
-#define MIN_BPM 1
-#define MAX_BPM 999
-#define MAX_VOICES 32
-#define TRACK_WIDTH (5 * MAX_VOICES)
+// do not touch these!
+#define MIN_BPM 32
+#define MAX_BPM 255
+#define MAX_SPEED 31
+#define MAX_CHANNELS 32
+#define TRACK_WIDTH (5 * MAX_CHANNELS)
 #define MAX_FRQ 32000
+#define C4_FREQ 8363
+#define NOTE_OFF 97
 #define MAX_NOTES (10*12*16+16)
 #define MAX_PATTERNS 256
 #define MAX_PATT_LEN 256
@@ -55,6 +59,29 @@ enum
 #define MAX_SAMPLE_LEN 0x3FFFFFFF
 #define PROG_NAME_STR "Fasttracker II clone"
 
+enum // sample flags
+{
+	LOOP_OFF = 0,
+	LOOP_FWD = 1,
+	LOOP_BIDI = 2,
+	SAMPLE_16BIT = 16,
+	SAMPLE_STEREO = 32,
+	SAMPLE_ADPCM = 64, // not an existing flag, but used by loader
+};
+
+enum // envelope flags
+{
+	ENV_ENABLED = 1,
+	ENV_SUSTAIN = 2,
+	ENV_LOOP    = 4
+};
+
+#define GET_LOOPTYPE(smpFlags) ((smpFlags) & (LOOP_FWD | LOOP_BIDI))
+#define DISABLE_LOOP(smpFlags) ((smpFlags) &= ~(LOOP_FWD | LOOP_BIDI))
+#define SAMPLE_LENGTH_BYTES(smp) (smp->length << !!(smp->flags & SAMPLE_16BIT))
+#define FINETUNE_MOD2XM(f) (((uint8_t)(f) & 0x0F) << 4)
+#define FINETUNE_XM2MOD(f) ((uint8_t)(f) >> 4)
+
 /* Some of the following structs MUST be packed!
 ** Please do NOT edit these structs unless you
 ** absolutely know what you are doing!
@@ -64,113 +91,112 @@ enum
 #pragma pack(push)
 #pragma pack(1)
 #endif
-typedef struct songHeaderTyp_t
+typedef struct xmHdr_t
 {
-	char sig[17], name[21], progName[20];
-	uint16_t ver;
+	char ID[17], name[20], x1A, progName[20];
+	uint16_t version;
 	int32_t headerSize;
-	uint16_t len, repS, antChn, antPtn, antInstrs, flags, defTempo, defSpeed;
-	uint8_t songTab[256];
+	uint16_t numOrders, songLoopStart, numChannels, numPatterns;
+	uint16_t numInstr, flags, speed, BPM;
+	uint8_t orders[256];
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-songHeaderTyp;
+xmHdr_t;
 
-typedef struct patternHeaderTyp_t
+typedef struct xmPatHdr_t
 {
-	int32_t patternHeaderSize;
-	uint8_t typ;
-	int16_t pattLen;
-	uint16_t dataLen;
+	int32_t headerSize;
+	uint8_t type;
+	int16_t numRows;
+	uint16_t dataSize;
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-patternHeaderTyp;
+xmPatHdr_t;
 
-typedef struct songMODInstrHeaderTyp_t
+typedef struct modSmpHdr_t
 {
 	char name[22];
-	uint16_t len;
-	uint8_t fine, vol;
-	uint16_t repS, repL;
+	uint16_t length;
+	uint8_t finetune, volume;
+	uint16_t loopStart, loopLength;
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-songMODInstrHeaderTyp;
+modSmpHdr_t;
 
-typedef struct songMOD31HeaderTyp_t
+typedef struct modHdr_t
 {
 	char name[20];
-	songMODInstrHeaderTyp instr[31];
-	uint8_t len, repS, songTab[128];
-	char sig[4];
+	modSmpHdr_t smp[31];
+	uint8_t numOrders, songLoopStart, orders[128];
+	char ID[4];
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-songMOD31HeaderTyp;
+modHdr_t;
 
-typedef struct sampleHeaderTyp_t
+typedef struct xmSmpHdr_t
 {
-	int32_t len, repS, repL;
-	uint8_t vol;
-	int8_t fine;
-	uint8_t typ, pan;
-	int8_t relTon;
-	uint8_t nameLen;
+	uint32_t length, loopStart, loopLength;
+	uint8_t volume;
+	int8_t finetune;
+	uint8_t flags, panning;
+	int8_t relativeNote;
+	uint8_t nameLength; // only handled before saving (ignored under load)
 	char name[22];
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-sampleHeaderTyp;
+xmSmpHdr_t;
 
-typedef struct instrHeaderTyp_t
+typedef struct xmInsHdr_t
 {
 	uint32_t instrSize;
 	char name[22];
-	uint8_t typ;
-	int16_t antSamp;
+	uint8_t type;
+	int16_t numSamples;
 	int32_t sampleSize;
-	uint8_t ta[96];
-	int16_t envVP[12][2], envPP[12][2];
-	uint8_t envVPAnt, envPPAnt;
-	uint8_t envVSust, envVRepS, envVRepE;
-	uint8_t envPSust, envPRepS, envPRepE;
-	uint8_t envVTyp, envPTyp;
-	uint8_t vibTyp, vibSweep, vibDepth, vibRate;
-	uint16_t fadeOut;
+	uint8_t note2SampleLUT[96];
+	int16_t volEnvPoints[12][2], panEnvPoints[12][2];
+	uint8_t volEnvLength, panEnvLength;
+	uint8_t volEnvSustain, volEnvLoopStart, volEnvLoopEnd;
+	uint8_t panEnvSustain, panEnvLoopStart, panEnvLoopEnd;
+	uint8_t volEnvFlags, panEnvFlags;
+	uint8_t vibType, vibSweep, vibDepth, vibRate;
+	uint16_t fadeout;
 	uint8_t midiOn, midiChannel;
 	int16_t midiProgram, midiBend;
 	int8_t mute;
-	uint8_t reserved[15];
-	sampleHeaderTyp samp[16];
+	uint8_t junk[15];
+	xmSmpHdr_t smp[16];
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-instrHeaderTyp;
+xmInsHdr_t;
 
-typedef struct tonTyp_t // must be packed on some systems, even though it consists of bytes only
+typedef struct pattNote_t // must be packed!
 {
-	uint8_t ton, instr, vol, effTyp, eff;
+	uint8_t note, instr, vol, efx, efxData;
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-tonTyp;
+note_t;
 
 typedef struct syncedChannel_t // used for audio/video sync queue (pack to save RAM)
 {
-	uint8_t status;
-	uint8_t pianoNoteNr;
-	uint8_t sampleNr, instrNr;
-	uint16_t smpStartPos;
-	uint8_t vol;
-	double dHz;
+	uint8_t status, pianoNoteNum, smpNum, instrNum;
+	int32_t smpStartPos;
+	uint8_t scopeVolume;
+	uintCPUWord_t scopeDelta;
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
@@ -181,88 +207,87 @@ syncedChannel_t;
 #pragma pack(pop)
 #endif
 
-typedef struct sampleTyp_t
+typedef struct sample_t
 {
 	char name[22+1];
-	bool fixed;
-	int8_t fine, relTon, *pek, *origPek;
-	uint8_t vol, typ, pan;
-	int32_t len, repS, repL;
+	bool isFixed;
+	int8_t finetune, relativeNote, *dataPtr, *origDataPtr;
+	uint8_t volume, flags, panning;
+	int32_t length, loopStart, loopLength;
 
 	// fix for resampling interpolation taps
 	int8_t leftEdgeTapSamples8[SINC_TAPS+SINC_LEFT_TAPS];
 	int16_t leftEdgeTapSamples16[SINC_TAPS+SINC_LEFT_TAPS];
 	int16_t fixedSmp[SINC_RIGHT_TAPS];
 	int32_t fixedPos;
-} sampleTyp;
+} sample_t;
 
-typedef struct instrTyp_t
+typedef struct instr_t
 {
 	bool midiOn, mute;
-	uint8_t midiChannel, ta[96];
-	uint8_t envVPAnt, envPPAnt;
-	uint8_t envVSust, envVRepS, envVRepE;
-	uint8_t envPSust, envPRepS, envPRepE;
-	uint8_t envVTyp, envPTyp;
-	uint8_t vibTyp, vibSweep, vibDepth, vibRate;
-	uint16_t fadeOut;
-	int16_t envVP[12][2], envPP[12][2], midiProgram, midiBend;
-	int16_t antSamp; // used by loader only
-	sampleTyp samp[16];
-} instrTyp;
+	uint8_t midiChannel, note2SampleLUT[96];
+	uint8_t volEnvLength, panEnvLength;
+	uint8_t volEnvSustain, volEnvLoopStart, volEnvLoopEnd;
+	uint8_t panEnvSustain, panEnvLoopStart, panEnvLoopEnd;
+	uint8_t volEnvFlags, panEnvFlags;
+	uint8_t vibType, vibSweep, vibDepth, vibRate;
+	uint16_t fadeout;
+	int16_t volEnvPoints[12][2], panEnvPoints[12][2], midiProgram, midiBend;
+	int16_t numSamples; // used by loader only
+	sample_t smp[16];
+} instr_t;
 
-typedef struct stmTyp_t
+typedef struct channel_t
 {
-	bool envSustainActive, stOff, mute;
+	bool envSustainActive, channelOff, mute;
 	volatile uint8_t status, tmpStatus;
-	int8_t relTonNr, fineTune;
-	uint8_t sampleNr, instrNr, effTyp, eff, smpOffset, tremorSave, tremorPos;
-	uint8_t globVolSlideSpeed, panningSlideSpeed, waveCtrl, portaDir;
+	int8_t relativeNote, finetune;
+	uint8_t smpNum, instrNum, efxData, efx, smpOffset, tremorSave, tremorPos;
+	uint8_t globVolSlideSpeed, panningSlideSpeed, waveCtrl, portaDirection;
 	uint8_t glissFunk, vibPos, tremPos, vibSpeed, vibDepth, tremSpeed, tremDepth;
-	uint8_t pattPos, loopCnt, volSlideSpeed, fVolSlideUpSpeed, fVolSlideDownSpeed;
+	uint8_t jumpToRow, patLoopCounter, volSlideSpeed, fVolSlideUpSpeed, fVolSlideDownSpeed;
 	uint8_t fPortaUpSpeed, fPortaDownSpeed, ePortaUpSpeed, ePortaDownSpeed;
 	uint8_t portaUpSpeed, portaDownSpeed, retrigSpeed, retrigCnt, retrigVol;
-	uint8_t volKolVol, tonNr, envPPos, eVibPos, envVPos, realVol, oldVol, outVol;
+	uint8_t volColumnVol, noteNum, panEnvPos, eVibPos, volEnvPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
 	int16_t midiPitch;
-	uint16_t outPeriod, realPeriod, finalPeriod, tonTyp, wantPeriod, portaSpeed;
-	uint16_t envVCnt, envPCnt, eVibAmp, eVibSweep;
-	uint16_t fadeOutAmp, fadeOutSpeed, midiVibDepth;
-	int32_t envVIPValue, envPIPValue, envVAmp, envPAmp;
+	uint16_t outPeriod, realPeriod, finalPeriod, noteData, wantPeriod, portaSpeed;
+	uint16_t volEnvTick, panEnvTick, eVibAmp, eVibSweep;
+	uint16_t fadeoutVol, fadeoutSpeed, midiVibDepth;
+	int32_t volEnvDelta, panEnvDelta, volEnvValue, panEnvValue;
 	int32_t oldFinalPeriod, smpStartPos;
 
-	uint8_t finalVol; // 0..255 (for visuals)
-	double dFinalVol; // 0.0 .. 1.0 (for mixer)
+	float fFinalVol; // 0.0f .. 1.0f
 
-	sampleTyp *smpPtr;
-	instrTyp *instrPtr;
-} stmTyp;
+	sample_t *smpPtr;
+	instr_t *instrPtr;
+} channel_t;
 
-typedef struct songTyp_t
+typedef struct song_t
 {
 	bool pBreakFlag, posJumpFlag, isModified;
 	char name[20+1], instrName[1+MAX_INST][22+1];
-	uint8_t curReplayerTimer, curReplayerPattPos, curReplayerSongPos, curReplayerPattNr; // used for audio/video sync queue
-	uint8_t pattDelTime, pattDelTime2, pBreakPos, songTab[MAX_ORDERS];
-	int16_t songPos, pattNr, pattPos, pattLen;
-	int32_t antChn;
-	uint16_t len, repS, speed, tempo, globVol, timer, ver, initialTempo;
+	uint8_t curReplayerTick, curReplayerRow, curReplayerSongPos, curReplayerPattNum; // used for audio/video sync queue
+	uint8_t pattDelTime, pattDelTime2, pBreakPos, orders[MAX_ORDERS];
+	int16_t songPos, pattNum, row, currNumRows;
+	uint16_t songLength, songLoopStart, BPM, speed, initialSpeed, globalVolume, tick;
+	int32_t numChannels;
 	uint64_t musicTime64;
-} songTyp;
+} song_t;
 
-double getSampleC4Rate(sampleTyp *s);
+double getSampleC4Rate(sample_t *s);
 
 void setNewSongPos(int32_t pos);
 void resetReplayerState(void);
 
 void fixString(char *str, int32_t lastChrPos); // removes leading spaces and 0x1A chars
 void fixSongName(void);
-void fixInstrAndSampleNames(int16_t nr);
+void fixInstrAndSampleNames(int16_t insNum);
 
 void calcReplayerVars(int32_t rate);
 
 // used on external sample load and during sample loading in some module formats
-void tuneSample(sampleTyp *s, const int32_t midCFreq, bool linearPeriodsFlag);
+void tuneSample(sample_t *s, const int32_t midCFreq, bool linearPeriodsFlag);
 
 void calcReplayerLogTab(void);
 
@@ -272,10 +297,10 @@ double dPeriod2Hz(int32_t period);
 
 int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
 
-bool allocateInstr(int16_t nr);
-void freeInstr(int32_t nr);
+bool allocateInstr(int16_t insNum);
+void freeInstr(int32_t insNum);
 void freeAllInstr(void);
-void freeSample(int16_t nr, int16_t nr2);
+void freeSample(int16_t insNum, int16_t smpNum);
 
 void freeAllPatterns(void);
 void updateChanNums(void);
@@ -285,28 +310,28 @@ void resetMusic(void);
 void startPlaying(int8_t mode, int16_t row);
 void stopPlaying(void);
 void stopVoices(void);
-void setPos(int16_t songPos, int16_t pattPos, bool resetTimer);
+void setPos(int16_t songPos, int16_t row, bool resetTimer);
 void pauseMusic(void); // stops reading pattern data
 void resumeMusic(void); // starts reading pattern data
 void setSongModifiedFlag(void);
 void removeSongModifiedFlag(void);
-void playTone(uint8_t stmm, uint8_t inst, uint8_t ton, int8_t vol, uint16_t midiVibDepth, uint16_t midiPitch);
-void playSample(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t midiVibDepth, uint16_t midiPitch);
-void playRange(uint8_t stmm, uint8_t inst, uint8_t smpNr, uint8_t ton, uint16_t midiVibDepth, uint16_t midiPitch, int32_t offs, int32_t len);
-void keyOff(stmTyp *ch);
-void conv8BitSample(int8_t *p, int32_t len, bool stereo);
-void conv16BitSample(int8_t *p, int32_t len, bool stereo);
-void delta2Samp(int8_t *p, int32_t len, uint8_t typ);
-void samp2Delta(int8_t *p, int32_t len, uint8_t typ);
-void setPatternLen(uint16_t nr, int16_t len);
-void setFrqTab(bool linear);
+void playTone(uint8_t chNum, uint8_t insNum, uint8_t note, int8_t vol, uint16_t midiVibDepth, uint16_t midiPitch);
+void playSample(uint8_t chNum, uint8_t insNum, uint8_t smpNum, uint8_t note, uint16_t midiVibDepth, uint16_t midiPitch);
+void playRange(uint8_t chNum, uint8_t insNum, uint8_t smpNum, uint8_t note, uint16_t midiVibDepth, uint16_t midiPitch, int32_t smpOffset, int32_t length);
+void keyOff(channel_t *ch);
+void conv8BitSample(int8_t *p, int32_t length, bool stereo); // changes sample sign
+void conv16BitSample(int8_t *p, int32_t length, bool stereo); // changes sample sign
+void delta2Samp(int8_t *p, int32_t length, uint8_t smpFlags);
+void samp2Delta(int8_t *p, int32_t length, uint8_t smpFlags);
+void setPatternLen(uint16_t pattNum, int16_t numRows);
+void setFrequencyTable(bool linearPeriodsFlag);
 void tickReplayer(void); // periodically called from audio callback
 void resetChannels(void);
-bool patternEmpty(uint16_t nr);
-int16_t getUsedSamples(int16_t nr);
-int16_t getRealUsedSamples(int16_t nr);
-void setStdEnvelope(instrTyp *ins, int16_t i, uint8_t typ);
-void setNoEnvelope(instrTyp *ins);
+bool patternEmpty(uint16_t pattNum);
+int16_t getUsedSamples(int16_t smpNum);
+int16_t getRealUsedSamples(int16_t smpNum);
+void setStdEnvelope(instr_t *ins, int16_t i, uint8_t type);
+void setNoEnvelope(instr_t *ins);
 void setSyncedReplayerVars(void);
 void decSongPos(void);
 void incSongPos(void);
@@ -324,8 +349,8 @@ extern int8_t playMode;
 extern bool songPlaying, audioPaused, musicPaused;
 extern volatile bool replayerBusy;
 extern const uint16_t *note2Period;
-extern int16_t pattLens[MAX_PATTERNS];
-extern stmTyp stm[MAX_VOICES];
-extern songTyp song;
-extern instrTyp *instr[132];
-extern tonTyp *patt[MAX_PATTERNS];
+extern int16_t patternNumRows[MAX_PATTERNS];
+extern channel_t channel[MAX_CHANNELS];
+extern song_t song;
+extern instr_t *instr[132];
+extern note_t *pattern[MAX_PATTERNS];

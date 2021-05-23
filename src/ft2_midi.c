@@ -68,10 +68,10 @@ static inline void midiInControlChange(uint8_t data1, uint8_t data2)
 
 	if (recMIDIValidChn) // real FT2 forgot to check this here..
 	{
-		for (uint8_t i = 0; i < song.antChn; i++)
+		for (uint8_t i = 0; i < song.numChannels; i++)
 		{
-			if (stm[i].midiVibDepth != 0 || editor.keyOnTab[i] != 0)
-				stm[i].midiVibDepth = midi.currMIDIVibDepth;
+			if (channel[i].midiVibDepth != 0 || editor.keyOnTab[i] != 0)
+				channel[i].midiVibDepth = midi.currMIDIVibDepth;
 		}
 	}
 
@@ -88,8 +88,8 @@ static inline void midiInPitchBendChange(uint8_t data1, uint8_t data2)
 	midi.currMIDIPitch = pitch;
 	if (recMIDIValidChn)
 	{
-		stmTyp *ch = stm;
-		for (uint8_t i = 0; i < song.antChn; i++, ch++)
+		channel_t *ch = channel;
+		for (uint8_t i = 0; i < song.numChannels; i++, ch++)
 		{
 			if (ch->midiPitch != 0 || editor.keyOnTab[i] != 0)
 				ch->midiPitch = midi.currMIDIPitch;
@@ -214,27 +214,26 @@ bool openMidiInDevice(uint32_t deviceID)
 	return true;
 }
 
-void recordMIDIEffect(uint8_t effTyp, uint8_t effData)
+void recordMIDIEffect(uint8_t efx, uint8_t efxData)
 {
 	// only handle this in record mode
 	if (!midi.enable || (playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT))
 		return;
 
-	const int16_t nr = editor.editPattern;
 	if (config.multiRec)
 	{
-		tonTyp *note = &patt[nr][editor.pattPos * MAX_VOICES];
-		for (int32_t i = 0; i < song.antChn; i++, note++)
+		note_t *p = &pattern[editor.editPattern][editor.row * MAX_CHANNELS];
+		for (int32_t i = 0; i < song.numChannels; i++, p++)
 		{
 			if (config.multiRecChn[i] && editor.chnMode[i])
 			{
-				if (!allocatePattern(nr))
+				if (!allocatePattern(editor.editPattern))
 					return;
 
-				if (note->effTyp == 0)
+				if (p->efx == 0)
 				{
-					note->effTyp = effTyp;
-					note->eff = effData;
+					p->efx = efx;
+					p->efxData = efxData;
 					setSongModifiedFlag();
 				}
 			}
@@ -242,15 +241,15 @@ void recordMIDIEffect(uint8_t effTyp, uint8_t effData)
 	}
 	else
 	{
-		if (!allocatePattern(nr))
+		if (!allocatePattern(editor.editPattern))
 			return;
 
-		tonTyp *note = &patt[nr][(editor.pattPos * MAX_VOICES) + cursor.ch];
-		if (note->effTyp != effTyp || note->eff != effData)
+		note_t *p = &pattern[editor.editPattern][(editor.row * MAX_CHANNELS) + cursor.ch];
+		if (p->efx != efx || p->efxData != efxData)
 			setSongModifiedFlag();
 
-		note->effTyp = effTyp;
-		note->eff = effData;
+		p->efx = efx;
+		p->efxData = efxData;
 	}
 }
 

@@ -25,7 +25,7 @@ void closeMidiInDevice(void);
 void freeMidiIn(void);
 bool initMidiIn(void);
 bool openMidiInDevice(uint32_t deviceID);
-void recordMIDIEffect(uint8_t effTyp, uint8_t effData);
+void recordMIDIEffect(uint8_t efx, uint8_t efxData);
 bool saveMidiInputDeviceToConfig(void);
 bool setMidiInputDeviceFromConfig(void);
 void freeMidiInputDeviceList(void);

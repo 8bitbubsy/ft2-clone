@@ -20,7 +20,7 @@
 #include "ft2_video.h"
 #include "ft2_events.h"
 #include "ft2_mouse.h"
-#include "ft2_scopes.h"
+#include "scopes/ft2_scopes.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_pattern_draw.h"
 #include "ft2_sample_ed.h"
@@ -34,6 +34,7 @@
 #include "ft2_midi.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#include "ft2_cpu.h"
 
 static const uint8_t textCursorData[12] =
 {
@@ -158,15 +159,23 @@ void endFPSCounter(void)
 
 void flipFrame(void)
 {
+	const uint32_t windowFlags = SDL_GetWindowFlags(video.window);
+	bool minimized = (windowFlags & SDL_WINDOW_MINIMIZED) ? true : false;
+
 	renderSprites();
 
 	if (video.showFPSCounter)
 		drawFPSCounter();
 
 	SDL_UpdateTexture(video.texture, NULL, video.frameBuffer, SCREEN_W * sizeof (int32_t));
-	SDL_RenderClear(video.renderer);
+
+	// SDL2 bug on Windows (?): This function consumes ever-increasing memory if the program is minimized
+	if (!minimized)
+		SDL_RenderClear(video.renderer);
+
 	SDL_RenderCopy(video.renderer, video.texture, NULL, NULL);
 	SDL_RenderPresent(video.renderer);
+
 	eraseSprites();
 
 	if (!video.vsync60HzPresent)
@@ -175,21 +184,19 @@ void flipFrame(void)
 	}
 	else
 	{
-		uint32_t windowFlags = SDL_GetWindowFlags(video.window);
-
 		/* We have VSync, but it can unexpectedly get inactive in certain scenarios.
 		** We have to force thread sleeping (to ~60Hz) if so.
 		*/
 #ifdef __APPLE__
 		// macOS: VSync gets disabled if the window is 100% covered by another window. Let's add a (crude) fix:
-		if ((windowFlags & SDL_WINDOW_MINIMIZED) || !(windowFlags & SDL_WINDOW_INPUT_FOCUS))
+		if (minimized || !(windowFlags & SDL_WINDOW_INPUT_FOCUS))
 			waitVBL();
 #elif __unix__
 		// *NIX: VSync gets disabled in fullscreen mode (at least on some distros/systems). Let's add a fix:
-		if ((windowFlags & SDL_WINDOW_MINIMIZED) || video.fullscreen)
+		if (minimized || video.fullscreen)
 			waitVBL();
 #else
-		if (windowFlags & SDL_WINDOW_MINIMIZED)
+		if (minimized)
 			waitVBL();
 #endif
 	}
@@ -267,6 +274,7 @@ static void updateRenderSizeVars(void)
 	// for mouse cursor creation
 	video.xScale = (uint32_t)round(video.renderW * (1.0 / SCREEN_W));
 	video.yScale = (uint32_t)round(video.renderH * (1.0 / SCREEN_H));
+
 	createMouseCursors();
 }
 
@@ -850,16 +858,16 @@ void updateWindowTitle(bool forceUpdate)
 		songTitleTrunc[sizeof (songTitleTrunc)-1] = '\0';
 
 		if (song.isModified)
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\" (unsaved)", PROG_VER_STR, songTitleTrunc);
+			sprintf(wndTitle, "Fasttracker II clone v%s (%d-bit) - \"%s\" (unsaved)", PROG_VER_STR, CPU_BITS, songTitleTrunc);
 		else
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\"", PROG_VER_STR, songTitleTrunc);
+			sprintf(wndTitle, "Fasttracker II clone v%s (%d-bit) - \"%s\"", PROG_VER_STR, CPU_BITS, songTitleTrunc);
 	}
 	else
 	{
 		if (song.isModified)
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled\" (unsaved)", PROG_VER_STR);
+			sprintf(wndTitle, "Fasttracker II clone v%s (%d-bit) - \"untitled\" (unsaved)", PROG_VER_STR, CPU_BITS);
 		else
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled\"", PROG_VER_STR);
+			sprintf(wndTitle, "Fasttracker II clone v%s (%d-bit) - \"untitled\"", PROG_VER_STR, CPU_BITS);
 	}
 
 	SDL_SetWindowTitle(video.window, wndTitle);
@@ -1004,6 +1012,7 @@ bool setupRenderer(void)
 	if (videoDriver != NULL && strcmp("KMSDRM", videoDriver) == 0)
 		video.useDesktopMouseCoords = false;
 
+	SDL_SetRenderDrawColor(video.renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 	return true;
 }
 
@@ -1018,7 +1027,7 @@ void handleRedrawing(void)
 		else if (ui.nibblesShown)
 		{
 			if (editor.NI_Play)
-				moveNibblePlayers();
+				moveNibblesPlayers();
 		}
 		else
 		{
@@ -1028,14 +1037,14 @@ void handleRedrawing(void)
 
 				if (!ui.diskOpShown)
 				{
-					drawSongRepS();
+					drawSongLoopStart();
 					drawSongLength();
 					drawPosEdNums(editor.songPos);
 					drawEditPattern(editor.editPattern);
 					drawPatternLength(editor.editPattern);
-					drawSongBPM(editor.speed);
-					drawSongSpeed(editor.tempo);
-					drawGlobalVol(editor.globalVol);
+					drawSongBPM(editor.BPM);
+					drawSongSpeed(editor.speed);
+					drawGlobalVol(editor.globalVolume);
 
 					if (!songPlaying || editor.wavIsRendering)
 						setScrollBarPos(SB_POS_ED, editor.songPos, false);
@@ -1057,7 +1066,7 @@ void handleRedrawing(void)
 			{
 				ui.updatePosEdScrollBar = false;
 				setScrollBarPos(SB_POS_ED, song.songPos, false);
-				setScrollBarEnd(SB_POS_ED, (song.len - 1) + 5);
+				setScrollBarEnd(SB_POS_ED, (song.songLength - 1) + 5);
 			}
 
 			if (!ui.extended)
@@ -1124,19 +1133,19 @@ static void drawReplayerData(void)
 			if (ui.drawBPMFlag)
 			{
 				ui.drawBPMFlag = false;
-				drawSongBPM(editor.speed);
+				drawSongBPM(editor.BPM);
 			}
 			
 			if (ui.drawSpeedFlag)
 			{
 				ui.drawSpeedFlag = false;
-				drawSongSpeed(editor.tempo);
+				drawSongSpeed(editor.speed);
 			}
 
 			if (ui.drawGlobVolFlag)
 			{
 				ui.drawGlobVolFlag = false;
-				drawGlobalVol(editor.globalVol);
+				drawGlobalVol(editor.globalVolume);
 			}
 
 			if (ui.drawPosEdFlag)
@@ -1164,6 +1173,6 @@ static void drawReplayerData(void)
 	{
 		ui.updatePatternEditor = false;
 		if (ui.patternEditorShown)
-			writePattern(editor.pattPos, editor.editPattern);
+			writePattern(editor.row, editor.editPattern);
 	}
 }

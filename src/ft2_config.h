@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "ft2_replayer.h"
 #include "ft2_palette.h"
+#include "ft2_cpu.h"
 
 #define CFG_ID_STR "FastTracker 2.0 configuration file\x1A"
 #define CONFIG_FILE_SIZE 1736
@@ -110,17 +111,18 @@ __attribute__ ((packed))
 #endif
 highScoreType;
 
+// this has some Swedish names, those variables are not used in our clone.
 typedef struct config_t // exact FT2.CFG layout (with some modifications)
 {
 	char cfgID[35];
-	uint16_t ver;
+	uint16_t version;
 	uint32_t audioFreq; // was "BIOSSum" (never used in FT2)
 	int16_t utEnhet, masterVol, inputVol, inputDev;
 	uint8_t interpolation, internMode, stereoMode;
 	uint8_t specialFlags2; // was lo-byte of "sample16Bit" (was used for external audio sampling)
 	uint8_t dontShowAgainFlags; // was hi-byte of "sample16Bit" (was used for external audio sampling)
 	int16_t inEnhet, sbPort, sbDMA, sbHiDMA, sbInt, sbOutFilter;
-	uint8_t true16Bit, ptnUnpressed, ptnHex, ptnInstrZero, ptnFrmWrk, ptnLineLight, ptnS3M, ptnChnNumbers;
+	uint8_t true16Bit, ptnStretch, ptnHex, ptnInstrZero, ptnFrmWrk, ptnLineLight, ptnShowVolColumn, ptnChnNumbers;
 	int16_t ptnLineLightStep, ptnFont, ptnAcc;
 	pal16 userPal[16];
 	uint16_t comMacro[10], volMacro[10];
@@ -146,18 +148,18 @@ typedef struct config_t // exact FT2.CFG layout (with some modifications)
 	uint8_t tracksPathLen;
 	char tracksPath[79+1];
 	uint8_t id_FastLogo, id_TritonProd;
-	int16_t cfg_StdPalNr;
+	int16_t cfg_StdPalNum;
 	uint8_t cfg_AutoSave;
 	int16_t smpEd_SampleNote;
 	highScoreType NI_HighScore[10];
-	int16_t NI_AntPlayers, NI_Speed;
+	int16_t NI_NumPlayers, NI_Speed;
 	uint8_t NI_Surround, NI_Grid, NI_Wrap;
 	int32_t NI_HighScoreChecksum;
-	int16_t mouseType, mouseAnimType, mouseSpeed, keyLayout, boostLevel, stdEnvP[6][2][12][2];
-	uint16_t stdVolEnvAnt[6], stdVolEnvSust[6], stdVolEnvRepS[6], stdVolEnvRepE[6];
-	uint16_t stdPanEnvAnt[6], stdPanEnvSust[6], stdPanEnvRepS[6], stdPanEnvRepE[6];
-	uint16_t stdFadeOut[6], stdVibRate[6], stdVibDepth[6], stdVibSweep[6], stdVibTyp[6];
-	uint16_t stdVolEnvTyp[6], stdPanEnvTyp[6];
+	int16_t mouseType, mouseAnimType, mouseSpeed, keyLayout, boostLevel, stdEnvPoints[6][2][12][2];
+	uint16_t stdVolEnvLength[6], stdVolEnvSustain[6], stdVolEnvLoopStart[6], stdVolEnvLoopEnd[6];
+	uint16_t stdPanEnvLength[6], stdPanEnvSustain[6], stdPanEnvLoopStart[6], stdPanEnvLoopEnd[6];
+	uint16_t stdFadeout[6], stdVibRate[6], stdVibDepth[6], stdVibSweep[6], stdVibType[6];
+	uint16_t stdVolEnvFlags[6], stdPanEnvFlags[6];
 	int16_t antStars, ptnMaxChannels;
 	uint16_t sampleRates[16];
 	uint8_t cfg_OverwriteWarning;
@@ -216,8 +218,10 @@ void rbConfigAudioIntrpLinear(void);
 void rbConfigAudioIntrpSinc(void);
 void rbConfigAudio44kHz(void);
 void rbConfigAudio48kHz(void);
+#if CPU_64BIT
 void rbConfigAudio96kHz(void);
 void rbConfigAudio192kHz(void);
+#endif
 void rbConfigAudioInput44kHz(void);
 void rbConfigAudioInput48kHz(void);
 void rbConfigAudioInput96kHz(void);

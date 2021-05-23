@@ -1,4 +1,9 @@
-// WAV sample loader
+/* WAV sample loader
+**
+** Note: Vol/loop sanitation is done in the last stage
+** of sample loading, so you don't need to do that here.
+** Do NOT close the file handle!
+*/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -20,13 +25,14 @@ static bool wavIsStereo(FILE *f);
 bool loadWAV(FILE *f, uint32_t filesize)
 {
 	uint8_t *audioDataU8;
-	int16_t *audioDataS16, *audioDataS16_2, *ptr16;
+	int16_t *audioDataS16, *ptr16;
 	uint16_t audioFormat, numChannels, bitsPerSample;
 	int32_t *audioDataS32;
 	uint32_t i, sampleRate, sampleLength;
 	uint32_t len32;
 	float *fAudioDataFloat;
 	double *dAudioDataDouble;
+	sample_t *s = &tmpSmp;
 
 	if (filesize < 12)
 	{
@@ -172,28 +178,25 @@ bool loadWAV(FILE *f, uint32_t filesize)
 	// ---- READ SAMPLE DATA ----
 	fseek(f, dataPtr, SEEK_SET);
 
-	if (sampleLength > MAX_SAMPLE_LEN)
-		sampleLength = MAX_SAMPLE_LEN;
-
 	int16_t stereoSampleLoadMode = -1;
 	if (wavIsStereo(f))
 		stereoSampleLoadMode = loaderSysReq(5, "System request", "This is a stereo sample...");
 
 	if (bitsPerSample == 8) // 8-BIT INTEGER SAMPLE
 	{
-		if (!allocateTmpSmpData(&tmpSmp, sampleLength))
+		if (!allocateSmpData(s, sampleLength, false))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 
-		if (fread(tmpSmp.pek, sampleLength, 1, f) != 1)
+		if (fread(s->dataPtr, sampleLength, 1, f) != 1)
 		{
 			loaderMsgBox("General I/O error during loading! Is the file in use?");
 			return false;
 		}
 
-		audioDataU8 = (uint8_t *)tmpSmp.pek;
+		audioDataU8 = (uint8_t *)s->dataPtr;
 
 		// stereo conversion
 		if (numChannels == 2)
@@ -236,24 +239,24 @@ bool loadWAV(FILE *f, uint32_t filesize)
 
 		// convert from unsigned to signed
 		for (i = 0; i < sampleLength; i++)
-			tmpSmp.pek[i] ^= 0x80;
+			s->dataPtr[i] ^= 0x80;
 	}
 	else if (bitsPerSample == 16) // 16-BIT INTEGER SAMPLE
 	{
 		sampleLength /= 2;
-		if (!allocateTmpSmpData(&tmpSmp, sampleLength*2))
+		if (!allocateSmpData(s, sampleLength, true))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 
-		if (fread(tmpSmp.pek, sampleLength, 2, f) != 2)
+		if (fread(s->dataPtr, sampleLength, 2, f) != 2)
 		{
 			loaderMsgBox("General I/O error during loading! Is the file in use?");
 			return false;
 		}
 
-		audioDataS16 = (int16_t *)tmpSmp.pek;
+		audioDataS16 = (int16_t *)s->dataPtr;
 
 		// stereo conversion
 		if (numChannels == 2)
@@ -298,28 +301,27 @@ bool loadWAV(FILE *f, uint32_t filesize)
 			}
 		}
 
-		sampleLength *= 2;
-		tmpSmp.typ |= 16; // 16-bit
+		s->flags |= SAMPLE_16BIT;
 	}
 	else if (bitsPerSample == 24) // 24-BIT INTEGER SAMPLE
 	{
 		sampleLength /= 3;
-		if (!allocateTmpSmpData(&tmpSmp, (sampleLength * 4) * 2))
+		if (!allocateSmpData(s, sampleLength * sizeof (int32_t), false))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 
-		if (fread(&tmpSmp.pek[sampleLength], sampleLength, 3, f) != 3)
+		if (fread(&s->dataPtr[sampleLength], sampleLength, 3, f) != 3)
 		{
 			loaderMsgBox("General I/O error during loading! Is the file in use?");
 			return false;
 		}
 
-		audioDataS32 = (int32_t *)tmpSmp.pek;
+		audioDataS32 = (int32_t *)s->dataPtr;
 
 		// convert to 32-bit
-		audioDataU8 = (uint8_t *)tmpSmp.pek + sampleLength;
+		audioDataU8 = (uint8_t *)s->dataPtr + sampleLength;
 		for (i = 0; i < sampleLength; i++)
 		{
 			audioDataS32[i] = (audioDataU8[2] << 24) | (audioDataU8[1] << 16) | (audioDataU8[0] << 8);
@@ -373,33 +375,28 @@ bool loadWAV(FILE *f, uint32_t filesize)
 
 		normalizeSigned32Bit(audioDataS32, sampleLength);
 
-		// downscale to 16-bit (ultra fast method!)
+		ptr16 = (int16_t *)s->dataPtr;
+		for (i = 0; i < sampleLength; i++)
+			ptr16[i] = audioDataS32[i] >> 16;
 
-		audioDataS16 = (int16_t *)tmpSmp.pek;
-		audioDataS16_2 = (int16_t *)tmpSmp.pek + 1; // yes, this is aligned to words
-
-		for (i = 0; i < sampleLength; i++, audioDataS16_2++)
-			audioDataS16[i] = audioDataS16_2[i];
-
-		sampleLength *= 2;
-		tmpSmp.typ |= 16; // 16-bit
+		s->flags |= SAMPLE_16BIT;
 	}
 	else if (audioFormat == WAV_FORMAT_PCM && bitsPerSample == 32) // 32-BIT INTEGER SAMPLE
 	{
-		sampleLength /= 4;
-		if (!allocateTmpSmpData(&tmpSmp, sampleLength * 4))
+		sampleLength /= sizeof (int32_t);
+		if (!allocateSmpData(s, sampleLength * sizeof (int32_t), false))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 
-		if (fread(tmpSmp.pek, sampleLength, 4, f) != 4)
+		if (fread(s->dataPtr, sampleLength, sizeof (int32_t), f) != sizeof (int32_t))
 		{
 			loaderMsgBox("General I/O error during loading! Is the file in use?");
 			return false;
 		}
 
-		audioDataS32 = (int32_t *)tmpSmp.pek;
+		audioDataS32 = (int32_t *)s->dataPtr;
 
 		// stereo conversion
 		if (numChannels == 2)
@@ -448,33 +445,28 @@ bool loadWAV(FILE *f, uint32_t filesize)
 
 		normalizeSigned32Bit(audioDataS32, sampleLength);
 
-		// downscale to 16-bit (ultra fast method!)
+		ptr16 = (int16_t *)s->dataPtr;
+		for (i = 0; i < sampleLength; i++)
+			ptr16[i] = audioDataS32[i] >> 16;
 
-		audioDataS16 = (int16_t *)tmpSmp.pek;
-		audioDataS16_2 = (int16_t *)tmpSmp.pek + 1; // yes, this is aligned to words
-
-		for (i = 0; i < sampleLength; i++, audioDataS16_2++)
-			audioDataS16[i] = audioDataS16_2[i];
-
-		sampleLength *= 2;
-		tmpSmp.typ |= 16; // 16-bit
+		s->flags |= SAMPLE_16BIT;
 	}
 	else if (audioFormat == WAV_FORMAT_IEEE_FLOAT && bitsPerSample == 32) // 32-BIT FLOATING POINT SAMPLE
 	{
-		sampleLength /= 4;
-		if (!allocateTmpSmpData(&tmpSmp, sampleLength * 4))
+		sampleLength /= sizeof (float);
+		if (!allocateSmpData(s, sampleLength * sizeof (float), false))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 
-		if (fread(tmpSmp.pek, sampleLength, 4, f) != 4)
+		if (fread(s->dataPtr, sampleLength, sizeof (float), f) != sizeof (float))
 		{
 			loaderMsgBox("General I/O error during loading! Is the file in use?");
 			return false;
 		}
 
-		fAudioDataFloat = (float *)tmpSmp.pek;
+		fAudioDataFloat = (float *)s->dataPtr;
 
 		// stereo conversion
 		if (numChannels == 2)
@@ -517,29 +509,31 @@ bool loadWAV(FILE *f, uint32_t filesize)
 
 		normalize32BitFloatToSigned16Bit(fAudioDataFloat, sampleLength);
 
-		ptr16 = (int16_t *)tmpSmp.pek;
+		ptr16 = (int16_t *)s->dataPtr;
 		for (i = 0; i < sampleLength; i++)
-			ptr16[i] = (int16_t)fAudioDataFloat[i]; // should use SIMD if available
+		{
+			const int32_t smp32 = (const int32_t)fAudioDataFloat[i];
+			ptr16[i] = (int16_t)smp32;
+		}
 
-		sampleLength *= 2;
-		tmpSmp.typ |= 16; // 16-bit
+		s->flags |= SAMPLE_16BIT;
 	}
 	else if (audioFormat == WAV_FORMAT_IEEE_FLOAT && bitsPerSample == 64) // 64-BIT FLOATING POINT SAMPLE
 	{
-		sampleLength /= 8;
-		if (!allocateTmpSmpData(&tmpSmp, sampleLength * 8))
+		sampleLength /= sizeof (double);
+		if (!allocateSmpData(s, sampleLength * sizeof (double), false))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 
-		if (fread(tmpSmp.pek, sampleLength, 8, f) != 8)
+		if (fread(s->dataPtr, sampleLength, sizeof (double), f) != sizeof (double))
 		{
 			loaderMsgBox("General I/O error during loading! Is the file in use?");
 			return false;
 		}
 
-		dAudioDataDouble = (double *)tmpSmp.pek;
+		dAudioDataDouble = (double *)s->dataPtr;
 
 		// stereo conversion
 		if (numChannels == 2)
@@ -582,21 +576,27 @@ bool loadWAV(FILE *f, uint32_t filesize)
 
 		normalize64BitFloatToSigned16Bit(dAudioDataDouble, sampleLength);
 
-		ptr16 = (int16_t *)tmpSmp.pek;
+		ptr16 = (int16_t *)s->dataPtr;
 		for (i = 0; i < sampleLength; i++)
-			ptr16[i] = (int16_t)dAudioDataDouble[i]; // should use SIMD if available
+		{
+			const int32_t smp32 = (const int32_t)dAudioDataDouble[i];
+			ptr16[i] = (int16_t)smp32;
+		}
 
-		sampleLength *= 2;
-		tmpSmp.typ |= 16; // 16-bit
+		s->flags |= SAMPLE_16BIT;
 	}
 
-	reallocateTmpSmpData(&tmpSmp, sampleLength); // readjust memory needed
+	if (sampleLength > MAX_SAMPLE_LEN)
+		sampleLength = MAX_SAMPLE_LEN;
 
-	tuneSample(&tmpSmp, sampleRate, audio.linearPeriodsFlag);
+	bool sample16Bit = !!(s->flags & SAMPLE_16BIT);
+	reallocateSmpData(s, sampleLength, sample16Bit); // readjust memory needed
 
-	tmpSmp.vol = 64;
-	tmpSmp.pan = 128;
-	tmpSmp.len = sampleLength;
+	tuneSample(s, sampleRate, audio.linearPeriodsFlag);
+
+	s->volume = 64;
+	s->panning = 128;
+	s->length = sampleLength;
 
 	// ---- READ "smpl" chunk ----
 	if (smplPtr != 0 && smplLen > 52)
@@ -612,19 +612,14 @@ bool loadWAV(FILE *f, uint32_t filesize)
 
 			fread(&loopType, 4, 1, f);
 			fread(&loopStart, 4, 1, f);
-			fread(&loopEnd, 4, 1, f); loopEnd++;
+			fread(&loopEnd, 4, 1, f);
 
-			if (tmpSmp.typ & 16)
-			{
-				loopStart *= 2;
-				loopEnd *= 2;
-			}
-
+			loopEnd++;
 			if (loopEnd <= sampleLength)
 			{
-				tmpSmp.repS = loopStart;
-				tmpSmp.repL = loopEnd - loopStart;
-				tmpSmp.typ |= (loopType == 0) ? 1 : 2;
+				s->loopStart = loopStart;
+				s->loopLength = loopEnd - loopStart;
+				s->flags |= (loopType == 0) ? LOOP_FWD : LOOP_BIDI;
 			}
 		}
 	}
@@ -646,7 +641,7 @@ bool loadWAV(FILE *f, uint32_t filesize)
 			if (tmpPan > 255)
 				tmpPan = 255;
 
-			tmpSmp.pan = (uint8_t)tmpPan;
+			s->panning = (uint8_t)tmpPan;
 		}
 		else
 		{
@@ -659,7 +654,7 @@ bool loadWAV(FILE *f, uint32_t filesize)
 		if (tmpVol > 256)
 			tmpVol = 256;
 
-		tmpSmp.vol = (uint8_t)((tmpVol + 2) / 4); // 0..256 -> 0..64 (rounded)
+		s->volume = (uint8_t)((tmpVol + 2) / 4); // 0..256 -> 0..64 (rounded)
 	}
 	// ---------------------------
 
@@ -667,20 +662,11 @@ bool loadWAV(FILE *f, uint32_t filesize)
 	if (inamPtr != 0 && inamLen > 0)
 	{
 		fseek(f, inamPtr, SEEK_SET);
+		if (inamLen > 22)
+			inamLen = 22;
 
-		uint32_t len = 22;
-		if (len > inamLen)
-			len = inamLen;
-
-		memset(tmpSmp.name, 0, sizeof (tmpSmp.name));
-		for (i = 0; i < len; i++)
-		{
-			char chr = (char)fgetc(f);
-			if (chr == '\0')
-				break;
-
-			tmpSmp.name[i] = chr;
-		}
+		fread(s->name, 1, inamLen, f);
+		s->name[22] = '\0';
 
 		smpFilenameSet = true;
 	}

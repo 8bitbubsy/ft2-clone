@@ -5,7 +5,7 @@
 #include <SDL2/SDL.h>
 
 void nibblesKeyAdministrator(SDL_Scancode scancode);
-void moveNibblePlayers(void);
+void moveNibblesPlayers(void);
 void showNibblesScreen(void);
 void hideNibblesScreen(void);
 void exitNibblesScreen(void);

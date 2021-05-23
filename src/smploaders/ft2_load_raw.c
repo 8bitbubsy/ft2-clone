@@ -1,4 +1,7 @@
-// RAW (header-less) sample loader
+/* RAW (header-less) sample loader
+**
+** Note: Do NOT close the file handle!
+*/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -10,21 +13,23 @@
 
 bool loadRAW(FILE *f, uint32_t filesize)
 {
-	if (!allocateTmpSmpData(&tmpSmp, filesize))
+	sample_t *s = &tmpSmp;
+
+	if (!allocateSmpData(s, filesize, false))
 	{
 		loaderMsgBox("Not enough memory!");
 		return false;
 	}
 
-	if (fread(tmpSmp.pek, filesize, 1, f) != 1)
+	if (fread(s->dataPtr, filesize, 1, f) != 1)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during loading! Is the file in use?");
 		return false;
 	}
 
-	tmpSmp.len = filesize;
-	tmpSmp.vol = 64;
-	tmpSmp.pan = 128;
+	s->length = filesize;
+	s->volume = 64;
+	s->panning = 128;
 
 	return true;
 }

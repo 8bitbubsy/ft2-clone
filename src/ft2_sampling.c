@@ -13,282 +13,281 @@
 #include "ft2_sampling.h"
 #include "ft2_structs.h"
 
-// these may very well change after opening the audio input device
+#define STEREO_SAMPLE_HEIGHT (SAMPLE_AREA_HEIGHT/2)
+#define SAMPLE_L_CENTER (SAMPLE_AREA_Y_CENTER - (STEREO_SAMPLE_HEIGHT/2))
+#define SAMPLE_R_CENTER (SAMPLE_AREA_Y_CENTER + (STEREO_SAMPLE_HEIGHT/2))
+
+#define MONO_SAMPLE_HEIGHT SAMPLE_AREA_HEIGHT
+#define SAMPLE_CENTER SAMPLE_AREA_Y_CENTER
+
+// this number may change when the audio input device is opened (must be 2^n)
 #define SAMPLING_BUFFER_SIZE 2048
+
+// (must be 2^n)
+#if defined(_WIN32) || defined(__APPLE__)
+#define PREVIEW_SAMPLES 2048
+#else
+#define PREVIEW_SAMPLES 8192
+#endif
 
 static bool sampleInStereo;
 static volatile bool drawSamplingBufferFlag, outOfMemoryFlag, noMoreRoomFlag;
-static int16_t *currWriteBuf;
-static int16_t displayBuffer1[SAMPLING_BUFFER_SIZE * 2], displayBuffer2[SAMPLING_BUFFER_SIZE * 2];
-static int32_t bytesSampled, samplingBufferBytes;
+static int16_t previewBufL[2][PREVIEW_SAMPLES], previewBufR[2][PREVIEW_SAMPLES];
+static int32_t samplesSampled, samplingBufferSize, currPreviewBufNum, oldPreviewSmpPos, currSampleLen;
 static uint32_t samplingRate;
-static volatile int32_t currSampleLen;
+static sample_t *smpL, *smpR;
 static SDL_AudioDeviceID recordDev;
-static int16_t rightChSmpSlot = -1;
 
-static void SDLCALL samplingCallback(void *userdata, Uint8 *stream, int len)
+static void SDLCALL stereoSamplingCallback(void *userdata, Uint8 *stream, int len)
 {
-	if (instr[editor.curInstr] == NULL || len < 0 || len > samplingBufferBytes)
+	const int32_t samples = len >> 2;
+	if (instr[editor.curInstr] == NULL || samples < 0 || samples > samplingBufferSize)
 		return;
 
-	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
-
-	int8_t *newPtr = (int8_t *)realloc(s->origPek, (s->len + len) + LOOP_FIX_LEN);
-	if (newPtr == NULL)
+	if (!reallocateSmpData(smpL, smpL->length + samples, true) || !reallocateSmpData(smpR, smpR->length + samples, true))
 	{
 		drawSamplingBufferFlag = false;
 		outOfMemoryFlag = true;
 		return;
 	}
 
-	s->origPek = newPtr;
-	s->pek = s->origPek + SMP_DAT_OFFSET;
+	const int16_t *src16 = (int16_t *)stream;
+	int16_t *dst16_L = (int16_t *)smpL->dataPtr + smpL->length;
+	int16_t *dst16_R = (int16_t *)smpR->dataPtr + smpR->length;
 
-	memcpy(&s->pek[s->len], stream, len);
-
-	s->len += len;
-	if (s->len > MAX_SAMPLE_LEN) // length overflow
+	for (int32_t i = 0; i < samples; i++)
 	{
-		s->len -= len;
+		dst16_L[i] = *src16++;
+		dst16_R[i] = *src16++;
+	}
+
+	smpL->length += samples;
+	smpR->length += samples;
+
+	if (smpL->length > MAX_SAMPLE_LEN) // length overflow
+	{
+		smpL->length -= samples;
+		smpR->length -= samples;
 		noMoreRoomFlag = true;
 		return;
 	}
 
-	bytesSampled += len;
-	if (bytesSampled >= samplingBufferBytes)
+	currSampleLen = smpL->length;
+
+	// if we have gathared enough samples, fill the current display buffer
+
+	samplesSampled += samples;
+	if (samplesSampled >= PREVIEW_SAMPLES)
 	{
-		bytesSampled -= samplingBufferBytes;
+		samplesSampled -= PREVIEW_SAMPLES;
 
-		currSampleLen = s->len - samplingBufferBytes;
+		if (oldPreviewSmpPos > 0)
+		{
+			int16_t *dstL = previewBufL[currPreviewBufNum^1];
+			int16_t *dstR = previewBufR[currPreviewBufNum^1];
+			const int16_t *srcL = (int16_t *)smpL->dataPtr + oldPreviewSmpPos;
+			const int16_t *srcR = (int16_t *)smpR->dataPtr + oldPreviewSmpPos;
 
-		// fill display buffer
-		memcpy(currWriteBuf, &s->pek[currSampleLen], samplingBufferBytes);
+			memcpy(dstL, srcL, PREVIEW_SAMPLES * sizeof (int16_t));
+			memcpy(dstR, srcR, PREVIEW_SAMPLES * sizeof (int16_t));
 
-		// swap write buffer (double-buffering)
-		if (currWriteBuf == displayBuffer1)
-			currWriteBuf = displayBuffer2;
-		else
-			currWriteBuf = displayBuffer1;
+			drawSamplingBufferFlag = true;
+		}
 
-		drawSamplingBufferFlag = true;
+		oldPreviewSmpPos = smpL->length - PREVIEW_SAMPLES;
 	}
+
+	(void)userdata;
+}
+
+static void SDLCALL monoSamplingCallback(void *userdata, Uint8 *stream, int len)
+{
+	const int32_t samples = len >> 1;
+	if (instr[editor.curInstr] == NULL || samples < 0 || samples > samplingBufferSize)
+		return;
+
+	if (!reallocateSmpData(smpL, smpL->length + samples, true))
+	{
+		drawSamplingBufferFlag = false;
+		outOfMemoryFlag = true;
+		return;
+	}
+
+	const int16_t *src16 = (int16_t *)stream;
+	int16_t *dst16 = (int16_t *)smpL->dataPtr + smpL->length;
+	memcpy(dst16, src16, samples * sizeof (int16_t));
+
+	smpL->length += samples;
+	if (smpL->length > MAX_SAMPLE_LEN) // length overflow
+	{
+		smpL->length -= samples;
+		noMoreRoomFlag = true;
+		return;
+	}
+
+	// if we have gathared enough samples, fill the current display buffer
+
+	samplesSampled += samples;
+	if (samplesSampled >= PREVIEW_SAMPLES)
+	{
+		samplesSampled -= PREVIEW_SAMPLES;
+
+		if (oldPreviewSmpPos > 0)
+		{
+			int16_t *dst = previewBufL[currPreviewBufNum^1];
+			const int16_t *src = (int16_t *)smpL->dataPtr + oldPreviewSmpPos;
+			memcpy(dst, src, PREVIEW_SAMPLES * sizeof (int16_t));
+
+			drawSamplingBufferFlag = true;
+		}
+
+		oldPreviewSmpPos = smpL->length - PREVIEW_SAMPLES;
+	}
+
+	currSampleLen = smpL->length;
 
 	(void)userdata;
 }
 
 void stopSampling(void)
 {
-	int8_t *newPtr;
-	int16_t *dst16, *src16;
-	int32_t i, len;
-
 	resumeAudio();
 	mouseAnimOff();
 
 	SDL_CloseAudioDevice(recordDev);
+
+	if (smpL != NULL) fixSample(smpL);
+	if (smpR != NULL) fixSample(smpR);
+
 	editor.samplingAudioFlag = false;
-
-	sampleTyp *currSmp = NULL;
-	sampleTyp *nextSmp = NULL;
-
-	if (instr[editor.curInstr] != NULL)
-		currSmp = &instr[editor.curInstr]->samp[editor.curSmp];
-
-	if (sampleInStereo)
-	{
-		// read right channel data
-		
-		if (currSmp->pek != NULL && rightChSmpSlot != -1)
-		{
-			nextSmp = &instr[editor.curInstr]->samp[rightChSmpSlot];
-
-			nextSmp->origPek = (int8_t *)malloc((currSmp->len >> 1) + LOOP_FIX_LEN);
-			if (nextSmp->origPek != NULL)
-			{
-				nextSmp->pek = nextSmp->origPek + SMP_DAT_OFFSET;
-				nextSmp->len = currSmp->len >> 1;
-
-				src16 = (int16_t *)currSmp->pek;
-				dst16 = (int16_t *)nextSmp->pek;
-
-				len = nextSmp->len >> 1;
-				for (i = 0; i < len; i++)
-					dst16[i] = src16[(i << 1) + 1];
-			}
-			else
-			{
-				freeSample(editor.curInstr, rightChSmpSlot);
-			}
-
-			currSmp->len >>= 1;
-
-			// read left channel data by skipping every other sample
-
-			dst16 = (int16_t *)currSmp->pek;
-
-			len = currSmp->len >> 1;
-			for (i = 0; i < len; i++)
-				dst16[i] = dst16[i << 1];
-		}
-	}
-
-	if (currSmp->origPek != NULL)
-	{
-		newPtr = (int8_t *)realloc(currSmp->origPek, currSmp->len + LOOP_FIX_LEN);
-		if (newPtr != NULL)
-		{
-			currSmp->origPek = newPtr;
-			currSmp->pek = currSmp->origPek + SMP_DAT_OFFSET;
-		}
-
-		fixSample(currSmp);
-	}
-	else
-	{
-		freeSample(editor.curInstr, editor.curSmp);
-	}
-
-	if (nextSmp != NULL && nextSmp->origPek != NULL)
-		fixSample(nextSmp);
 
 	updateSampleEditorSample();
 	editor.updateCurInstr = true;
 }
 
-static uint8_t getDispBuffPeakMono(const int16_t *smpData, int32_t smpNum)
+static void getMinMax16(const int16_t *p, uint32_t position, uint32_t scanLen, int16_t *min16, int16_t *max16)
 {
-	uint32_t max = 0;
-	for (int32_t i = 0; i < smpNum; i++)
-	{
-		const int16_t smp16 = smpData[i];
+	int16_t minVal =  32767;
+	int16_t maxVal = -32768;
 
-		const uint32_t smpAbs = ABS(smp16);
-		if (smpAbs > max)
-			max = smpAbs;
+	assert(position+scanLen <= PREVIEW_SAMPLES);
+
+	const int16_t *ptr16 = (const int16_t *)p + position;
+	for (uint32_t i = 0; i < scanLen; i++)
+	{
+		const int16_t smp16 = ptr16[i];
+		if (smp16 < minVal) minVal = smp16;
+		if (smp16 > maxVal) maxVal = smp16;
 	}
 
-	max = (max * SAMPLE_AREA_HEIGHT) >> 16;
-	if (max > 76)
-		max = 76;
-
-	return (uint8_t)max;
+	*min16 = minVal;
+	*max16 = maxVal;
 }
 
-static uint8_t getDispBuffPeakLeft(const int16_t *smpData, int32_t smpNum)
+static int32_t scr2BufPos(int32_t x)
 {
-	smpNum <<= 1;
-
-	uint32_t max = 0;
-	for (int32_t i = 0; i < smpNum; i += 2)
-	{
-		const int16_t smp16 = smpData[i];
-
-		const uint32_t smpAbs = ABS(smp16);
-		if (smpAbs > max)
-			max = smpAbs;
-	}
-
-	max = (max * SAMPLE_AREA_HEIGHT) >> (16 + 1);
-	if (max > 38)
-		max = 38;
-
-	return (uint8_t)max;
-}
-
-static uint8_t getDispBuffPeakRight(const int16_t *smpData, int32_t smpNum)
-{
-	smpNum <<= 1;
-
-	uint32_t max = 0;
-	for (int32_t i = 0; i < smpNum; i += 2)
-	{
-		const int16_t smp16 = smpData[i];
-
-		const uint32_t smpAbs = ABS(smp16);
-		if (smpAbs > max)
-			max = smpAbs;
-	}
-
-	max = (max * SAMPLE_AREA_HEIGHT) >> (16 + 1);
-	if (max > 38)
-		max = 38;
-
-	return (uint8_t)max;
-}
-
-static inline int32_t scrPos2SmpBufPos(int32_t x) // x = 0..SAMPLE_AREA_WIDTH
-{
-	return (x * ((SAMPLING_BUFFER_SIZE << 16) / SAMPLE_AREA_WIDTH)) >> 16;
+	const double dXScaleMul = PREVIEW_SAMPLES / (double)SAMPLE_AREA_WIDTH;
+	return (int32_t)(x * dXScaleMul);
 }
 
 static void drawSamplingPreview(void)
 {
-	uint8_t smpAbs;
-	int16_t *readBuf;
-	uint16_t x;
-	int32_t smpIdx, smpNum;
-	uint32_t *centerPtrL, *centerPtrR;
+	int16_t min, max;
 
-	const uint32_t pixVal = video.palette[PAL_PATTEXT];
+	// clear sample data area
+	memset(&video.frameBuffer[174 * SCREEN_W], 0, SAMPLE_AREA_WIDTH * SAMPLE_AREA_HEIGHT * sizeof (int32_t));
 
-	// select buffer currently not being written to (double-buffering)
-	if (currWriteBuf == displayBuffer1)
-		readBuf = displayBuffer2;
-	else
-		readBuf = displayBuffer1;
-
-	if (sampleInStereo)
+	if (sampleInStereo) // stereo sampling
 	{
-		// stereo sampling
+		const int16_t *smpDataL = previewBufL[currPreviewBufNum];
+		const int16_t *smpDataR = previewBufR[currPreviewBufNum];
 
-		const uint16_t centerL = SAMPLE_AREA_Y_CENTER - (SAMPLE_AREA_HEIGHT / 4);
-		const uint16_t centerR = SAMPLE_AREA_Y_CENTER + (SAMPLE_AREA_HEIGHT / 4);
+		int32_t oldMinL = SAMPLE_L_CENTER;
+		int32_t oldMaxL = SAMPLE_L_CENTER;
+		int32_t oldMinR = SAMPLE_R_CENTER;
+		int32_t oldMaxR = SAMPLE_R_CENTER;
 
-		centerPtrL = &video.frameBuffer[centerL*SCREEN_W];
-		centerPtrR = &video.frameBuffer[centerR*SCREEN_W];
+		hLine(0, SAMPLE_L_CENTER, SAMPLE_AREA_WIDTH, PAL_DESKTOP); // draw center line
+		hLine(0, SAMPLE_R_CENTER, SAMPLE_AREA_WIDTH, PAL_DESKTOP); // draw center line
 
-		for (x = 0; x < SAMPLE_AREA_WIDTH; x++)
+		for (int16_t x = 0; x < SAMPLE_AREA_WIDTH; x++)
 		{
-			smpIdx = scrPos2SmpBufPos(x);
-			smpNum = scrPos2SmpBufPos(x+1) - smpIdx;
+			int32_t smpIdx = scr2BufPos(x+0);
+			int32_t smpNum = scr2BufPos(x+1) - smpIdx;
 
-			if (smpIdx+smpNum >= SAMPLING_BUFFER_SIZE)
-				smpNum = SAMPLING_BUFFER_SIZE - smpIdx;
+			if (smpIdx+smpNum > PREVIEW_SAMPLES)
+				smpNum = PREVIEW_SAMPLES-smpIdx;
 
-			// left channel samples
-			smpAbs = getDispBuffPeakLeft(&readBuf[(smpIdx * 2) + 0], smpNum);
-			if (smpAbs == 0)
-				centerPtrL[x] = pixVal;
-			else
-				vLine(x, centerL - smpAbs, (smpAbs * 2) + 1, PAL_PATTEXT);
+			if (smpNum > 0)
+			{
+				// left channel
+				getMinMax16(smpDataL, smpIdx, smpNum, &min, &max);
+				min = SAMPLE_L_CENTER - ((min * STEREO_SAMPLE_HEIGHT) >> 16);
+				max = SAMPLE_L_CENTER - ((max * STEREO_SAMPLE_HEIGHT) >> 16);
 
-			// right channel samples
-			smpAbs = getDispBuffPeakRight(&readBuf[(smpIdx * 2) + 1], smpNum);
-			if (smpAbs == 0)
-				centerPtrR[x] = pixVal;
-			else
-				vLine(x, centerR - smpAbs, (smpAbs * 2) + 1, PAL_PATTEXT);
+				if (x != 0)
+				{
+					if (min > oldMaxL) sampleLine(x-1, x, oldMaxL, min);
+					if (max < oldMinL) sampleLine(x-1, x, oldMinL, max);
+				}
+
+				sampleLine(x, x, max, min);
+
+				oldMinL = min;
+				oldMaxL = max;
+
+				// right channel
+				getMinMax16(smpDataR, smpIdx, smpNum, &min, &max);
+				min = SAMPLE_R_CENTER - ((min * STEREO_SAMPLE_HEIGHT) >> 16);
+				max = SAMPLE_R_CENTER - ((max * STEREO_SAMPLE_HEIGHT) >> 16);
+
+				if (x != 0)
+				{
+					if (min > oldMaxR) sampleLine(x-1, x, oldMaxR, min);
+					if (max < oldMinR) sampleLine(x-1, x, oldMinR, max);
+				}
+
+				sampleLine(x, x, max, min);
+
+				oldMinR = min;
+				oldMaxR = max;
+			}
 		}
 	}
-	else
+	else // mono sampling
 	{
-		// mono sampling
+		const int16_t *smpData = previewBufL[currPreviewBufNum];
 
-		centerPtrL = &video.frameBuffer[SAMPLE_AREA_Y_CENTER * SCREEN_W];
+		int32_t oldMin = SAMPLE_CENTER;
+		int32_t oldMax = SAMPLE_CENTER;
 
-		for (x = 0; x < SAMPLE_AREA_WIDTH; x++)
+		hLine(0, SAMPLE_CENTER, SAMPLE_AREA_WIDTH, PAL_DESKTOP); // draw center line
+
+		for (int16_t x = 0; x < SAMPLE_AREA_WIDTH; x++)
 		{
-			smpIdx = scrPos2SmpBufPos(x);
-			smpNum = scrPos2SmpBufPos(x+1) - smpIdx;
+			int32_t smpIdx = scr2BufPos(x+0);
+			int32_t smpNum = scr2BufPos(x+1) - smpIdx;
 
-			if (smpIdx+smpNum >= SAMPLING_BUFFER_SIZE)
-				smpNum = SAMPLING_BUFFER_SIZE - smpIdx;
+			if (smpIdx+smpNum > PREVIEW_SAMPLES)
+				smpNum = PREVIEW_SAMPLES-smpIdx;
 
-			smpAbs = getDispBuffPeakMono(&readBuf[smpIdx], smpNum);
-			if (smpAbs == 0)
-				centerPtrL[x] = pixVal;
-			else
-				vLine(x, SAMPLE_AREA_Y_CENTER - smpAbs, (smpAbs * 2) + 1, PAL_PATTEXT);
+			if (smpNum > 0)
+			{
+				getMinMax16(smpData, smpIdx, smpNum, &min, &max);
+				min = SAMPLE_CENTER - ((min * MONO_SAMPLE_HEIGHT) >> 16);
+				max = SAMPLE_CENTER - ((max * MONO_SAMPLE_HEIGHT) >> 16);
+
+				if (x != 0)
+				{
+					if (min > oldMax) sampleLine(x-1, x, oldMax, min);
+					if (max < oldMin) sampleLine(x-1, x, oldMin, max);
+				}
+
+				sampleLine(x, x, max, min);
+
+				oldMin = min;
+				oldMax = max;
+			}
 		}
 	}
 }
@@ -315,19 +314,13 @@ void handleSamplingUpdates(void)
 	{
 		drawSamplingBufferFlag = false;
 
-		// clear sample data area
-		memset(&video.frameBuffer[174 * SCREEN_W], 0, SAMPLE_AREA_WIDTH * SAMPLE_AREA_HEIGHT * sizeof (int32_t));
-
 		drawSamplingPreview();
-
-		// clear and draw new sample length number
-		fillRect(536, 362, 56, 10, PAL_DESKTOP);
-
-		if (sampleInStereo)
-			hexOut(536, 362, PAL_FORGRND, currSampleLen >> 1, 8);
-		else
-			hexOut(536, 362, PAL_FORGRND, currSampleLen, 8);
+		currPreviewBufNum ^= 1;
 	}
+
+	// clear and draw new sample length number
+	fillRect(536, 362, 56, 10, PAL_DESKTOP);
+	hexOut(536, 362, PAL_FORGRND, currSampleLen, 8);
 }
 
 void startSampling(void)
@@ -346,23 +339,20 @@ void startSampling(void)
 		return;
 
 	sampleInStereo = (result == 2);
-	samplingBufferBytes = sampleInStereo ? (SAMPLING_BUFFER_SIZE * 4) : (SAMPLING_BUFFER_SIZE * 2);
-
 	mouseAnimOn();
 
 	switch (config.audioInputFreq)
 	{
-		case INPUT_FREQ_96KHZ: samplingRate = 96000; break;
-		case INPUT_FREQ_44KHZ: samplingRate = 44100; break;
-		default: samplingRate = 48000; break;
+		         case INPUT_FREQ_44KHZ: samplingRate = 44100; break;
+		default: case INPUT_FREQ_48KHZ: samplingRate = 48000; break;
+		         case INPUT_FREQ_96KHZ: samplingRate = 96000; break;
 	}
 
 	memset(&want, 0, sizeof (SDL_AudioSpec));
 	want.freq = samplingRate;
 	want.format = AUDIO_S16;
-	want.channels = 1 + sampleInStereo;
-	want.callback = samplingCallback;
-	want.userdata = NULL;
+	want.channels = sampleInStereo ? 2 : 1;
+	want.callback = sampleInStereo ? stereoSamplingCallback : monoSamplingCallback;
 	want.samples = SAMPLING_BUFFER_SIZE;
 
 	recordDev = SDL_OpenAudioDevice(audio.currInputDevice, true, &want, &have, 0);
@@ -372,63 +362,60 @@ void startSampling(void)
 		return;
 	}
 
+	samplingRate = have.freq;
+	samplingBufferSize = have.samples;
+
 	pauseAudio();
 
 	if (instr[editor.curInstr] == NULL && !allocateInstr(editor.curInstr))
 	{
-		resumeAudio();
+		stopSampling();
 		okBox(0, "System message", "Not enough memory!");
 		return;
 	}
 
-	sampleTyp *s = &instr[editor.curInstr]->samp[editor.curSmp];
+	if (sampleInStereo && editor.curSmp+1 >= MAX_SMP_PER_INST)
+	{
+		stopSampling();
+		okBox(0, "System message", "Error: No free sample slot for the right channel!");
+		return;
+	}
 
-	// wipe current sample and prepare it
-	freeSample(editor.curInstr, editor.curSmp);
-	s->typ |= 16; // we always sample in 16-bit
-
-	tuneSample(s, samplingRate, audio.linearPeriodsFlag); // tune sample (relTone/finetune) to the sampling frequency we obtained
+	smpL = &instr[editor.curInstr]->smp[editor.curSmp];
+	freeSample(editor.curInstr, editor.curSmp); // also sets pan to 128 and vol to 64
+	tuneSample(smpL, samplingRate, audio.linearPeriodsFlag);
+	smpL->flags |= SAMPLE_16BIT;
 
 	if (sampleInStereo)
 	{
-		strcpy(s->name, "Left sample");
-		s->pan = 0;
+		smpR = &instr[editor.curInstr]->smp[editor.curSmp+1];
+		freeSample(editor.curInstr, editor.curSmp+1); // also sets pan to 128 and vol to 64
+		tuneSample(smpR, samplingRate, audio.linearPeriodsFlag);
+		smpR->flags |= SAMPLE_16BIT;
 
-		if (editor.curSmp+1 < MAX_SMP_PER_INST)
-			rightChSmpSlot = editor.curSmp+1;
-		else
-			rightChSmpSlot = -1;
+		strcpy(smpL->name, "Left sample");
+		smpL->panning = 0;
 
-		if (rightChSmpSlot != -1)
-		{
-			// wipe current sample and prepare it
-			freeSample(editor.curInstr, rightChSmpSlot);
-			sampleTyp *nextSmp = &instr[editor.curInstr]->samp[rightChSmpSlot];
-
-			strcpy(nextSmp->name, "Right sample");
-			nextSmp->typ |= 16; // we always sample in 16-bit
-			nextSmp->pan = 255;
-
-			tuneSample(nextSmp, samplingRate, audio.linearPeriodsFlag); // tune sample (relTone/finetune) to the sampling frequency we obtained
-		}
+		strcpy(smpR->name, "Right sample");
+		smpR->panning = 255;
 	}
 	else
 	{
-		strcpy(s->name, "Mono-mixed sample");
+		strcpy(smpL->name, "Mono sample");
 	}
+
+	memset(previewBufL, 0, sizeof (previewBufL));
+	memset(previewBufR, 0, sizeof (previewBufR));
+	currPreviewBufNum = 0;
+
+	samplesSampled = currSampleLen = oldPreviewSmpPos = 0;
+	noMoreRoomFlag = outOfMemoryFlag = drawSamplingBufferFlag = false;
 
 	updateSampleEditorSample();
 	updateSampleEditor();
 	setSongModifiedFlag();
 
-	currWriteBuf = displayBuffer1;
-	memset(displayBuffer1, 0, sizeof (displayBuffer1));
-	memset(displayBuffer2, 0, sizeof (displayBuffer2));
-
 	editor.samplingAudioFlag = true;
-	bytesSampled = 0;
-	currSampleLen = 0;
-
 	SDL_PauseAudioDevice(recordDev, false);
 #endif
 }

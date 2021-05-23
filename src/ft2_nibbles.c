@@ -1,5 +1,3 @@
-// directly ported from FT2 source code (except some routines)
-
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h> // round()
@@ -13,7 +11,6 @@
 #include "ft2_structs.h"
 
 #define STAGES_BMP_WIDTH 530
-
 #define NI_MAXLEVEL 30
 
 static const char *NI_HelpText[] =
@@ -35,14 +32,14 @@ static const char *NI_HelpText[] =
 
 typedef struct
 {
-	int16_t antal;
+	int16_t length;
 	uint8_t data[8];
-} nibbleBufferTyp;
+} nibblesBuffer_t;
 
 typedef struct
 {
 	uint8_t x, y;
-} nibbleCrd;
+} nibblesCoord_t;
 
 static const char nibblesCheatCode1[] = "skip", nibblesCheatCode2[] = "triton";
 static char nibblesCheatBuffer[16];
@@ -51,11 +48,11 @@ static const char convHexTable2[10] = { 7, 8, 9, 10, 11, 12, 13, 16, 17, 18 };
 static const uint8_t NI_Speeds[4] = { 12, 8, 6, 4 };
 static bool NI_EternalLives;
 static uint8_t NI_CheatIndex, NI_CurSpeed, NI_CurTick60Hz, NI_CurSpeed60Hz, NI_Screen[51][23], NI_Level;
-static int16_t NI_P1Dir, NI_P2Dir, NI_P1Len, NI_P2Len, NI_Number, NI_NumberX, NI_NumberY, NI_P1NoRens, NI_P2NoRens;
+static int16_t NI_P1Dir, NI_P2Dir, NI_P1Len, NI_P2Len, NI_Number, NI_NumberX, NI_NumberY, NI_P1NoClear, NI_P2NoClear;
 static uint16_t NI_P1Lives, NI_P2Lives;
 static int32_t NI_P1Score, NI_P2Score;
-static nibbleCrd NI_P1[256], NI_P2[256];
-static nibbleBufferTyp nibblesBuffer[2];
+static nibblesCoord_t NI_P1[256], NI_P2[256];
+static nibblesBuffer_t nibblesBuffer[2];
 
 /* Non-FT2 feature: Check if either the Desktop or Buttons palette color
 ** is so close to black that the player would have troubles seeing the walls
@@ -150,29 +147,29 @@ static void redrawNibblesScreen(void)
 	}
 }
 
-static void nibblesAddBuffer(int16_t nr, uint8_t typ)
+static void nibblesAddBuffer(int16_t bufNum, uint8_t value)
 {
-	nibbleBufferTyp *n = &nibblesBuffer[nr];
-	if (n->antal < 8)
+	nibblesBuffer_t *n = &nibblesBuffer[bufNum];
+	if (n->length < 8)
 	{
-		n->data[n->antal] = typ;
-		n->antal++;
+		n->data[n->length] = value;
+		n->length++;
 	}
 }
 
-static bool nibblesBufferFull(int16_t nr)
+static bool nibblesBufferFull(int16_t bufNum)
 {
-	return (nibblesBuffer[nr].antal > 0);
+	return (nibblesBuffer[bufNum].length > 0);
 }
 
-static int16_t nibblesGetBuffer(int16_t nr)
+static int16_t nibblesGetBuffer(int16_t bufNum)
 {
-	nibbleBufferTyp *n = &nibblesBuffer[nr];
-	if (n->antal > 0)
+	nibblesBuffer_t *n = &nibblesBuffer[bufNum];
+	if (n->length > 0)
 	{
 		const int16_t dataOut = n->data[0];
 		memmove(&n->data[0], &n->data[1], 7);
-		n->antal--;
+		n->length--;
 
 		return dataOut;
 	}
@@ -180,10 +177,10 @@ static int16_t nibblesGetBuffer(int16_t nr)
 	return -1;
 }
 
-static void nibblesGetLevel(int16_t nr)
+static void nibblesGetLevel(int16_t levelNum)
 {
-	const int32_t readX = 1 + ((51+2) * (nr % 10));
-	const int32_t readY = 1 + ((23+2) * (nr / 10));
+	const int32_t readX = 1 + ((51+2) * (levelNum % 10));
+	const int32_t readY = 1 + ((23+2) * (levelNum / 10));
 
 	const uint8_t *stagePtr = &bmp.nibblesStages[(readY * STAGES_BMP_WIDTH) + readX];
 
@@ -196,12 +193,12 @@ static void nibblesGetLevel(int16_t nr)
 	}
 }
 
-static void nibblesCreateLevel(int16_t nr)
+static void nibblesCreateLevel(int16_t levelNum)
 {
-	if (nr >= NI_MAXLEVEL)
-		nr = NI_MAXLEVEL - 1;
+	if (levelNum >= NI_MAXLEVEL)
+		levelNum = NI_MAXLEVEL-1;
 
-	nibblesGetLevel(nr);
+	nibblesGetLevel(levelNum);
 
 	int32_t x1 = 0;
 	int32_t x2 = 0;
@@ -233,19 +230,19 @@ static void nibblesCreateLevel(int16_t nr)
 		}
 	}
 
-	const int32_t readX = (51 + 2) * (nr % 10);
-	const int32_t readY = (23 + 2) * (nr / 10);
+	const int32_t readX = (51 + 2) * (levelNum % 10);
+	const int32_t readY = (23 + 2) * (levelNum / 10);
 
 	NI_P1Dir = bmp.nibblesStages[(readY * 530) + (readX + 1)];
 	NI_P2Dir = bmp.nibblesStages[(readY * 530) + (readX + 0)];
 
 	NI_P1Len = 5;
 	NI_P2Len = 5;
-	NI_P1NoRens = 0;
-	NI_P2NoRens = 0;
+	NI_P1NoClear = 0;
+	NI_P2NoClear = 0;
 	NI_Number = 0;
-	nibblesBuffer[0].antal = 0;
-	nibblesBuffer[1].antal = 0;
+	nibblesBuffer[0].length = 0;
+	nibblesBuffer[1].length = 0;
 
 	for (int32_t i = 0; i < 256; i++)
 	{
@@ -256,10 +253,10 @@ static void nibblesCreateLevel(int16_t nr)
 	}
 }
 
-static void nibbleWriteLevelSprite(int16_t xOut, int16_t yOut, int16_t nr)
+static void nibbleWriteLevelSprite(int16_t xOut, int16_t yOut, int16_t levelNum)
 {
-	const int32_t readX = (51 + 2) * (nr % 10);
-	const int32_t readY = (23 + 2) * (nr / 10);
+	const int32_t readX = (51 + 2) * (levelNum % 10);
+	const int32_t readY = (23 + 2) * (levelNum / 10);
 
 	const uint8_t *src = (const uint8_t *)&bmp.nibblesStages[(readY * 530) + readX];
 	uint32_t *dst = &video.frameBuffer[(yOut * SCREEN_W) + xOut];
@@ -385,7 +382,7 @@ static void newNibblesGame(void)
 	redrawNibblesScreen();
 
 	setNibbleDot(NI_P1[0].x, NI_P1[0].y, 6);
-	if (config.NI_AntPlayers == 1)
+	if (config.NI_NumPlayers == 1)
 		setNibbleDot(NI_P2[0].x, NI_P2[0].y, 7);
 
 	if (!config.NI_Surround)
@@ -450,7 +447,7 @@ static void nibblesDecLives(int16_t l1, int16_t l2)
 
 		// prevent highscore table from showing overflowing level graphics
 		if (NI_Level >= NI_MAXLEVEL)
-			NI_Level = NI_MAXLEVEL - 1;
+			NI_Level = NI_MAXLEVEL-1;
 
 		if (NI_P1Score > config.NI_HighScore[9].score)
 		{
@@ -528,7 +525,7 @@ static void nibblesNewLevel(void)
 
 	// cast to int16_t to simulate a bug in FT2
 	NI_P1Score += 0x10000 + (int16_t)((12 - NI_CurSpeed) * 0x2000);
-	if (config.NI_AntPlayers == 1)
+	if (config.NI_NumPlayers == 1)
 		NI_P2Score += 0x10000;
 
 	NI_Level++;
@@ -536,7 +533,7 @@ static void nibblesNewLevel(void)
 	if (NI_P1Lives < 99)
 		NI_P1Lives++;
 
-	if (config.NI_AntPlayers == 1)
+	if (config.NI_NumPlayers == 1)
 	{
 		if (NI_P2Lives < 99)
 			NI_P2Lives++;
@@ -549,7 +546,7 @@ static void nibblesNewLevel(void)
 	nibblesGenNewNumber();
 }
 
-void moveNibblePlayers(void)
+void moveNibblesPlayers(void)
 {
 	if (ui.sysReqShown || --NI_CurTick60Hz != 0)
 		return;
@@ -578,9 +575,9 @@ void moveNibblePlayers(void)
 		}
 	}
 
-	memmove(&NI_P1[1], &NI_P1[0], 255 * sizeof (nibbleCrd));
-	if (config.NI_AntPlayers == 1)
-		memmove(&NI_P2[1], &NI_P2[0], 255 * sizeof (nibbleCrd));
+	memmove(&NI_P1[1], &NI_P1[0], 255 * sizeof (nibblesCoord_t));
+	if (config.NI_NumPlayers == 1)
+		memmove(&NI_P2[1], &NI_P2[0], 255 * sizeof (nibblesCoord_t));
 
 	switch (NI_P1Dir)
 	{
@@ -591,7 +588,7 @@ void moveNibblePlayers(void)
 		default: break;
 	}
 
-	if (config.NI_AntPlayers == 1)
+	if (config.NI_NumPlayers == 1)
 	{
 		switch (NI_P2Dir)
 		{
@@ -613,7 +610,7 @@ void moveNibblePlayers(void)
 	NI_P2[0].x %= 51;
 	NI_P2[0].y %= 23;
 
-	if (config.NI_AntPlayers == 1)
+	if (config.NI_NumPlayers == 1)
 	{
 		if (nibblesInvalid(NI_P1[0].x, NI_P1[0].y, NI_P1Dir) && nibblesInvalid(NI_P2[0].x, NI_P2[0].y, NI_P2Dir))
 		{
@@ -651,22 +648,22 @@ void moveNibblePlayers(void)
 	{
 		NI_P1Score += (i & 15) * 999 * (NI_Level + 1);
 		nibblesEraseNumber(); j = 1;
-		NI_P1NoRens = NI_P1Len / 2;
+		NI_P1NoClear = NI_P1Len >> 1;
 	}
 
-	if (config.NI_AntPlayers == 1)
+	if (config.NI_NumPlayers == 1)
 	{
 		i = NI_Screen[NI_P2[0].x][NI_P2[0].y];
 		if (i >= 16)
 		{
 			NI_P2Score += ((i & 15) * 999 * (NI_Level + 1));
 			nibblesEraseNumber(); j = 1;
-			NI_P2NoRens = NI_P2Len / 2;
+			NI_P2NoClear = NI_P2Len >> 1;
 		}
 	}
 
 	NI_P1Score -= 17;
-	if (config.NI_AntPlayers == 1)
+	if (config.NI_NumPlayers == 1)
 		NI_P2Score -= 17;
 
 	if (NI_P1Score < 0) NI_P1Score = 0;
@@ -674,9 +671,9 @@ void moveNibblePlayers(void)
 
 	if (!config.NI_Surround)
 	{
-		if (NI_P1NoRens > 0 && NI_P1Len < 255)
+		if (NI_P1NoClear > 0 && NI_P1Len < 255)
 		{
-			NI_P1NoRens--;
+			NI_P1NoClear--;
 			NI_P1Len++;
 		}
 		else
@@ -684,11 +681,11 @@ void moveNibblePlayers(void)
 			setNibbleDot(NI_P1[NI_P1Len].x, NI_P1[NI_P1Len].y, 0);
 		}
 
-		if (config.NI_AntPlayers == 1)
+		if (config.NI_NumPlayers == 1)
 		{
-			if (NI_P2NoRens > 0 && NI_P2Len < 255)
+			if (NI_P2NoClear > 0 && NI_P2Len < 255)
 			{
-				NI_P2NoRens--;
+				NI_P2NoClear--;
 				NI_P2Len++;
 			}
 			else
@@ -699,7 +696,7 @@ void moveNibblePlayers(void)
 	}
 
 	setNibbleDot(NI_P1[0].x, NI_P1[0].y, 6);
-	if (config.NI_AntPlayers == 1)
+	if (config.NI_NumPlayers == 1)
 		setNibbleDot(NI_P2[0].x, NI_P2[0].y, 5);
 
 	if (j == 1 && !config.NI_Surround)
@@ -770,7 +767,7 @@ void showNibblesScreen(void)
 	showCheckBox(CB_NIBBLES_WRAP);
 
 	uncheckRadioButtonGroup(RB_GROUP_NIBBLES_PLAYERS);
-	if (config.NI_AntPlayers == 0)
+	if (config.NI_NumPlayers == 0)
 		radioButtons[RB_NIBBLES_1PLAYER].state = RADIOBUTTON_CHECKED;
 	else
 		radioButtons[RB_NIBBLES_2PLAYERS].state = RADIOBUTTON_CHECKED;
@@ -821,7 +818,7 @@ void nibblesPlay(void)
 			return;
 	}
 
-	if (config.NI_Surround && config.NI_AntPlayers == 0)
+	if (config.NI_Surround && config.NI_NumPlayers == 0)
 	{
 		okBox(0, "Nibbles message", "Surround mode is not appropriate in one-player mode.");
 		return;
@@ -834,8 +831,8 @@ void nibblesPlay(void)
 	NI_CurSpeed = NI_Speeds[config.NI_Speed];
 
 	// adjust for 70Hz -> 60Hz frames
-	NI_CurSpeed60Hz = (uint8_t)round(NI_CurSpeed * ((double)VBLANK_HZ / FT2_VBLANK_HZ));
-	NI_CurTick60Hz = (uint8_t)round(NI_Speeds[2] * ((double)VBLANK_HZ / FT2_VBLANK_HZ));
+	NI_CurSpeed60Hz = (uint8_t)SCALE_VBLANK_DELTA(NI_CurSpeed);
+	NI_CurTick60Hz = (uint8_t)SCALE_VBLANK_DELTA(NI_Speeds[2]);
 
 	editor.NI_Play = true;
 	NI_P1Score = 0;
@@ -882,13 +879,13 @@ void nibblesExit(void)
 
 void nibblesSet1Player(void)
 {
-	config.NI_AntPlayers = 0;
+	config.NI_NumPlayers = 0;
 	checkRadioButton(RB_NIBBLES_1PLAYER);
 }
 
 void nibblesSet2Players(void)
 {
-	config.NI_AntPlayers = 1;
+	config.NI_NumPlayers = 1;
 	checkRadioButton(RB_NIBBLES_2PLAYERS);
 }
 

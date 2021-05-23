@@ -82,4 +82,5 @@ void rbDiskOpSmpSaveWav(void);
 void rbDiskOpSmpSaveRaw(void);
 void rbDiskOpSmpSaveIff(void);
 void trimEntryName(char *name, bool isDir);
+void createFileOverwriteText(char *filename, char *buffer);
 bool fileExistsAnsi(char *str);

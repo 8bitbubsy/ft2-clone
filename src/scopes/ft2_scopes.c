@@ -9,62 +9,45 @@
 #ifndef _WIN32
 #include <unistd.h> // usleep()
 #endif
-#include "ft2_header.h"
-#include "ft2_events.h"
-#include "ft2_config.h"
-#include "ft2_audio.h"
-#include "ft2_gui.h"
-#include "ft2_midi.h"
-#include "ft2_bmp.h"
+#include "../ft2_header.h"
+#include "../ft2_events.h"
+#include "../ft2_config.h"
+#include "../ft2_audio.h"
+#include "../ft2_gui.h"
+#include "../ft2_midi.h"
+#include "../ft2_bmp.h"
+#include "../ft2_mouse.h"
+#include "../ft2_video.h"
+#include "../ft2_tables.h"
+#include "../ft2_structs.h"
 #include "ft2_scopes.h"
-#include "ft2_mouse.h"
-#include "ft2_video.h"
 #include "ft2_scopedraw.h"
-#include "ft2_tables.h"
-#include "ft2_structs.h"
 
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
 static uint32_t scopeTimeLen, scopeTimeLenFrac;
 static uint64_t timeNext64, timeNext64Frac;
-static volatile scope_t scope[MAX_VOICES];
+static volatile scope_t scope[MAX_CHANNELS];
 static SDL_Thread *scopeThread;
 
-lastChInstr_t lastChInstr[MAX_VOICES]; // global
-
-void resetCachedScopeVars(void)
-{
-	volatile scope_t *sc = scope;
-	for (int32_t i = 0; i < MAX_VOICES; i++, sc++)
-	{
-		sc->dOldHz = -1.0;
-		sc->oldDelta = 0;
-		sc->oldDrawDelta = 0;
-	}
-}
+lastChInstr_t lastChInstr[MAX_CHANNELS]; // global
 
 int32_t getSamplePosition(uint8_t ch)
 {
-	if (ch >= song.antChn)
+	if (ch >= song.numChannels)
 		return -1;
 
 	volatile scope_t *sc = &scope[ch];
 
 	// cache some stuff
 	volatile bool active = sc->active;
-	volatile int32_t pos = sc->pos;
-	volatile int32_t end = sc->end;
-	volatile bool sampleIs16Bit = sc->sampleIs16Bit;
+	volatile int32_t position = sc->position;
+	volatile int32_t sampleEnd = sc->sampleEnd;
 
-	if (!active || end == 0)
+	if (!active || sampleEnd == 0)
 		return -1;
 
-	if (pos >= 0 && pos < end)
-	{
-		if (sampleIs16Bit)
-			pos <<= 1;
-
-		return pos;
-	}
+	if (position >= 0 && position < sampleEnd)
+		return position;
 
 	return -1; // not active or overflown
 }
@@ -75,7 +58,7 @@ void stopAllScopes(void)
 	while (scopesUpdatingFlag);
 	
 	volatile scope_t *sc = scope;
-	for (int32_t i = 0; i < MAX_VOICES; i++, sc++)
+	for (int32_t i = 0; i < MAX_CHANNELS; i++, sc++)
 		sc->active = false;
 
 	// wait for scope displaying to be done (safety)
@@ -83,19 +66,19 @@ void stopAllScopes(void)
 }
 
 // toggle mute
-static void setChannel(int32_t nr, bool on)
+static void setChannel(int32_t chNr, bool on)
 {
-	stmTyp *ch = &stm[nr];
+	channel_t *ch = &channel[chNr];
 
-	ch->stOff = !on;
-	if (ch->stOff)
+	ch->channelOff = !on;
+	if (ch->channelOff)
 	{
-		ch->effTyp = 0;
-		ch->eff = 0;
+		ch->efx = 0;
+		ch->efxData = 0;
 		ch->realVol = 0;
 		ch->outVol = 0;
 		ch->oldVol = 0;
-		ch->dFinalVol = 0.0;
+		ch->fFinalVol = 0.0f;
 		ch->outPan = 128;
 		ch->oldPan = 128;
 		ch->finalPan = 128;
@@ -104,37 +87,37 @@ static void setChannel(int32_t nr, bool on)
 		ch->envSustainActive = false; // non-FT2 bug fix for stuck piano keys
 	}
 
-	scope[nr].wasCleared = false;
+	scope[chNr].wasCleared = false;
 }
 
-static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t channel, bool outline)
+static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t chNr, bool outline)
 {
 	scopeXOffs++;
 	scopeYOffs++;
-	channel++;
+	chNr++;
 
 	if (outline)
 	{
-		if (channel < 10) // one digit?
+		if (chNr < 10) // one digit?
 		{
-			charOutOutlined(scopeXOffs, scopeYOffs, PAL_MOUSEPT, '0' + channel);
+			charOutOutlined(scopeXOffs, scopeYOffs, PAL_MOUSEPT, '0' + chNr);
 		}
 		else
 		{
-			charOutOutlined(scopeXOffs, scopeYOffs, PAL_MOUSEPT, chDecTab1[channel]);
-			charOutOutlined(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, chDecTab2[channel]);
+			charOutOutlined(scopeXOffs, scopeYOffs, PAL_MOUSEPT, chDecTab1[chNr]);
+			charOutOutlined(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, chDecTab2[chNr]);
 		}
 	}
 	else
 	{
-		if (channel < 10) // one digit?
+		if (chNr < 10) // one digit?
 		{
-			charOut(scopeXOffs, scopeYOffs, PAL_MOUSEPT, '0' + channel);
+			charOut(scopeXOffs, scopeYOffs, PAL_MOUSEPT, '0' + chNr);
 		}
 		else
 		{
-			charOut(scopeXOffs, scopeYOffs, PAL_MOUSEPT, chDecTab1[channel]);
-			charOut(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, chDecTab2[channel]);
+			charOut(scopeXOffs, scopeYOffs, PAL_MOUSEPT, chDecTab1[chNr]);
+			charOut(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, chDecTab2[chNr]);
 		}
 	}
 }
@@ -143,7 +126,7 @@ static void redrawScope(int32_t ch)
 {
 	int32_t i;
 
-	int32_t chansPerRow = (uint32_t)song.antChn >> 1;
+	int32_t chansPerRow = (uint32_t)song.numChannels >> 1;
 	int32_t chanLookup = chansPerRow - 1;
 	const uint16_t *scopeLens = scopeLenTab[chanLookup];
 
@@ -153,7 +136,7 @@ static void redrawScope(int32_t ch)
 	uint16_t y = 94;
 
 	uint16_t scopeLen = 0; // prevent compiler warning
-	for (i = 0; i < song.antChn; i++)
+	for (i = 0; i < song.numChannels; i++)
 	{
 		scopeLen = scopeLens[i];
 
@@ -190,7 +173,7 @@ static void redrawScope(int32_t ch)
 
 void refreshScopes(void)
 {
-	for (int32_t i = 0; i < MAX_VOICES; i++)
+	for (int32_t i = 0; i < MAX_CHANNELS; i++)
 		scope[i].wasCleared = false;
 }
 
@@ -198,7 +181,7 @@ static void channelMode(int32_t chn)
 {
 	int32_t i;
 	
-	assert(chn < song.antChn);
+	assert(chn < song.numChannels);
 
 	bool m = mouse.leftButtonPressed && !mouse.rightButtonPressed;
 	bool m2 = mouse.rightButtonPressed && mouse.leftButtonPressed;
@@ -206,7 +189,7 @@ static void channelMode(int32_t chn)
 	if (m2)
 	{
 		bool test = false;
-		for (i = 0; i < song.antChn; i++)
+		for (i = 0; i < song.numChannels; i++)
 		{
 			if (i != chn && !editor.chnMode[i])
 				test = true;
@@ -214,12 +197,12 @@ static void channelMode(int32_t chn)
 
 		if (test)
 		{
-			for (i = 0; i < song.antChn; i++)
+			for (i = 0; i < song.numChannels; i++)
 				editor.chnMode[i] = true;
 		}
 		else
 		{
-			for (i = 0; i < song.antChn; i++)
+			for (i = 0; i < song.numChannels; i++)
 				editor.chnMode[i] = (i == chn);
 		}
 	}
@@ -241,12 +224,12 @@ static void channelMode(int32_t chn)
 		}
 	}
 
-	for (i = 0; i < song.antChn; i++)
+	for (i = 0; i < song.numChannels; i++)
 		setChannel(i, editor.chnMode[i]);
 
 	if (m2)
 	{
-		for (i = 0; i < song.antChn; i++)
+		for (i = 0; i < song.numChannels; i++)
 			redrawScope(i);
 	}
 	else
@@ -267,7 +250,7 @@ bool testScopesMouseDown(void)
 		if (mouse.y > 130 && mouse.y < 134)
 			return true;
 
-		int32_t chansPerRow = (uint32_t)song.antChn >> 1;
+		int32_t chansPerRow = (uint32_t)song.numChannels >> 1;
 		const uint16_t *scopeLens = scopeLenTab[chansPerRow-1];
 
 		// find out if we clicked inside a scope
@@ -294,71 +277,49 @@ bool testScopesMouseDown(void)
 	return false;
 }
 
-static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
+static void scopeTrigger(int32_t ch, const sample_t *s, int32_t playOffset)
 {
-	scope_t tempState;
-
+	volatile scope_t tempState;
 	volatile scope_t *sc = &scope[ch];
 
-	int32_t length = s->len;
-	int32_t loopStart = s->repS;
-	int32_t loopLength = s->repL;
-	int32_t loopEnd = s->repS + s->repL;
-	uint8_t loopType = s->typ & 3;
-	bool sampleIs16Bit = (s->typ >> 4) & 1;
+	int32_t length = s->length;
+	int32_t loopStart = s->loopStart;
+	int32_t loopLength = s->loopLength;
+	int32_t loopEnd = s->loopStart + s->loopLength;
+	uint8_t loopType = GET_LOOPTYPE(s->flags);
+	bool sample16Bit = !!(s->flags & SAMPLE_16BIT);
 
-	if (sampleIs16Bit)
-	{
-		assert(!(length & 1));
-		assert(!(loopStart & 1));
-		assert(!(loopLength & 1));
-		assert(!(loopEnd & 1));
-
-		length >>= 1;
-		loopStart >>= 1;
-		loopLength >>= 1;
-		loopEnd >>= 1;
-	}
-
-	if (s->pek == NULL || length < 1)
+	if (s->dataPtr == NULL || length < 1)
 	{
 		sc->active = false; // shut down scope (illegal parameters)
 		return;
 	}
 
+	tempState = *sc; // get copy of current scope state
+
 	if (loopLength < 1) // disable loop if loopLength is below 1
 		loopType = 0;
 
-	if (sampleIs16Bit)
-		tempState.base16 = (const int16_t *)s->pek;
+	if (sample16Bit)
+		tempState.base16 = (const int16_t *)s->dataPtr;
 	else
-		tempState.base8 = s->pek;
+		tempState.base8 = s->dataPtr;
 
-	tempState.sampleIs16Bit = sampleIs16Bit;
+	tempState.sample16Bit = sample16Bit;
 	tempState.loopType = loopType;
-
 	tempState.direction = 1; // forwards
-	tempState.end = (loopType > 0) ? loopEnd : length;
+	tempState.sampleEnd = (loopType == LOOP_OFF) ? length : loopEnd;
 	tempState.loopStart = loopStart;
 	tempState.loopLength = loopLength;
-	tempState.pos = playOffset;
-	tempState.posFrac = 0;
+	tempState.position = playOffset;
+	tempState.positionFrac = 0;
 	
 	// if position overflows (f.ex. through 9xx command), shut down scopes
-	if (tempState.pos >= tempState.end)
+	if (tempState.position >= tempState.sampleEnd)
 	{
 		sc->active = false;
 		return;
 	}
-
-	// these has to be copied so that they are not lost
-	tempState.wasCleared = sc->wasCleared;
-	tempState.delta = sc->delta;
-	tempState.oldDelta = sc->oldDelta;
-	tempState.drawDelta = sc->drawDelta;
-	tempState.oldDrawDelta = sc->oldDrawDelta;
-	tempState.dOldHz = sc->dOldHz;
-	tempState.vol = sc->vol;
 
 	tempState.active = true;
 
@@ -369,49 +330,49 @@ static void scopeTrigger(int32_t ch, const sampleTyp *s, int32_t playOffset)
 	** so it's probably very rare. Yes, this is not good coding...
 	*/
 
-	*sc = tempState;
+	*sc = tempState; // set new scope state
 }
 
 static void updateScopes(void)
 {
-	int32_t loopOverflowVal;
-
 	scopesUpdatingFlag = true;
 
 	volatile scope_t *sc = scope;
-	for (int32_t i = 0; i < song.antChn; i++, sc++)
+	for (int32_t i = 0; i < song.numChannels; i++, sc++)
 	{
-		scope_t s = *sc; // cache it
+		volatile scope_t s = *sc; // get copy of current scope state
 		if (!s.active)
-			continue; // scope is not active, no need
+			continue; // scope is not active
 
 		// scope position update
 
-		s.posFrac += s.delta;
-		const int32_t wholeSamples = s.posFrac >> 32;
-		s.posFrac &= 0xFFFFFFFF;
+		s.positionFrac += s.delta;
+		const uint32_t wholeSamples = (uint32_t)(s.positionFrac >> SCOPE_FRAC_BITS);
+		s.positionFrac &= SCOPE_FRAC_MASK;
 
 		if (s.direction == 1)
-			s.pos += wholeSamples; // forwards
+			s.position += wholeSamples; // forwards
 		else
-			s.pos -= wholeSamples; // backwards
+			s.position -= wholeSamples; // backwards
 
 		// handle loop wrapping or sample end
-		if (s.direction == -1 && s.pos < s.loopStart) // sampling backwards (definitely pingpong loop)
+		if (s.direction == -1 && s.position < s.loopStart) // sampling backwards (definitely pingpong loop)
 		{
 			s.direction = 1; // change direction to forwards
 
 			if (s.loopLength >= 2)
-				s.pos = s.loopStart + ((s.loopStart - s.pos - 1) % s.loopLength);
+				s.position = s.loopStart + ((s.loopStart - s.position - 1) % s.loopLength);
 			else
-				s.pos = s.loopStart;
+				s.position = s.loopStart;
 
-			assert(s.pos >= s.loopStart && s.pos < s.end);
+			assert(s.position >= s.loopStart && s.position < s.sampleEnd);
 		}
-		else if (s.pos >= s.end)
+		else if (s.position >= s.sampleEnd)
 		{
+			uint32_t loopOverflowVal;
+
 			if (s.loopLength >= 2)
-				loopOverflowVal = (s.pos - s.end) % s.loopLength;
+				loopOverflowVal = (s.position - s.sampleEnd) % s.loopLength;
 			else
 				loopOverflowVal = 0;
 
@@ -421,19 +382,19 @@ static void updateScopes(void)
 			}
 			else if (s.loopType == LOOP_FORWARD)
 			{
-				s.pos = s.loopStart + loopOverflowVal;
-				assert(s.pos >= s.loopStart && s.pos < s.end);
+				s.position = s.loopStart + loopOverflowVal;
+				assert(s.position >= s.loopStart && s.position < s.sampleEnd);
 			}
 			else // pingpong loop
 			{
 				s.direction = -1; // change direction to backwards
-				s.pos = (s.end - 1) - loopOverflowVal;
-				assert(s.pos >= s.loopStart && s.pos < s.end);
+				s.position = (s.sampleEnd - 1) - loopOverflowVal;
+				assert(s.position >= s.loopStart && s.position < s.sampleEnd);
 			}
 		}
-		assert(s.pos >= 0);
+		assert(s.position >= 0);
 
-		*sc = s; // update scope state
+		*sc = s; // set new scope state
 	}
 	scopesUpdatingFlag = false;
 }
@@ -441,14 +402,14 @@ static void updateScopes(void)
 void drawScopes(void)
 {
 	scopesDisplayingFlag = true;
-	int32_t chansPerRow = (uint32_t)song.antChn >> 1;
+	int32_t chansPerRow = (uint32_t)song.numChannels >> 1;
 
 	const uint16_t *scopeLens = scopeLenTab[chansPerRow-1];
 	uint16_t scopeXOffs = 3;
 	uint16_t scopeYOffs = 95;
 	int16_t scopeLineY = 112;
 
-	for (int32_t i = 0; i < song.antChn; i++)
+	for (int32_t i = 0; i < song.numChannels; i++)
 	{
 		// if we reached the last scope on the row, go to first scope on the next row
 		if (i == chansPerRow)
@@ -466,7 +427,7 @@ void drawScopes(void)
 		}
 
 		const scope_t s = scope[i]; // cache scope to lower thread race condition issues
-		if (s.active && s.vol > 0 && !audio.locked)
+		if (s.active && s.volume > 0 && !audio.locked)
 		{
 			// scope is active
 			scope[i].wasCleared = false;
@@ -476,7 +437,7 @@ void drawScopes(void)
 
 			// draw scope
 			bool linedScopesFlag = !!(config.specialFlags & LINED_SCOPES);
-			scopeDrawRoutineTable[(linedScopesFlag * 6) + (s.sampleIs16Bit * 3) + s.loopType](&s, scopeXOffs, scopeLineY, scopeDrawLen);
+			scopeDrawRoutineTable[(linedScopesFlag * 6) + (s.sample16Bit * 3) + s.loopType](&s, scopeXOffs, scopeLineY, scopeDrawLen);
 		}
 		else
 		{
@@ -511,7 +472,7 @@ void drawScopes(void)
 void drawScopeFramework(void)
 {
 	drawFramework(0, 92, 291, 81, FRAMEWORK_TYPE1);
-	for (int32_t i = 0; i < song.antChn; i++)
+	for (int32_t i = 0; i < song.numChannels; i++)
 		redrawScope(i);
 }
 
@@ -519,51 +480,36 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 {
 	volatile scope_t *sc = scope;
 	syncedChannel_t *ch = chSyncData->channels;
-	for (int32_t i = 0; i < song.antChn; i++, sc++, ch++)
+	for (int32_t i = 0; i < song.numChannels; i++, sc++, ch++)
 	{
 		const uint8_t status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
-			sc->vol = ((ch->vol * SCOPE_HEIGHT) + 128) >> 8; // rounded
+			sc->volume = ch->scopeVolume;
 
 		if (status & IS_Period)
+			sc->delta = ch->scopeDelta;
+
+		if (status & IS_Trigger)
 		{
-			// use cached values when possible
-			if (ch->dHz != sc->dOldHz)
+			if (instr[ch->instrNum] != NULL)
 			{
-				sc->dOldHz = ch->dHz;
-
-				const double dHz2ScopeDeltaMul = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-				sc->oldDelta = (int64_t)((ch->dHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> 32.32fp delta (rounded)
-
-				const double dRelativeHz = ch->dHz * (1.0 / (8363.0 / 2.0));
-				sc->oldDrawDelta = (int32_t)((dRelativeHz * SCOPE_DRAW_FRAC_SCALE) + 0.5); // Hz -> 13.19fp draw delta (rounded)
-			}
-
-			sc->delta = sc->oldDelta;
-			sc->drawDelta = sc->oldDrawDelta;
-		}
-
-		if (status & IS_NyTon)
-		{
-			if (instr[ch->instrNr] != NULL)
-			{
-				scopeTrigger(i, &instr[ch->instrNr]->samp[ch->sampleNr], ch->smpStartPos);
+				scopeTrigger(i, &instr[ch->instrNum]->smp[ch->smpNum], ch->smpStartPos);
 
 				// set some stuff used by Smp. Ed. for sampling position line
 
-				if (ch->instrNr == 130 || (ch->instrNr == editor.curInstr && ch->sampleNr == editor.curSmp))
+				if (ch->instrNum == 130 || (ch->instrNum == editor.curInstr && ch->smpNum == editor.curSmp))
 					editor.curSmpChannel = (uint8_t)i;
 
-				lastChInstr[i].instrNr = ch->instrNr;
-				lastChInstr[i].sampleNr = ch->sampleNr;
+				lastChInstr[i].instrNum = ch->instrNum;
+				lastChInstr[i].smpNum = ch->smpNum;
 			}
 			else
 			{
 				// empty instrument, shut down scope
 				scope[i].active = false;
-				lastChInstr[i].instrNr = 255;
-				lastChInstr[i].sampleNr = 255;
+				lastChInstr[i].instrNum = 255;
+				lastChInstr[i].smpNum = 255;
 			}
 		}
 	}

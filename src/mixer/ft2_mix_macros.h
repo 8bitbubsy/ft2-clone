@@ -1,6 +1,5 @@
 #pragma once
 
-#include <assert.h>
 #include "../ft2_audio.h"
 #include "ft2_windowed_sinc.h"
 
@@ -9,160 +8,155 @@
 /* ----------------------------------------------------------------------- */
 
 #define GET_VOL \
-	const double dVolL = v->dVolL; \
-	const double dVolR = v->dVolR; \
+	const float fVolumeL = v->fVolumeL; \
+	const float fVolumeR = v->fVolumeR;
 
 #define GET_VOL_MONO \
-	const double dVolL = v->dVolL; \
+	const float fVolumeL = v->fVolumeL;
 
 #define GET_VOL_RAMP \
-	dVolL = v->dVolL; \
-	dVolR = v->dVolR; \
+	fVolumeL = v->fVolumeL; \
+	fVolumeR = v->fVolumeR;
 
 #define GET_VOL_MONO_RAMP \
-	dVolL = v->dVolL; \
+	fVolumeL = v->fVolumeL;
 
 #define SET_VOL_BACK \
-	v->dVolL = dVolL; \
-	v->dVolR = dVolR; \
+	v->fVolumeL = fVolumeL; \
+	v->fVolumeR = fVolumeR;
 
 #define SET_VOL_BACK_MONO \
-	v->dVolL = v->dVolR = dVolL; \
+	v->fVolumeL = fVolumeL; \
+	v->fVolumeR = fVolumeL;
 
 #define GET_MIXER_VARS \
-	const uint64_t delta = v->delta; \
-	dMixBufferL = audio.dMixBufferL + bufferPos; \
-	dMixBufferR = audio.dMixBufferR + bufferPos; \
-	pos = v->pos; \
-	posFrac = v->posFrac; \
+	const uintCPUWord_t delta = v->delta; \
+	fMixBufferL = audio.fMixBufferL + bufferPos; \
+	fMixBufferR = audio.fMixBufferR + bufferPos; \
+	position = v->position; \
+	positionFrac = v->positionFrac;
 
 #define GET_MIXER_VARS_RAMP \
-	const uint64_t delta = v->delta; \
-	dMixBufferL = audio.dMixBufferL + bufferPos; \
-	dMixBufferR = audio.dMixBufferR + bufferPos; \
-	dVolLDelta = v->dVolDeltaL; \
-	dVolRDelta = v->dVolDeltaR; \
-	pos = v->pos; \
-	posFrac = v->posFrac; \
+	const uintCPUWord_t delta = v->delta; \
+	fMixBufferL = audio.fMixBufferL + bufferPos; \
+	fMixBufferR = audio.fMixBufferR + bufferPos; \
+	fVolumeLDelta = v->fVolumeLDelta; \
+	fVolumeRDelta = v->fVolumeRDelta; \
+	position = v->position; \
+	positionFrac = v->positionFrac;
 
 #define GET_MIXER_VARS_MONO_RAMP \
-	const uint64_t delta = v->delta; \
-	dMixBufferL = audio.dMixBufferL + bufferPos; \
-	dMixBufferR = audio.dMixBufferR + bufferPos; \
-	dVolLDelta = v->dVolDeltaL; \
-	pos = v->pos; \
-	posFrac = v->posFrac; \
+	const uintCPUWord_t delta = v->delta; \
+	fMixBufferL = audio.fMixBufferL + bufferPos; \
+	fMixBufferR = audio.fMixBufferR + bufferPos; \
+	fVolumeLDelta = v->fVolumeLDelta; \
+	position = v->position; \
+	positionFrac = v->positionFrac;
 
 #define PREPARE_TAP_FIX8 \
 	const int8_t *loopStartPtr = &v->base8[v->loopStart]; \
-	const int8_t *leftEdgePtr = loopStartPtr+SINC_LEFT_TAPS; \
+	const int8_t *leftEdgePtr = loopStartPtr+SINC_LEFT_TAPS;
 
 #define PREPARE_TAP_FIX16 \
 	const int16_t *loopStartPtr = &v->base16[v->loopStart]; \
-	const int16_t *leftEdgePtr = loopStartPtr+SINC_LEFT_TAPS; \
+	const int16_t *leftEdgePtr = loopStartPtr+SINC_LEFT_TAPS;
 
 #define SET_BASE8 \
 	base = v->base8; \
-	smpPtr = base + pos; \
+	smpPtr = base + position;
 
 #define SET_BASE16 \
 	base = v->base16; \
-	smpPtr = base + pos; \
+	smpPtr = base + position;
 
 #define SET_BASE8_BIDI \
 	base = v->base8; \
-	revBase = v->revBase8; \
+	revBase = v->revBase8;
 
 #define SET_BASE16_BIDI \
 	base = v->base16; \
-	revBase = v->revBase16; \
+	revBase = v->revBase16;
 
 #define INC_POS \
-	posFrac += delta; \
-	smpPtr += posFrac >> MIXER_FRAC_BITS; \
-	posFrac &= MIXER_FRAC_MASK; \
+	positionFrac += delta; \
+	smpPtr += positionFrac >> MIXER_FRAC_BITS; \
+	positionFrac &= MIXER_FRAC_MASK;
 
 #define INC_POS_BIDI \
-	posFrac += deltaLo; \
-	smpPtr += posFrac >> MIXER_FRAC_BITS; \
+	positionFrac += deltaLo; \
+	smpPtr += positionFrac >> MIXER_FRAC_BITS; \
 	smpPtr += deltaHi; \
-	posFrac &= MIXER_FRAC_MASK; \
+	positionFrac &= MIXER_FRAC_MASK;
 
 #define SET_BACK_MIXER_POS \
-	v->posFrac = posFrac; \
-	v->pos = pos; \
+	v->positionFrac = positionFrac; \
+	v->position = position;
 
 /* ----------------------------------------------------------------------- */
 /*                          SAMPLE RENDERING MACROS                        */
 /* ----------------------------------------------------------------------- */
 
 #define VOLUME_RAMPING \
-	dVolL += dVolLDelta; \
-	dVolR += dVolRDelta; \
+	fVolumeL += fVolumeLDelta; \
+	fVolumeR += fVolumeRDelta;
 
 #define VOLUME_RAMPING_MONO \
-	dVolL += dVolLDelta; \
+	fVolumeL += fVolumeLDelta;
 
 #define RENDER_8BIT_SMP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	dSample = *smpPtr * (1.0 / 128.0); \
-	*dMixBufferL++ += dSample * dVolL; \
-	*dMixBufferR++ += dSample * dVolR; \
+	fSample = *smpPtr * (1.0f / 128.0f); \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_8BIT_SMP_MONO \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	dSample = (*smpPtr * (1.0 / 128.0)) * dVolL; \
-	*dMixBufferL++ += dSample; \
-	*dMixBufferR++ += dSample; \
+	fSample = (*smpPtr * (1.0f / 128.0f)) * fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
 
 #define RENDER_16BIT_SMP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	dSample = *smpPtr * (1.0 / 32768.0); \
-	*dMixBufferL++ += dSample * dVolL; \
-	*dMixBufferR++ += dSample * dVolR; \
+	fSample = *smpPtr * (1.0f / 32768.0f); \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_16BIT_SMP_MONO \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	dSample = (*smpPtr * (1.0 / 32768.0)) * dVolL; \
-	*dMixBufferL++ += dSample; \
-	*dMixBufferR++ += dSample; \
+	fSample = (*smpPtr * (1.0f / 32768.0f)) * fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
 
 // 2-tap linear interpolation (like FT2)
 
+/* 8bitbubsy: It may look like we are potentially going out of bounds while looking up the sample points,
+** but the sample data has a fixed sample after the end (sampleEnd/loopEnd).
+*/
+
 #define LINEAR_INTERPOLATION(s, f, scale) \
 { \
-	/* uint32_t -> int32_t for less SIMD overhead when doing int->double conversion */ \
-	const int32_t frac = (uint32_t)(f) >> 1; /* (2^32)-1 -> (2^31)-1 */ \
-	\
-	const double dFrac = (double)(frac * (1.0 / (INT32_MAX+1.0))); /* 0.0 .. 0.999999999 */ \
-	dSample = ((s[0] + (s[1]-s[0]) * dFrac)) * (1.0 / scale); \
-} \
+	const int32_t frac = (uint32_t)(f) >> 1; /* uint32 -> int32 range, faster int->float conv. (x86/x86_64) */ \
+	const float fFrac = frac * (1.0f / (MIXER_FRAC_SCALE/2)); /* 0.0f .. 0.9999999f */ \
+	fSample = ((s[0] + (s[1]-s[0]) * fFrac)) * (1.0f / scale); \
+}
 
 #define RENDER_8BIT_SMP_LINTRP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	LINEAR_INTERPOLATION(smpPtr, posFrac, 128) \
-	*dMixBufferL++ += dSample * dVolL; \
-	*dMixBufferR++ += dSample * dVolR; \
+	LINEAR_INTERPOLATION(smpPtr, positionFrac, 128) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_8BIT_SMP_MONO_LINTRP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	LINEAR_INTERPOLATION(smpPtr, posFrac, 128) \
-	dSample *= dVolL; \
-	*dMixBufferL++ += dSample; \
-	*dMixBufferR++ += dSample; \
+	LINEAR_INTERPOLATION(smpPtr, positionFrac, 128) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
 
 #define RENDER_16BIT_SMP_LINTRP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	LINEAR_INTERPOLATION(smpPtr, posFrac, 32768) \
-	*dMixBufferL++ += dSample * dVolL; \
-	*dMixBufferR++ += dSample * dVolR; \
+	LINEAR_INTERPOLATION(smpPtr, positionFrac, 32768) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_16BIT_SMP_MONO_LINTRP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	LINEAR_INTERPOLATION(smpPtr, posFrac, 32768) \
-	dSample *= dVolL; \
-	*dMixBufferL++ += dSample; \
-	*dMixBufferR++ += dSample; \
+	LINEAR_INTERPOLATION(smpPtr, positionFrac, 32768) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
 
 // 8-tap windowed-sinc interpolation (better quality, through LUT: mixer/ft2_windowed_sinc.c)
 
@@ -176,113 +170,114 @@
 
 #define WINDOWED_SINC_INTERPOLATION(s, f, scale) \
 { \
-	const double *t = v->dSincLUT + (((uint32_t)f >> SINC_FSHIFT) & SINC_FMASK); \
-	dSample = ((s[-3] * t[0]) + \
+	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC_FSHIFT) & SINC_FMASK); \
+	fSample = ((s[-3] * t[0]) + \
 	           (s[-2] * t[1]) + \
 	           (s[-1] * t[2]) + \
 	           ( s[0] * t[3]) + \
 	           ( s[1] * t[4]) + \
 	           ( s[2] * t[5]) + \
 	           ( s[3] * t[6]) + \
-	           ( s[4] * t[7])) * (1.0 / scale); \
-} \
+	           ( s[4] * t[7])) * (1.0f / scale); \
+}
 
 #define RENDER_8BIT_SMP_SINTRP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	WINDOWED_SINC_INTERPOLATION(smpPtr, posFrac, 128) \
-	*dMixBufferL++ += dSample * dVolL; \
-	*dMixBufferR++ += dSample * dVolR; \
+	WINDOWED_SINC_INTERPOLATION(smpPtr, positionFrac, 128) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_8BIT_SMP_MONO_SINTRP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	WINDOWED_SINC_INTERPOLATION(smpPtr, posFrac, 128) \
-	dSample *= dVolL; \
-	*dMixBufferL++ += dSample; \
-	*dMixBufferR++ += dSample; \
+	WINDOWED_SINC_INTERPOLATION(smpPtr, positionFrac, 128) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
 
 #define RENDER_16BIT_SMP_SINTRP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	WINDOWED_SINC_INTERPOLATION(smpPtr, posFrac, 32768) \
-	*dMixBufferL++ += dSample * dVolL; \
-	*dMixBufferR++ += dSample * dVolR; \
+	WINDOWED_SINC_INTERPOLATION(smpPtr, positionFrac, 32768) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_16BIT_SMP_MONO_SINTRP \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
-	WINDOWED_SINC_INTERPOLATION(smpPtr, posFrac, 32768) \
-	dSample *= dVolL; \
-	*dMixBufferL++ += dSample; \
-	*dMixBufferR++ += dSample; \
+	WINDOWED_SINC_INTERPOLATION(smpPtr, positionFrac, 32768) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
 
 /* Special left-edge case mixers to get proper tap data after one loop cycle.
 ** These are only used with sinc interpolation on looped samples.
 */
 
 #define RENDER_8BIT_SMP_SINTRP_TAP_FIX  \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC_INTERPOLATION(smpTapPtr, posFrac, 128) \
-	*dMixBufferL++ += dSample * dVolL; \
-	*dMixBufferR++ += dSample * dVolR; \
+	WINDOWED_SINC_INTERPOLATION(smpTapPtr, positionFrac, 128) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_8BIT_SMP_MONO_SINTRP_TAP_FIX \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC_INTERPOLATION(smpTapPtr, posFrac, 128) \
-	dSample *= dVolL; \
-	*dMixBufferL++ += dSample; \
-	*dMixBufferR++ += dSample; \
+	WINDOWED_SINC_INTERPOLATION(smpTapPtr, positionFrac, 128) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
 
 #define RENDER_16BIT_SMP_SINTRP_TAP_FIX \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC_INTERPOLATION(smpTapPtr, posFrac, 32768) \
-	*dMixBufferL++ += dSample * dVolL; \
-	*dMixBufferR++ += dSample * dVolR; \
+	WINDOWED_SINC_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_16BIT_SMP_MONO_SINTRP_TAP_FIX \
-	assert(smpPtr >= base && smpPtr < base+v->end); \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC_INTERPOLATION(smpTapPtr, posFrac, 32768) \
-	dSample *= dVolL; \
-	*dMixBufferL++ += dSample; \
-	*dMixBufferR++ += dSample; \
+	WINDOWED_SINC_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
 
 /* ----------------------------------------------------------------------- */
 /*                      SAMPLES-TO-MIX LIMITING MACROS                     */
 /* ----------------------------------------------------------------------- */
 
+#if CPU_64BIT
+#define LIMIT_NUM
+#else
+#define LIMIT_NUM if (i > (1<<(32-MIXER_FRAC_BITS))-1) i = (1<<(32-MIXER_FRAC_BITS))-1;
+#endif
+
 #define LIMIT_MIX_NUM \
-	i = (v->end - 1) - pos; \
-	const uint64_t tmp64 = ((uint64_t)i << 32) | ((uint32_t)posFrac ^ 0xFFFFFFFF); \
+	samplesToMix = INT32_MAX; \
+	if (v->delta != 0) \
+	{ \
+		i = (v->sampleEnd - 1) - position; \
+		LIMIT_NUM \
+		const uintCPUWord_t dividend = ((uintCPUWord_t)i << MIXER_FRAC_BITS) | ((uint32_t)positionFrac ^ MIXER_FRAC_MASK); \
+		samplesToMix = (uint32_t)(dividend / (uintCPUWord_t)v->delta) + 1; \
+	} \
 	\
-	samplesToMix = (uint32_t)(tmp64 / (uint64_t)v->delta) + 1; /* this can be slow on 32-bit systems... */ \
 	if (samplesToMix > samplesLeft) \
-		samplesToMix = samplesLeft; \
+		samplesToMix = samplesLeft;
 
 #define START_BIDI \
-	if (v->backwards) \
+	if (v->samplingBackwards) \
 	{ \
 		tmpDelta = 0 - delta; \
-		assert(pos >= v->loopStart && pos < v->end); \
-		pos = ~pos; \
-		smpPtr = revBase + pos; \
-		posFrac ^= MIXER_FRAC_MASK; \
+		position = ~position; \
+		smpPtr = revBase + position; \
+		positionFrac ^= MIXER_FRAC_MASK; \
 	} \
 	else \
 	{ \
 		tmpDelta = delta; \
-		assert(pos >= 0 && pos < v->end); \
-		smpPtr = base + pos; \
+		smpPtr = base + position; \
 	} \
 	\
-	const int32_t deltaHi = (int64_t)tmpDelta >> MIXER_FRAC_BITS; \
-	const uint32_t deltaLo = tmpDelta & MIXER_FRAC_MASK; \
+	const int32_t deltaHi = (intCPUWord_t)tmpDelta >> MIXER_FRAC_BITS; \
+	const uint32_t deltaLo = tmpDelta & MIXER_FRAC_MASK;
 
 #define LIMIT_MIX_NUM_RAMP \
-	if (v->volRampSamples == 0) \
+	if (v->volumeRampLength == 0) \
 	{ \
-		dVolLDelta = 0.0; \
-		dVolRDelta = 0.0; \
+		fVolumeLDelta = 0.0; \
+		fVolumeRDelta = 0.0; \
 		\
 		if (v->isFadeOutVoice) \
 		{ \
@@ -292,16 +287,16 @@
 	} \
 	else \
 	{ \
-		if (samplesToMix > v->volRampSamples) \
-			samplesToMix = v->volRampSamples; \
+		if (samplesToMix > v->volumeRampLength) \
+			samplesToMix = v->volumeRampLength; \
 		\
-		v->volRampSamples -= samplesToMix; \
-	} \
+		v->volumeRampLength -= samplesToMix; \
+	}
 
 #define LIMIT_MIX_NUM_MONO_RAMP \
-	if (v->volRampSamples == 0) \
+	if (v->volumeRampLength == 0) \
 	{ \
-		dVolLDelta = 0.0; \
+		fVolumeLDelta = 0.0; \
 		if (v->isFadeOutVoice) \
 		{ \
 			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \
@@ -310,55 +305,54 @@
 	} \
 	else \
 	{ \
-		if (samplesToMix > v->volRampSamples) \
-			samplesToMix = v->volRampSamples; \
+		if (samplesToMix > v->volumeRampLength) \
+			samplesToMix = v->volumeRampLength; \
 		\
-		v->volRampSamples -= samplesToMix; \
-	} \
+		v->volumeRampLength -= samplesToMix; \
+	}
 
 #define HANDLE_SAMPLE_END \
-	pos = (int32_t)(smpPtr - base); \
-	if (pos >= v->end) \
+	position = (int32_t)(smpPtr - base); \
+	if (position >= v->sampleEnd) \
 	{ \
 		v->active = false; \
 		return; \
-	} \
+	}
 
 #define WRAP_LOOP \
-	pos = (int32_t)(smpPtr - base); \
-	if (pos >= v->end) \
+	position = (int32_t)(smpPtr - base); \
+	if (position >= v->sampleEnd) \
 	{ \
 		do \
 		{ \
-			pos -= v->loopLength; \
+			position -= v->loopLength; \
 		} \
-		while (pos >= v->end); \
+		while (position >= v->sampleEnd); \
 		\
-		smpPtr = base + pos; \
+		smpPtr = base + position; \
 		\
 		v->hasLooped = true; \
-	} \
+	}
 
 #define WRAP_BIDI_LOOP \
-	if (pos >= v->end) \
+	if (position >= v->sampleEnd) \
 	{ \
 		do \
 		{ \
-			pos -= v->loopLength; \
-			v->backwards ^= 1; \
+			position -= v->loopLength; \
+			v->samplingBackwards ^= 1; \
 		} \
-		while (pos >= v->end); \
+		while (position >= v->sampleEnd); \
 		v->hasLooped = true; \
-	} \
+	}
 
 #define END_BIDI \
-	if (v->backwards) \
+	if (v->samplingBackwards) \
 	{ \
-		posFrac ^= MIXER_FRAC_MASK; \
-		pos = ~(int32_t)(smpPtr - revBase); \
+		positionFrac ^= MIXER_FRAC_MASK; \
+		position = ~(int32_t)(smpPtr - revBase); \
 	} \
 	else \
 	{ \
-		pos = (int32_t)(smpPtr - base); \
-	} \
-
+		position = (int32_t)(smpPtr - base); \
+	}

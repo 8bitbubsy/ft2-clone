@@ -23,7 +23,7 @@ void removeSampleIsLoadingFlag(void);
 extern bool loadAsInstrFlag, smpFilenameSet;
 extern char *smpFilename;
 extern uint8_t sampleSlot;
-extern sampleTyp tmpSmp;
+extern sample_t tmpSmp;
 // --------------------------
 
 // file extensions accepted by Disk Op. in sample mode

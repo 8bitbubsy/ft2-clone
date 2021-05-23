@@ -1,0 +1,4 @@
+8bitbubsy:
+This is a cut down and modified version of libFLAC v1.3.3.
+I have removed stuff I don't want, and only left the decoder in. Please don't
+use this outside of the FT2 clone project!

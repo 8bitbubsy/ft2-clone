@@ -8,7 +8,7 @@
 #include "ft2_header.h"
 #include "ft2_gui.h"
 #include "ft2_video.h"
-#include "ft2_scopes.h"
+#include "scopes/ft2_scopes.h"
 #include "ft2_help.h"
 #include "ft2_sample_ed.h"
 #include "ft2_inst_ed.h"
@@ -127,7 +127,7 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 							outX[xScale] = pixel;
 					}
 
-					outX += video.xScale;
+					outX += scaleFactor;
 				}
 			}
 		}
@@ -383,11 +383,11 @@ static void mouseWheelDecRow(void)
 	if (songPlaying)
 		return;
 
-	int16_t pattPos = editor.pattPos - 1;
-	if (pattPos < 0)
-		pattPos = pattLens[editor.editPattern] - 1;
+	int16_t row = editor.row - 1;
+	if (row < 0)
+		row = patternNumRows[editor.editPattern] - 1;
 
-	setPos(-1, pattPos, true);
+	setPos(-1, row, true);
 }
 
 static void mouseWheelIncRow(void)
@@ -395,11 +395,11 @@ static void mouseWheelIncRow(void)
 	if (songPlaying)
 		return;
 
-	int16_t pattPos = editor.pattPos + 1;
-	if (pattPos > (pattLens[editor.editPattern] - 1))
-		pattPos = 0;
+	int16_t row = editor.row + 1;
+	if (row >= patternNumRows[editor.editPattern])
+		row = 0;
 
-	setPos(-1, pattPos, true);
+	setPos(-1, row, true);
 }
 
 void mouseWheelHandler(bool directionUp)
@@ -569,7 +569,7 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 		{
 			// right mouse button released after hand-editing sample data
 			if (instr[editor.curInstr] != NULL)
-				fixSample(&instr[editor.curInstr]->samp[editor.curSmp]);
+				fixSample(&instr[editor.curInstr]->smp[editor.curSmp]);
 
 			resumeAudio();
 

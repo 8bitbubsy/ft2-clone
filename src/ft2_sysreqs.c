@@ -54,7 +54,7 @@ static SDL_Keycode shortCut[NUM_SYSREQ_TYPES][5] =
 typedef struct quitType_t
 {
 	const char *text;
-	uint8_t typ;
+	uint8_t type;
 } quitType_t;
 
 #define QUIT_MESSAGES 11
@@ -180,7 +180,7 @@ static bool mouseButtonUpLogic(uint8_t mouseButton)
 }
 
 // WARNING: This routine must ONLY be called from the main input/video thread!
-int16_t okBox(int16_t typ, const char *headline, const char *text)
+int16_t okBox(int16_t type, const char *headline, const char *text)
 {
 #define PUSHBUTTON_W 80
 
@@ -207,9 +207,9 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	int16_t oldLastUsedObjectType = mouse.lastUsedObjectType;
 
 	// count number of buttons
-	uint16_t knp = 0;
-	while (buttonText[typ][knp][0] != '\0' && knp < 5)
-		knp++;
+	uint16_t numButtons = 0;
+	while (buttonText[type][numButtons][0] != '\0' && numButtons < 5)
+		numButtons++;
 
 	uint16_t tlen = textWidth(text);
 	uint16_t hlen = textWidth(headline);
@@ -218,7 +218,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	if (hlen > tlen)
 		wlen = hlen;
 
-	uint16_t tx = (knp * 100) - 20;
+	uint16_t tx = (numButtons * 100) - 20;
 	if (tx > wlen)
 		wlen = tx;
 
@@ -234,7 +234,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 	uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set up buttons
-	for (i = 0; i < knp; i++)
+	for (i = 0; i < numButtons; i++)
 	{
 		p = &pushButtons[i];
 
@@ -242,12 +242,12 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 		p->y = y + 42;
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
-		p->caption = buttonText[typ][i];
+		p->caption = buttonText[type][i];
 		p->visible = true;
 	}
 
 	// set up checkbox (special okBox types only!)
-	if (typ >= 6 && typ <= 7)
+	if (type >= 6 && type <= 7)
 	{
 		checkBox_t *c = &checkBoxes[0];
 		c->x = x + 5;
@@ -256,12 +256,12 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 		c->clickAreaHeight = 12;
 		c->checked = false;
 
-		if (typ == 6)
+		if (type == 6)
 		{
 			// S3M load warning
 			c->callbackFunc = configToggleImportWarning;
 		}
-		else if (typ == 7)
+		else if (type == 7)
 		{
 			// "setting not yet applied"
 			c->callbackFunc = configToggleNotYetAppliedWarning;
@@ -312,9 +312,9 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 					keyb.ignoreCurrKeyUp = true; // don't handle key up event for any keys that were pressed
 				}
 
-				for (i = 0; i < knp; i++)
+				for (i = 0; i < numButtons; i++)
 				{
-					if (shortCut[typ][i] == inputEvent.key.keysym.sym)
+					if (shortCut[type][i] == inputEvent.key.keysym.sym)
 					{
 						returnVal = i + 1;
 						ui.sysReqShown = false;
@@ -327,7 +327,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 			{
 				if (mouseButtonUpLogic(inputEvent.button.button))
 				{
-					if (typ >= 6 && typ <= 7)
+					if (type >= 6 && type <= 7)
 						testCheckBoxMouseRelease();
 
 					returnVal = testPushButtonMouseRelease(false) + 1;
@@ -360,8 +360,8 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 		drawWindow(wlen);
 		textOutShadow(headlineX, y +  4, PAL_FORGRND, PAL_BUTTON2, headline);
 		textOutShadow(textX,     y + 24, PAL_FORGRND, PAL_BUTTON2, text);
-		for (i = 0; i < knp; i++) drawPushButton(i);
-		if (typ >= 6 && typ <= 7)
+		for (i = 0; i < numButtons; i++) drawPushButton(i);
+		if (type >= 6 && type <= 7)
 		{
 			drawCheckBox(0);
 			textOutShadow(x + 21, y + 52, PAL_FORGRND, PAL_BUTTON2, "Don't show again");
@@ -371,10 +371,10 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 		endFPSCounter();
 	}
 
-	for (i = 0; i < knp; i++)
+	for (i = 0; i < numButtons; i++)
 		hidePushButton(i);
 
-	if (typ >= 6 && typ <= 7)
+	if (type >= 6 && type <= 7)
 		hideCheckBox(0);
 
 	mouse.lastUsedObjectID = oldLastUsedObjectID;
@@ -391,7 +391,7 @@ int16_t okBox(int16_t typ, const char *headline, const char *text)
 ** - This routine must ONLY be called from the main input/video thread!!
 ** - edText must be null-terminated
 */
-int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxStrLen)
+int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxStrLen)
 {
 #define PUSHBUTTON_W 80
 #define TEXTBOX_W 250
@@ -443,15 +443,15 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	uint16_t headlineX = (SCREEN_W - wlen) >> 1;
 
 	// count number of buttons
-	uint16_t knp = 0;
-	while (buttonText[typ][knp][0] != '\0' && knp < 5)
-		knp++;
+	uint16_t numButtons = 0;
+	while (buttonText[type][numButtons][0] != '\0' && numButtons < 5)
+		numButtons++;
 
 	uint16_t tx = TEXTBOX_W;
 	if (tx > wlen)
 		wlen = tx;
 
-	tx = (knp * 100) - 20;
+	tx = (numButtons * 100) - 20;
 	if (tx > wlen)
 		wlen = tx;
 
@@ -470,13 +470,13 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	// setup buttons
 
 	pushButton_t *p = pushButtons;
-	for (i = 0; i < knp; i++, p++)
+	for (i = 0; i < numButtons; i++, p++)
 	{
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
 		p->x = ((SCREEN_W - tx) >> 1) + (i * 100);
 		p->y = y + 42;
-		p->caption = buttonText[typ][i];
+		p->caption = buttonText[type][i];
 		p->visible = true;
 	}
 
@@ -553,7 +553,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 				}
 				else
 				{
-					for (i = 0; i < knp; i++)
+					for (i = 0; i < numButtons; i++)
 					{
 						if (shortCut[1][i] == inputEvent.key.keysym.sym)
 						{
@@ -604,7 +604,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 		hLine(t->x,        t->y + t->h, t->w + 1, PAL_BUTTON1);
 		vLine(t->x + t->w, t->y,        t->h,     PAL_BUTTON1);
 		drawTextBox(0);
-		for (i = 0; i < knp; i++) drawPushButton(i);
+		for (i = 0; i < numButtons; i++) drawPushButton(i);
 
 		flipFrame();
 		endFPSCounter();
@@ -613,7 +613,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 	editor.editTextFlag = false;
 	SDL_StopTextInput();
 
-	for (i = 0; i < knp; i++)
+	for (i = 0; i < numButtons; i++)
 		hidePushButton(i);
 	hideTextBox(0);
 
@@ -630,7 +630,7 @@ int16_t inputBox(int16_t typ, const char *headline, char *edText, uint16_t maxSt
 }
 
 // WARNING: This routine must NOT be called from the main input/video thread!
-int16_t okBoxThreadSafe(int16_t typ, const char *headline, const char *text)
+int16_t okBoxThreadSafe(int16_t type, const char *headline, const char *text)
 {
 	if (!editor.mainLoopOngoing)
 		return 0; // main loop was not even started yet, bail out.
@@ -639,7 +639,7 @@ int16_t okBoxThreadSafe(int16_t typ, const char *headline, const char *text)
 	while (okBoxData.active)
 		SDL_Delay(1000 / VBLANK_HZ);
 
-	okBoxData.typ = typ;
+	okBoxData.type = type;
 	okBoxData.headline = headline;
 	okBoxData.text = text;
 	okBoxData.active = true;
@@ -653,7 +653,7 @@ int16_t okBoxThreadSafe(int16_t typ, const char *headline, const char *text)
 static bool askQuit_RandomMsg(void)
 {
 	uint8_t msg = rand() % QUIT_MESSAGES;
-	int16_t button = okBox(quitMessage[msg].typ, "System request", quitMessage[msg].text);
+	int16_t button = okBox(quitMessage[msg].type, "System request", quitMessage[msg].text);
 
 	return (button == 1) ? true : false;
 }

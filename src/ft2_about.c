@@ -7,7 +7,7 @@
 #include "ft2_video.h"
 #include "ft2_structs.h"
 
-#define NUM_STARS 1750
+#define NUM_STARS 2048
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
 #define ABOUT_LOGO_W 449
@@ -26,10 +26,12 @@ typedef struct
 } matrix_t;
 
 static char *customText1 = "Clone by Olav \"8bitbubsy\" S\025rensen";
-static char customText2[64];
+static char *customText2 = "www.16-bits.org";
+static char customText3[64];
 
-static int16_t customText1X, customText2X, customTextY;
-static int32_t lastStarScreenPos[NUM_STARS], starfieldFade, logoFade;
+static int16_t customText1Y, customText2Y, customText3Y;
+static int16_t customText1X, customText2X, customText3X;
+static int32_t lastStarScreenPos[NUM_STARS], fadeValue;
 static uint32_t randSeed, frameCounter;
 static float f2pi;
 static vector_t starPoints[NUM_STARS], rotation;
@@ -139,9 +141,8 @@ static void starfield(void)
 				d = 255;
 
 			d ^= 255;
-			d = (d * starfieldFade) >> 8;
 
-			int32_t r = d - 66;
+			int32_t r = d - 68;
 			if (r < 0)
 				r = 0;
 
@@ -164,20 +165,20 @@ void aboutFrame(void)
 	rotateMatrix();
 	starfield();
 
-	rotation.x += 0.00009f;
-	rotation.y += 0.00007f;
-	rotation.z -= 0.00005f;
+	rotation.x -= 0.00011f;
+	rotation.z += 0.00006f;
 
-	// fade in starfield
-	if (starfieldFade < 256)
-		starfieldFade += 4;
-
-	// fade in logo after 1 second
-	if (logoFade < 256 && frameCounter++ >= VBLANK_HZ*1)
+	// fade in stuff after 1/3th of a second
+	if (fadeValue < 256 && ++frameCounter >= (int32_t)((VBLANK_HZ/3.0)+0.5))
 	{
-		blit32Fade(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H, logoFade);
-		textOutFade(customText1X, customTextY, PAL_FORGRND, customText1, logoFade);
-		logoFade += 4;
+		blit32Fade(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H, fadeValue);
+		textOutFade(customText1X, customText1Y, PAL_FORGRND, customText1, fadeValue);
+		textOutFade(customText2X, customText2Y, PAL_FORGRND, customText2, fadeValue);
+		textOutFade(customText3X, customText3Y, PAL_FORGRND, customText3, fadeValue);
+
+		fadeValue += 3;
+		if (fadeValue > 256)
+			fadeValue = 256;
 	}
 }
 
@@ -193,14 +194,17 @@ void showAboutScreen(void) // called once when About screen is opened
 
 	showPushButton(PB_EXIT_ABOUT);
 
-	sprintf(customText2, "v%s (%s)", PROG_VER_STR, __DATE__);
+	sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
 	customText1X = (SCREEN_W - textWidth(customText1)) >> 1;
 	customText2X = (SCREEN_W-8) - textWidth(customText2);
-	customTextY = 157;
-	textOut(customText2X, customTextY, PAL_FORGRND, customText2);
+	customText3X = (SCREEN_W-8) - textWidth(customText3);
+	customText1Y = 157;
+	customText2Y = 157-12;
+	customText3Y = 157;	
 
 	aboutInit();
-	frameCounter = starfieldFade = logoFade = 0;
+	frameCounter = 0;
+	fadeValue = 0;
 	ui.aboutScreenShown = true;
 }
 

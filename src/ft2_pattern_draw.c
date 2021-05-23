@@ -14,7 +14,7 @@
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
 
-static tonTyp emptyPattern[MAX_VOICES * MAX_PATT_LEN];
+static note_t emptyPattern[MAX_CHANNELS * MAX_PATT_LEN];
 
 static const uint8_t *font4Ptr, *font5Ptr;
 static const uint8_t vol2charTab1[16] = { 39, 0, 1, 2, 3, 4, 36, 52, 53, 54, 28, 31, 25, 58, 59, 22 };
@@ -36,13 +36,13 @@ static const uint16_t flatNote2Char_big[12] = { 36*16, 38*16, 36*16, 38*16, 36*1
 static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontType, uint32_t color);
 static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color);
 static void drawKeyOffSmall(uint32_t xPos, uint32_t yPos, uint32_t color);
-static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color);
+static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_t color);
 static void drawEmptyNoteMedium(uint32_t xPos, uint32_t yPos, uint32_t color);
 static void drawKeyOffMedium(uint32_t xPos, uint32_t yPos, uint32_t color);
-static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color);
+static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_t color);
 static void drawEmptyNoteBig(uint32_t xPos, uint32_t yPos, uint32_t color);
 static void drawKeyOffBig(uint32_t xPos, uint32_t yPos, uint32_t color);
-static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color);
+static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_t color);
 
 void updatePattFontPtrs(void)
 {
@@ -54,7 +54,7 @@ void updatePattFontPtrs(void)
 void drawPatternBorders(void)
 {
 	// get heights/pos/rows depending on configuration
-	const pattCoord2_t *pattCoord = &pattCoord2Table[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
+	const pattCoord2_t *pattCoord = &pattCoord2Table[config.ptnStretch][ui.pattChanScrollShown][ui.extended];
 
 	// set pattern cursor Y position
 	editor.ptnCursorY = pattCoord->lowerRowsY - 9;
@@ -66,7 +66,7 @@ void drawPatternBorders(void)
 	// in some configurations, there will be two empty channels to the right, fix that
 	if (chans == 2)
 		chans = 4;
-	else if (chans == 10 && !config.ptnS3M)
+	else if (chans == 10 && !config.ptnShowVolColumn)
 		chans = 12;
 
 	assert(chans >= 2 && chans <= 12);
@@ -177,7 +177,7 @@ void drawPatternBorders(void)
 
 static void writeCursor(void)
 {
-	const int32_t tabOffset = (config.ptnS3M * 32) + (columnModeTab[ui.numChannelsShown-1] * 8) + cursor.object;
+	const int32_t tabOffset = (config.ptnShowVolColumn * 32) + (columnModeTab[ui.numChannelsShown-1] * 8) + cursor.object;
 
 	int32_t xPos = pattCursorXTab[tabOffset];
 	const int32_t width = pattCursorWTab[tabOffset];
@@ -212,7 +212,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 	if (pattMark.markX1 > endCh || pattMark.markX2 < startCh || pattMark.markY1 > endRow || pattMark.markY2 < startRow)
 		return;
 
-	const markCoord_t *markCoord = &markCoordTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
+	const markCoord_t *markCoord = &markCoordTable[config.ptnStretch][ui.pattChanScrollShown][ui.extended];
 	const int32_t pattYStart = markCoord->upperRowsY;
 
 	// X1
@@ -264,7 +264,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 	}
 
 	// kludge! (some mark situations could overwrite illegal areas)
-	if (config.ptnUnpressed && ui.pattChanScrollShown)
+	if (config.ptnStretch && ui.pattChanScrollShown)
 	{
 		if (y1 == pattCoord->upperRowsY-1 || y1 == pattCoord->lowerRowsY-1)
 			y1++;
@@ -368,29 +368,29 @@ static void drawRowNums(int32_t yPos, uint8_t row, bool selectedRowFlag)
 
 // DRAWING ROUTINES (WITH VOLUME COLUMN)
 
-static void showNoteNum(uint32_t xPos, uint32_t yPos, int16_t ton, uint32_t color)
+static void showNoteNum(uint32_t xPos, uint32_t yPos, int16_t note, uint32_t color)
 {
 	xPos += 3;
 
-	assert(ton >= 0 && ton <= 97);
+	assert(note >= 0 && note <= 97);
 
 	if (ui.numChannelsShown <= 4)
 	{
-		if (ton <= 0 || ton > 97)
+		if (note <= 0 || note > 97)
 			drawEmptyNoteBig(xPos, yPos, color);
-		else if (ton == 97)
+		else if (note == NOTE_OFF)
 			drawKeyOffBig(xPos, yPos, color);
 		else
-			drawNoteBig(xPos, yPos, ton, color);
+			drawNoteBig(xPos, yPos, note, color);
 	}
 	else
 	{
-		if (ton <= 0 || ton > 97)
+		if (note <= 0 || note > 97)
 			drawEmptyNoteMedium(xPos, yPos, color);
-		else if (ton == 97)
+		else if (note == NOTE_OFF)
 			drawKeyOffMedium(xPos, yPos, color);
 		else
-			drawNoteMedium(xPos, yPos, ton, color);
+			drawNoteMedium(xPos, yPos, note, color);
 	}
 }
 
@@ -480,7 +480,7 @@ static void showVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t color
 	pattCharOut(xPos + charW, yPos, char2, fontType, color);
 }
 
-static void showEfx(uint32_t xPos, uint32_t yPos, uint8_t effTyp, uint8_t eff, uint32_t color)
+static void showEfx(uint32_t xPos, uint32_t yPos, uint8_t efx, uint8_t efxData, uint32_t color)
 {
 	uint8_t fontType, charW;
 
@@ -503,45 +503,45 @@ static void showEfx(uint32_t xPos, uint32_t yPos, uint8_t effTyp, uint8_t eff, u
 		xPos += 55;
 	}
 
-	pattCharOut(xPos,               yPos, effTyp,     fontType, color);
-	pattCharOut(xPos +  charW,      yPos, eff >> 4,   fontType, color);
-	pattCharOut(xPos + (charW * 2), yPos, eff & 0x0F, fontType, color);
+	pattCharOut(xPos,               yPos, efx,            fontType, color);
+	pattCharOut(xPos +  charW,      yPos, efxData >> 4,   fontType, color);
+	pattCharOut(xPos + (charW * 2), yPos, efxData & 0x0F, fontType, color);
 }
 
 // DRAWING ROUTINES (WITHOUT VOLUME COLUMN)
 
-static void showNoteNumNoVolColumn(uint32_t xPos, uint32_t yPos, int16_t ton, uint32_t color)
+static void showNoteNumNoVolColumn(uint32_t xPos, uint32_t yPos, int16_t note, uint32_t color)
 {
 	xPos += 3;
 
-	assert(ton >= 0 && ton <= 97);
+	assert(note >= 0 && note <= 97);
 
 	if (ui.numChannelsShown <= 6)
 	{
-		if (ton <= 0 || ton > 97)
+		if (note <= 0 || note > 97)
 			drawEmptyNoteBig(xPos, yPos, color);
-		else if (ton == 97)
+		else if (note == NOTE_OFF)
 			drawKeyOffBig(xPos, yPos, color);
 		else
-			drawNoteBig(xPos, yPos, ton, color);
+			drawNoteBig(xPos, yPos, note, color);
 	}
 	else if (ui.numChannelsShown <= 8)
 	{
-		if (ton <= 0 || ton > 97)
+		if (note <= 0 || note > 97)
 			drawEmptyNoteMedium(xPos, yPos, color);
-		else if (ton == 97)
+		else if (note == NOTE_OFF)
 			drawKeyOffMedium(xPos, yPos, color);
 		else
-			drawNoteMedium(xPos, yPos, ton, color);
+			drawNoteMedium(xPos, yPos, note, color);
 	}
 	else
 	{
-		if (ton <= 0 || ton > 97)
+		if (note <= 0 || note > 97)
 			drawEmptyNoteSmall(xPos, yPos, color);
-		else if (ton == 97)
+		else if (note == NOTE_OFF)
 			drawKeyOffSmall(xPos, yPos, color);
 		else
-			drawNoteSmall(xPos, yPos, ton, color);
+			drawNoteSmall(xPos, yPos, note, color);
 	}
 }
 
@@ -600,7 +600,7 @@ static void showNoVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t col
 	(void)color;
 }
 
-static void showEfxNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t effTyp, uint8_t eff, uint32_t color)
+static void showEfxNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t efx, uint8_t efxData, uint32_t color)
 {
 	uint8_t charW, fontType;
 
@@ -629,12 +629,12 @@ static void showEfxNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t effTyp, uin
 		xPos += 31;
 	}
 
-	pattCharOut(xPos,               yPos, effTyp,     fontType, color);
-	pattCharOut(xPos +  charW,      yPos, eff >> 4,   fontType, color);
-	pattCharOut(xPos + (charW * 2), yPos, eff & 0x0F, fontType, color);
+	pattCharOut(xPos,               yPos, efx,            fontType, color);
+	pattCharOut(xPos +  charW,      yPos, efxData >> 4,   fontType, color);
+	pattCharOut(xPos + (charW * 2), yPos, efxData & 0x0F, fontType, color);
 }
 
-void writePattern(int32_t currRow, int32_t pattern)
+void writePattern(int32_t currRow, int32_t currPattern)
 {
 	uint32_t noteTextColors[2];
 
@@ -663,8 +663,8 @@ void writePattern(int32_t currRow, int32_t pattern)
 	ui.patternChannelWidth = (uint16_t)(chanWidth + 3);
 
 	// get heights/pos/rows depending on configuration
-	uint32_t rowHeight = config.ptnUnpressed ? 11 : 8;
-	const pattCoord_t *pattCoord = &pattCoordTable[config.ptnUnpressed][ui.pattChanScrollShown][ui.extended];
+	uint32_t rowHeight = config.ptnStretch ? 11 : 8;
+	const pattCoord_t *pattCoord = &pattCoordTable[config.ptnStretch][ui.pattChanScrollShown][ui.extended];
 	const int32_t midRowTextY = pattCoord->midRowTextY;
 	const int32_t lowerRowsTextY = pattCoord->lowerRowsTextY;
 	int32_t row = currRow - pattCoord->numUpperRows;
@@ -672,17 +672,15 @@ void writePattern(int32_t currRow, int32_t pattern)
 	int32_t textY = pattCoord->upperRowsTextY;
 	const int32_t afterCurrRow = currRow + 1;
 	const int32_t numChannels = ui.numChannelsShown;
-	tonTyp *pattPtr = patt[pattern];
-	const int32_t numRows = pattLens[pattern];
-
-
+	note_t *pattPtr = pattern[currPattern];
+	const int32_t numRows = patternNumRows[currPattern];
 
 	// increment pattern data pointer by horizontal scrollbar offset/channel
 	if (pattPtr != NULL)
 		pattPtr += ui.channelOffset;
 
 	// set up function pointers for drawing
-	if (config.ptnS3M)
+	if (config.ptnShowVolColumn)
 	{
 		drawNote = showNoteNum;
 		drawInst = showInstrNum;
@@ -709,19 +707,17 @@ void writePattern(int32_t currRow, int32_t pattern)
 
 			drawRowNums(textY, (uint8_t)row, selectedRowFlag);
 
-			const tonTyp *note = (pattPtr == NULL) ? emptyPattern : &pattPtr[(uint32_t)row * MAX_VOICES];
+			const note_t *p = (pattPtr == NULL) ? emptyPattern : &pattPtr[(uint32_t)row * MAX_CHANNELS];
 			const int32_t xWidth = ui.patternChannelWidth;
 			const uint32_t color = noteTextColors[selectedRowFlag];
 
 			int32_t xPos = 29;
-			for (int32_t j = 0; j < numChannels; j++, note++)
+			for (int32_t j = 0; j < numChannels; j++, p++, xPos += xWidth)
 			{
-				drawNote(xPos, textY, note->ton, color);
-				drawInst(xPos, textY, note->instr, color);
-				drawVolEfx(xPos, textY, note->vol, color);
-				drawEfx(xPos, textY, note->effTyp, note->eff, color);
-
-				xPos += xWidth;
+				drawNote(xPos, textY, p->note, color);
+				drawInst(xPos, textY, p->instr, color);
+				drawVolEfx(xPos, textY, p->vol, color);
+				drawEfx(xPos, textY, p->efx, p->efxData, color);
 			}
 		}
 
@@ -932,15 +928,14 @@ static void drawKeyOffSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 	}
 }
 
-static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color)
+static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_t color)
 {
 	uint32_t char1, char2;
 
-	assert(ton >= 1 && ton <= 97);
-	ton--;
+	noteNum--;
 
-	const uint8_t note = noteTab1[ton];
-	const uint32_t char3 = noteTab2[ton] * FONT7_CHAR_W;
+	const uint8_t note = noteTab1[noteNum];
+	const uint32_t char3 = noteTab2[noteNum] * FONT7_CHAR_W;
 
 	if (config.ptnAcc == 0)
 	{
@@ -1039,14 +1034,14 @@ static void drawKeyOffMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 	}
 }
 
-static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color)
+static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_t color)
 {
 	uint32_t char1, char2;
 
-	ton--;
+	noteNum--;
 
-	const uint8_t note = noteTab1[ton];
-	const uint32_t char3 = noteTab2[ton] * FONT4_CHAR_W;
+	const uint8_t note = noteTab1[noteNum];
+	const uint32_t char3 = noteTab2[noteNum] * FONT4_CHAR_W;
 
 	if (config.ptnAcc == 0)
 	{
@@ -1145,14 +1140,14 @@ static void drawKeyOffBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 	}
 }
 
-static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t ton, uint32_t color)
+static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_t color)
 {
 	uint32_t char1, char2;
 
-	ton--;
+	noteNum--;
 
-	const uint8_t note = noteTab1[ton];
-	const uint32_t char3 = noteTab2[ton] * FONT5_CHAR_W;
+	const uint8_t note = noteTab1[noteNum];
+	const uint32_t char3 = noteTab2[noteNum] * FONT5_CHAR_W;
 
 	if (config.ptnAcc == 0)
 	{

@@ -10,8 +10,10 @@ file(GLOB ft2-clone_SRC
     "${ft2-clone_SOURCE_DIR}/src/*.c"
     "${ft2-clone_SOURCE_DIR}/src/gfxdata/*.c"
     "${ft2-clone_SOURCE_DIR}/src/mixer/*.c"
+    "${ft2-clone_SOURCE_DIR}/src/scopes/*.c"
     "${ft2-clone_SOURCE_DIR}/src/modloaders/*.c"
     "${ft2-clone_SOURCE_DIR}/src/smploaders/*.c"
+    "${ft2-clone_SOURCE_DIR}/src/libflac/*.c"
 )
 
 add_executable(ft2-clone ${ft2-clone_SRC})
@@ -26,7 +28,11 @@ endif()
 
 target_link_libraries(ft2-clone
     PRIVATE m asound pthread ${SDL2_LIBRARIES})
-target_compile_definitions(ft2-clone PRIVATE __LINUX_ALSA__)
+
+target_compile_definitions(ft2-clone
+    PRIVATE HAS_MIDI
+    PRIVATE __LINUX_ALSA__
+    PRIVATE HAS_LIBFLAC)
 
 install(TARGETS ft2-clone
-    RUNTIME DESTINATION bin )
+    RUNTIME DESTINATION bin)

@@ -1,25 +1,32 @@
 #pragma once
 
 #include <stdint.h>
-#include "ft2_replayer.h"
+#include "ft2_header.h"
 
 #define SAMPLE_AREA_HEIGHT 154
 #define SAMPLE_AREA_WIDTH 632
 #define SAMPLE_AREA_Y_CENTER 250
 
 // allocs sample with proper alignment and padding for branchless resampling interpolation
-bool allocateTmpSmpData(sampleTyp *s, int32_t length);
+bool allocateSmpData(sample_t *s, int32_t length, bool sample16Bit);
+bool allocateSmpDataPtr(smpPtr_t *sp, int32_t length, bool sample16Bit);
 
 // reallocs sample with proper alignment and padding for branchless resampling interpolation
-bool reallocateTmpSmpData(sampleTyp *s, int32_t length);
+bool reallocateSmpData(sample_t *s, int32_t length, bool sample16Bit);
+bool reallocateSmpDataPtr(smpPtr_t *sp, int32_t length, bool sample16Bit);
 
-sampleTyp *getCurSample(void);
-void checkSampleRepeat(sampleTyp *s);
-void fixSample(sampleTyp *s); // modifies samples before index 0, and after loop/end (for branchless mixer interpolation)
-void restoreSample(sampleTyp *s); // restores samples after loop/end
+void setSmpDataPtr(sample_t *s, smpPtr_t *sp);
+void freeSmpDataPtr(smpPtr_t *sp);
+void freeSmpData(sample_t *s);
+
+bool cloneSample(sample_t *src, sample_t *dst);
+sample_t *getCurSample(void);
+void sanitizeSample(sample_t *s);
+void fixSample(sample_t *s); // modifies samples before index 0, and after loop/end (for branchless mixer interpolation)
+void unfixSample(sample_t *s); // restores samples after loop/end
 void clearSample(void);
 void clearCopyBuffer(void);
-int32_t getSampleMiddleCRate(sampleTyp *s);
+int32_t getSampleMiddleCRate(sample_t *s);
 int32_t getSampleRangeStart(void);
 int32_t getSampleRangeEnd(void);
 int32_t getSampleRangeLength(void);
@@ -50,13 +57,13 @@ void rbSampleForwardLoop(void);
 void rbSamplePingpongLoop(void);
 void rbSample8bit(void);
 void rbSample16bit(void);
-void sampMin(void);
+void sampMinimize(void);
 void sampRepeatUp(void);
 void sampRepeatDown(void);
 void sampReplenUp(void);
 void sampReplenDown(void);
-int16_t getSampleValue(int8_t *ptr, uint8_t typ, int32_t pos);
-void putSampleValue(int8_t *ptr, uint8_t typ, int32_t pos, int16_t val);
+double getSampleValue(int8_t *smpData, int32_t position, bool sample16Bit);
+void putSampleValue(int8_t *smpData, int32_t position, double dSample, bool sample16Bit);
 void writeSample(bool forceSmpRedraw);
 void handleSampleDataMouseDown(bool mouseButtonHeld);
 void updateSampleEditorSample(void);
@@ -72,10 +79,12 @@ void hideSampleEditorExt(void);
 void drawSampleEditorExt(void);
 void handleSampleEditorExtRedrawing(void);
 void sampleBackwards(void);
-void sampleConv(void);
-void sampleConvW(void);
+void sampleChangeSign(void);
+void sampleByteSwap(void);
 void fixDC(void);
 void smpEdStop(void);
 void testSmpEdMouseUp(void);
+
+void sampleLine(int32_t x1, int32_t x2, int32_t y1, int32_t y2);
 
 extern int32_t smpEd_Rx1, smpEd_Rx2;

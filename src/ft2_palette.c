@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include "ft2_palette.h"
 #include "ft2_gui.h"
 #include "ft2_config.h"
@@ -7,7 +8,7 @@
 #include "ft2_palette.h"
 #include "ft2_tables.h"
 
-uint8_t cfg_ColorNr = 0; // globalized
+uint8_t cfg_ColorNum = 0; // globalized
 
 static uint8_t cfg_Red, cfg_Green, cfg_Blue, cfg_Contrast;
 
@@ -27,7 +28,7 @@ void setCustomPalColor(uint32_t color)
 
 void setPal16(pal16 *p, bool redrawScreen)
 {
-#define LOOP_PIN_COL_SUB 96
+#define LOOP_PIN_COL_SUB 110
 #define TEXT_MARK_COLOR 0x0078D7
 #define BOX_SELECT_COLOR 0x7F7F7F
 
@@ -89,12 +90,12 @@ static double palPow(double dX, double dY)
 
 uint8_t palMax(int32_t c)
 {
-	return (uint8_t)(CLAMP(c, 0, 63));
+	return (uint8_t)CLAMP(c, 0, 63);
 }
 
 static void drawCurrentPaletteColor(void)
 {
-	const uint8_t palIndex = FTC_EditOrder[cfg_ColorNr];
+	const uint8_t palIndex = FTC_EditOrder[cfg_ColorNum];
 
 	const uint8_t r = P6_TO_P8(cfg_Red);
 	const uint8_t g = P6_TO_P8(cfg_Green);
@@ -108,14 +109,14 @@ static void drawCurrentPaletteColor(void)
 
 static void updatePaletteEditor(void)
 {
-	const uint8_t nr = FTC_EditOrder[cfg_ColorNr];
+	const uint8_t colorNum = FTC_EditOrder[cfg_ColorNum];
 
-	cfg_Red = palTable[config.cfg_StdPalNr][nr].r;
-	cfg_Green = palTable[config.cfg_StdPalNr][nr].g;
-	cfg_Blue = palTable[config.cfg_StdPalNr][nr].b;
+	cfg_Red = palTable[config.cfg_StdPalNum][colorNum].r;
+	cfg_Green = palTable[config.cfg_StdPalNum][colorNum].g;
+	cfg_Blue = palTable[config.cfg_StdPalNum][colorNum].b;
 
-	if (cfg_ColorNr == 4 || cfg_ColorNr == 5)
-		cfg_Contrast = palContrast[config.cfg_StdPalNr][cfg_ColorNr-4];
+	if (cfg_ColorNum == 4 || cfg_ColorNum == 5)
+		cfg_Contrast = palContrast[config.cfg_StdPalNum][cfg_ColorNum-4];
 	else
 		cfg_Contrast = 0;
 
@@ -129,28 +130,28 @@ static void updatePaletteEditor(void)
 
 static void paletteDragMoved(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 	{
 		updatePaletteEditor(); // resets colors/contrast vars
 		showColorErrorMsg();
 		return;
 	}
 
-	if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 	{
 		updatePaletteEditor(); // resets colors/contrast vars
 		showMouseColorErrorMsg();
 		return;
 	}
 
-	const uint8_t nr = FTC_EditOrder[cfg_ColorNr];
-	const uint8_t p = (uint8_t)config.cfg_StdPalNr;
+	const uint8_t colorNum = FTC_EditOrder[cfg_ColorNum];
+	const uint8_t p = (uint8_t)config.cfg_StdPalNum;
 
-	palTable[p][nr].r = cfg_Red;
-	palTable[p][nr].g = cfg_Green;
-	palTable[p][nr].b = cfg_Blue;
+	palTable[p][colorNum].r = cfg_Red;
+	palTable[p][colorNum].g = cfg_Green;
+	palTable[p][colorNum].b = cfg_Blue;
 
-	if (cfg_ColorNr == 4 || cfg_ColorNr == 5)
+	if (cfg_ColorNum == 4 || cfg_ColorNum == 5)
 	{
 		double dRed = cfg_Red;
 		double dGreen = cfg_Green;
@@ -164,7 +165,7 @@ static void paletteDragMoved(void)
 
 		for (int32_t i = 0; i < 3; i++)
 		{
-			const int32_t k = scaleOrder[i] + (cfg_ColorNr - 4) * 2;
+			const int32_t k = scaleOrder[i] + (cfg_ColorNum - 4) * 2;
 
 			double dMul = palPow((i + 1) * (1.0 / 2.0), dContrast);
 
@@ -173,7 +174,7 @@ static void paletteDragMoved(void)
 			palTable[p][k].b = palMax((int32_t)((dBlue * dMul) + 0.5));
 		}
 
-		palContrast[p][cfg_ColorNr-4] = cfg_Contrast;
+		palContrast[p][cfg_ColorNum-4] = cfg_Contrast;
 	}
 	else
 	{
@@ -186,7 +187,7 @@ static void paletteDragMoved(void)
 
 	setScrollBarPos(SB_PAL_CONTRAST, cfg_Contrast, false);
 
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	drawCurrentPaletteColor();
 }
 
@@ -228,9 +229,9 @@ void sbPalContrastPos(uint32_t pos)
 
 void configPalRDown(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 		showColorErrorMsg();
-	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 		showMouseColorErrorMsg();
 	else
 		scrollBarScrollLeft(SB_PAL_R, 1);
@@ -238,9 +239,9 @@ void configPalRDown(void)
 
 void configPalRUp(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 		showColorErrorMsg();
-	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 		showMouseColorErrorMsg();
 	else
 		scrollBarScrollRight(SB_PAL_R, 1);
@@ -248,9 +249,9 @@ void configPalRUp(void)
 
 void configPalGDown(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 		showColorErrorMsg();
-	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 		showMouseColorErrorMsg();
 	else
 		scrollBarScrollLeft(SB_PAL_G, 1);
@@ -258,9 +259,9 @@ void configPalGDown(void)
 
 void configPalGUp(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 		showColorErrorMsg();
-	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 		showMouseColorErrorMsg();
 	else
 		scrollBarScrollRight(SB_PAL_G, 1);
@@ -268,9 +269,9 @@ void configPalGUp(void)
 
 void configPalBDown(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 		showColorErrorMsg();
-	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 		showMouseColorErrorMsg();
 	else
 		scrollBarScrollLeft(SB_PAL_B, 1);
@@ -278,9 +279,9 @@ void configPalBDown(void)
 
 void configPalBUp(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 		showColorErrorMsg();
-	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 		showMouseColorErrorMsg();
 	else
 		scrollBarScrollRight(SB_PAL_B, 1);
@@ -288,9 +289,9 @@ void configPalBUp(void)
 
 void configPalContDown(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 		showColorErrorMsg();
-	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 		showMouseColorErrorMsg();
 	else
 		scrollBarScrollLeft(SB_PAL_CONTRAST, 1);
@@ -298,9 +299,9 @@ void configPalContDown(void)
 
 void configPalContUp(void)
 {
-	if (config.cfg_StdPalNr != PAL_USER_DEFINED)
+	if (config.cfg_StdPalNum != PAL_USER_DEFINED)
 		showColorErrorMsg();
-	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNr == 3)
+	else if ((config.specialFlags2 & HARDWARE_MOUSE) && cfg_ColorNum == 3)
 		showMouseColorErrorMsg();
 	else
 		scrollBarScrollRight(SB_PAL_CONTRAST, 1);
@@ -334,138 +335,138 @@ void showPaletteEditor(void)
 
 void rbConfigPalPatternText(void)
 {
-	cfg_ColorNr = 0;
+	cfg_ColorNum = 0;
 	checkRadioButton(RB_CONFIG_PAL_PATTERNTEXT);
 	updatePaletteEditor();
 }
 
 void rbConfigPalBlockMark(void)
 {
-	cfg_ColorNr = 1;
+	cfg_ColorNum = 1;
 	checkRadioButton(RB_CONFIG_PAL_BLOCKMARK);
 	updatePaletteEditor();
 }
 
 void rbConfigPalTextOnBlock(void)
 {
-	cfg_ColorNr = 2;
+	cfg_ColorNum = 2;
 	checkRadioButton(RB_CONFIG_PAL_TEXTONBLOCK);
 	updatePaletteEditor();
 }
 
 void rbConfigPalMouse(void)
 {
-	cfg_ColorNr = 3;
+	cfg_ColorNum = 3;
 	checkRadioButton(RB_CONFIG_PAL_MOUSE);
 	updatePaletteEditor();
 }
 
 void rbConfigPalDesktop(void)
 {
-	cfg_ColorNr = 4;
+	cfg_ColorNum = 4;
 	checkRadioButton(RB_CONFIG_PAL_DESKTOP);
 	updatePaletteEditor();
 }
 
 void rbConfigPalButttons(void)
 {
-	cfg_ColorNr = 5;
+	cfg_ColorNum = 5;
 	checkRadioButton(RB_CONFIG_PAL_BUTTONS);
 	updatePaletteEditor();
 }
 
 void rbConfigPalArctic(void)
 {
-	config.cfg_StdPalNr = PAL_ARCTIC;
+	config.cfg_StdPalNum = PAL_ARCTIC;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_ARCTIC);
 }
 
 void rbConfigPalLitheDark(void)
 {
-	config.cfg_StdPalNr = PAL_LITHE_DARK;
+	config.cfg_StdPalNum = PAL_LITHE_DARK;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_LITHE_DARK);
 }
 
 void rbConfigPalAuroraBorealis(void)
 {
-	config.cfg_StdPalNr = PAL_AURORA_BOREALIS;
+	config.cfg_StdPalNum = PAL_AURORA_BOREALIS;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_AURORA_BOREALIS);
 }
 
 void rbConfigPalRose(void)
 {
-	config.cfg_StdPalNr = PAL_ROSE;
+	config.cfg_StdPalNum = PAL_ROSE;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_ROSE);
 }
 
 void rbConfigPalBlues(void)
 {
-	config.cfg_StdPalNr = PAL_BLUES;
+	config.cfg_StdPalNum = PAL_BLUES;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_BLUES);
 }
 
 void rbConfigPalDarkMode(void)
 {
-	config.cfg_StdPalNr = PAL_DARK_MODE;
+	config.cfg_StdPalNum = PAL_DARK_MODE;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_DARK_MODE);
 }
 
 void rbConfigPalGold(void)
 {
-	config.cfg_StdPalNr = PAL_GOLD;
+	config.cfg_StdPalNum = PAL_GOLD;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_GOLD);
 }
 
 void rbConfigPalViolent(void)
 {
-	config.cfg_StdPalNr = PAL_VIOLENT;
+	config.cfg_StdPalNum = PAL_VIOLENT;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_VIOLENT);
 }
 
 void rbConfigPalHeavyMetal(void)
 {
-	config.cfg_StdPalNr = PAL_HEAVY_METAL;
+	config.cfg_StdPalNum = PAL_HEAVY_METAL;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_HEAVY_METAL);
 }
 
 void rbConfigPalWhyColors(void)
 {
-	config.cfg_StdPalNr = PAL_WHY_COLORS;
+	config.cfg_StdPalNum = PAL_WHY_COLORS;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_WHY_COLORS);
 }
 
 void rbConfigPalJungle(void)
 {
-	config.cfg_StdPalNr = PAL_JUNGLE;
+	config.cfg_StdPalNum = PAL_JUNGLE;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_JUNGLE);
 }
 
 void rbConfigPalUserDefined(void)
 {
-	config.cfg_StdPalNr = PAL_USER_DEFINED;
+	config.cfg_StdPalNum = PAL_USER_DEFINED;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNr], true);
+	setPal16(palTable[config.cfg_StdPalNum], true);
 	checkRadioButton(RB_CONFIG_PAL_USER_DEFINED);
 }

@@ -848,18 +848,18 @@ void trimEntryName(char *name, bool isDir)
 	}
 }
 
-static void createOverwriteText(char *name)
+void createFileOverwriteText(char *filename, char *buffer)
 {
 	char nameTmp[128];
 
 	// read entry name to a small buffer
-	const uint32_t nameLen = (uint32_t)strlen(name);
-	memcpy(nameTmp, name, (nameLen >= sizeof (nameTmp)) ? sizeof (nameTmp) : (nameLen + 1));
+	const uint32_t nameLen = (uint32_t)strlen(filename);
+	memcpy(nameTmp, filename, (nameLen >= sizeof (nameTmp)) ? sizeof (nameTmp) : (nameLen + 1));
 	nameTmp[sizeof (nameTmp) - 1] = '\0';
 
 	trimEntryName(nameTmp, false);
 
-	sprintf(FReq_SysReqText, "Overwrite file \"%s\"?", nameTmp);
+	sprintf(buffer, "Overwrite file \"%s\"?", nameTmp);
 }
 
 static void diskOpSave(bool checkOverwrite)
@@ -908,7 +908,7 @@ static void diskOpSave(bool checkOverwrite)
 
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
-				createOverwriteText(FReq_FileName);
+				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
 				if (okBox(2, "System request", FReq_SysReqText) != 1)
 					return;
 			}
@@ -932,7 +932,7 @@ static void diskOpSave(bool checkOverwrite)
 
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
-				createOverwriteText(FReq_FileName);
+				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
 				if (okBox(2, "System request", FReq_SysReqText) != 1)
 					return;
 			}
@@ -961,7 +961,7 @@ static void diskOpSave(bool checkOverwrite)
 
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
-				createOverwriteText(FReq_FileName);
+				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
 				if (okBox(2, "System request", FReq_SysReqText) != 1)
 					return;
 			}
@@ -985,7 +985,7 @@ static void diskOpSave(bool checkOverwrite)
 
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
-				createOverwriteText(FReq_FileName);
+				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
 				if (okBox(2, "System request", FReq_SysReqText) != 1)
 					return;
 			}
@@ -1008,7 +1008,7 @@ static void diskOpSave(bool checkOverwrite)
 
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
-				createOverwriteText(FReq_FileName);
+				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
 				if (okBox(2, "System request", FReq_SysReqText) != 1)
 					return;
 			}

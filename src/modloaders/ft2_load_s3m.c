@@ -1,4 +1,8 @@
-// Scream Tracker 3 (or compatible) S3M loader
+/* Scream Tracker 3 (or compatible) S3M loader
+**
+** Note: Data sanitation is done in the last stage
+** of module loading, so you don't need to do that here.
+*/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -13,38 +17,36 @@
 #pragma pack(push)
 #pragma pack(1)
 #endif
-typedef struct songS3MinstrHeaderTyp_t
+typedef struct s3mSmpHdr_t
 {
-	uint8_t typ;
-	char dosName[12];
-	uint8_t memSegH;
-	uint16_t memSeg;
-	int32_t len, repS, repE;
-	uint8_t vol, dsk, pack, flags;
-	int32_t c2Spd, res1;
-	uint16_t gusPos;
-	uint8_t res2[6];
-	char name[28], id[4];
+	uint8_t type, junk1[12], offsetInFileH;
+	uint16_t offsetInFile;
+	int32_t length, loopStart, loopEnd;
+	uint8_t volume, junk2, packFlag, flags;
+	int32_t midCFreq, junk3;
+	uint16_t junk4;
+	uint8_t junk5[6];
+	char name[28], ID[4];
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-songS3MinstrHeaderTyp;
+s3mSmpHdr_t;
 
-typedef struct songS3MHeaderTyp_t
+typedef struct s3mHdr_t
 {
 	char name[28];
-	uint8_t id1a, typ;
-	uint16_t res1;
-	int16_t songTabLen, antInstr, antPatt;
-	uint16_t flags, trackerID, ver;
-	char id[4];
-	uint8_t globalVol, defSpeed, defTempo, masterVol, res2[12], chanType[32];
+	uint8_t junk1, type;
+	uint16_t junk2;
+	int16_t numOrders, numSamples, numPatterns;
+	uint16_t flags, junk3, version;
+	char ID[4];
+	uint8_t junk4, speed, BPM, junk5, junk6[12], chnSettings[32];
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
 #endif
-songS3MHeaderTyp;
+s3mHdr_t;
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif
@@ -55,117 +57,111 @@ static int8_t countS3MChannels(uint16_t antPtn);
 
 bool loadS3M(FILE *f, uint32_t filesize)
 {
-	uint8_t ha[2048];
 	uint8_t alastnfo[32], alastefx[32], alastvibnfo[32], s3mLastGInstr[32];
-	uint8_t typ;
-	int16_t ai, ap, ver, ii, kk, tmp;
-	uint16_t ptnOfs[256];
-	int32_t i, j, k, len;
-	tonTyp ton;
-	sampleTyp *s;
-	songS3MHeaderTyp h_S3M;
-	songS3MinstrHeaderTyp h_S3MInstr;
+	int16_t ii, kk, tmp;
+	int32_t patternOffsets[256], sampleOffsets[256], j, k;
+	note_t tmpNote;
+	sample_t *s;
+	s3mHdr_t hdr;
+	s3mSmpHdr_t smpHdr;
 
 	tmpLinearPeriodsFlag = false; // use Amiga periods
 
-	if (filesize < sizeof (h_S3M))
+	if (filesize < sizeof (hdr))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	memset(&h_S3M, 0, sizeof (h_S3M));
-	if (fread(&h_S3M, 1, sizeof (h_S3M), f) != sizeof (h_S3M))
+	memset(&hdr, 0, sizeof (hdr));
+	if (fread(&hdr, 1, sizeof (hdr), f) != sizeof (hdr))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	if (h_S3M.antInstr > MAX_INST || h_S3M.songTabLen > 256 || h_S3M.antPatt > 256 ||
-		h_S3M.typ != 16 || h_S3M.ver < 1 || h_S3M.ver > 2)
+	if (hdr.numSamples > MAX_INST || hdr.numOrders > MAX_ORDERS || hdr.numPatterns > MAX_PATTERNS ||
+		hdr.type != 16 || hdr.version < 1 || hdr.version > 2)
 	{
 		loaderMsgBox("Error loading .s3m: Incompatible module!");
 		return false;
 	}
 
-	memset(songTmp.songTab, 255, sizeof (songTmp.songTab));
-	if (fread(songTmp.songTab, h_S3M.songTabLen, 1, f) != 1)
+	memset(songTmp.orders, 255, 256); // pad by 255
+	if (fread(songTmp.orders, hdr.numOrders, 1, f) != 1)
 	{
 		loaderMsgBox("General I/O error during loading! Is the file in use?");
 		return false;
 	}
 
-	songTmp.len = h_S3M.songTabLen;
+	songTmp.songLength = hdr.numOrders;
 
 	// remove pattern separators (254)
 	k = 0;
 	j = 0;
-	for (i = 0; i < songTmp.len; i++)
+	for (int32_t i = 0; i < songTmp.songLength; i++)
 	{
-		if (songTmp.songTab[i] != 254)
-			songTmp.songTab[j++] = songTmp.songTab[i];
+		if (songTmp.orders[i] != 254)
+			songTmp.orders[j++] = songTmp.orders[i];
 		else
 			k++;
 	}
 
-	if (k <= songTmp.len)
-		songTmp.len -= (uint16_t)k;
+	if (k <= songTmp.songLength)
+		songTmp.songLength -= (uint16_t)k;
 	else
-		songTmp.len = 1;
+		songTmp.songLength = 1;
 
-	for (i = 1; i < songTmp.len; i++)
+	for (int32_t i = 1; i < songTmp.songLength; i++)
 	{
-		if (songTmp.songTab[i] == 255)
+		if (songTmp.orders[i] == 255)
 		{
-			songTmp.len = (uint16_t)i;
+			songTmp.songLength = (uint16_t)i;
 			break;
 		}
 	}
 	
 	// clear unused song table entries
-	if (songTmp.len < 255)
-		memset(&songTmp.songTab[songTmp.len], 0, 255-songTmp.len);
+	if (songTmp.songLength < 255)
+		memset(&songTmp.orders[songTmp.songLength], 0, 255-songTmp.songLength);
 
-	songTmp.speed = h_S3M.defTempo;
-	if (songTmp.speed < 32)
-		songTmp.speed = 32;
+	memcpy(songTmp.name, hdr.name, 20);
 
-	songTmp.tempo = h_S3M.defSpeed;
-	if (songTmp.tempo == 0)
-		songTmp.tempo = 6;
+	songTmp.BPM = hdr.BPM;
+	songTmp.speed = hdr.speed;
 
-	if (songTmp.tempo > 31)
-		songTmp.tempo = 31;
-
-	songTmp.initialTempo = songTmp.tempo;
-	memcpy(songTmp.name, h_S3M.name, 20);
-
-	ap = h_S3M.antPatt;
-	ai = h_S3M.antInstr;
-	ver = h_S3M.ver;
-
-	k = 31;
-	while (k >= 0 && h_S3M.chanType[k] >= 16) k--;
-	songTmp.antChn = (k + 2) & 254;
-
-	if (fread(ha, ai*2, 1, f) != 1)
+	// load sample offsets
+	for (int32_t i = 0; i < hdr.numSamples; i++)
 	{
-		loaderMsgBox("General I/O error during loading! Is the file in use?");
-		return false;
+		uint16_t offset;
+		if (fread(&offset, 2, 1, f) != 1)
+		{
+			loaderMsgBox("General I/O error during loading! Is the file in use?");
+			return false;
+		}
+
+		sampleOffsets[i] = offset << 4;
 	}
 
-	if (fread(ptnOfs, ap*2, 1, f) != 1)
+	// load pattern offsets
+	for (int32_t i = 0; i < hdr.numPatterns; i++)
 	{
-		loaderMsgBox("General I/O error during loading! Is the file in use?");
-		return false;
+		uint16_t offset;
+		if (fread(&offset, 2, 1, f) != 1)
+		{
+			loaderMsgBox("General I/O error during loading! Is the file in use?");
+			return false;
+		}
+
+		patternOffsets[i] = offset << 4;
 	}
 
 	// *** PATTERNS ***
 
 	k = 0;
-	for (i = 0; i < ap; i++)
+	for (int32_t i = 0; i < hdr.numPatterns; i++)
 	{
-		if (ptnOfs[i]  == 0)
+		if (patternOffsets[i]  == 0)
 			continue; // empty pattern
 
 		memset(alastnfo, 0, sizeof (alastnfo));
@@ -173,7 +169,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 		memset(alastvibnfo, 0, sizeof (alastvibnfo));
 		memset(s3mLastGInstr, 0, sizeof (s3mLastGInstr));
 
-		fseek(f, ptnOfs[i] << 4, SEEK_SET);
+		fseek(f, patternOffsets[i], SEEK_SET);
 		if (feof(f))
 			continue;
 
@@ -198,126 +194,126 @@ bool loadS3M(FILE *f, uint32_t filesize)
 
 			while (k < j && kk < 64)
 			{
-				typ = pattBuff[k++];
+				uint8_t bits = pattBuff[k++];
 
-				if (typ == 0)
+				if (bits == 0)
 				{
 					kk++;
 				}
 				else
 				{
-					ii = typ & 31;
+					ii = bits & 31;
 
-					memset(&ton, 0, sizeof (ton));
+					memset(&tmpNote, 0, sizeof (tmpNote));
 
 					// note and sample
-					if (typ & 32)
+					if (bits & 32)
 					{
-						ton.ton = pattBuff[k++];
-						ton.instr = pattBuff[k++];
+						tmpNote.note = pattBuff[k++];
+						tmpNote.instr = pattBuff[k++];
 
-						if (ton.instr > MAX_INST)
-							ton.instr = 0;
+						if (tmpNote.instr > MAX_INST)
+							tmpNote.instr = 0;
 
-						     if (ton.ton == 254) ton.ton = 97;
-						else if (ton.ton == 255) ton.ton = 0;
+						     if (tmpNote.note == 254) tmpNote.note = NOTE_OFF;
+						else if (tmpNote.note == 255) tmpNote.note = 0;
 						else
 						{
-							ton.ton = 1 + (ton.ton & 0xF) + (ton.ton >> 4) * 12;
-							if (ton.ton > 96)
-								ton.ton = 0;
+							tmpNote.note = 1 + (tmpNote.note & 0xF) + (tmpNote.note >> 4) * 12;
+							if (tmpNote.note > 96)
+								tmpNote.note = 0;
 						}
 					}
 
 					// volume column
-					if (typ & 64)
+					if (bits & 64)
 					{
-						ton.vol = pattBuff[k++];
+						tmpNote.vol = pattBuff[k++];
 
-						if (ton.vol <= 64)
-							ton.vol += 0x10;
+						if (tmpNote.vol <= 64)
+							tmpNote.vol += 0x10;
 						else
-							ton.vol = 0;
+							tmpNote.vol = 0;
 					}
 
 					// effect
-					if (typ & 128)
+					if (bits & 128)
 					{
-						ton.effTyp = pattBuff[k++];
-						ton.eff = pattBuff[k++];
+						tmpNote.efx = pattBuff[k++];
+						tmpNote.efxData = pattBuff[k++];
 
-						if (ton.eff > 0)
+						if (tmpNote.efxData > 0)
 						{
-							alastnfo[ii] = ton.eff;
-							if (ton.effTyp == 8 || ton.effTyp == 21)
-								alastvibnfo[ii] = ton.eff; // H/U
+							alastnfo[ii] = tmpNote.efxData;
+							if (tmpNote.efx == 8 || tmpNote.efx == 21)
+								alastvibnfo[ii] = tmpNote.efxData; // H/U
 						}
 
 						// in ST3, a lot of effects directly share the same memory!
-						if (ton.eff == 0 && ton.effTyp != 7) // G
+						if (tmpNote.efxData == 0 && tmpNote.efx != 7) // G
 						{
-							uint8_t efx = ton.effTyp;
+							uint8_t efx = tmpNote.efx;
 							if (efx == 8 || efx == 21) // H/U
-								ton.eff = alastvibnfo[ii];
+								tmpNote.efxData = alastvibnfo[ii];
 							else if ((efx >= 4 && efx <= 12) || (efx >= 17 && efx <= 19)) // D/E/F/I/J/K/L/Q/R/S
-								ton.eff = alastnfo[ii];
+								tmpNote.efxData = alastnfo[ii];
 
 							/* If effect data is zero and effect type was the same as last one, clear out
 							** data if it's not J or S (those have no memory in the equivalent XM effects).
 							** Also goes for extra fine pitch slides and fine volume slides,
 							** since they get converted to other effects.
 							*/
-							if (efx == alastefx[ii] && ton.effTyp != 10 && ton.effTyp != 19) // J/S
+							if (efx == alastefx[ii] && tmpNote.efx != 10 && tmpNote.efx != 19) // J/S
 							{
-								uint8_t nfo = ton.eff;
+								uint8_t nfo = tmpNote.efxData;
 								bool extraFinePitchSlides = (efx == 5 || efx == 6) && ((nfo & 0xF0) == 0xE0);
 								bool fineVolSlides = (efx == 4 || efx == 11) &&
 								     ((nfo > 0xF0) || (((nfo & 0xF) == 0xF) && ((nfo & 0xF0) > 0)));
 
 								if (!extraFinePitchSlides && !fineVolSlides)
-									ton.eff = 0;
+									tmpNote.efxData = 0;
 							}
 						}
 
-						if (ton.effTyp > 0)
-							alastefx[ii] = ton.effTyp;
+						if (tmpNote.efx > 0)
+							alastefx[ii] = tmpNote.efx;
 
-						switch (ton.effTyp)
+						switch (tmpNote.efx)
 						{
 							case 1: // A
 							{
-								ton.effTyp = 0xF;
-								if (ton.eff == 0)
+								tmpNote.efx = 0xF;
+								if (tmpNote.efxData == 0)
 								{
-									ton.effTyp = 0;
-									ton.eff = 0;
+									tmpNote.efx = 0;
+									tmpNote.efxData = 0;
 								}
-								else if (ton.eff > 0x1F)
+								else if (tmpNote.efxData > 0x1F)
 								{
-									ton.eff = 0x1F;
+									tmpNote.efxData = 0x1F;
 								}
 							}
 							break;
 
-							case 2: ton.effTyp = 0xB; break; // B
-							case 3: ton.effTyp = 0xD; break; // C
+							case 2: tmpNote.efx = 0xB; break; // B
+							case 3: tmpNote.efx = 0xD; break; // C
 							case 4: // D
 							{
-								if (ton.eff > 0xF0) // fine slide up
+								if (tmpNote.efxData > 0xF0) // fine slide up
 								{
-									ton.effTyp = 0xE;
-									ton.eff = 0xB0 | (ton.eff & 0xF);
+									tmpNote.efx = 0xE;
+									tmpNote.efxData = 0xB0 | (tmpNote.efxData & 0xF);
 								}
-								else if ((ton.eff & 0x0F) == 0x0F && (ton.eff & 0xF0) > 0) // fine slide down
+								else if ((tmpNote.efxData & 0x0F) == 0x0F && (tmpNote.efxData & 0xF0) > 0) // fine slide down
 								{
-									ton.effTyp = 0xE;
-									ton.eff = 0xA0 | (ton.eff >> 4);
+									tmpNote.efx = 0xE;
+									tmpNote.efxData = 0xA0 | (tmpNote.efxData >> 4);
 								}
 								else
 								{
-									ton.effTyp = 0xA;
-									if (ton.eff & 0x0F) // on D/K, last nybble has first priority in ST3
-										ton.eff &= 0x0F;
+									tmpNote.efx = 0xA;
+									if (tmpNote.efxData & 0x0F) // on D/K, last nybble has first priority in ST3
+										tmpNote.efxData &= 0x0F;
 								}
 							}
 							break;
@@ -325,179 +321,179 @@ bool loadS3M(FILE *f, uint32_t filesize)
 							case 5: // E
 							case 6: // F
 							{
-								if ((ton.eff & 0xF0) >= 0xE0)
+								if ((tmpNote.efxData & 0xF0) >= 0xE0)
 								{
 									// convert to fine slide
-									if ((ton.eff & 0xF0) == 0xE0)
+									if ((tmpNote.efxData & 0xF0) == 0xE0)
 										tmp = 0x21;
 									else
 										tmp = 0xE;
 
-									ton.eff &= 0x0F;
+									tmpNote.efxData &= 0x0F;
 
-									if (ton.effTyp == 0x05)
-										ton.eff |= 0x20;
+									if (tmpNote.efx == 0x05)
+										tmpNote.efxData |= 0x20;
 									else
-										ton.eff |= 0x10;
+										tmpNote.efxData |= 0x10;
 
-									ton.effTyp = (uint8_t)tmp;
+									tmpNote.efx = (uint8_t)tmp;
 
-									if (ton.effTyp == 0x21 && ton.eff == 0)
+									if (tmpNote.efx == 0x21 && tmpNote.efxData == 0)
 									{
-										ton.effTyp = 0;
+										tmpNote.efx = 0;
 									}
 								}
 								else
 								{
 									// convert to normal 1xx/2xx slide
-									ton.effTyp = 7 - ton.effTyp;
+									tmpNote.efx = 7 - tmpNote.efx;
 								}
 							}
 							break;
 
 							case 7: // G
 							{
-								ton.effTyp = 0x03;
+								tmpNote.efx = 0x03;
 
 								// fix illegal slides (to new instruments)
-								if (ton.instr != 0 && ton.instr != s3mLastGInstr[ii])
-									ton.instr = s3mLastGInstr[ii];
+								if (tmpNote.instr != 0 && tmpNote.instr != s3mLastGInstr[ii])
+									tmpNote.instr = s3mLastGInstr[ii];
 							}
 							break;
 
 							case 11: // K
 							{
-								if (ton.eff > 0xF0) // fine slide up
+								if (tmpNote.efxData > 0xF0) // fine slide up
 								{
-									ton.effTyp = 0xE;
-									ton.eff = 0xB0 | (ton.eff & 0xF);
+									tmpNote.efx = 0xE;
+									tmpNote.efxData = 0xB0 | (tmpNote.efxData & 0xF);
 
 									// if volume column is unoccupied, set to vibrato
-									if (ton.vol == 0)
-										ton.vol = 0xB0;
+									if (tmpNote.vol == 0)
+										tmpNote.vol = 0xB0;
 								}
-								else if ((ton.eff & 0x0F) == 0x0F && (ton.eff & 0xF0) > 0) // fine slide down
+								else if ((tmpNote.efxData & 0x0F) == 0x0F && (tmpNote.efxData & 0xF0) > 0) // fine slide down
 								{
-									ton.effTyp = 0xE;
-									ton.eff = 0xA0 | (ton.eff >> 4);
+									tmpNote.efx = 0xE;
+									tmpNote.efxData = 0xA0 | (tmpNote.efxData >> 4);
 
 									// if volume column is unoccupied, set to vibrato
-									if (ton.vol == 0)
-										ton.vol = 0xB0;
+									if (tmpNote.vol == 0)
+										tmpNote.vol = 0xB0;
 								}
 								else
 								{
-									ton.effTyp = 0x6;
-									if (ton.eff & 0x0F) // on D/K, last nybble has first priority in ST3
-										ton.eff &= 0x0F;
+									tmpNote.efx = 0x6;
+									if (tmpNote.efxData & 0x0F) // on D/K, last nybble has first priority in ST3
+										tmpNote.efxData &= 0x0F;
 								}
 							}
 							break;
 
-							case 8: ton.effTyp = 0x04; break; // H
-							case 9: ton.effTyp = 0x1D; break; // I
-							case 10: ton.effTyp = 0x00; break; // J
-							case 12: ton.effTyp = 0x05; break; // L
-							case 15: ton.effTyp = 0x09; break; // O
-							case 17: ton.effTyp = 0x1B; break; // Q
-							case 18: ton.effTyp = 0x07; break; // R
+							case 8: tmpNote.efx = 0x04; break; // H
+							case 9: tmpNote.efx = 0x1D; break; // I
+							case 10: tmpNote.efx = 0x00; break; // J
+							case 12: tmpNote.efx = 0x05; break; // L
+							case 15: tmpNote.efx = 0x09; break; // O
+							case 17: tmpNote.efx = 0x1B; break; // Q
+							case 18: tmpNote.efx = 0x07; break; // R
 
 							case 19: // S
 							{
-								ton.effTyp = 0xE;
-								tmp = ton.eff >> 4;
-								ton.eff &= 0x0F;
+								tmpNote.efx = 0xE;
+								tmp = tmpNote.efxData >> 4;
+								tmpNote.efxData &= 0x0F;
 
-								     if (tmp == 0x1) ton.eff |= 0x30;
-								else if (tmp == 0x2) ton.eff |= 0x50;
-								else if (tmp == 0x3) ton.eff |= 0x40;
-								else if (tmp == 0x4) ton.eff |= 0x70;
+								     if (tmp == 0x1) tmpNote.efxData |= 0x30;
+								else if (tmp == 0x2) tmpNote.efxData |= 0x50;
+								else if (tmp == 0x3) tmpNote.efxData |= 0x40;
+								else if (tmp == 0x4) tmpNote.efxData |= 0x70;
 								// ignore S8x becuase it's not compatible with FT2 panning
-								else if (tmp == 0xB) ton.eff |= 0x60;
+								else if (tmp == 0xB) tmpNote.efxData |= 0x60;
 								else if (tmp == 0xC) // Note Cut
 								{
-									ton.eff |= 0xC0;
-									if (ton.eff == 0xC0)
+									tmpNote.efxData |= 0xC0;
+									if (tmpNote.efxData == 0xC0)
 									{
 										// EC0 does nothing in ST3 but cuts voice in FT2, remove effect
-										ton.effTyp = 0;
-										ton.eff = 0;
+										tmpNote.efx = 0;
+										tmpNote.efxData = 0;
 									}
 								}
 								else if (tmp == 0xD) // Note Delay
 								{
-									ton.eff |= 0xD0;
-									if (ton.ton == 0 || ton.ton == 97)
+									tmpNote.efxData |= 0xD0;
+									if (tmpNote.note == 0 || tmpNote.note == NOTE_OFF)
 									{
 										// EDx without a note does nothing in ST3 but retrigs in FT2, remove effect
-										ton.effTyp = 0;
-										ton.eff = 0;
+										tmpNote.efx = 0;
+										tmpNote.efxData = 0;
 									}
-									else if (ton.eff == 0xD0)
+									else if (tmpNote.efxData == 0xD0)
 									{
 										// ED0 prevents note/smp/vol from updating in ST3, remove everything
-										ton.ton = 0;
-										ton.instr = 0;
-										ton.vol = 0;
-										ton.effTyp = 0;
-										ton.eff = 0;
+										tmpNote.note = 0;
+										tmpNote.instr = 0;
+										tmpNote.vol = 0;
+										tmpNote.efx = 0;
+										tmpNote.efxData = 0;
 									}
 								}
-								else if (tmp == 0xE) ton.eff |= 0xE0;
-								else if (tmp == 0xF) ton.eff |= 0xF0;
+								else if (tmp == 0xE) tmpNote.efxData |= 0xE0;
+								else if (tmp == 0xF) tmpNote.efxData |= 0xF0;
 								else
 								{
-									ton.effTyp = 0;
-									ton.eff = 0;
+									tmpNote.efx = 0;
+									tmpNote.efxData = 0;
 								}
 							}
 							break;
 
 							case 20: // T
 							{
-								ton.effTyp = 0x0F;
-								if (ton.eff < 0x21) // Txx with a value lower than 33 (0x21) does nothing in ST3, remove effect
+								tmpNote.efx = 0x0F;
+								if (tmpNote.efxData < 0x21) // Txx with a value lower than 33 (0x21) does nothing in ST3, remove effect
 								{
-									ton.effTyp = 0;
-									ton.eff = 0;
+									tmpNote.efx = 0;
+									tmpNote.efxData = 0;
 								}
 							}
 							break;
 
 							case 22: // V
 							{
-								ton.effTyp = 0x10;
-								if (ton.eff > 0x40)
+								tmpNote.efx = 0x10;
+								if (tmpNote.efxData > 0x40)
 								{
 									// Vxx > 0x40 does nothing in ST3
-									ton.effTyp = 0;
-									ton.eff = 0;
+									tmpNote.efx = 0;
+									tmpNote.efxData = 0;
 								}
 							}
 							break;
 
 							default:
 							{
-								ton.effTyp = 0;
-								ton.eff = 0;
+								tmpNote.efx = 0;
+								tmpNote.efxData = 0;
 							}
 							break;
 						}
 					}
 
-					if (ton.instr != 0 && ton.effTyp != 0x3)
-						s3mLastGInstr[ii] = ton.instr;
+					if (tmpNote.instr != 0 && tmpNote.efx != 0x3)
+						s3mLastGInstr[ii] = tmpNote.instr;
 
-					pattTmp[i][(kk * MAX_VOICES) + ii] = ton;
+					patternTmp[i][(kk * MAX_CHANNELS) + ii] = tmpNote;
 				}
 			}
 
 			if (tmpPatternEmpty((uint16_t)i))
 			{
-				if (pattTmp[i] != NULL)
+				if (patternTmp[i] != NULL)
 				{
-					free(pattTmp[i]);
-					pattTmp[i] = NULL;
+					free(patternTmp[i]);
+					patternTmp[i] = NULL;
 				}
 			}
 		}
@@ -506,32 +502,34 @@ bool loadS3M(FILE *f, uint32_t filesize)
 	// *** SAMPLES ***
 
 	bool adlibInsWarn = false;
-
-	memcpy(ptnOfs, ha, 512);
-	for (i = 0; i < ai; i++)
+	for (int32_t i = 0; i < hdr.numSamples; i++)
 	{
-		fseek(f, ptnOfs[i] << 4, SEEK_SET);
+		if (sampleOffsets[i] == 0)
+			continue;
 
-		if (fread(&h_S3MInstr, 1, sizeof (h_S3MInstr), f) != sizeof (h_S3MInstr))
+		fseek(f, sampleOffsets[i], SEEK_SET);
+
+		if (fread(&smpHdr, 1, sizeof (smpHdr), f) != sizeof (smpHdr))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 		
-		memcpy(songTmp.instrName[1+i], h_S3MInstr.name, 22);
+		memcpy(songTmp.instrName[1+i], smpHdr.name, 22);
 
-		if (h_S3MInstr.typ == 2)
+		if (smpHdr.type == 2)
 		{
 			adlibInsWarn = true;
 		}
-		else if (h_S3MInstr.typ == 1)
+		else if (smpHdr.type == 1)
 		{
-			if ((h_S3MInstr.flags & (255-1-2-4)) != 0 || h_S3MInstr.pack != 0)
+			int32_t offsetInFile = ((smpHdr.offsetInFileH << 16) | smpHdr.offsetInFile) << 4;
+			if ((smpHdr.flags & (255-1-2-4)) != 0 || smpHdr.packFlag != 0)
 			{
 				loaderMsgBox("Error loading .s3m: Incompatible module!");
 				return false;
 			}
-			else if (h_S3MInstr.memSeg > 0 && h_S3MInstr.len > 0)
+			else if (offsetInFile > 0 && smpHdr.length > 0)
 			{
 				if (!allocateTmpInstr((int16_t)(1 + i)))
 				{
@@ -540,90 +538,86 @@ bool loadS3M(FILE *f, uint32_t filesize)
 				}
 
 				setNoEnvelope(instrTmp[1 + i]);
-				s = &instrTmp[1+i]->samp[0];
+				s = &instrTmp[1+i]->smp[0];
+
+				if (smpHdr.midCFreq > 65535) // ST3 (and OpenMPT) does this
+					smpHdr.midCFreq = 65535;
+
+				memcpy(s->name, smpHdr.name, 22);
 
 				// non-FT2: fixes "miracle man.s3m" and other broken S3Ms
-				if ((h_S3MInstr.memSeg<<4)+h_S3MInstr.len > (int32_t)filesize)
-					h_S3MInstr.len = filesize - (h_S3MInstr.memSeg << 4);
+				if (offsetInFile+smpHdr.length > (int32_t)filesize)
+					smpHdr.length = filesize - offsetInFile;
 
-				len = h_S3MInstr.len;
+				bool hasLoop = !!(smpHdr.flags & 1);
+				bool stereoSample = !!(smpHdr.flags & 2);
+				bool sample16Bit = !!(smpHdr.flags & 4);
 
-				bool hasLoop = h_S3MInstr.flags & 1;
-				bool stereoSample = (h_S3MInstr.flags >> 1) & 1;
-				bool is16Bit = (h_S3MInstr.flags >> 2) & 1;
-			
-				if (is16Bit) // 16-bit
-					len <<= 1;
+				if (stereoSample)
+					smpHdr.length <<= 1;
 
-				if (stereoSample) // stereo
-					len <<= 1;
+				int32_t lengthInFile = smpHdr.length;
 
-				if (!allocateTmpSmpData(s, len))
+				s->length = smpHdr.length;
+				s->volume = smpHdr.volume;
+				s->loopStart = smpHdr.loopStart;
+				s->loopLength = smpHdr.loopEnd - smpHdr.loopStart;
+
+				tuneSample(s, smpHdr.midCFreq, tmpLinearPeriodsFlag);
+
+				if (sample16Bit)
+				{
+					s->flags |= SAMPLE_16BIT;
+					lengthInFile <<= 1;
+				}
+
+				if (!allocateSmpData(s, s->length, sample16Bit))
 				{
 					loaderMsgBox("Not enough memory!");
 					return false;
 				}
 
-				memcpy(s->name, h_S3MInstr.name, 21);
-
-				if (h_S3MInstr.c2Spd > 65535) // ST3 (and OpenMPT) does this
-					h_S3MInstr.c2Spd = 65535;
-
-				s->len = h_S3MInstr.len;
-				s->vol = h_S3MInstr.vol;
-				s->repS = h_S3MInstr.repS;
-				s->repL = h_S3MInstr.repE - h_S3MInstr.repS;
-
-				tuneSample(s, h_S3MInstr.c2Spd, tmpLinearPeriodsFlag);
-
-				if (s->vol > 64)
-					s->vol = 64;
-
-				if (s->repL <= 2 || s->repS+s->repL > s->len || s->repL == 0)
+				if (s->loopLength <= 1 || s->loopStart+s->loopLength > s->length || s->loopLength == 0)
 				{
-					s->repS = 0;
-					s->repL = 0;
+					s->loopStart = 0;
+					s->loopLength = 0;
 					hasLoop = false;
 				}
 
-				s->typ = hasLoop + (is16Bit << 4);
+				if (hasLoop)
+					s->flags |= LOOP_FWD;
 
-				fseek(f, h_S3MInstr.memSeg << 4, SEEK_SET);
+				fseek(f, offsetInFile, SEEK_SET);
 
-				if (ver == 1)
+				if (hdr.version == 1)
 				{
-					fseek(f, len, SEEK_CUR); // sample not supported
+					fseek(f, lengthInFile, SEEK_CUR); // sample not supported
 				}
 				else
 				{
-					if (fread(s->pek, len, 1, f) != 1)
+					if (fread(s->dataPtr, SAMPLE_LENGTH_BYTES(s), 1, f) != 1)
 					{
 						loaderMsgBox("General I/O error during loading! Is the file in use?");
 						return false;
 					}
 
-					if (is16Bit)
-					{
-						conv16BitSample(s->pek, len, stereoSample);
-
-						s->len <<= 1;
-						s->repS <<= 1;
-						s->repL <<= 1;
-					}
+					if (sample16Bit)
+						conv16BitSample(s->dataPtr, s->length, stereoSample);
 					else
-					{
-						conv8BitSample(s->pek, len, stereoSample);
-					}
+						conv8BitSample(s->dataPtr, s->length, stereoSample);
 
 					// if stereo sample: reduce memory footprint after sample was downmixed to mono
 					if (stereoSample)
-						reallocateTmpSmpData(s, s->len);
+					{
+						s->length >>= 1;
+						reallocateSmpData(s, s->length, sample16Bit);
+					}
 				}
 			}
 		}
 	}
 
-	songTmp.antChn = countS3MChannels(ap);
+	songTmp.numChannels = countS3MChannels(hdr.numPatterns);
 
 	if (adlibInsWarn)
 		loaderMsgBox("Warning: The module contains unsupported AdLib instruments!");
@@ -639,15 +633,15 @@ static int8_t countS3MChannels(uint16_t antPtn)
 	int32_t channels = 0;
 	for (int32_t i = 0; i < antPtn; i++)
 	{
-		if (pattTmp[i] == NULL)
+		if (patternTmp[i] == NULL)
 			continue;
 
-		tonTyp *ton = pattTmp[i];
+		note_t *p = patternTmp[i];
 		for (int32_t j = 0; j < 64; j++)
 		{
-			for (int32_t k = 0; k < MAX_VOICES; k++, ton++)
+			for (int32_t k = 0; k < MAX_CHANNELS; k++, p++)
 			{
-				if (ton->eff == 0 && ton->effTyp == 0 && ton->instr == 0 && ton->ton == 0 && ton->vol == 0)
+				if (p->note == 0 && p->instr == 0 && p->vol == 0 && p->efx == 0 && p->efxData == 0)
 					continue;
 
 				if (k > channels)

@@ -727,7 +727,7 @@ bool testTextBoxMouseDown(void)
 void updateTextBoxPointers(void)
 {
 	int32_t i;
-	instrTyp *curIns = instr[editor.curInstr];
+	instr_t *curIns = instr[editor.curInstr];
 
 	// instrument names
 	for (i = 0; i < 8; i++)
@@ -742,7 +742,7 @@ void updateTextBoxPointers(void)
 	else
 	{
 		for (i = 0; i < 5; i++)
-			textBoxes[TB_SAMP1+i].textPtr = curIns->samp[editor.sampleBankOffset+i].name;
+			textBoxes[TB_SAMP1+i].textPtr = curIns->smp[editor.sampleBankOffset+i].name;
 	}
 
 	// song name

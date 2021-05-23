@@ -18,15 +18,15 @@ enum
 	TRANSP_BLOCK = 3
 };
 
-typedef struct trackHeaderType_t
+typedef struct xtHdr_t
 {
-	uint16_t ver, len;
-} trackHeaderType;
+	uint16_t version, numRows;
+} xtHdr_t;
 
-typedef struct patternHeaderType_t
+typedef struct xpHdr_t
 {
-	uint16_t ver, len;
-} patternHeaderType;
+	uint16_t version, numRows;
+} xpHdr_t;
 
 typedef struct pattCoord_t
 {
@@ -61,8 +61,8 @@ extern pattMark_t pattMark; // ft2_pattern_ed.c
 
 void resetPlaybackTime(void);
 
-bool allocatePattern(uint16_t nr);
-void killPatternIfUnused(uint16_t nr);
+bool allocatePattern(uint16_t pattNum);
+void killPatternIfUnused(uint16_t pattNum);
 uint8_t getMaxVisibleChannels(void);
 void updatePatternWidth(void);
 void updateAdvEdit(void);
@@ -106,7 +106,7 @@ bool savePattern(UNICHAR *filenameU);
 void scrollChannelLeft(void);
 void scrollChannelRight(void);
 void setChannelScrollPos(uint32_t pos);
-void jumpToChannel(uint8_t channel); // for ALT+q..i ALT+a..k
+void jumpToChannel(uint8_t chNr); // for ALT+q..i ALT+a..k
 void sbPosEdPos(uint32_t pos);
 void pbPosEdPosUp(void);
 void pbPosEdPosDown(void);
@@ -132,7 +132,7 @@ void pbPattLenUp(void);
 void pbPattLenDown(void);
 void drawPosEdNums(int16_t songPos);
 void drawSongLength(void);
-void drawSongRepS(void);
+void drawSongLoopStart(void);
 void drawSongBPM(uint16_t val);
 void drawSongSpeed(uint16_t val);
 void drawEditPattern(uint16_t editPattern);

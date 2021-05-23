@@ -7,10 +7,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_header.h"
+#include "ft2_audio.h"
 #include "ft2_gui.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_diskop.h"
-#include "ft2_scopes.h"
+#include "scopes/ft2_scopes.h"
 #include "ft2_config.h"
 #include "ft2_mouse.h"
 #include "ft2_sample_ed.h"
@@ -36,10 +37,9 @@ typedef struct wavHeader_t
 	uint32_t subchunk2ID, subchunk2Size;
 } wavHeader_t;
 
-static char WAV_SysReqText[192];
 static uint8_t WDBitDepth = 16, WDStartPos, WDStopPos, *wavRenderBuffer;
 static int16_t WDAmp;
-static uint32_t WDFrequency = 48000;
+static uint32_t WDFrequency = DEFAULT_AUDIO_FREQ;
 static SDL_Thread *thread;
 
 static void updateWavRenderer(void)
@@ -125,7 +125,7 @@ void drawWavRenderer(void)
 void resetWavRenderer(void)
 {
 	WDStartPos = 0;
-	WDStopPos = (uint8_t)song.len - 1;
+	WDStopPos = (uint8_t)song.songLength - 1;
 
 	if (ui.wavRendererShown)
 		updateWavRenderer();
@@ -143,7 +143,7 @@ void showWavRenderer(void)
 	ui.scopesShown = false;
 
 	WDStartPos = 0;
-	WDStopPos = (uint8_t)song.len - 1;
+	WDStopPos = (uint8_t)song.songLength - 1;
 
 	drawWavRenderer();
 }
@@ -194,8 +194,8 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 	setAudioAmp(amp, config.masterVol, (WDBitDepth == 32));
 
 	stopVoices();
-	song.globVol = 64;
-	P_SetSpeed(song.speed);
+	song.globalVolume = 64;
+	setMixerBPM(song.BPM);
 
 	resetPlaybackTime();
 	return true;
@@ -251,12 +251,12 @@ static void dump_Close(FILE *f, uint32_t totalSamples)
 	stopPlaying();
 
 	// kludge: set speed to 6 if speed was set to 0
-	if (song.tempo == 0)
-		song.tempo = 6;
+	if (song.speed == 0)
+		song.speed = 6;
 
 	setBackOldAudioFreq();
-	P_SetSpeed(song.speed);
-	setAudioAmp(config.boostLevel, config.masterVol, config.specialFlags & BITDEPTH_32);
+	setMixerBPM(song.BPM);
+	setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
 	editor.wavIsRendering = false;
 
 	setMouseBusy(false);
@@ -264,13 +264,13 @@ static void dump_Close(FILE *f, uint32_t totalSamples)
 
 static bool dump_EndOfTune(int16_t endSongPos)
 {
-	bool returnValue = (editor.wavReachedEndFlag && song.pattPos == 0 && song.timer == 1) || (song.tempo == 0);
+	bool returnValue = (editor.wavReachedEndFlag && song.row == 0 && song.tick == 1) || (song.speed == 0);
 
 	// 8bitbubsy: FT2 bugfix for EEx (pattern delay) on first row of a pattern
 	if (song.pattDelTime2 > 0)
 		returnValue = false;
 
-	if (song.songPos == endSongPos && song.pattPos == 0 && song.timer == 1)
+	if (song.songPos == endSongPos && song.row == 0 && song.tick == 1)
 		editor.wavReachedEndFlag = true;
 
 	return returnValue;
@@ -291,12 +291,12 @@ void dump_TickReplayer(void)
 
 static void updateVisuals(void)
 {
-	editor.editPattern = (uint8_t)song.pattNr;
-	editor.pattPos = song.pattPos;
+	editor.editPattern = (uint8_t)song.pattNum;
+	editor.row = song.row;
 	editor.songPos = song.songPos;
+	editor.BPM = song.BPM;
 	editor.speed = song.speed;
-	editor.tempo = song.tempo;
-	editor.globalVol = song.globVol;
+	editor.globalVolume = song.globalVolume;
 
 	ui.drawPosEdFlag = true;
 	ui.drawPattNumLenFlag = true;
@@ -324,7 +324,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	uint32_t sampleCounter = 0;
 	bool renderDone = false;
 	uint8_t tickCounter = 4;
-	double dTickSampleCounter = 0.0;
+	int64_t tickSampleCounter64 = 0;
 
 	editor.wavReachedEndFlag = false;
 	while (!renderDone)
@@ -341,17 +341,16 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 				break;
 			}
 
-			if (dTickSampleCounter <= 0.0)
+			if (tickSampleCounter64 <= 0) // new replayer tick
 			{
-				// new replayer tick
 				dump_TickReplayer();
-				dTickSampleCounter += audio.dSamplesPerTick;
+				tickSampleCounter64 += audio.samplesPerTick64;
 			}
 
-			int32_t remainingTick = (int32_t)ceil(dTickSampleCounter);
+			int32_t remainingTick = (tickSampleCounter64 + UINT32_MAX) >> 32; // ceil (rounded upwards)
 
 			mixReplayerTickToBuffer(remainingTick, ptr8, WDBitDepth);
-			dTickSampleCounter -= remainingTick;
+			tickSampleCounter64 -= (int64_t)remainingTick << 32;
 
 			remainingTick *= 2; // stereo
 			samplesInChunk += remainingTick;
@@ -392,24 +391,10 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	(void)ptr;
 }
 
-static void createOverwriteText(char *name)
-{
-	char nameTmp[128];
-
-	// read entry name to a small buffer
-	uint32_t nameLen = (uint32_t)strlen(name);
-	memcpy(nameTmp, name, (nameLen >= sizeof (nameTmp)) ? sizeof (nameTmp) : (nameLen + 1));
-	nameTmp[sizeof (nameTmp) - 1] = '\0';
-
-	trimEntryName(nameTmp, false);
-
-	sprintf(WAV_SysReqText, "Overwrite file \"%s\"?", nameTmp);
-}
-
 static void wavRender(bool checkOverwrite)
 {
-	WDStartPos = (uint8_t)(MAX(0, MIN(WDStartPos, song.len - 1)));
-	WDStopPos  = (uint8_t)(MAX(0, MIN(MAX(WDStartPos, WDStopPos), song.len - 1)));
+	WDStartPos = (uint8_t)(MAX(0, MIN(WDStartPos, song.songLength - 1)));
+	WDStopPos  = (uint8_t)(MAX(0, MIN(MAX(WDStartPos, WDStopPos), song.songLength - 1)));
 
 	updateWavRenderer();
 
@@ -418,8 +403,9 @@ static void wavRender(bool checkOverwrite)
 	char *filename = getDiskOpFilename();
 	if (checkOverwrite && fileExistsAnsi(filename))
 	{
-		createOverwriteText(filename);
-		if (okBox(2, "System request", WAV_SysReqText) != 1)
+		char buf[256];
+		createFileOverwriteText(filename, buf);
+		if (okBox(2, "System request", buf) != 1)
 			return;
 	}
 
@@ -457,8 +443,10 @@ void pbWavFreqUp(void)
 	if (WDFrequency < MAX_WAV_RENDER_FREQ)
 	{
 		     if (WDFrequency == 44100) WDFrequency = 48000;
+#if CPU_64BIT
 		else if (WDFrequency == 48000) WDFrequency = 96000;
 		else if (WDFrequency == 96000) WDFrequency = 192000;
+#endif
 		updateWavRenderer();
 	}
 }
@@ -467,10 +455,13 @@ void pbWavFreqDown(void)
 {
 	if (WDFrequency > MIN_WAV_RENDER_FREQ)
 	{
+#if CPU_64BIT
 		     if (WDFrequency == 192000) WDFrequency = 96000;
 		else if (WDFrequency == 96000) WDFrequency = 48000;
 		else if (WDFrequency == 48000) WDFrequency = 44100;
-
+#else
+		if (WDFrequency == 48000) WDFrequency = 44100;
+#endif
 		updateWavRenderer();
 	}
 }
@@ -495,11 +486,11 @@ void pbWavAmpDown(void)
 
 void pbWavSongStartUp(void)
 {
-	if (WDStartPos >= song.len-1)
+	if (WDStartPos >= song.songLength-1)
 		return;
 
 	WDStartPos++;
-	WDStopPos = (uint8_t)(MIN(MAX(WDStartPos, WDStopPos), song.len - 1));
+	WDStopPos = (uint8_t)(MIN(MAX(WDStartPos, WDStopPos), song.songLength - 1));
 	updateWavRenderer();
 }
 
@@ -518,7 +509,7 @@ void pbWavSongEndUp(void)
 		return;
 
 	WDStopPos++;
-	WDStopPos = (uint8_t)(MIN(MAX(WDStartPos, WDStopPos), song.len - 1));
+	WDStopPos = (uint8_t)(MIN(MAX(WDStartPos, WDStopPos), song.songLength - 1));
 	updateWavRenderer();
 }
 
@@ -528,7 +519,7 @@ void pbWavSongEndDown(void)
 		return;
 
 	WDStopPos--;
-	WDStopPos = (uint8_t)(MIN(MAX(WDStartPos, WDStopPos), song.len - 1));
+	WDStopPos = (uint8_t)(MIN(MAX(WDStartPos, WDStopPos), song.songLength - 1));
 	updateWavRenderer();
 }
 

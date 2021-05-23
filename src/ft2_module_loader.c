@@ -10,7 +10,7 @@
 #include <unistd.h>
 #endif
 #include "ft2_header.h"
-#include "ft2_scopes.h"
+#include "scopes/ft2_scopes.h"
 #include "ft2_trim.h"
 #include "ft2_inst_ed.h"
 #include "ft2_sample_ed.h"
@@ -56,10 +56,10 @@ char *supportedModExtensions[] =
 
 // globals for module loaders
 volatile bool tmpLinearPeriodsFlag;
-int16_t pattLensTmp[MAX_PATTERNS];
-tonTyp *pattTmp[MAX_PATTERNS];
-instrTyp *instrTmp[1+256];
-songTyp songTmp;
+int16_t patternNumRowsTmp[MAX_PATTERNS];
+note_t *patternTmp[MAX_PATTERNS];
+instr_t *instrTmp[1+256];
+song_t songTmp;
 // --------------------------
 
 static volatile bool musicIsLoading, moduleLoaded, moduleFailedToLoad;
@@ -214,12 +214,12 @@ loadError:
 
 static void clearTmpModule(void)
 {
-	memset(pattTmp, 0, sizeof (pattTmp));
+	memset(patternTmp, 0, sizeof (patternTmp));
 	memset(instrTmp, 0, sizeof (instrTmp));
 	memset(&songTmp, 0, sizeof (songTmp));
 
 	for (uint32_t i = 0; i < MAX_PATTERNS; i++)
-		pattLensTmp[i] = 64;
+		patternNumRowsTmp[i] = 64;
 }
 
 static int32_t SDLCALL loadMusicThread(void *ptr)
@@ -277,33 +277,33 @@ bool loadMusicUnthreaded(UNICHAR *filenameU, bool autoPlay)
 	return false;
 }
 
-bool allocateTmpPatt(int32_t nr, uint16_t rows)
+bool allocateTmpPatt(int32_t pattNum, uint16_t numRows)
 {
-	pattTmp[nr] = (tonTyp *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
-	if (pattTmp[nr] == NULL)
+	patternTmp[pattNum] = (note_t *)calloc((MAX_PATT_LEN * TRACK_WIDTH) + 16, 1);
+	if (patternTmp[pattNum] == NULL)
 		return false;
 
-	pattLensTmp[nr] = rows;
+	patternNumRowsTmp[pattNum] = numRows;
 	return true;
 }
 
-bool allocateTmpInstr(int16_t nr)
+bool allocateTmpInstr(int16_t insNum)
 {
-	if (instrTmp[nr] != NULL)
+	if (instrTmp[insNum] != NULL)
 		return false; // already allocated
 
-	instrTyp *p = (instrTyp *)calloc(1, sizeof (instrTyp));
-	if (p == NULL)
+	instr_t *ins = (instr_t *)calloc(1, sizeof (instr_t));
+	if (ins == NULL)
 		return false;
 
-	sampleTyp *s = p->samp;
+	sample_t *s = ins->smp;
 	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++, s++)
 	{
-		s->pan = 128;
-		s->vol = 64;
+		s->panning = 128;
+		s->volume = 64;
 	}
 
-	instrTmp[nr] = p;
+	instrTmp[insNum] = ins;
 	return true;
 }
 
@@ -312,10 +312,10 @@ static void freeTmpModule(void) // called on module load error
 	// free all patterns
 	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
-		if (pattTmp[i] != NULL)
+		if (patternTmp[i] != NULL)
 		{
-			free(pattTmp[i]);
-			pattTmp[i] = NULL;
+			free(patternTmp[i]);
+			patternTmp[i] = NULL;
 		}
 	}
 
@@ -325,25 +325,22 @@ static void freeTmpModule(void) // called on module load error
 		if (instrTmp[i] == NULL)
 			continue;
 
-		sampleTyp *s = instrTmp[i]->samp;
+		sample_t *s = instrTmp[i]->smp;
 		for (int32_t j = 0; j < MAX_SMP_PER_INST; j++, s++)
-		{
-			if (s->origPek != NULL)
-				free(s->origPek);
-		}
+			freeSmpData(s);
 
 		free(instrTmp[i]);
 		instrTmp[i] = NULL;
 	}
 }
 
-bool tmpPatternEmpty(uint16_t nr)
+bool tmpPatternEmpty(uint16_t pattNum)
 {
-	if (pattTmp[nr] == NULL)
+	if (patternTmp[pattNum] == NULL)
 		return true;
 
-	uint8_t *scanPtr = (uint8_t *)pattTmp[nr];
-	const uint32_t scanLen = pattLensTmp[nr] * TRACK_WIDTH;
+	uint8_t *scanPtr = (uint8_t *)patternTmp[pattNum];
+	const uint32_t scanLen = patternNumRowsTmp[pattNum] * TRACK_WIDTH;
 
 	for (uint32_t i = 0; i < scanLen; i++)
 	{
@@ -354,16 +351,16 @@ bool tmpPatternEmpty(uint16_t nr)
 	return true;
 }
 
-void clearUnusedChannels(tonTyp *p, int16_t pattLen, int32_t antChn)
+void clearUnusedChannels(note_t *pattPtr, int16_t numRows, int32_t numChannels)
 {
-	if (p == NULL || antChn >= MAX_VOICES)
+	if (pattPtr == NULL || numChannels >= MAX_CHANNELS)
 		return;
 
-	const int32_t width = sizeof (tonTyp) * (MAX_VOICES - antChn);
+	const int32_t width = sizeof (note_t) * (MAX_CHANNELS - numChannels);
 
-	tonTyp *ptr = &p[antChn];
-	for (int32_t i = 0; i < pattLen; i++, ptr += MAX_VOICES)
-		memset(ptr, 0, width);
+	note_t *p = &pattPtr[numChannels];
+	for (int32_t i = 0; i < numRows; i++, p += MAX_CHANNELS)
+		memset(p, 0, width);
 }
 
 // called from input/video thread after the module was done loading
@@ -388,12 +385,12 @@ static void setupLoadedModule(void)
 	// copy over new pattern pointers and lengths
 	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
-		patt[i] = pattTmp[i];
-		pattLens[i] = pattLensTmp[i];
+		pattern[i] = patternTmp[i];
+		patternNumRows[i] = patternNumRowsTmp[i];
 	}
 
 	// copy over song struct
-	memcpy(&song, &songTmp, sizeof (songTyp));
+	memcpy(&song, &songTmp, sizeof (song_t));
 	fixSongName();
 
 	// copy over new instruments (includes sample pointers)
@@ -404,12 +401,13 @@ static void setupLoadedModule(void)
 
 		if (instr[i] != NULL)
 		{
+			sanitizeInstrument(instr[i]);
 			for (int32_t j = 0; j < MAX_SMP_PER_INST; j++)
 			{
-				sampleTyp *s = &instr[i]->samp[j];
+				sample_t *s = &instr[i]->smp[j];
 
-				checkSampleRepeat(s);
-				if (s->pek != NULL)
+				sanitizeSample(s);
+				if (s->dataPtr != NULL)
 					fixSample(s); // prepare sample for branchless linear interpolation
 			}
 		}
@@ -417,69 +415,67 @@ static void setupLoadedModule(void)
 
 	// we are the owners of the allocated memory ptrs set by the loader thread now
 
-	if (song.antChn == 0)
-		song.antChn = 2;
-
 	// support non-even channel numbers
-	if (song.antChn & 1)
+	if (song.numChannels & 1)
 	{
-		song.antChn++;
-		if (song.antChn > MAX_VOICES)
-			song.antChn = MAX_VOICES;
+		song.numChannels++;
+		if (song.numChannels > MAX_CHANNELS)
+			song.numChannels = MAX_CHANNELS;
 	}
 
-	if (song.len == 0)
-		song.len = 1;
+	song.numChannels = CLAMP(song.numChannels, 2, MAX_CHANNELS);
+	song.songLength = CLAMP(song.songLength, 1, MAX_ORDERS);
+	song.BPM = CLAMP(song.BPM, MIN_BPM, MAX_BPM);
+	song.initialSpeed = song.speed = CLAMP(song.speed, 1, MAX_SPEED);
 
-	if (song.repS >= song.len)
-		song.repS = 0;
+	if (song.songLoopStart >= song.songLength)
+		song.songLoopStart = 0;
 
-	song.globVol = 64;
+	song.globalVolume = 64;
 
 	// remove overflown stuff in pattern data (FT2 doesn't do this)
 	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
-		if (pattLens[i] <= 0)
-			pattLens[i] = 64;
+		if (patternNumRows[i] <= 0)
+			patternNumRows[i] = 64;
 
-		if (pattLens[i] > MAX_PATT_LEN)
-			pattLens[i] = MAX_PATT_LEN;
+		if (patternNumRows[i] > MAX_PATT_LEN)
+			patternNumRows[i] = MAX_PATT_LEN;
 
-		tonTyp *p = patt[i];
-		if (p == NULL)
+		if (pattern[i] == NULL)
 			continue;
 
-		tonTyp *note = p;
-		for (int32_t j = 0; j < MAX_PATT_LEN * MAX_VOICES; j++, note++)
+		note_t *p = pattern[i];
+		for (int32_t j = 0; j < MAX_PATT_LEN * MAX_CHANNELS; j++, p++)
 		{
-			if (note->ton > 97)
-				note->ton = 0;
+			if (p->note > 97)
+				p->note = 0;
 
-			if (note->instr > 128)
-				note->instr = 0;
+			if (p->instr > 128)
+				p->instr = 0;
 
-			if (note->effTyp > 35)
+			if (p->efx > 35)
 			{
-				note->effTyp = 0;
-				note->eff = 0;
+				p->efx = 0;
+				p->efxData = 0;
 			}
 		}
 	}
 
-	setScrollBarEnd(SB_POS_ED, (song.len - 1) + 5);
+	setScrollBarEnd(SB_POS_ED, (song.songLength - 1) + 5);
 	setScrollBarPos(SB_POS_ED, 0, false);
 
 	resetChannels();
 	setPos(0, 0, true);
-	P_SetSpeed(song.speed);
+	setMixerBPM(song.BPM);
 
 	editor.tmpPattern = editor.editPattern; // set kludge variable
+	editor.BPM = song.BPM;
 	editor.speed = song.speed;
-	editor.tempo = song.tempo;
-	editor.timer = song.timer;
-	editor.globalVol = song.globVol;
+	editor.tick = song.tick;
+	editor.globalVolume = song.globalVolume;
 
-	setFrqTab(tmpLinearPeriodsFlag);
+	setFrequencyTable(tmpLinearPeriodsFlag);
 
 	unlockMixerCallback();
 
@@ -687,6 +683,8 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 			return;
 		}
 	}
+
+	exitTextEditing();
 
 	// pass UTF8 to these tests so that we can test file ending in ASCII/ANSI
 

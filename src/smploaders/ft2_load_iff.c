@@ -1,4 +1,9 @@
-// IFF (Amiga/FT2) sample loader
+/* IFF (Amiga/FT2) sample loader
+**
+** Note: Vol/loop sanitation is done in the last stage
+** of sample loading, so you don't need to do that here.
+** Do NOT close the file handle!
+*/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -12,7 +17,8 @@
 bool loadIFF(FILE *f, uint32_t filesize)
 {
 	char hdr[4+1];
-	uint32_t sampleLength, sampleVol, sampleLoopStart, sampleLoopLength, sampleRate;
+	uint32_t length, volume, loopStart, loopLength, sampleRate;
+	sample_t *s = &tmpSmp;
 
 	if (filesize < 12)
 	{
@@ -23,7 +29,7 @@ bool loadIFF(FILE *f, uint32_t filesize)
 	fseek(f, 8, SEEK_SET);
 	fread(hdr, 1, 4, f);
 	hdr[4] = '\0';
-	bool is16Bit = !strncmp(hdr, "16SV", 4);
+	bool sample16Bit = !strncmp(hdr, "16SV", 4);
 
 	uint32_t vhdrPtr = 0, vhdrLen = 0;
 	uint32_t bodyPtr = 0, bodyLen = 0;
@@ -82,8 +88,8 @@ bool loadIFF(FILE *f, uint32_t filesize)
 		bodyLen = filesize - bodyPtr;
 
 	fseek(f, vhdrPtr, SEEK_SET);
-	fread(&sampleLoopStart,  4, 1, f); sampleLoopStart = SWAP32(sampleLoopStart);
-	fread(&sampleLoopLength, 4, 1, f); sampleLoopLength = SWAP32(sampleLoopLength);
+	fread(&loopStart,  4, 1, f); loopStart = SWAP32(loopStart);
+	fread(&loopLength, 4, 1, f); loopLength = SWAP32(loopLength);
 	fseek(f, 4, SEEK_CUR);
 	fread(&sampleRate, 2, 1, f); sampleRate = SWAP16(sampleRate);
 	fseek(f, 1, SEEK_CUR);
@@ -94,83 +100,61 @@ bool loadIFF(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	fread(&sampleVol, 4, 1, f); sampleVol = SWAP32(sampleVol);
-	if (sampleVol > 65535)
-		sampleVol = 65535;
+	fread(&volume, 4, 1, f); volume = SWAP32(volume);
+	if (volume > 65535)
+		volume = 65535;
 
-	sampleVol = (sampleVol + 512) / 1024; // rounded
+	volume = (volume + 512) / 1024; // rounded
 
-	sampleLength = bodyLen;
-	if (sampleLength > MAX_SAMPLE_LEN)
-		sampleLength = MAX_SAMPLE_LEN;
-
-	if (sampleLoopStart >= MAX_SAMPLE_LEN || sampleLoopLength > MAX_SAMPLE_LEN)
+	length = bodyLen;
+	if (sample16Bit)
 	{
-		sampleLoopStart = 0;
-		sampleLoopLength = 0;
+		length >>= 1;
+		loopStart >>= 1;
+		loopLength >>= 1;
 	}
 
-	if (sampleLoopStart+sampleLoopLength > sampleLength)
-	{
-		sampleLoopStart = 0;
-		sampleLoopLength = 0;
-	}
+	s->length = length;
+	if (s->length > MAX_SAMPLE_LEN)
+		s->length = MAX_SAMPLE_LEN;
 
-	if (sampleLoopStart > sampleLength-2)
-	{
-		sampleLoopStart = 0;
-		sampleLoopLength = 0;
-	}
-
-	if (!allocateTmpSmpData(&tmpSmp, sampleLength))
+	if (!allocateSmpData(s, length, sample16Bit))
 	{
 		loaderMsgBox("Not enough memory!");
 		return false;
 	}
 
 	fseek(f, bodyPtr, SEEK_SET);
-	if (fread(tmpSmp.pek, sampleLength, 1, f) != 1)
+	if (fread(s->dataPtr, length << sample16Bit, 1, f) != 1)
 	{
 		loaderMsgBox("General I/O error during loading! Is the file in use?");
 		return false;
 	}
 
-	tmpSmp.len = sampleLength;
+	s->loopStart = loopStart;
+	s->loopLength = loopLength;
 
-	if (sampleLoopLength > 2)
-	{
-		tmpSmp.repS = sampleLoopStart;
-		tmpSmp.repL = sampleLoopLength;
-		tmpSmp.typ |= 1;
-	}
+	if (s->loopLength > 0)
+		s->flags |= LOOP_FWD;
 
-	if (is16Bit)
-	{
-		tmpSmp.len  &= 0xFFFFFFFE;
-		tmpSmp.repS &= 0xFFFFFFFE;
-		tmpSmp.repL &= 0xFFFFFFFE;
-		tmpSmp.typ |= 16;
-	}
+	if (sample16Bit)
+		s->flags |= SAMPLE_16BIT;
 
-	tmpSmp.vol = (uint8_t)sampleVol;
-	tmpSmp.pan = 128;
+	s->volume = (uint8_t)volume;
+	s->panning = 128;
 
-	tuneSample(&tmpSmp, sampleRate, audio.linearPeriodsFlag);
+	tuneSample(s, sampleRate, audio.linearPeriodsFlag);
 
 	// set name
 	if (namePtr != 0 && nameLen > 0)
 	{
 		fseek(f, namePtr, SEEK_SET);
-		if (nameLen > 21)
-		{
-			fread(tmpSmp.name, 1, 21, f);
-			tmpSmp.name[21] = '\0';
-		}
-		else
-		{
-			memset(tmpSmp.name, 0, 22);
-			fread(tmpSmp.name, 1, nameLen, f);
-		}
+
+		if (nameLen > 22)
+			nameLen = 22;
+
+		fread(s->name, 1, nameLen, f);
+		s->name[22] = '\0';
 
 		smpFilenameSet = true;
 	}

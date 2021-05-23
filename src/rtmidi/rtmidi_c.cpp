@@ -3,6 +3,11 @@
 #include "rtmidi_c.h"
 #include "RtMidi.h"
 
+// 8bb: hide POSIX warnings
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)
+#endif
+
 /* Compile-time assertions that will break if the enums are changed in
  * the future without synchronizing them properly.  If you get (g++)
  * "error: ‘StaticAssert<b>::StaticAssert() [with bool b = false]’ is
@@ -128,7 +133,7 @@ unsigned int rtmidi_get_port_count (RtMidiPtr device)
     } catch (const RtMidiError & err) {
         device->ok  = false;
         device->msg = err.what ();
-        return -1;
+        return (unsigned int)-1;
     }
 }
 

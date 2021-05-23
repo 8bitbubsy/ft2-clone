@@ -26,10 +26,10 @@ typedef struct
 #define MAX_HELP_LINES 768
 #define HELP_SIZE sizeof (helpRec)
 #define MAX_SUBJ 10
-#define HELP_KOL 135
-#define HELP_WIDTH (596 - HELP_KOL)
+#define HELP_COLUMN 135
+#define HELP_WIDTH (596 - HELP_COLUMN)
 
-static uint8_t fHlp_Nr;
+static uint8_t fHlp_Num;
 static int16_t textLine, fHlp_Line, subjLen[MAX_SUBJ];
 static int32_t helpBufferPos;
 static helpRec *subjPtrArr[MAX_SUBJ];
@@ -101,7 +101,7 @@ static char *rtrim(char *s)
 	return s;
 }
 
-static void readHelp(void) // this is really messy, directly ported from Pascal code...
+static void readHelp(void) // this is a bit messy...
 {
 	char text[256], text2[256], *s, *sEnd, *s3;
 	int16_t a, b, i, k;
@@ -122,7 +122,7 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 	for (int16_t subj = 0; subj < MAX_SUBJ; subj++)
 	{
 		textLine = 0;
-		int16_t currKol = 0;
+		int16_t currColumn = 0;
 		uint8_t currColor = PAL_FORGRND;
 
 		getLine(text); s = text;
@@ -139,12 +139,12 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 
 			if (*(uint16_t *)s == 0x4C40) // @L - "big font"
 			{
-				addText(&tempText[textLine], currKol, currColor, s2);
+				addText(&tempText[textLine], currColumn, currColor, s2);
 				s += 2;
 
 				if (*(uint16_t *)s == 0x5840) // @X - "change X position"
 				{
-					currKol = controlCodeToNum(&s[2]);
+					currColumn = controlCodeToNum(&s[2]);
 					s += 5;
 				}
 
@@ -156,7 +156,7 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 				}
 
 				helpRec *t = &tempText[textLine];
-				t->xPos = currKol;
+				t->xPos = currColumn;
 				t->color = currColor;
 				t->bigFont = true;
 				t->noLine = false;
@@ -171,13 +171,13 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 			{
 				if (*s == '>')
 				{
-					addText(&tempText[textLine], currKol, currColor, s2);
+					addText(&tempText[textLine], currColumn, currColor, s2);
 					s++;
 				}
 
 				if (*(uint16_t *)s == 0x5840) // @X - "set X position (relative to help X start)"
 				{
-					currKol = controlCodeToNum(&s[2]);
+					currColumn = controlCodeToNum(&s[2]);
 					s += 5;
 				}
 
@@ -191,9 +191,9 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 				s = ltrim(rtrim(s));
 				if (*s == '\0')
 				{
-					addText(&tempText[textLine], currKol, currColor, s2);
+					addText(&tempText[textLine], currColumn, currColor, s2);
 					strcpy(s2, " ");
-					addText(&tempText[textLine], currKol, currColor, s2);
+					addText(&tempText[textLine], currColumn, currColor, s2);
 				}
 
 				int16_t sLen = (int16_t)strlen(s);
@@ -214,7 +214,7 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 						s += 5; sLen -= 5;
 
 						s3 = &s2[strlen(s2)];
-						while (textWidth(s2) + charWidth(' ') + 1 < k-currKol)
+						while (textWidth(s2) + charWidth(' ') + 1 < k-currColumn)
 						{
 							s3[0] = ' ';
 							s3[1] = '\0';
@@ -222,17 +222,17 @@ static void readHelp(void) // this is really messy, directly ported from Pascal 
 						}
 
 						b = textWidth(s2) + 1;
-						if (b < (k - currKol))
+						if (b < k-currColumn)
 						{
 							s3 = &s2[strlen(s2)];
-							for (a = 0; a < k-b-currKol; a++)
+							for (a = 0; a < k-b-currColumn; a++)
 								s3[a] = 127; // one-pixel spacer glyph
 							s3[a] = '\0';
 						}
 					}
 
-					if (textWidth(s2)+textNWidth(s,i)+2 > HELP_WIDTH-currKol)
-						addText(&tempText[textLine], currKol, currColor, s2);
+					if (textWidth(s2)+textNWidth(s,i)+2 > HELP_WIDTH-currColumn)
+						addText(&tempText[textLine], currColumn, currColor, s2);
 
 					strncat(s2, s, i);
 
@@ -301,42 +301,42 @@ static void bigTextOutHalf(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, b
 
 static void writeHelp(void)
 {
-	helpRec *pek = subjPtrArr[fHlp_Nr];
-	if (pek == NULL)
+	helpRec *ptr = subjPtrArr[fHlp_Num];
+	if (ptr == NULL)
 		return;
 
 	for (int16_t i = 0; i < HELP_LINES; i++)
 	{
 		const int16_t k = i + fHlp_Line;
-		if (k >= subjLen[fHlp_Nr])
+		if (k >= subjLen[fHlp_Num])
 			break;
 
-		clearRect(HELP_KOL, 5 + (i * 11), HELP_WIDTH, 11);
+		clearRect(HELP_COLUMN, 5 + (i * 11), HELP_WIDTH, 11);
 
-		if (pek[k].noLine)
+		if (ptr[k].noLine)
 		{
 			if (i == 0)
-				bigTextOutHalf(HELP_KOL + pek[k-1].xPos, 5 + (i * 11), PAL_FORGRND, false, pek[k-1].text);
+				bigTextOutHalf(HELP_COLUMN + ptr[k-1].xPos, 5 + (i * 11), PAL_FORGRND, false, ptr[k-1].text);
 		}
 		else
 		{
-			if (pek[k].bigFont)
+			if (ptr[k].bigFont)
 			{
-				if (i == (HELP_LINES - 1))
+				if (i == HELP_LINES-1)
 				{
-					bigTextOutHalf(HELP_KOL + pek[k].xPos, 5 + (i * 11), PAL_FORGRND, true, pek[k].text);
+					bigTextOutHalf(HELP_COLUMN + ptr[k].xPos, 5 + (i * 11), PAL_FORGRND, true, ptr[k].text);
 					return;
 				}
 				else
 				{
-					clearRect(HELP_KOL, 5 + ((i + 1) * 11), HELP_WIDTH, 11);
-					bigTextOut(HELP_KOL + pek[k].xPos, 5 + (i * 11), PAL_FORGRND, pek[k].text);
+					clearRect(HELP_COLUMN, 5 + ((i + 1) * 11), HELP_WIDTH, 11);
+					bigTextOut(HELP_COLUMN + ptr[k].xPos, 5 + (i * 11), PAL_FORGRND, ptr[k].text);
 					i++;
 				}
 			}
 			else
 			{
-				textOut(HELP_KOL + pek[k].xPos, 5 + (i * 11), pek[k].color, pek[k].text);
+				textOut(HELP_COLUMN + ptr[k].xPos, 5 + (i * 11), ptr[k].color, ptr[k].text);
 			}
 		}
 	}
@@ -353,7 +353,7 @@ void helpScrollUp(void)
 
 void helpScrollDown(void)
 {
-	if (fHlp_Line < subjLen[fHlp_Nr]-1)
+	if (fHlp_Line < subjLen[fHlp_Num]-1)
 	{
 		scrollBarScrollDown(SB_HELP_SCROLL, 1);
 		writeHelp();
@@ -388,12 +388,12 @@ void showHelpScreen(void)
 	showPushButton(PB_HELP_SCROLL_DOWN);
 
 	uncheckRadioButtonGroup(RB_GROUP_HELP);
-	switch (fHlp_Nr)
+	switch (fHlp_Num)
 	{
 		default:
 		case 0: tmpID = RB_HELP_FEATURES;       break;
 		case 1: tmpID = RB_HELP_EFFECTS;        break;
-		case 2: tmpID = RB_HELP_KEYBOARD;       break;
+		case 2: tmpID = RB_HELP_KEYBINDINGS;       break;
 		case 3: tmpID = RB_HELP_HOW_TO_USE_FT2; break;
 		case 4: tmpID = RB_HELP_FAQ;            break;
 		case 5: tmpID = RB_HELP_KNOWN_BUGS;     break;
@@ -407,7 +407,7 @@ void showHelpScreen(void)
 	textOutShadow(4,   4, PAL_FORGRND, PAL_DSKTOP2, "Subjects:");
 	textOutShadow(21, 19, PAL_FORGRND, PAL_DSKTOP2, "Features");
 	textOutShadow(21, 35, PAL_FORGRND, PAL_DSKTOP2, "Effects");
-	textOutShadow(21, 51, PAL_FORGRND, PAL_DSKTOP2, "Keyboard");
+	textOutShadow(21, 51, PAL_FORGRND, PAL_DSKTOP2, "Keybindings");
 	textOutShadow(21, 67, PAL_FORGRND, PAL_DSKTOP2, "How to use FT2");
 	textOutShadow(21, 83, PAL_FORGRND, PAL_DSKTOP2, "Problems/FAQ");
 	textOutShadow(21, 99, PAL_FORGRND, PAL_DSKTOP2, "Known bugs");
@@ -435,10 +435,10 @@ void exitHelpScreen(void)
 
 static void setHelpSubject(uint8_t Nr)
 {
-	fHlp_Nr = Nr;
+	fHlp_Num = Nr;
 	fHlp_Line = 0;
 
-	setScrollBarEnd(SB_HELP_SCROLL, subjLen[fHlp_Nr]);
+	setScrollBarEnd(SB_HELP_SCROLL, subjLen[fHlp_Num]);
 	setScrollBarPos(SB_HELP_SCROLL, 0, false);
 }
 
@@ -456,9 +456,9 @@ void rbHelpEffects(void)
 	writeHelp();
 }
 
-void rbHelpKeyboard(void)
+void rbHelpKeybindings(void)
 {
-	checkRadioButton(RB_HELP_KEYBOARD);
+	checkRadioButton(RB_HELP_KEYBINDINGS);
 	setHelpSubject(2);
 	writeHelp();
 }

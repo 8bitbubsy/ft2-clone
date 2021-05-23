@@ -3,6 +3,9 @@ This project uses the following licenses:
 Source code (BSD 3-clause):
 src\LICENSE.txt
 
+libFLAC:
+src\libflac\COPYING.txt
+
 rtmidi:
 src\rtmidi\LICENSE.txt
 
