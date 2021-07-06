@@ -265,7 +265,7 @@ double dLinearPeriod2Hz(int32_t period)
 	const uint32_t quotient = invPeriod / 768;
 	const uint32_t remainder = invPeriod % 768;
 
-	return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y / 2^((14-quotient) & 31)
+	return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y >> ((14-quotient) & 31);
 }
 
 double dAmigaPeriod2Hz(int32_t period)
@@ -400,7 +400,7 @@ void keyOff(channel_t *ch)
 void calcReplayerLogTab(void)
 {
 	for (int32_t i = 0; i < 32; i++)
-		dExp2MulTab[i] = 1.0 / exp2(i); // 1/2^i
+		dExp2MulTab[i] = 1.0 / exp2(i); // 1/(2^i)
 
 	for (int32_t i = 0; i < 768; i++)
 		dLogTab[i] = 8363.0 * 256.0 * exp2(i / 768.0);

@@ -38,9 +38,8 @@ enum
 char *supportedSmpExtensions[] =
 {
 	"iff", "raw", "wav", "snd", "smp", "sam", "aif", "pat",
-	"aiff","flac",
+	"aiff","flac", // IMPORTANT: Remember comma after last entry!!!
 
-	// IMPORTANT: Remember comma after last entry above
 	"END_OF_LIST" // do NOT move, remove or edit this line!
 };
 
@@ -59,7 +58,7 @@ static void freeTmpSample(sample_t *s);
 // Crude sample detection routine. These aren't always accurate detections!
 static int8_t detectSample(FILE *f)
 {
-	uint8_t D[256];
+	uint8_t D[512];
 
 	uint32_t oldPos = ftell(f);
 	rewind(f);
