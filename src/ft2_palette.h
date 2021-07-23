@@ -44,10 +44,21 @@ enum
 	PAL_NUM
 };
 
+#ifdef _MSC_VER
+#pragma pack(push)
+#pragma pack(1)
+#endif
 typedef struct pal16_t
 {
 	uint8_t r, g, b;
-} pal16;
+}
+#ifdef __GNUC__
+__attribute__ ((packed))
+#endif
+pal16;
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 void setCustomPalColor(uint32_t color);
 
