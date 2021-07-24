@@ -70,6 +70,7 @@ static void loadConfigFromBuffer(bool defaults)
 {
 	lockMixerCallback();
 
+	assert(sizeof(config) == CONFIG_FILE_SIZE);
 	memcpy(&config, configBuffer, CONFIG_FILE_SIZE);
 
 	if (defaults)
