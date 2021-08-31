@@ -1,0 +1,6 @@
+Someone made this icon for me for free, and I don't really know what license it
+has... This icon is only used for the macOS/Windows release binary, so you can
+simply remove it if it causes issue with licensing.
+
+Other than that, I'm fairly sure the creator would be permissive about its use,
+so as long as it's not used under commercial circumstances, it should be fine.
