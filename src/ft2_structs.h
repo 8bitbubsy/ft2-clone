@@ -15,7 +15,7 @@ typedef struct editor_t
 	UNICHAR *configFileLocationU, *audioDevConfigFileLocationU, *midiConfigFileLocationU;
 
 	volatile bool mainLoopOngoing;
-	volatile bool busy, scopeThreadMutex, programRunning, wavIsRendering, wavReachedEndFlag;
+	volatile bool busy, scopeThreadBusy, programRunning, wavIsRendering, wavReachedEndFlag;
 	volatile bool updateCurSmp, updateCurInstr, diskOpReadDir, diskOpReadDone, updateWindowTitle;
 	volatile uint8_t loadMusicEvent;
 	volatile FILE *wavRendererFileHandle;

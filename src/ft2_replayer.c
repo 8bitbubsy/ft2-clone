@@ -3127,7 +3127,7 @@ void stopVoices(void)
 	resetCachedMixerVars();
 
 	// wait for scope thread to finish, so that we know pointers aren't deprecated
-	while (editor.scopeThreadMutex);
+	while (editor.scopeThreadBusy);
 
 	if (audioWasntLocked)
 		unlockAudio();

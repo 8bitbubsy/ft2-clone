@@ -526,9 +526,9 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 
 	while (editor.programRunning)
 	{
-		editor.scopeThreadMutex = true;
+		editor.scopeThreadBusy = true;
 		updateScopes();
-		editor.scopeThreadMutex = false;
+		editor.scopeThreadBusy = false;
 
 		uint64_t time64 = SDL_GetPerformanceCounter();
 		if (time64 < timeNext64)

@@ -317,7 +317,7 @@ bool loadMOD(FILE *f, uint32_t filesize)
 		if (s->loopLength < 2)
 			s->loopLength = 2;
 
-		// fix for poorly converted STK (< v2.5) -> PT/NT modules (FIXME: Worth keeping or not?)
+		// fix for poorly converted STK (< v2.5) -> PT/NT modules
 		if (s->loopLength > 2 && s->loopStart+s->loopLength > s->length)
 		{
 			if ((s->loopStart >> 1) + s->loopLength <= s->length)
