@@ -1,9 +1,11 @@
-These graphics (except "ft2AboutLogo.bmp" and "midiLogo.bmp") are copyrighted
-Magnus "Vogue" Högdahl and can ONLY be used for non-commercial purposes!
-Some of the graphics have been slightly altered by me (8bitbubsy).
-The rest of the graphics uses the same BSD 3-clause license as the source code.
+midiLogo.bmp was hand-drawn by me (8bitbubsy) and goes under BSD 3-clause,
+even though it's obviously inspired by the original MIDI logo.
+ft2AboutLogo.bmp has been redesigned so much that it goes under BSD 3-clause
+too.
 
-License (CC BY-NC-SA 4.0):
+The rest is made by Magnus "Vogue" Högdahl, and even though I have hand-edited
+some of them, I got permission from him to license them under CC BY-NC-SA 4.0:
+
 Attribution-NonCommercial-ShareAlike 4.0 International
 
 =======================================================================
