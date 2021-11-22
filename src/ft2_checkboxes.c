@@ -180,7 +180,7 @@ bool testCheckBoxMouseDown(void)
 
 	if (ui.sysReqShown)
 	{
-		// if a system request is open, only test the first three checkboxes (reserved)
+		// if a system request is open, only test the first checkbox (reserved)
 		start = 0;
 		end = 1;
 	}

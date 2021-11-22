@@ -974,7 +974,6 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 		bufferPosition += samplesToMix;
 		samplesLeft -= samplesToMix;
 		audio.tickSampleCounter64 -= (int64_t)samplesToMix << 32;
-
 	}
 
 	// normalize mix buffer and send to audio stream

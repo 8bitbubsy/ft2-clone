@@ -28,7 +28,7 @@ static char *buttonText[NUM_SYSREQ_TYPES][5] =
 	{ "OK", "","","","" },
 	{ "OK", "Cancel", "","","" },
 	{ "Yes", "No", "","","" },
-	{ "","","","","" }, // deprecated
+	{ "","","","","" }, // removed (TODO: Re-arrange and fix all sysreq call offsets...)
 	{ "All", "Song", "Instruments", "Cancel", "" },
 	{ "Read left", "Read right", "Convert", "", "" },
 	{ "OK", "","","","" },

@@ -169,7 +169,7 @@ void flipFrame(void)
 
 	SDL_UpdateTexture(video.texture, NULL, video.frameBuffer, SCREEN_W * sizeof (int32_t));
 
-	// SDL2 bug on Windows (?): This function consumes ever-increasing memory if the program is minimized
+	// SDL 2.0.14 bug on Windows (?): This function consumes ever-increasing memory if the program is minimized
 	if (!minimized)
 		SDL_RenderClear(video.renderer);
 
