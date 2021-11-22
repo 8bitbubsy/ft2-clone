@@ -46,6 +46,7 @@ enum
 #define TRACK_WIDTH (5 * MAX_CHANNELS)
 #define MAX_FRQ 32000
 #define C4_FREQ 8363
+#define NOTE_C4 (4*12)
 #define NOTE_OFF 97
 #define MAX_NOTES (10*12*16+16)
 #define MAX_PATTERNS 256
@@ -57,6 +58,7 @@ enum
 #define INSTR_HEADER_SIZE 263
 #define INSTR_XI_HEADER_SIZE 298
 #define MAX_SAMPLE_LEN 0x3FFFFFFF
+#define FT2_QUICKRAMP_SAMPLES 200
 #define PROG_NAME_STR "Fasttracker II clone"
 
 enum // sample flags
@@ -289,7 +291,7 @@ void calcReplayerVars(int32_t rate);
 // used on external sample load and during sample loading in some module formats
 void tuneSample(sample_t *s, const int32_t midCFreq, bool linearPeriodsFlag);
 
-void calcReplayerLogTab(void);
+void calcReplayerLogTab(void); // for linear period -> hz calculation
 
 double dLinearPeriod2Hz(int32_t period);
 double dAmigaPeriod2Hz(int32_t period);
@@ -352,5 +354,5 @@ extern const uint16_t *note2Period;
 extern int16_t patternNumRows[MAX_PATTERNS];
 extern channel_t channel[MAX_CHANNELS];
 extern song_t song;
-extern instr_t *instr[132];
+extern instr_t *instr[128+4];
 extern note_t *pattern[MAX_PATTERNS];

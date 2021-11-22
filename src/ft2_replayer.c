@@ -22,12 +22,7 @@
 #include "ft2_structs.h"
 #include "mixer/ft2_windowed_sinc.h"
 
-/* This is a mess, directly ported from the original FT2 code (with some modifications).
-** You will experience a lot of headaches if you dig into it...
-** If something looks to be off, it probably isn't!
-*/
-
-static double dLogTab[768], dExp2MulTab[32];
+static double dLogTab[4*12*16], dExp2MulTab[32];
 static bool bxxOverflow;
 static note_t nilPatternLine[MAX_CHANNELS];
 
@@ -43,7 +38,7 @@ const uint16_t *note2Period = NULL;
 int16_t patternNumRows[MAX_PATTERNS];
 channel_t channel[MAX_CHANNELS];
 song_t song;
-instr_t *instr[132];
+instr_t *instr[128+4];
 note_t *pattern[MAX_PATTERNS];
 // ----------------------------------
 
@@ -111,10 +106,9 @@ void removeSongModifiedFlag(void)
 	editor.updateWindowTitle = true;
 }
 
-// used on external sample load and during sample loading in some module formats
+// used on external sample load and during sample loading (on some module formats)
 void tuneSample(sample_t *s, const int32_t midCFreq, bool linearPeriodsFlag)
 {
-	#define NOTE_C4 (4*12)
 	#define MIN_PERIOD (0)
 	#define MAX_PERIOD (((10*12*16)-1)-1) /* -1 (because of bugged amigaPeriods table values) */
 
@@ -257,19 +251,23 @@ int16_t getRealUsedSamples(int16_t smpNum)
 
 double dLinearPeriod2Hz(int32_t period)
 {
+	period &= 0xFFFF; // just in case (actual period range is 0..65535)
+
 	if (period == 0)
 		return 0.0; // in FT2, a period of 0 results in 0Hz
 
-	const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 frequency quirk
+	const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
 
-	const uint32_t quotient = invPeriod / 768;
-	const uint32_t remainder = invPeriod % 768;
+	const uint32_t quotient  = invPeriod / (12 * 16 * 4);
+	const uint32_t remainder = invPeriod % (12 * 16 * 4);
 
 	return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y >> ((14-quotient) & 31);
 }
 
 double dAmigaPeriod2Hz(int32_t period)
 {
+	period &= 0xFFFF; // just in case (actual period range is 0..65535)
+
 	if (period == 0)
 		return 0.0; // in FT2, a period of 0 results in 0Hz
 
@@ -284,13 +282,16 @@ double dPeriod2Hz(int32_t period)
 // returns *exact* FT2 C-4 voice rate (depending on finetune, relativeNote and linear/Amiga period mode)
 double getSampleC4Rate(sample_t *s)
 {
-	int32_t note = (96/2) + s->relativeNote;
+	int32_t note = NOTE_C4 + s->relativeNote;
+	if (note < 0)
+		return -1; // shouldn't happen (just in case...)
+
 	if (note >= (10*12)-1)
-		return -1; // B-9 (from relativeTone) = illegal! (won't play in replayer)
+		return -1; // B-9 (after relativeTone add) = illegal! (won't play in replayer)
 
 	const int32_t C4Period = (note << 4) + (((int8_t)s->finetune >> 3) + 16);
 
-	const uint16_t period = audio.linearPeriodsFlag ? linearPeriods[C4Period] : amigaPeriods[C4Period];
+	const int32_t period = audio.linearPeriodsFlag ? linearPeriods[C4Period] : amigaPeriods[C4Period];
 	return dPeriod2Hz(period);
 }
 
@@ -328,7 +329,7 @@ static void retrigVolume(channel_t *ch)
 
 static void retrigEnvelopeVibrato(channel_t *ch)
 {
-	if (!(ch->waveCtrl & 0x04)) ch->vibPos = 0;
+	if (!(ch->waveCtrl & 0x04)) ch->vibPos  = 0;
 	if (!(ch->waveCtrl & 0x40)) ch->tremPos = 0;
 
 	ch->retrigCnt = 0;
@@ -397,13 +398,13 @@ void keyOff(channel_t *ch)
 	}
 }
 
-void calcReplayerLogTab(void)
+void calcReplayerLogTab(void) // for linear period -> hz calculation
 {
 	for (int32_t i = 0; i < 32; i++)
 		dExp2MulTab[i] = 1.0 / exp2(i); // 1/(2^i)
 
-	for (int32_t i = 0; i < 768; i++)
-		dLogTab[i] = 8363.0 * 256.0 * exp2(i / 768.0);
+	for (int32_t i = 0; i < 4*12*16; i++)
+		dLogTab[i] = 8363.0 * exp2(i / 768.0) * 256.0;
 }
 
 void calcReplayerVars(int32_t audioFreq)
@@ -413,7 +414,7 @@ void calcReplayerVars(int32_t audioFreq)
 		return;
 
 	audio.dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
-	audio.quickVolRampSamples = (int32_t)round(audioFreq / 200.0);
+	audio.quickVolRampSamples = (int32_t)round(audioFreq / (double)FT2_QUICKRAMP_SAMPLES);
 	audio.fRampQuickVolMul = (float)(1.0 / audio.quickVolRampSamples);
 
 	for (int32_t bpm = MIN_BPM; bpm <= MAX_BPM; bpm++)
@@ -442,35 +443,23 @@ void calcReplayerVars(int32_t audioFreq)
 	}
 }
 
-int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote) // for piano in Instr. Ed.
+// for piano in Instr. Ed. (values outside 0..95 can happen)
+int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote) 
 {
 	assert(note2Period != NULL);
-
 	if (period > note2Period[0])
-		return -1; // outside lower range on piano
+		return -1; // outside left piano edge
 
-	if (audio.linearPeriodsFlag)
-	{
-		int32_t note = ((10*12*16*4+64) - (period + 16*2)) >> 2;
-		note -= ((int8_t)finetune >> 3) + 16;
-		note = ((note >> 4) + 1) - relativeNote;
+	finetune = ((int8_t)finetune >> 3) + 16; // -128..127 -> 0..31
 
-		return note;
-	}
-
-	/* Amiga periods require a slightly slower method...
-	** This is not 100% accurate for all periods, but should be faster
-	** than using log2() and floating-point arithmetics.
-	*/
-	finetune = ((int8_t)finetune >> 3) + 16;
-	int32_t hiPeriod = (10*12*16)+16;
+	int32_t hiPeriod = 10*12*16;
 	int32_t loPeriod = 0;
 
 	for (int32_t i = 0; i < 7; i++)
 	{
 		const int32_t tmpPeriod = (((loPeriod + hiPeriod) >> 1) & ~15) + finetune;
 
-		int32_t lookUp = tmpPeriod - 8;
+		int32_t lookUp = tmpPeriod - 16;
 		if (lookUp < 0)
 			lookUp = 0;
 
@@ -480,11 +469,7 @@ int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote) // fo
 			loPeriod = (tmpPeriod - finetune) & ~15;
 	}
 
-	int32_t note = loPeriod;
-	note >>= 4;
-	note -= relativeNote;
-
-	return note;
+	return (loPeriod >> 4) - relativeNote;
 }
 
 static void startTone(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
@@ -523,7 +508,7 @@ static void startTone(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 	ch->relativeNote = s->relativeNote;
 
 	note += ch->relativeNote;
-	if (note >= 10*12)
+	if (note >= 10*12) // unsigned check (also handles note < 0)
 		return;
 
 	ch->oldVol = s->volume;
@@ -536,12 +521,10 @@ static void startTone(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 
 	if (note != 0)
 	{
-		const uint16_t tmpTon = ((note-1) << 4) + (((int8_t)ch->finetune >> 3) + 16); // 0..1935
-		if (tmpTon < MAX_NOTES) // tmpTon is *always* below MAX_NOTES here, so this check is not really needed
-		{
-			assert(note2Period != NULL);
-			ch->outPeriod = ch->realPeriod = note2Period[tmpTon];
-		}
+		const uint16_t noteIndex = ((note-1) << 4) + (((int8_t)ch->finetune >> 3) + 16); // 0..1920
+
+		assert(note2Period != NULL);
+		ch->outPeriod = ch->realPeriod = note2Period[noteIndex];
 	}
 
 	ch->status |= IS_Period + IS_Vol + IS_Pan + IS_Trigger + IS_QuickVol;
@@ -787,6 +770,8 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 	instr_t *ins = ch->instrPtr;
 	assert(ins != NULL);
 
+	// (envelope precision has been updated from x.8fp to x.16fp)
+
 	// *** VOLUME ENVELOPE ***
 	if (ins->volEnvFlags & ENV_ENABLED)
 	{
@@ -854,7 +839,7 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 	}
 
 	// *** PANNING ENVELOPE ***
-	if (ins->volEnvFlags & ENV_SUSTAIN) // What..? Probably an FT2 bug!
+	if (ins->volEnvFlags & ENV_SUSTAIN) // What..? An FT2 bug!?
 	{
 		ch->panEnvTick = param-1;
 
@@ -1424,6 +1409,8 @@ static void updateChannel(channel_t *ch)
 
 	if (!ch->mute)
 	{
+		// (envelope precision has been updated from x.8fp to x.16fp)
+
 		// *** VOLUME ENVELOPE ***
 		envVal = 0;
 		if (ins->volEnvFlags & ENV_ENABLED)
@@ -1712,7 +1699,7 @@ static uint16_t relocateTon(uint16_t period, uint8_t arpNote, channel_t *ch)
 
 		int32_t lookUp = tmpPeriod - 8;
 		if (lookUp < 0)
-			lookUp = 0; // safety fix (C-0 w/ finetune <= -65). This buggy read seems to return 0 in FT2 (TODO: Verify...)
+			lookUp = 0; // safety fix (C-0 w/ f.tune <= -65). This seems to result in 0 in FT2 (TODO: verify)
 
 		if (period >= note2Period[lookUp])
 			hiPeriod = (tmpPeriod - fineTune) & ~15;

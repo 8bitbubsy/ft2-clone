@@ -12,7 +12,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.47"
+#define PROG_VER_STR "1.48"
 
 // do NOT change these! It will only mess things up...
 
@@ -56,11 +56,11 @@
 #define CLAMP(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 
 #define DROUND(x) \
-	if (x < 0.0) x -= 0.5; \
+	     if (x < 0.0) x -= 0.5; \
 	else if (x > 0.0) x += 0.5
 
 #define FROUND(x) \
-	if (x < 0.0f) x -= 0.5f; \
+	     if (x < 0.0f) x -= 0.5f; \
 	else if (x > 0.0f) x += 0.5f
 
 // fast 32-bit -> 8-bit clamp
