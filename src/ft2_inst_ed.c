@@ -180,16 +180,31 @@ static int32_t SDLCALL copyInstrThread(void *ptr)
 	{
 		if (allocateInstr(dstIns))
 		{
+			int16_t i;
+
+			sample_t *srcSmp;
+			sample_t *dstSmp;
+
 			memcpy(instr[dstIns], instr[srcIns], sizeof (instr_t));
 
-			sample_t *srcSmp = instr[srcIns]->smp;
-			sample_t *dstSmp = instr[dstIns]->smp;
+			// clear all copied sample structs (set up in cloneSample() later)
+			dstSmp = instr[dstIns]->smp;
+			for (i = 0; i < MAX_SMP_PER_INST; i++, dstSmp++)
+				memset(dstSmp, 0, sizeof (sample_t));
 
-			for (int16_t i = 0; i < MAX_SMP_PER_INST; i++, srcSmp++, dstSmp++)
+			// clone all the samples
+
+			srcSmp = instr[srcIns]->smp;
+			dstSmp = instr[dstIns]->smp;
+
+			for (i = 0; i < MAX_SMP_PER_INST; i++, srcSmp++, dstSmp++)
 			{
 				if (!cloneSample(srcSmp, dstSmp))
-					error = false;
+					break;
 			}
+
+			if (i == MAX_SMP_PER_INST) // did we manage to successfully copy the samples?
+				error = false; // yes
 		}
 	}
 
@@ -235,17 +250,14 @@ void xchgInstr(void) // dstInstr <-> srcInstr
 
 	lockMixerCallback();
 
-	instr_t *src = instr[editor.srcInstr];
-	instr_t *dst = instr[editor.curInstr];
-
 	// swap instruments
-	instr_t dstTmp = *dst;
-	*dst = *src;
-	*src = dstTmp;
+	instr_t *dstTmp = instr[editor.curInstr];
+	instr[editor.curInstr] = instr[editor.srcInstr];
+	instr[editor.srcInstr] = dstTmp;
+
+	// we do not swap instrument names (like FT2)
 
 	unlockMixerCallback();
-
-	// do not change instrument names!
 
 	updateNewInstrument();
 	setSongModifiedFlag();

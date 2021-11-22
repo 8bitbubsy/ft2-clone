@@ -155,17 +155,23 @@ bool cloneSample(sample_t *src, sample_t *dst)
 	freeSmpData(dst);
 	memcpy(dst, src, sizeof (sample_t));
 
+	// zero out stuff that wasn't supposed to be cloned
 	dst->origDataPtr = dst->dataPtr = NULL;
 	dst->isFixed = false;
+	dst->fixedPos = 0;
 
+	// if source sample isn't empty, allocate room and copy it over (and fix it)
 	if (src->length > 0 && src->dataPtr != NULL)
 	{
 		bool sample16Bit = !!(src->flags & SAMPLE_16BIT);
 		if (!allocateSmpDataPtr(&sp, src->length, sample16Bit))
+		{
+			dst->length = 0;
 			return false;
+		}
 
-		memcpy(sp.ptr, src->dataPtr, src->length);
 		setSmpDataPtr(dst, &sp);
+		memcpy(dst->dataPtr, src->dataPtr, src->length << sample16Bit);
 		fixSample(dst);
 	}
 
