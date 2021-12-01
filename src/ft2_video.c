@@ -306,9 +306,9 @@ void leaveFullScreen(void)
 	SDL_SetWindowFullscreen(video.window, 0);
 	SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
 
-	setWindowSizeFromConfig(false); // also updates mouse scaling and render size vars
+	setWindowSizeFromConfig(false);
+
 	SDL_SetWindowSize(video.window, SCREEN_W * video.upscaleFactor, SCREEN_H * video.upscaleFactor);
-	SDL_SetWindowPosition(video.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 	SDL_SetWindowGrab(video.window, SDL_FALSE);
 
 	updateRenderSizeVars();
