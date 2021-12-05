@@ -221,15 +221,22 @@ void showErrorMsgBox(const char *fmt, ...)
 static void updateRenderSizeVars(void)
 {
 	float fXScale, fYScale;
-	SDL_DisplayMode dm;
 
-	int32_t di = SDL_GetWindowDisplayIndex(video.window);
-	if (di < 0)
-		di = 0; // return display index 0 (default) on error
+	if (video.useDesktopMouseCoords)
+	{
+		SDL_DisplayMode dm;
+		int32_t di = SDL_GetWindowDisplayIndex(video.window);
+		if (di < 0)
+			di = 0; // return display index 0 (default) on error
 
-	SDL_GetDesktopDisplayMode(di, &dm);
-	video.displayW = dm.w;
-	video.displayH = dm.h;
+		SDL_GetDesktopDisplayMode(di, &dm);
+		video.displayW = dm.w;
+		video.displayH = dm.h;
+	}
+	else
+	{
+		SDL_GetWindowSize(video.window, &video.displayW, &video.displayH);
+	}
 
 	if (video.fullscreen)
 	{
@@ -247,10 +254,15 @@ static void updateRenderSizeVars(void)
 			video.renderW = (int32_t)(SCREEN_W * fXScale);
 			video.renderH = (int32_t)(SCREEN_H * fYScale);
 
-			// retina high-DPI hackery (SDL2 is bad at reporting actual rendering sizes on macOS w/ high-DPI)
-#ifdef __APPLE__
+			// high-DPI hackery:
+			//  On high-DPI systems, the display w/h are given in logical pixels,
+			//  but the renderer size is given in physical pixels. Since our internal
+			//  render{X,Y,W,H} variables need to be in logical coordinates, as that's
+			//  what mouse input uses, scale them by the screen's DPI scale factor,
+			//  which is the physical (renderer) size / the logical (window) size.
+			//  On non high-DPI systems, this is effectively a no-op.
 			int32_t actualScreenW, actualScreenH;
-			SDL_GL_GetDrawableSize(video.window, &actualScreenW, &actualScreenH);
+			SDL_GetRendererOutputSize(video.renderer, &actualScreenW, &actualScreenH);
 
 			const double dXUpscale = (const double)actualScreenW / video.displayW;
 			const double dYUpscale = (const double)actualScreenH / video.displayH;
@@ -258,7 +270,7 @@ static void updateRenderSizeVars(void)
 			// downscale back to correct sizes
 			if (dXUpscale != 0.0) video.renderW = (int32_t)(video.renderW / dXUpscale);
 			if (dYUpscale != 0.0) video.renderH = (int32_t)(video.renderH / dYUpscale);
-#endif
+
 			video.renderX = (video.displayW - video.renderW) >> 1;
 			video.renderY = (video.displayH - video.renderH) >> 1;
 		}
