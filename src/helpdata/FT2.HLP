@@ -378,13 +378,16 @@ END
 ;***************************************************************************
 ;***************************************************************************
 @LKeybindings
-
 >@X020@C002
 >If you have an ambition to create music efficiently we strongly recommend
 that you learn ALL the keyboard functions. Many of them are the same
 from Fasttracker 1 and ProTracker to ensure that you feel comfortable
 using this program from the very first minute.
 >
+>@X020@C002Note for Mac keyboards on MacOS:
+>@C002- The left Option key is the left Alt key
+>- The left Command key can also be used instead of Alt for
+>@X031"select all"/cut/copy/paste for text/sample editing.
 >@X020@C001
 >You should be aware of the fact that:
 >
@@ -456,7 +459,7 @@ Right ctrl.  @T160Play song.
 @X040@C001Miscellaneous (on a Mac keyboard):
 >@X060@C002
 Right command  @T240Play song.
->Right alt (or left command)    @T240Play pattern.
+>Right alt/option  @T240Play pattern.
 >Right shift  @T240Record pattern.
 
 @X040@C001Window switching:
@@ -530,11 +533,6 @@ Alt/Ctrl+A @T160Range all.
 >Alt/Ctrl+V @T160Paste.
 >Alt+R @T160Crop.
 >Mouse wheel @T160Zoom sample data in/out.
-
-@X040@C001Note for Mac keyboards:
->@X060@C002
-Use left ctrl. for A/X/C/V (mark all/cut/copy/paste) keys.
->This applies to the sample editor (A/C/V only) and text marking in the UI.
 
 END
 ;***************************************************************************
@@ -913,7 +911,7 @@ one and not attempt to create config dirs for the OS user. (portable mode)
 >@C001Q: Can the clone read FT2.CFG from real FT2, and vice versa?
 >@C002A: Yes, it should work just fine. Put it in the directory shown above.
 >@X020
->@C001Q: Smp. Ed.: While zooming in, I sometimes can't mark the last sample point!
+>@C001Q: Smp. Ed.: While zoomed in, I sometimes can't mark the last sample point!
 >@C002A: This is normal. This is a limitation in the nature of scaling.
 >@X020
 >@C001Q: I found a bug!
@@ -938,7 +936,6 @@ END
 >@X010@C001Video:
 >@C002
 >@X010- Fullscreen mode can be unbearably slow on a Raspberry Pi (even on RPi 4)
->
 >@X010- Not a bug, but if your monitor's refresh rate is not set to 60Hz (or 59Hz)
 >@X021you may experience visual stuttering because VSync will not be used.
 
