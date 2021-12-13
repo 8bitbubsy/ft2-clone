@@ -78,6 +78,7 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 		{
 			freeMouseCursors();
 			config.specialFlags2 &= ~HARDWARE_MOUSE; // enable software mouse
+			SDL_ShowCursor(SDL_FALSE);
 			return false;
 		}
 
@@ -148,6 +149,7 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 			SDL_FreeSurface(surface);
 			freeMouseCursors();
 			config.specialFlags2 &= ~HARDWARE_MOUSE; // enable software mouse
+			SDL_ShowCursor(SDL_FALSE);
 			return false;
 		}
 
@@ -159,6 +161,12 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 		     if (mouse.mode == MOUSE_MODE_NORMAL) setSystemCursor(cursors[0]);
 		else if (mouse.mode == MOUSE_MODE_DELETE) setSystemCursor(cursors[1]);
 		else if (mouse.mode == MOUSE_MODE_RENAME) setSystemCursor(cursors[2]);
+
+		SDL_ShowCursor(SDL_TRUE);
+	}
+	else
+	{
+		SDL_ShowCursor(SDL_FALSE);
 	}
 
 	return true;
