@@ -3321,8 +3321,8 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 	if (editor.curInstr == 0)
 		return;
 
-	const int32_t mx = CLAMP(mouse.x, 0, SCREEN_W+8); // allow some pixels outside of the screen
-	const int32_t my = CLAMP(mouse.y, 0, SCREEN_H-1);
+	int32_t mx = CLAMP(mouse.x, 0, SCREEN_W+8); // allow some pixels outside of the screen
+	int32_t my = CLAMP(mouse.y, 0, SCREEN_H-1);
 
 	if (!mouseButtonHeld)
 	{
@@ -3411,13 +3411,20 @@ void handleSampleDataMouseDown(bool mouseButtonHeld)
 			else if (ui.sampleDataOrLoopDrag >= 0)
 			{
 				// mark data
+
 				lastMouseX = mx;
 
-				if (lastMouseX > ui.sampleDataOrLoopDrag)
+				/* Edge-case hack for fullscreen sample marking where the width
+				** of the image fills the whole screen (or close).
+				*/
+				if (video.fullscreen && video.renderW >= video.displayW-5 && mx == SCREEN_W-1)
+					mx = SCREEN_W;
+
+				if (mx > ui.sampleDataOrLoopDrag)
 					setSampleRange(ui.sampleDataOrLoopDrag, mx);
-				else if (lastMouseX == ui.sampleDataOrLoopDrag)
+				else if (mx == ui.sampleDataOrLoopDrag)
 					setSampleRange(ui.sampleDataOrLoopDrag, ui.sampleDataOrLoopDrag);
-				else if (lastMouseX < ui.sampleDataOrLoopDrag)
+				else if (mx < ui.sampleDataOrLoopDrag)
 					setSampleRange(mx, ui.sampleDataOrLoopDrag);
 			}
 		}
