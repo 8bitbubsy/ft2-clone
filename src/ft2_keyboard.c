@@ -382,9 +382,6 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		break;
 
 		// play pattern
-#ifdef __APPLE__
-		case SDLK_LGUI: // fall-through for Apple keyboards
-#endif
 		case SDLK_RALT:
 		{
 			if (!keyb.leftCtrlPressed) // kludge for Mac (toggle fullscreen)
@@ -779,11 +776,19 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 		case SDLK_a:
 		{
-			if (keyb.leftCtrlPressed)
+#ifdef __APPLE__
+			if (keyb.leftAltPressed || keyb.leftCommandPressed)
+#else
+			if (keyb.leftAltPressed)
+#endif
 			{
 				if (ui.sampleEditorShown)
 					rangeAll();
+#ifdef __APPLE__
+				else if (!keyb.leftCommandPressed) // yuck!
+#else
 				else
+#endif
 					showAdvEdit();
 
 				return true;
@@ -814,7 +819,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 		case SDLK_c:
 		{
+#ifdef __APPLE__
+			if (keyb.leftAltPressed || keyb.leftCommandPressed)
+#else
 			if (keyb.leftAltPressed)
+#endif
 			{
 				if (ui.sampleEditorShown)
 				{
@@ -1091,7 +1100,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 		case SDLK_v:
 		{
+#ifdef __APPLE__
+			if (keyb.leftAltPressed || keyb.leftCommandPressed)
+#else
 			if (keyb.leftAltPressed)
+#endif
 			{
 				if (ui.sampleEditorShown)
 					sampPaste();
@@ -1134,7 +1147,11 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 		case SDLK_x:
 		{
+#ifdef __APPLE__
+			if (keyb.leftAltPressed || keyb.leftCommandPressed)
+#else
 			if (keyb.leftAltPressed)
+#endif
 			{
 				if (ui.sampleEditorShown)
 					sampCut();

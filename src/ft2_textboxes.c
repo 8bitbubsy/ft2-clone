@@ -823,7 +823,11 @@ void handleTextEditControl(SDL_Keycode keycode)
 		case SDLK_a:
 		{
 			// CTRL+A - mark all text
+#ifdef __APPLE__
+			if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
+#else
 			if (keyb.leftCtrlPressed)
+#endif
 			{
 				// count number of chars and get full text width
 				textWidth = 0;
@@ -851,7 +855,11 @@ void handleTextEditControl(SDL_Keycode keycode)
 		case SDLK_x:
 		{
 			// CTRL+X - cut marked text
+#ifdef __APPLE__
+			if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
+#else
 			if (keyb.leftCtrlPressed)
+#endif
 				cutMarkedText(t);
 		}
 		break;
@@ -859,7 +867,11 @@ void handleTextEditControl(SDL_Keycode keycode)
 		case SDLK_c:
 		{
 			// CTRL+C - copy marked text
+#ifdef __APPLE__
+			if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
+#else
 			if (keyb.leftCtrlPressed)
+#endif
 				copyMarkedText(t);
 		}
 		break;
@@ -867,7 +879,11 @@ void handleTextEditControl(SDL_Keycode keycode)
 		case SDLK_v:
 		{
 			// CTRL+V - paste text
+#ifdef __APPLE__
+			if (keyb.leftCtrlPressed || keyb.leftCommandPressed)
+#else
 			if (keyb.leftCtrlPressed)
+#endif
 				pasteText(t);
 		}
 		break;
