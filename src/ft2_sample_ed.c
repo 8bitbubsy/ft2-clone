@@ -1896,7 +1896,7 @@ static bool cutRange(bool cropMode, int32_t r1, int32_t r2)
 				return false;
 			}
 
-			memcpy(smpCopyBuff, &s->dataPtr[r1], (r2-r1) << sample16Bit);
+			memcpy(smpCopyBuff, &s->dataPtr[r1 << sample16Bit], (r2-r1) << sample16Bit);
 			smpCopyBits = sample16Bit ? 16 : 8;
 		}
 	}
