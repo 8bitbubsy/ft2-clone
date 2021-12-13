@@ -142,7 +142,7 @@ static void starfield(void)
 
 			d ^= 255;
 
-			int32_t r = d - 68;
+			int32_t r = d - 75;
 			if (r < 0)
 				r = 0;
 
