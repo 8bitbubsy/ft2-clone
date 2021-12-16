@@ -25,7 +25,12 @@
 #include "../ft2_sample_ed.h"
 #include "../ft2_sysreqs.h"
 #include "../ft2_sample_loader.h"
+
+#ifdef EXTERNAL_LIBFLAC
+#include <FLAC/stream_decoder.h>
+#else
 #include "../libflac/FLAC/stream_decoder.h"
+#endif
 
 static bool sample16Bit;
 static int16_t stereoSampleLoadMode = -1;
