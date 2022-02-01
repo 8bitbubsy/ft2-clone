@@ -923,10 +923,6 @@ bool setupWindow(void)
 
 	setWindowSizeFromConfig(false);
 
-#if SDL_PATCHLEVEL >= 5 // SDL 2.0.5 or later
-	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-#endif
-
 	SDL_GetDesktopDisplayMode(0, &dm);
 	video.dMonitorRefreshRate = (double)dm.refresh_rate;
 
