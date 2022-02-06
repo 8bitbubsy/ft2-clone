@@ -57,23 +57,32 @@ typedef struct quitType_t
 	uint8_t type;
 } quitType_t;
 
-#define QUIT_MESSAGES 11
+#define QUIT_MESSAGES 16
 
+<<<<<<< HEAD
+=======
+// 8bitbubsy: Removed unsuitable/offensive ones...
+// Scratch that, re-added them :)
+>>>>>>> cdf5d6d (RE-ADDED the quit messages, for fun, that is.)
 static quitType_t quitMessage[QUIT_MESSAGES] =
 {
-	// removed unsuitable/offensive ones...
 
 	{ "Do you really want to quit?", 2 },
+	{ "Musicians, press >Cancel<.  Lamers, press >OK<", 1 },
 	{ "Tired already?", 2 },
 	{ "Dost thou wish to leave with such hasty abandon?", 2 },
 	{ "So, you think you can quit this easily, huh?", 2 },
 	{ "Hey, what is the matter? You are not quiting now, are you?", 2 },
 	{ "Rome was not built in one day! Quit really?", 2 },
+	{ "For Work and Worry, press YES.  For Delectation and Demos, press NO.", 2 },
 	{ "Did you really press the right key?", 2 },
+	{ "You are a lamer, aren't you? Press >OK< to confirm.", 1 },
 	{ "Hope ya did some good. Press >OK< to quit.", 1 },
 	{ "Quit? Only for a good reason you are allowed to press >OK<.", 1 },
 	{ "Are we at the end of a Fasttracker round?", 2 },
+	{ "Are you just another boring user?", 2 },
 	{ "Hope you're doing the compulsory \"Exit ceremony\" before pressing >OK<.", 1 },
+	{ "Fasttracker...", 3 }
 };
 
 void myLoaderMsgBoxThreadSafe(const char *fmt, ...)
