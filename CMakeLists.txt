@@ -43,7 +43,7 @@ if(UNIX)
         target_link_libraries(ft2-clone
             PRIVATE ${COREAUDIO} ${COREMIDI})
         target_compile_definitions(ft2-clone
-            PRIVATE __MAXOSX_CORE__)
+            PRIVATE __MACOSX_CORE__)
     else()
         target_link_libraries(ft2-clone
             PRIVATE asound)
