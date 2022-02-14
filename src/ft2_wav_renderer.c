@@ -309,6 +309,8 @@ static void updateVisuals(void)
 
 static int32_t SDLCALL renderWavThread(void *ptr)
 {
+	(void)ptr;
+
 	FILE *f = (FILE *)editor.wavRendererFileHandle;
 	fseek(f, sizeof (wavHeader_t), SEEK_SET);
 
@@ -322,9 +324,11 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	}
 
 	uint32_t sampleCounter = 0;
-	bool renderDone = false;
+	bool overflow = false, renderDone = false;
 	uint8_t tickCounter = 4;
 	int64_t tickSampleCounter64 = 0;
+
+	uint64_t bytesInFile = sizeof (wavHeader_t);
 
 	editor.wavReachedEndFlag = false;
 	while (!renderDone)
@@ -358,9 +362,22 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 
 			// increase buffer pointer
 			if (WDBitDepth == 16)
+			{
 				ptr8 += remainingTick * sizeof (int16_t);
+				bytesInFile += remainingTick * sizeof (int16_t);
+			}
 			else
+			{
 				ptr8 += remainingTick * sizeof (float);
+				bytesInFile += remainingTick * sizeof (float);
+			}
+
+			if (bytesInFile >= INT32_MAX)
+			{
+				renderDone = true;
+				overflow = true;
+				break;
+			}
 
 			if (++tickCounter >= 4)
 			{
@@ -385,10 +402,11 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	dump_Close(f, sampleCounter);
 	resumeAudio();
 
+	if (overflow)
+		okBoxThreadSafe(0, "System message", "Rendering stopped, file exceeded 2GB!");
+
 	editor.diskOpReadOnOpen = true;
 	return true;
-
-	(void)ptr;
 }
 
 static void wavRender(bool checkOverwrite)
