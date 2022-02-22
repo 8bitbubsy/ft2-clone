@@ -447,8 +447,7 @@ static void handleInput(void)
 				 key != SDL_SCANCODE_AUDIOMUTE && key != SDL_SCANCODE_VOLUMEDOWN &&
 				 key != SDL_SCANCODE_VOLUMEUP))
 			{
-				// only let keyboard keys interrupt audio sampling
-				if (editor.samplingAudioFlag && eventType != SDL_MOUSEBUTTONDOWN)
+				if (editor.samplingAudioFlag)
 					stopSampling();
 
 				editor.wavIsRendering = false;
