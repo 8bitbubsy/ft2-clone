@@ -5,6 +5,7 @@
 #include "ft2_header.h"
 #include "ft2_palette.h"
 #include "ft2_audio.h"
+#include "ft2_hpc.h"
 
 enum
 {
@@ -20,10 +21,11 @@ typedef struct video_t
 {
 	bool fullscreen, showFPSCounter, useDesktopMouseCoords;
 	uint32_t xScale, yScale;
-	uint32_t *frameBuffer, palette[PAL_NUM], vblankTimeLen, vblankTimeLenFrac;
+	uint32_t *frameBuffer, palette[PAL_NUM];
 #ifdef _WIN32
 	HWND hWnd;
 #endif
+	hpc_t vblankHpc;
 	SDL_Window *window;
 	double dMonitorRefreshRate;
 	float fMouseXMul, fMouseYMul;
@@ -74,5 +76,3 @@ void leaveFullScreen(void);
 void setWindowSizeFromConfig(bool updateRenderer);
 bool recreateTexture(void);
 void toggleFullScreen(void);
-void setupWaitVBL(void);
-void waitVBL(void);

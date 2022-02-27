@@ -163,6 +163,7 @@
     <ClCompile Include="..\..\src\scopes\ft2_scopes.c">
       <Filter>scopes</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\ft2_hpc.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\rtmidi\RtMidi.h">
@@ -319,6 +320,9 @@
       <Filter>scopes</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ft2_cpu.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_hpc.h">
       <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -20,7 +20,4 @@ void handleWaitVblQuirk(SDL_Event *event);
 #ifdef _WIN32
 bool handleSingleInstancing(int32_t argc, char **argv);
 void closeSingleInstancing(void);
-void usleep(uint32_t usec);
-void setupWin32Usleep(void);
-void freeWin32Usleep(void);
 #endif
