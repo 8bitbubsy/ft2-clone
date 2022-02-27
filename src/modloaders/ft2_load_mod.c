@@ -314,9 +314,6 @@ bool loadMOD(FILE *f, uint32_t filesize)
 		s->loopStart = 2 * SWAP16(hdr.smp[a].loopStart);
 		s->loopLength = 2 * SWAP16(hdr.smp[a].loopLength);
 
-		if (s->loopLength < 2)
-			s->loopLength = 2;
-
 		// fix for poorly converted STK (< v2.5) -> PT/NT modules
 		if (s->loopLength > 2 && s->loopStart+s->loopLength > s->length)
 		{
