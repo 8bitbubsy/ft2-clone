@@ -129,5 +129,7 @@ https://16-bits.org</string>
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>This program needs access to your audio device.</string>
 </dict>
 </plist>
