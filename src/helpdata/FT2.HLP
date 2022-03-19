@@ -922,11 +922,6 @@ END
 ;***************************************************************************
 @LKnown bugs
 >
->@X010@C001Sample recording on Mac:
->
->@X010@C002- Sample recording doesn't work on macOS Mojave and later, because of an
->@X021issue in SDL2 where it doesn't ask for permission to use the audio input device.
->
 >@X010@C001WAV exporting (rendering song to WAV):
 >
 >@X010@C002- Songs that jump back to a previous pattern will render forever and ever,
