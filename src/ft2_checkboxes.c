@@ -90,6 +90,7 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 113,  79, 128, 12, cbConfigLineColors },
 	{ 113,  92, 126, 12, cbConfigChanNums },
 	{ 255,  14, 136, 12, cbConfigShowVolCol },
+	{ 237, 108,  13, 12, cbEnableCustomPointer },
 	{ 255, 158, 111, 12, cbSoftwareMouse },
 	// ---------------------------------
 	{ 212,   2, 150, 12, cbSampCutToBuff },

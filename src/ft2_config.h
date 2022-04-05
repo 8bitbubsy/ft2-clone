@@ -80,9 +80,10 @@ enum
 	LINED_SCOPES = 128,
 
 	// specialFlags2
-	DITHERED_AUDIO = 1, /* DEPRECATED */
+	DITHERED_AUDIO = 1, /* DEPRECATED (but don't use it for anything else!) */
 	HARDWARE_MOUSE = 2,
 	STRETCH_IMAGE = 4,
+	USE_OS_MOUSE_POINTER = 8,
 
 	// windowFlags
 	WINSIZE_AUTO = 1,
@@ -260,6 +261,7 @@ void cbConfigFramework(void);
 void cbConfigLineColors(void);
 void cbConfigChanNums(void);
 void cbConfigShowVolCol(void);
+void cbEnableCustomPointer(void);
 void cbSoftwareMouse(void);
 void cbSampCutToBuff(void);
 void cbPattCutToBuff(void);
