@@ -20,12 +20,12 @@
 #include "../ft2_video.h"
 #include "../ft2_tables.h"
 #include "../ft2_structs.h"
+#include "../ft2_hpc.h"
 #include "ft2_scopes.h"
 #include "ft2_scopedraw.h"
 
 static volatile bool scopesUpdatingFlag, scopesDisplayingFlag;
-static uint32_t scopeTimeLen, scopeTimeLenFrac;
-static uint64_t timeNext64, timeNext64Frac;
+static hpc_t scopeHpc;
 static volatile scope_t scope[MAX_CHANNELS];
 static SDL_Thread *scopeThread;
 
@@ -520,9 +520,8 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 	// this is needed for scope stability (confirmed)
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 
-	// set next frame time
-	timeNext64 = SDL_GetPerformanceCounter() + scopeTimeLen;
-	timeNext64Frac = scopeTimeLenFrac;
+	hpc_SetDurationInHz(&scopeHpc, SCOPE_HZ);
+	hpc_ResetEndTime(&scopeHpc);
 
 	while (editor.programRunning)
 	{
@@ -530,31 +529,7 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 		updateScopes();
 		editor.scopeThreadBusy = false;
 
-		uint64_t time64 = SDL_GetPerformanceCounter();
-		if (time64 < timeNext64)
-		{
-			time64 = timeNext64 - time64;
-			if (time64 > INT32_MAX)
-				time64 = INT32_MAX;
-
-			const int32_t diff32 = (int32_t)time64;
-
-			// convert and round to microseconds
-			const int32_t time32 = (int32_t)((diff32 * editor.dPerfFreqMulMicro) + 0.5);
-
-			// delay until we have reached the next frame
-			if (time32 > 0)
-				usleep(time32);
-		}
-
-		// update next tick time
-		timeNext64 += scopeTimeLen;
-		timeNext64Frac += scopeTimeLenFrac;
-		if (timeNext64Frac > UINT32_MAX)
-		{
-			timeNext64Frac &= UINT32_MAX;
-			timeNext64++;
-		}
+		hpc_Wait(&scopeHpc);
 	}
 
 	(void)ptr;
@@ -563,18 +538,6 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 
 bool initScopes(void)
 {
-	double dInt;
-
-	// calculate scope time for performance counters and split into int/frac
-	double dFrac = modf(editor.dPerfFreq / SCOPE_HZ, &dInt);
-
-	// integer part
-	scopeTimeLen = (int32_t)dInt;
-
-	// fractional part (scaled to 0..2^32-1)
-	dFrac *= UINT32_MAX+1.0;
-	scopeTimeLenFrac = (uint32_t)dFrac;
-
 	scopeThread = SDL_CreateThread(scopeThreadFunc, NULL, NULL);
 	if (scopeThread == NULL)
 	{

@@ -48,7 +48,6 @@ video_t video; // globalized
 
 static bool songIsModified;
 static char wndTitle[256];
-static uint64_t timeNext64, timeNext64Frac;
 static sprite_t sprites[SPRITE_NUM];
 
 // for FPS counter
@@ -180,7 +179,8 @@ void flipFrame(void)
 
 	if (!video.vsync60HzPresent)
 	{
-		waitVBL(); // we have no VSync, do crude thread sleeping to sync to ~60Hz
+		// we have no VSync, do crude thread sleeping to sync to ~60Hz
+		hpc_Wait(&video.vblankHpc);
 	}
 	else
 	{
@@ -190,14 +190,14 @@ void flipFrame(void)
 #ifdef __APPLE__
 		// macOS: VSync gets disabled if the window is 100% covered by another window. Let's add a (crude) fix:
 		if (minimized || !(windowFlags & SDL_WINDOW_INPUT_FOCUS))
-			waitVBL();
+			hpc_Wait(&video.vblankHpc);
 #elif __unix__
 		// *NIX: VSync gets disabled in fullscreen mode (at least on some distros/systems). Let's add a fix:
 		if (minimized || video.fullscreen)
-			waitVBL();
+			hpc_Wait(&video.vblankHpc);
 #else
 		if (minimized)
-			waitVBL();
+			hpc_Wait(&video.vblankHpc);
 #endif
 	}
 
@@ -719,44 +719,6 @@ void renderLoopPins(void)
 			clr32 += srcPitch;
 			dst32 += dstPitch;
 		}
-	}
-}
-
-void setupWaitVBL(void)
-{
-	// set next frame time
-	timeNext64 = SDL_GetPerformanceCounter() + video.vblankTimeLen;
-	timeNext64Frac = video.vblankTimeLenFrac;
-}
-
-void waitVBL(void)
-{
-	// this routine almost never delays if we have 60Hz vsync, but it's still needed in some occasions
-
-	uint64_t time64 = SDL_GetPerformanceCounter();
-	if (time64 < timeNext64)
-	{
-		time64 = timeNext64 - time64;
-		if (time64 > INT32_MAX)
-			time64 = INT32_MAX;
-
-		const int32_t diff32 = (int32_t)time64;
-
-		// convert and round to microseconds
-		const int32_t time32 = (int32_t)((diff32 * editor.dPerfFreqMulMicro) + 0.5);
-
-		// delay until we have reached the next frame
-		if (time32 > 0)
-			usleep(time32);
-	}
-
-	// update next frame time
-	timeNext64 += video.vblankTimeLen;
-	timeNext64Frac += video.vblankTimeLenFrac;
-	if (timeNext64Frac > UINT32_MAX)
-	{
-		timeNext64Frac &= UINT32_MAX;
-		timeNext64++;
 	}
 }
 

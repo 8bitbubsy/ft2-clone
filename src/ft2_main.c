@@ -33,12 +33,12 @@
 #include "ft2_events.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#include "ft2_hpc.h"
 
 #ifdef HAS_MIDI
 static SDL_Thread *initMidiThread;
 #endif
 
-static void setupPerfFreq(void);
 static void initializeVars(void);
 static void cleanUpAndExit(void); // never call this inside the main loop
 #ifdef __APPLE__
@@ -117,7 +117,6 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	setupWin32Usleep();
 	disableWasapi(); // disable problematic WASAPI SDL2 audio driver on Windows (causes clicks/pops sometimes...)
 	                 // 13.03.2020: This is still needed with SDL 2.0.12...
 #endif
@@ -143,6 +142,9 @@ int main(int argc, char *argv[])
 	** Ref.: https://bugzilla.libsdl.org/show_bug.cgi?id=4166
 	*/
 	SDL_StopTextInput();
+
+	hpc_Init();
+	hpc_SetDurationInHz(&video.vblankHpc, VBLANK_HZ);
 
 #ifdef __APPLE__
 	osxSetDirToProgramDirFromArgs(argv);
@@ -177,8 +179,6 @@ int main(int argc, char *argv[])
 
 	audio.currOutputDevice = getAudioOutputDeviceFromConfig();
 	audio.currInputDevice = getAudioInputDeviceFromConfig();
-
-	setupPerfFreq();
 
 	if (!setupAudio(CONFIG_HIDE_ERRORS)) // can we open the audio device?
 	{
@@ -232,11 +232,11 @@ int main(int argc, char *argv[])
 	SDL_DetachThread(initMidiThread); // don't wait for this thread, let it clean up when done
 #endif
 
-	setupWaitVBL(); // this is needed for potential okBox() calls in handleModuleLoadFromArg()
+	hpc_ResetEndTime(&video.vblankHpc); // this is needed for potential okBox() calls in handleModuleLoadFromArg()
 	handleModuleLoadFromArg(argc, argv);
 
 	editor.mainLoopOngoing = true;
-	setupWaitVBL(); // this must be the very last thing done before entering the main loop
+	hpc_ResetEndTime(&video.vblankHpc); // this must be the very last thing done before entering the main loop
 
 	while (editor.programRunning)
 	{
@@ -377,7 +377,6 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	}
 
 #ifdef _WIN32
-	freeWin32Usleep();
 	closeSingleInstancing();
 #endif
 
@@ -416,28 +415,6 @@ static void osxSetDirToProgramDirFromArgs(char **argv)
 	}
 }
 #endif
-
-static void setupPerfFreq(void)
-{
-	double dInt;
-
-	const uint64_t perfFreq64 = SDL_GetPerformanceFrequency();
-	assert(perfFreq64 != 0);
-
-	editor.dPerfFreq = (double)perfFreq64;
-	editor.dPerfFreqMulMicro = 1000000.0 / editor.dPerfFreq;
-	editor.dPerfFreqMulMs = 1.0 / (editor.dPerfFreq / 1000.0);
-
-	// calculate vblank time for performance counters and split into int/frac
-	double dFrac = modf(editor.dPerfFreq / VBLANK_HZ, &dInt);
-
-	// integer part
-	video.vblankTimeLen = (int32_t)dInt;
-
-	// fractional part scaled to 0..2^32-1
-	dFrac *= UINT32_MAX+1.0;
-	video.vblankTimeLenFrac = (uint32_t)dFrac;
-}
 
 #ifdef _WIN32
 static void disableWasapi(void)

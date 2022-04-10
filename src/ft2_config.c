@@ -872,6 +872,7 @@ static void setConfigLayoutCheckButtonStates(void)
 	checkBoxes[CB_CONF_LINECOLORS].checked = config.ptnLineLight;
 	checkBoxes[CB_CONF_CHANNUMS].checked = config.ptnChnNumbers;
 	checkBoxes[CB_CONF_SHOW_VOLCOL].checked = config.ptnShowVolColumn;
+	checkBoxes[CB_CONF_ENABLE_CUSTOM_POINTER].checked = (config.specialFlags2 & USE_OS_MOUSE_POINTER) ? false : true;
 	checkBoxes[CB_CONF_SOFTWARE_MOUSE].checked = (config.specialFlags2 & HARDWARE_MOUSE) ? false : true;
 
 	showCheckBox(CB_CONF_PATTSTRETCH);
@@ -882,6 +883,7 @@ static void setConfigLayoutCheckButtonStates(void)
 	showCheckBox(CB_CONF_LINECOLORS);
 	showCheckBox(CB_CONF_CHANNUMS);
 	showCheckBox(CB_CONF_SHOW_VOLCOL);
+	showCheckBox(CB_CONF_ENABLE_CUSTOM_POINTER);
 	showCheckBox(CB_CONF_SOFTWARE_MOUSE);
 }
 
@@ -1737,6 +1739,29 @@ void cbConfigShowVolCol(void)
 	redrawPatternEditor();
 }
 
+void cbEnableCustomPointer(void)
+{
+	config.specialFlags2 ^= USE_OS_MOUSE_POINTER;
+
+	if (config.specialFlags2 & USE_OS_MOUSE_POINTER)
+	{
+		checkBoxes[CB_CONF_ENABLE_CUSTOM_POINTER].checked = false;
+		drawCheckBox(CB_CONF_ENABLE_CUSTOM_POINTER);
+	}
+	else
+	{
+		checkBoxes[CB_CONF_ENABLE_CUSTOM_POINTER].checked = true;
+		drawCheckBox(CB_CONF_ENABLE_CUSTOM_POINTER);
+	}
+
+	if (config.specialFlags2 & HARDWARE_MOUSE)
+		SDL_ShowCursor(SDL_TRUE);
+	else
+		SDL_ShowCursor(SDL_FALSE);
+
+	createMouseCursors();
+}
+
 void cbSoftwareMouse(void)
 {
 	config.specialFlags2 ^= HARDWARE_MOUSE;
@@ -1747,14 +1772,17 @@ void cbSoftwareMouse(void)
 	{
 		checkBoxes[CB_CONF_SOFTWARE_MOUSE].checked = false;
 		drawCheckBox(CB_CONF_SOFTWARE_MOUSE);
-		SDL_ShowCursor(SDL_TRUE);
 	}
 	else
 	{
 		checkBoxes[CB_CONF_SOFTWARE_MOUSE].checked = true;
 		drawCheckBox(CB_CONF_SOFTWARE_MOUSE);
-		SDL_ShowCursor(SDL_FALSE);
 	}
+
+	if (config.specialFlags2 & HARDWARE_MOUSE)
+		SDL_ShowCursor(SDL_TRUE);
+	else
+		SDL_ShowCursor(SDL_FALSE);
 }
 
 void rbConfigMouseNice(void)
