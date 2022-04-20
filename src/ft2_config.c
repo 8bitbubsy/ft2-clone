@@ -1431,6 +1431,7 @@ void hideConfigScreen(void)
 	hideCheckBox(CB_CONF_LINECOLORS);
 	hideCheckBox(CB_CONF_CHANNUMS);
 	hideCheckBox(CB_CONF_SHOW_VOLCOL);
+	hideCheckBox(CB_CONF_ENABLE_CUSTOM_POINTER);
 	hideCheckBox(CB_CONF_SOFTWARE_MOUSE);
 	hidePushButton(PB_CONFIG_PAL_R_DOWN);
 	hidePushButton(PB_CONFIG_PAL_R_UP);
