@@ -83,7 +83,7 @@ bool loadDIGI(FILE *f, uint32_t filesize)
 	}
 
 	memcpy(songTmp.orders, hdr.orders, 128);
-
+	memcpy(songTmp.name, hdr.name, 20);
 	songTmp.numChannels = hdr.numChannels;
 	songTmp.songLength = hdr.numOrders;
 	songTmp.BPM = 125;
