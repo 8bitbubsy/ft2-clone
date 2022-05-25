@@ -3127,11 +3127,20 @@ void resetReplayerState(void)
 	song.pBreakPos = 0;
 	song.pBreakFlag = false;
 
+	// reset pattern loops (E6x)
+	channel_t *ch = channel;
+	for (int32_t i = 0; i < song.numChannels; i++, ch++)
+	{
+		ch->jumpToRow = 0;
+		ch->patLoopCounter = 0;
+	}
+	
+	// reset global volume (if song was playing)
 	if (songPlaying)
 	{
 		song.globalVolume = 64;
 
-		channel_t *ch = channel;
+		ch = channel;
 		for (int32_t i = 0; i < song.numChannels; i++, ch++)
 			ch->status |= IS_Vol;
 	}
