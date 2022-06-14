@@ -175,9 +175,10 @@ static int32_t SDLCALL copyInstrThread(void *ptr)
 	pauseAudio();
 	freeInstr(dstIns);
 
-	bool error = true;
+	bool error = false;
 	if (instr[srcIns] != NULL)
 	{
+		error = true;
 		if (allocateInstr(dstIns))
 		{
 			int16_t i;
