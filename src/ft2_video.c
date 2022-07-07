@@ -59,7 +59,7 @@ static sprite_t sprites[SPRITE_NUM];
 
 static char fpsTextBuf[1024];
 static uint64_t frameStartTime;
-static double dRunningFPS, dFrameTime, dAvgFPS;
+static double dRunningFrameDuration, dAvgFPS;
 // ------------------
 
 static void drawReplayerData(void);
@@ -68,8 +68,7 @@ void resetFPSCounter(void)
 {
 	editor.framesPassed = 0;
 	fpsTextBuf[0] = '\0';
-	dRunningFPS = VBLANK_HZ;
-	dFrameTime = 1000.0 / VBLANK_HZ;
+	dRunningFrameDuration = 1000.0 / VBLANK_HZ;
 }
 
 void beginFPSCounter(void)
@@ -82,11 +81,11 @@ static void drawFPSCounter(void)
 {
 	if (editor.framesPassed >= FPS_SCAN_FRAMES && (editor.framesPassed % FPS_SCAN_FRAMES) == 0)
 	{
-		dAvgFPS = dRunningFPS * (1.0 / FPS_SCAN_FRAMES);
+		dAvgFPS = 1000.0 / (dRunningFrameDuration / FPS_SCAN_FRAMES);
 		if (dAvgFPS < 0.0 || dAvgFPS > 99999999.9999)
 			dAvgFPS = 99999999.9999; // prevent number from overflowing text box
 
-		dRunningFPS = 0.0;
+		dRunningFrameDuration = 0.0;
 	}
 
 	clearRect(FPS_RENDER_X+2, FPS_RENDER_Y+2, FPS_RENDER_W, FPS_RENDER_H);
@@ -98,7 +97,7 @@ static void drawFPSCounter(void)
 	// test if enough data is collected yet
 	if (editor.framesPassed < FPS_SCAN_FRAMES)
 	{
-		textOut(FPS_RENDER_X+53, FPS_RENDER_Y+39, PAL_FORGRND, "Collecting frame information...");
+		textOut(FPS_RENDER_X+53, FPS_RENDER_Y+39, PAL_FORGRND, "Gathering frame information...");
 		return;
 	}
 
@@ -150,9 +149,11 @@ void endFPSCounter(void)
 {
 	if (video.showFPSCounter && frameStartTime > 0)
 	{
-		const uint64_t frameTimeDiff = SDL_GetPerformanceCounter() - frameStartTime;
-		const double dHz = 1000.0 / (frameTimeDiff * editor.dPerfFreqMulMs);
-		dRunningFPS += dHz;
+		uint64_t frameTimeDiff64 = SDL_GetPerformanceCounter() - frameStartTime;
+		if (frameTimeDiff64 > INT32_MAX)
+			frameTimeDiff64 = INT32_MAX;
+
+		dRunningFrameDuration += (int32_t)frameTimeDiff64 / (hpcFreq.dFreq / 1000.0);
 	}
 }
 

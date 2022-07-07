@@ -34,7 +34,7 @@ static void usleepGood(int32_t usec)
 	// NtDelayExecution() delays in 100ns-units, and negative value = delay from current time
 	usec *= -10;
 
-	delayInterval.HighPart = 0xFFFFFFFF;
+	delayInterval.HighPart = 0xFFFFFFFF; // negative 64-bit value, we only set the lower dword
 	delayInterval.LowPart = usec;
 	NtDelayExecution(false, &delayInterval);
 }
@@ -61,6 +61,7 @@ void hpc_Init(void)
 #endif
 	hpcFreq.freq64 = SDL_GetPerformanceFrequency();
 	hpcFreq.dFreq = (double)hpcFreq.freq64;
+	hpcFreq.dFreqMulMs = 1000.0 / hpcFreq.dFreq;
 	hpcFreq.dFreqMulMicro = (1000.0 * 1000.0) / hpcFreq.dFreq;
 }
 
