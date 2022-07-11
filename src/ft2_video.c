@@ -308,8 +308,8 @@ static void updateRenderSizeVars(void)
 			if (dXUpscale != 0.0) video.renderW = (int32_t)(video.renderW / dXUpscale);
 			if (dYUpscale != 0.0) video.renderH = (int32_t)(video.renderH / dYUpscale);
 
-			video.renderX = (video.displayW - video.renderW) >> 1;
-			video.renderY = (video.displayH - video.renderH) >> 1;
+			video.renderX = (video.displayW - video.renderW) / 2;
+			video.renderY = (video.displayH - video.renderH) / 2;
 		}
 	}
 	else
@@ -321,8 +321,8 @@ static void updateRenderSizeVars(void)
 	}
 
 	// for mouse cursor creation
-	video.xScale = (uint32_t)round(video.renderW * (1.0 / SCREEN_W));
-	video.yScale = (uint32_t)round(video.renderH * (1.0 / SCREEN_H));
+	video.xScale = (uint32_t)round(video.renderW / (double)SCREEN_W);
+	video.yScale = (uint32_t)round(video.renderH / (double)SCREEN_H);
 
 	createMouseCursors();
 }
@@ -1029,6 +1029,12 @@ bool setupRenderer(void)
 	if (!setupSprites())
 		return false;
 
+	// Workaround: SDL_GetGlobalMouseState() doesn't work with KMSDRM/Wayland
+	video.useDesktopMouseCoords = true;
+	const char *videoDriver = SDL_GetCurrentVideoDriver();
+	if (videoDriver != NULL && (strcmp("KMSDRM", videoDriver) == 0 || strcmp("wayland", videoDriver) == 0))
+		video.useDesktopMouseCoords = false;
+
 	updateRenderSizeVars();
 	updateMouseScaling();
 
@@ -1036,12 +1042,6 @@ bool setupRenderer(void)
 		SDL_ShowCursor(SDL_TRUE);
 	else
 		SDL_ShowCursor(SDL_FALSE);
-
-	// Workaround: SDL_GetGlobalMouseState() doesn't work with KMSDRM/Wayland
-	video.useDesktopMouseCoords = true;
-	const char *videoDriver = SDL_GetCurrentVideoDriver();
-	if (videoDriver != NULL && (strcmp("KMSDRM", videoDriver) == 0 || strcmp("wayland", videoDriver) == 0))
-		video.useDesktopMouseCoords = false;
 
 	SDL_SetRenderDrawColor(video.renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 	return true;
