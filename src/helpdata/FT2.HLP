@@ -931,7 +931,7 @@ END
 >@X010@C001Video:
 >@C002
 >@X010- Fullscreen mode can be unbearably slow on a Raspberry Pi (even on RPi 4)
->@X010- Not a bug, but if your monitor's refresh rate is not set to 60Hz (or 59Hz)
->@X021you may experience visual stuttering because VSync will not be used.
+>@X010- Fullscreen mode can have several problems on multi-monitor systems
+>@X010- Fullscreen mode can have several problems on some Linux systems
 
 END
