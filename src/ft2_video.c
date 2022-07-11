@@ -51,9 +51,10 @@ static char wndTitle[256];
 static sprite_t sprites[SPRITE_NUM];
 
 // for FPS counter
+#define FPS_LINES 15
 #define FPS_SCAN_FRAMES 60
 #define FPS_RENDER_W 285
-#define FPS_RENDER_H (((FONT1_CHAR_H + 1) * 8) + 1)
+#define FPS_RENDER_H (((FONT1_CHAR_H + 1) * FPS_LINES) + 1)
 #define FPS_RENDER_X 2
 #define FPS_RENDER_Y 2
 
@@ -79,6 +80,10 @@ void beginFPSCounter(void)
 
 static void drawFPSCounter(void)
 {
+	SDL_version SDLVer;
+
+	SDL_GetVersion(&SDLVer);
+
 	if (editor.framesPassed >= FPS_SCAN_FRAMES && (editor.framesPassed % FPS_SCAN_FRAMES) == 0)
 	{
 		dAvgFPS = 1000.0 / (dRunningFrameDuration / FPS_SCAN_FRAMES);
@@ -94,10 +99,12 @@ static void drawFPSCounter(void)
 	hLineDouble(FPS_RENDER_X+1, FPS_RENDER_Y, FPS_RENDER_W, PAL_FORGRND);
 	hLineDouble(FPS_RENDER_X+1, FPS_RENDER_Y+FPS_RENDER_H+2, FPS_RENDER_W, PAL_FORGRND);
 
-	// test if enough data is collected yet
+	// if enough frame data isn't collected yet, show a message
 	if (editor.framesPassed < FPS_SCAN_FRAMES)
 	{
-		textOut(FPS_RENDER_X+53, FPS_RENDER_Y+39, PAL_FORGRND, "Gathering frame information...");
+		const char *text = "Gathering frame information...";
+		const uint16_t textW = textWidth(text);
+		textOut(FPS_RENDER_X+((FPS_RENDER_W/2)-(textW/2)), FPS_RENDER_Y+((FPS_RENDER_H/2)-(FONT1_CHAR_H/2)), PAL_FORGRND, text);
 		return;
 	}
 
@@ -109,20 +116,36 @@ static void drawFPSCounter(void)
 	if (dAudLatency < 0.0 || dAudLatency > 999999999.9999)
 		dAudLatency = 999999999.9999; // prevent number from overflowing text box
 
-	sprintf(fpsTextBuf, "Frames per second: %.4f\n" \
+	sprintf(fpsTextBuf,
+	             "SDL version: %u.%u.%u\n" \
+	             "Frames per second: %.3f\n" \
 	             "Monitor refresh rate: %.1fHz (+/-)\n" \
 	             "59..61Hz GPU VSync used: %s\n" \
 	             "Audio frequency: %.1fkHz (expected %.1fkHz)\n" \
 	             "Audio buffer samples: %d (expected %d)\n" \
 	             "Audio channels: %d (expected %d)\n" \
 	             "Audio latency: %.1fms (expected %.1fms)\n" \
+	             "Render size: %dx%d (offset %d,%d)\n" \
+	             "Disp. size: %dx%d (window: %dx%d)\n" \
+	             "Render scaling: x=%.2f, y=%.2f\n" \
+	             "Mouse to render space muls: x=%.2f, y=%.2f\n" \
+	             "Relative mouse coords: %d,%d\n" \
+	             "Absolute mouse coords: %d,%d\n" \
 	             "Press CTRL+SHIFT+F to close this box.\n",
-	             dAvgFPS, dRefreshRate,
+	             SDLVer.major, SDLVer.minor, SDLVer.patch,
+	             dAvgFPS,
+	             dRefreshRate,
 	             video.vsync60HzPresent ? "yes" : "no",
 	             audio.haveFreq * (1.0 / 1000.0), audio.wantFreq * (1.0 / 1000.0),
 	             audio.haveSamples, audio.wantSamples,
 	             audio.haveChannels, audio.wantChannels,
-	             dAudLatency, ((audio.wantSamples * 1000.0) / audio.wantFreq));
+	             dAudLatency, ((audio.wantSamples * 1000.0) / audio.wantFreq),
+	             video.renderW, video.renderH, video.renderX, video.renderY,
+	             video.displayW, video.displayH, video.windowW, video.windowH,
+	             video.renderW / (float)SCREEN_W, video.renderH / (float)SCREEN_H,
+	             video.fMouseXMul, video.fMouseYMul,
+	             mouse.x, mouse.y,
+	             mouse.absX, mouse.absY);
 
 	// draw text
 
@@ -136,13 +159,24 @@ static void drawFPSCounter(void)
 		if (ch == '\n')
 		{
 			yPos += FONT1_CHAR_H+1;
-			xPos = FPS_RENDER_X + 3;
+			xPos = FPS_RENDER_X+3;
 			continue;
 		}
 
 		charOut(xPos, yPos, PAL_FORGRND, ch);
 		xPos += charWidth(ch);
 	}
+
+	// draw framerate tester symbol
+
+	const uint16_t symbolEnd = 115;
+
+	// ping-pong movement
+	uint16_t x = editor.framesPassed % (symbolEnd * 2);
+	if (x >= symbolEnd)
+		x = (symbolEnd * 2) - x;
+
+	charOut(164 + x, 16, PAL_FORGRND, '*');
 }
 
 void endFPSCounter(void)
@@ -239,6 +273,8 @@ static void updateRenderSizeVars(void)
 		SDL_GetWindowSize(video.window, &video.displayW, &video.displayH);
 	}
 
+	SDL_GetWindowSize(video.window, &video.windowW, &video.windowH);
+
 	if (video.fullscreen)
 	{
 		if (config.specialFlags2 & STRETCH_IMAGE)
@@ -293,11 +329,18 @@ static void updateRenderSizeVars(void)
 
 void enterFullscreen(void)
 {
-	SDL_DisplayMode dm;
+	SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 
 	if (config.specialFlags2 & STRETCH_IMAGE)
 	{
-		SDL_GetDesktopDisplayMode(0, &dm);
+		SDL_DisplayMode dm;
+
+		int32_t di = SDL_GetWindowDisplayIndex(video.window);
+		if (di < 0)
+			di = 0; // return display index 0 (default) on error
+
+		SDL_GetDesktopDisplayMode(di, &dm);
+
 		SDL_RenderSetLogicalSize(video.renderer, dm.w, dm.h);
 	}
 	else
@@ -306,15 +349,17 @@ void enterFullscreen(void)
 	}
 
 	SDL_SetWindowSize(video.window, SCREEN_W, SCREEN_H);
-	SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+#ifndef __unix__ // can be severely buggy on Linux... (at least when used like this)
 	SDL_SetWindowGrab(video.window, SDL_TRUE);
+#endif
 
 	updateRenderSizeVars();
 	updateMouseScaling();
 	setMousePosToCenter();
 }
 
-void leaveFullScreen(void)
+void leaveFullscreen(void)
 {
 	SDL_SetWindowFullscreen(video.window, 0);
 	SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
@@ -322,21 +367,28 @@ void leaveFullScreen(void)
 	setWindowSizeFromConfig(false);
 
 	SDL_SetWindowSize(video.window, SCREEN_W * video.upscaleFactor, SCREEN_H * video.upscaleFactor);
+
+#ifndef __unix__
 	SDL_SetWindowGrab(video.window, SDL_FALSE);
+#endif
 
 	updateRenderSizeVars();
 	updateMouseScaling();
 	setMousePosToCenter();
+
+#ifdef __unix__ // can be required on Linux... (or else the window keeps moving down every time you leave fullscreen)
+	SDL_SetWindowPosition(video.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+#endif
 }
 
-void toggleFullScreen(void)
+void toggleFullscreen(void)
 {
 	video.fullscreen ^= 1;
 
 	if (video.fullscreen)
 		enterFullscreen();
 	else
-		leaveFullScreen();
+		leaveFullscreen();
 }
 
 bool setupSprites(void)
@@ -774,8 +826,12 @@ void setWindowSizeFromConfig(bool updateRenderer)
 	uint8_t oldUpscaleFactor = video.upscaleFactor;
 	if (config.windowFlags & WINSIZE_AUTO)
 	{
+		int32_t di = SDL_GetWindowDisplayIndex(video.window);
+		if (di < 0)
+			di = 0; // return display index 0 (default) on error
+
 		// find out which upscaling factor is the biggest to fit on screen
-		if (SDL_GetDesktopDisplayMode(0, &dm) == 0)
+		if (SDL_GetDesktopDisplayMode(di, &dm) == 0)
 		{
 			for (i = MAX_UPSCALE_FACTOR; i >= 1; i--)
 			{
@@ -886,7 +942,11 @@ bool setupWindow(void)
 
 	setWindowSizeFromConfig(false);
 
-	SDL_GetDesktopDisplayMode(0, &dm);
+	int32_t di = SDL_GetWindowDisplayIndex(video.window);
+	if (di < 0)
+		di = 0; // return display index 0 (default) on error
+
+	SDL_GetDesktopDisplayMode(di, &dm);
 	video.dMonitorRefreshRate = (double)dm.refresh_rate;
 
 	if (dm.refresh_rate >= 59 && dm.refresh_rate <= 61)

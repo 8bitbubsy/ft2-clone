@@ -896,7 +896,7 @@ void handleTextEditControl(SDL_Keycode keycode)
 		{
 			// ALT+ENTER = toggle fullscreen, even while text editing
 			if (keyb.leftAltPressed)
-				toggleFullScreen();
+				toggleFullscreen();
 			else
 				exitTextEditing();
 		}

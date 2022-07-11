@@ -703,7 +703,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		{
 			if (keyb.leftAltPressed)
 			{
-				toggleFullScreen();
+				toggleFullscreen();
 
 				// prevent fullscreen toggle from firing twice on certain SDL2 Linux ports
 #ifdef __unix__
@@ -896,7 +896,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 #ifdef __APPLE__
 			if (keyb.leftCommandPressed && keyb.leftCtrlPressed)
 			{
-				toggleFullScreen();
+				toggleFullscreen();
 				return true;
 			}
 			else

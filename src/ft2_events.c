@@ -38,7 +38,7 @@
                    "Try to mention what you did before the crash happened.\n" \
                    "My email can be found at the bottom of www.16-bits.org."
 
-static bool backupMadeAfterCrash;
+static bool backupMadeAfterCrash, didDropFile;
 
 #ifdef _WIN32
 #define SYSMSG_FILE_ARG (WM_USER+1)
@@ -50,49 +50,14 @@ static HANDLE oneInstHandle, hMapFile;
 static LPCTSTR sharedMemBuf;
 #endif
 
-static void handleInput(void);
-
-#ifdef _WIN32 // Windows usleep() implementation
-
-static NTSTATUS (__stdcall *NtDelayExecution)(BOOL Alertable, PLARGE_INTEGER DelayInterval);
-static NTSTATUS (__stdcall *NtQueryTimerResolution)(PULONG MinimumResolution, PULONG MaximumResolution, PULONG ActualResolution);
-static NTSTATUS (__stdcall *NtSetTimerResolution)(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution);
-
-static void (*usleep)(int32_t usec);
-
-static void usleepGood(int32_t usec)
-{
-	LARGE_INTEGER delayInterval;
-
-	// NtDelayExecution() delays in 100ns-units, and negative value = delay from current time
-	usec *= -10;
-
-	delayInterval.HighPart = 0xFFFFFFFF;
-	delayInterval.LowPart = usec;
-	NtDelayExecution(false, &delayInterval);
-}
-
-static void usleepWeak(int32_t usec) // fallback if no NtDelayExecution()
-{
-	Sleep((usec + 500) / 1000);
-}
-
-void windowsSetupUsleep(void)
-{
-	NtDelayExecution = (NTSTATUS (__stdcall *)(BOOL, PLARGE_INTEGER))GetProcAddress(GetModuleHandle("ntdll.dll"), "NtDelayExecution");
-	NtQueryTimerResolution = (NTSTATUS (__stdcall *)(PULONG, PULONG, PULONG))GetProcAddress(GetModuleHandle("ntdll.dll"), "NtQueryTimerResolution");
-	NtSetTimerResolution = (NTSTATUS (__stdcall *)(ULONG, BOOLEAN, PULONG))GetProcAddress(GetModuleHandle("ntdll.dll"), "NtSetTimerResolution");
-
-	usleep = (NtDelayExecution != NULL) ? usleepGood : usleepWeak;
-}
-#endif
+static void handleSDLEvents(void);
 
 void readInput(void)
 {
 	readMouseXY();
 	readKeyModifiers();
 	setSyncedReplayerVars();
-	handleInput();
+	handleSDLEvents();
 }
 
 void handleThreadEvents(void)
@@ -407,7 +372,7 @@ void handleWaitVblQuirk(SDL_Event *event)
 	}
 }
 
-static void handleInput(void)
+static void handleSDLEvents(void)
 {
 	SDL_Event event;
 
@@ -483,6 +448,10 @@ static void handleInput(void)
 			editor.autoPlayOnDrop = false;
 			loadDroppedFile(event.drop.file, true);
 			SDL_free(event.drop.file);
+
+			// kludge: allow focus-clickthrough after drag-n-drop
+			SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+			didDropFile = true;
 		}
 		else if (event.type == SDL_QUIT)
 		{
@@ -520,6 +489,13 @@ static void handleInput(void)
 		else if (event.type == SDL_MOUSEBUTTONUP)
 		{
 			mouseButtonUpHandler(event.button.button);
+
+			// kludge: we drag-n-dropped a file before this mouse click release, restore focus-clickthrough mode
+			if (didDropFile)
+			{
+				didDropFile = false;
+				SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "0");
+			}
 		}
 		else if (event.type == SDL_MOUSEBUTTONDOWN)
 		{

@@ -31,7 +31,7 @@ typedef struct video_t
 	float fMouseXMul, fMouseYMul;
 	uint8_t upscaleFactor;
 	bool vsync60HzPresent, windowHidden;
-	int32_t renderX, renderY, renderW, renderH, displayW, displayH;
+	int32_t renderX, renderY, renderW, renderH, displayW, displayH, windowW, windowH;
 	uint32_t *frameBufferUnaligned;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
@@ -72,7 +72,7 @@ void changeSpriteData(int32_t sprite, const uint8_t *data);
 void hideSprite(int32_t sprite);
 void handleRedrawing(void);
 void enterFullscreen(void);
-void leaveFullScreen(void);
+void leaveFullscreen(void);
 void setWindowSizeFromConfig(bool updateRenderer);
 bool recreateTexture(void);
-void toggleFullScreen(void);
+void toggleFullscreen(void);
