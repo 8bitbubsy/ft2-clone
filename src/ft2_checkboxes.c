@@ -109,7 +109,7 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 411, 119, 121, 12, cbMIDIRecTransp },
 	{ 411, 132, 109, 12, cbMIDIRecVelocity },
 	{ 411, 145, 124, 12, cbMIDIRecAftert },
-	{ 113, 115,  74, 12, cbVsyncOff },
+	{ 113, 115,  75, 12, cbVsyncOff },
 	{ 113, 128,  78, 12, cbFullScreen },
 	{ 113, 141,  75, 12, cbStretchImage },
 	{ 113, 154,  78, 12, cbPixelFilter }
