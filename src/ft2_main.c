@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
 
-#if SDL_PATCHLEVEL < 5
+#if SDL_MAJOR_VERSION == 2 && SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL < 5
 #pragma message("WARNING: The SDL2 dev lib is older than ver 2.0.5. You'll get fullscreen mode issues and no audio input sampling.")
 #pragma message("At least version 2.0.7 is recommended.")
 #endif
@@ -93,12 +93,13 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-#if SDL_PATCHLEVEL >= 4 // SDL 2.0.4 or later
-	SDL_SetHint(SDL_HINT_WINDOWS_NO_CLOSE_ON_ALT_F4, "1"); // windows only - prevent ALT+F4 from exiting (FT2 uses ALT+F4)
+#ifdef _WIN32
+
+	// ALT+F4 is used in FT2, but is "close program" in Windows...
+#if SDL_MAJOR_VERSION == 2 && SDL_MINOR_VERSION >= 0 && SDL_PATCHLEVEL >= 4
+	SDL_SetHint(SDL_HINT_WINDOWS_NO_CLOSE_ON_ALT_F4, "1");
 #endif
 
-#ifdef _WIN32
-	
 #ifndef _MSC_VER
 	SetProcessDPIAware();
 #endif
@@ -126,7 +127,7 @@ int main(int argc, char *argv[])
 	** reinitialized in Windows and what not.
 	** Ref.: https://bugzilla.libsdl.org/show_bug.cgi?id=4391
 	*/
-#if defined _WIN32 && SDL_PATCHLEVEL == 9
+#if defined _WIN32 && SDL_MAJOR_VERSION == 2 && SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL == 9
 	if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) != 0)
 #else
 	if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) != 0)
