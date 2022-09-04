@@ -4,14 +4,17 @@
 #include <stdbool.h>
 #include "ft2_mix.h"
 
-// if you change this, also change SINC_PHASES_BITS (>8192 gives very little improvement)
-#define SINC_PHASES 8192
-#define SINC_PHASES_BITS 13 /* log2(SINC_PHASES) */
+// 8 or 16. 8 should only be used if the code is too slow for the target system.
+#define SINC_TAPS 16
 
-// don't change these!
+// log2(SINC_TAPS)
+#define SINC_TAPS_BITS 4
 
-#define SINC_TAPS 8
-#define SINC_TAPS_BITS 3
+#define SINC_PHASES 16384
+
+// log2(SINC_PHASES)
+#define SINC_PHASES_BITS 14
+
 #define SINC_LUT_LEN (SINC_TAPS * SINC_PHASES)
 #define SINC_FSHIFT (MIXER_FRAC_BITS-(SINC_PHASES_BITS+SINC_TAPS_BITS))
 #define SINC_FMASK ((SINC_TAPS*SINC_PHASES)-SINC_TAPS)
@@ -23,9 +26,7 @@
 // for LUT calculation
 #define SINC_MID_TAP ((SINC_TAPS/2)*SINC_PHASES)
 
-extern float *fKaiserSinc;
-extern float *fDownSample1;
-extern float *fDownSample2;
+extern float *fKaiserSinc, *fDownSample1, *fDownSample2;
 
 bool calcWindowedSincTables(void);
 void freeWindowedSincTables(void);

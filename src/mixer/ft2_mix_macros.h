@@ -168,6 +168,9 @@
 **
 */
 
+#if SINC_TAPS==8
+
+#if SINC_FSHIFT>=0
 #define WINDOWED_SINC_INTERPOLATION(s, f, scale) \
 { \
 	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC_FSHIFT) & SINC_FMASK); \
@@ -180,6 +183,72 @@
 	           ( s[3] * t[6]) + \
 	           ( s[4] * t[7])) * (1.0f / scale); \
 }
+#else
+#define WINDOWED_SINC_INTERPOLATION(s, f, scale) \
+{ \
+	const float *t = v->fSincLUT + (((uint32_t)(f) << -SINC_FSHIFT) & SINC_FMASK); \
+	fSample = ((s[-3] * t[0]) + \
+	           (s[-2] * t[1]) + \
+	           (s[-1] * t[2]) + \
+	           ( s[0] * t[3]) + \
+	           ( s[1] * t[4]) + \
+	           ( s[2] * t[5]) + \
+	           ( s[3] * t[6]) + \
+	           ( s[4] * t[7])) * (1.0f / scale); \
+}
+#endif
+
+#elif SINC_TAPS==16
+
+#if SINC_FSHIFT>=0
+#define WINDOWED_SINC_INTERPOLATION(s, f, scale) \
+{ \
+	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC_FSHIFT) & SINC_FMASK); \
+	fSample = ((s[-7] * t[0]) + \
+	           (s[-6] * t[1]) + \
+	           (s[-5] * t[2]) + \
+	           (s[-4] * t[3]) + \
+	           (s[-3] * t[4]) + \
+	           (s[-2] * t[5]) + \
+	           (s[-1] * t[6]) + \
+	           ( s[0] * t[7]) + \
+	           ( s[1] * t[8]) + \
+	           ( s[2] * t[9]) + \
+	           ( s[3] * t[10]) + \
+	           ( s[4] * t[11]) + \
+	           ( s[5] * t[12]) + \
+	           ( s[6] * t[13]) + \
+	           ( s[7] * t[14]) + \
+	           ( s[8] * t[15])) * (1.0f / scale); \
+}
+#else
+#define WINDOWED_SINC_INTERPOLATION(s, f, scale) \
+{ \
+	const float *t = v->fSincLUT + (((uint32_t)(f) << -SINC_FSHIFT) & SINC_FMASK); \
+	fSample = ((s[-7] * t[0]) + \
+	           (s[-6] * t[1]) + \
+	           (s[-5] * t[2]) + \
+	           (s[-4] * t[3]) + \
+	           (s[-3] * t[4]) + \
+	           (s[-2] * t[5]) + \
+	           (s[-1] * t[6]) + \
+	           ( s[0] * t[7]) + \
+	           ( s[1] * t[8]) + \
+	           ( s[2] * t[9]) + \
+	           ( s[3] * t[10]) + \
+	           ( s[4] * t[11]) + \
+	           ( s[5] * t[12]) + \
+	           ( s[6] * t[13]) + \
+	           ( s[7] * t[14]) + \
+	           ( s[8] * t[15])) * (1.0f / scale); \
+}
+#endif
+
+#else
+
+#error mixer/ft2_mix_macros.h: The SINC_TAPS definition is invalid! Valid values: 8 or 16
+
+#endif
 
 #define RENDER_8BIT_SMP_SINTRP \
 	WINDOWED_SINC_INTERPOLATION(smpPtr, positionFrac, 128) \
