@@ -888,17 +888,31 @@ void updateWindowTitle(bool forceUpdate)
 		strncpy(songTitleTrunc, songTitle, sizeof (songTitleTrunc)-1);
 		songTitleTrunc[sizeof (songTitleTrunc)-1] = '\0';
 
-		if (song.isModified)
-			sprintf(wndTitle, "Fasttracker II clone v%s (%d-bit) - \"%s\" (unsaved)", PROG_VER_STR, CPU_BITS, songTitleTrunc);
-		else
-			sprintf(wndTitle, "Fasttracker II clone v%s (%d-bit) - \"%s\"", PROG_VER_STR, CPU_BITS, songTitleTrunc);
+#if CPU_BITS==32
+			if (song.isModified)
+				sprintf(wndTitle, "Fasttracker II clone v%s (32-bit) - \"%s\" (unsaved)", PROG_VER_STR, songTitleTrunc);
+			else
+				sprintf(wndTitle, "Fasttracker II clone v%s (32-bit) - \"%s\"", PROG_VER_STR, songTitleTrunc);
+#else
+			if (song.isModified)
+				sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\" (unsaved)", PROG_VER_STR, songTitleTrunc);
+			else
+				sprintf(wndTitle, "Fasttracker II clone v%s - \"%s\"", PROG_VER_STR, songTitleTrunc);
+#endif
 	}
 	else
 	{
+#if CPU_BITS==32
 		if (song.isModified)
-			sprintf(wndTitle, "Fasttracker II clone v%s (%d-bit) - \"untitled\" (unsaved)", PROG_VER_STR, CPU_BITS);
+			sprintf(wndTitle, "Fasttracker II clone v%s (32-bit) - \"untitled\" (unsaved)", PROG_VER_STR);
 		else
-			sprintf(wndTitle, "Fasttracker II clone v%s (%d-bit) - \"untitled\"", PROG_VER_STR, CPU_BITS);
+			sprintf(wndTitle, "Fasttracker II clone v%s (32-bit) - \"untitled\"", PROG_VER_STR);
+#else
+		if (song.isModified)
+			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled\" (unsaved)", PROG_VER_STR);
+		else
+			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled\"", PROG_VER_STR);
+#endif
 	}
 
 	SDL_SetWindowTitle(video.window, wndTitle);
