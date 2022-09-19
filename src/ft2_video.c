@@ -1016,7 +1016,7 @@ bool setupRenderer(void)
 
 	SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
 
-#if SDL_PATCHLEVEL >= 5
+#if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 5)
 	SDL_RenderSetIntegerScale(video.renderer, SDL_TRUE);
 #endif
 

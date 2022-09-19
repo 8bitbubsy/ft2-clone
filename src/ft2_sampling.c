@@ -325,7 +325,7 @@ void handleSamplingUpdates(void)
 
 void startSampling(void)
 {
-#if SDL_PATCHLEVEL < 5
+#if SDL_MAJOR_VERSION == 2 && SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL < 5
 	okBox(0, "System message", "This program needs to be compiled with SDL 2.0.5 or later to support audio sampling.");
 	return;
 #else
