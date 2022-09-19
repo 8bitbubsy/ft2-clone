@@ -28,7 +28,7 @@
 #ifndef SDL_cpuinfo_h_
 #define SDL_cpuinfo_h_
 
-#include "SDL_stdinc.h"
+#include <SDL2/SDL_stdinc.h>
 
 /* Need to do this here because intrin.h has C++ code in it */
 /* Visual Studio 2005 has a bug where intrin.h conflicts with winnt.h */
@@ -79,7 +79,7 @@ _m_prefetch(void *__P)
 #if !defined(SDL_DISABLE_ARM_NEON_H)
 #  if defined(__ARM_NEON)
 #    include <arm_neon.h>
-#  elif defined(__WINDOWS__) || defined(__WINRT__)
+#  elif defined(__WINDOWS__) || defined(__WINRT__) || defined(__GDK__)
 /* Visual Studio doesn't define __ARM_ARCH, but _M_ARM (if set, always 7), and _M_ARM64 (if set, always 1). */
 #    if defined(_M_ARM)
 #      include <armintr.h>
@@ -98,6 +98,14 @@ _m_prefetch(void *__P)
 #if defined(__3dNOW__) && !defined(SDL_DISABLE_MM3DNOW_H)
 #include <mm3dnow.h>
 #endif
+#if defined(__loongarch_sx) && !defined(SDL_DISABLE_LSX_H)
+#include <lsxintrin.h>
+#define __LSX__
+#endif
+#if defined(__loongarch_asx) && !defined(SDL_DISABLE_LASX_H)
+#include <lasxintrin.h>
+#define __LASX__
+#endif
 #if defined(HAVE_IMMINTRIN_H) && !defined(SDL_DISABLE_IMMINTRIN_H)
 #include <immintrin.h>
 #else
@@ -115,7 +123,7 @@ _m_prefetch(void *__P)
 #endif
 #endif /* HAVE_IMMINTRIN_H */
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -434,9 +442,35 @@ extern DECLSPEC SDL_bool SDLCALL SDL_HasARMSIMD(void);
 extern DECLSPEC SDL_bool SDLCALL SDL_HasNEON(void);
 
 /**
+ * Determine whether the CPU has LSX (LOONGARCH SIMD) features.
+ *
+ * This always returns false on CPUs that aren't using LOONGARCH instruction
+ * sets.
+ *
+ * \returns SDL_TRUE if the CPU has LOONGARCH LSX features or SDL_FALSE if
+ *          not.
+ *
+ * \since This function is available since SDL 2.24.0.
+ */
+extern DECLSPEC SDL_bool SDLCALL SDL_HasLSX(void);
+
+/**
+ * Determine whether the CPU has LASX (LOONGARCH SIMD) features.
+ *
+ * This always returns false on CPUs that aren't using LOONGARCH instruction
+ * sets.
+ *
+ * \returns SDL_TRUE if the CPU has LOONGARCH LASX features or SDL_FALSE if
+ *          not.
+ *
+ * \since This function is available since SDL 2.24.0.
+ */
+extern DECLSPEC SDL_bool SDLCALL SDL_HasLASX(void);
+
+/**
  * Get the amount of RAM configured in the system.
  *
- * \returns the amount of RAM configured in the system in MB.
+ * \returns the amount of RAM configured in the system in MiB.
  *
  * \since This function is available since SDL 2.0.1.
  */
@@ -494,7 +528,7 @@ extern DECLSPEC size_t SDLCALL SDL_SIMDGetAlignment(void);
  *
  * \since This function is available since SDL 2.0.10.
  *
- * \sa SDL_SIMDAlignment
+ * \sa SDL_SIMDGetAlignment
  * \sa SDL_SIMDRealloc
  * \sa SDL_SIMDFree
  */
@@ -518,7 +552,7 @@ extern DECLSPEC void * SDLCALL SDL_SIMDAlloc(const size_t len);
  *
  * \since This function is available since SDL 2.0.14.
  *
- * \sa SDL_SIMDAlignment
+ * \sa SDL_SIMDGetAlignment
  * \sa SDL_SIMDAlloc
  * \sa SDL_SIMDFree
  */
@@ -552,7 +586,7 @@ extern DECLSPEC void SDLCALL SDL_SIMDFree(void *ptr);
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_cpuinfo_h_ */
 

@@ -28,10 +28,10 @@
 #ifndef SDL_syswm_h_
 #define SDL_syswm_h_
 
-#include "SDL_stdinc.h"
-#include "SDL_error.h"
-#include "SDL_video.h"
-#include "SDL_version.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_error.h>
+#include <SDL2/SDL_video.h>
+#include <SDL2/SDL_version.h>
 
 /**
  *  \brief SDL_syswm.h
@@ -108,7 +108,7 @@ typedef void *EGLSurface;
 #endif
 
 #if defined(SDL_VIDEO_DRIVER_VIVANTE)
-#include "SDL_egl.h"
+#include <SDL2/SDL_egl.h>
 #endif
 
 #if defined(SDL_VIDEO_DRIVER_OS2)
@@ -122,7 +122,7 @@ struct gbm_device;
 #endif
 
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -379,7 +379,7 @@ extern DECLSPEC SDL_bool SDLCALL SDL_GetWindowWMInfo(SDL_Window * window,
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_syswm_h_ */
 

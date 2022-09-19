@@ -28,12 +28,12 @@
 #ifndef SDL_rect_h_
 #define SDL_rect_h_
 
-#include "SDL_stdinc.h"
-#include "SDL_error.h"
-#include "SDL_pixels.h"
-#include "SDL_rwops.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_error.h>
+#include <SDL2/SDL_pixels.h>
+#include <SDL2/SDL_rwops.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -252,10 +252,10 @@ SDL_FORCE_INLINE SDL_bool SDL_FRectEmpty(const SDL_FRect *r)
 SDL_FORCE_INLINE SDL_bool SDL_FRectEqualsEpsilon(const SDL_FRect *a, const SDL_FRect *b, const float epsilon)
 {
     return (a && b && ((a == b) ||
-            ((SDL_fabs(a->x - b->x) <= epsilon) &&
-            (SDL_fabs(a->y - b->y) <= epsilon) &&
-            (SDL_fabs(a->w - b->w) <= epsilon) &&
-            (SDL_fabs(a->h - b->h) <= epsilon))))
+            ((SDL_fabsf(a->x - b->x) <= epsilon) &&
+            (SDL_fabsf(a->y - b->y) <= epsilon) &&
+            (SDL_fabsf(a->w - b->w) <= epsilon) &&
+            (SDL_fabsf(a->h - b->h) <= epsilon))))
             ? SDL_TRUE : SDL_FALSE;
 }
 
@@ -369,7 +369,7 @@ extern DECLSPEC SDL_bool SDLCALL SDL_IntersectFRectAndLine(const SDL_FRect *
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_rect_h_ */
 

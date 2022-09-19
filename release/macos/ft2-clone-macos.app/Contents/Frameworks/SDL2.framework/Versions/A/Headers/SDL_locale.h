@@ -28,10 +28,10 @@
 #ifndef _SDL_locale_h
 #define _SDL_locale_h
 
-#include "SDL_stdinc.h"
-#include "SDL_error.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_error.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 /* *INDENT-OFF* */
@@ -96,7 +96,7 @@ extern DECLSPEC SDL_Locale * SDLCALL SDL_GetPreferredLocales(void);
 }
 /* *INDENT-ON* */
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* _SDL_locale_h */
 

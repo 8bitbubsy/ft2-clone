@@ -28,9 +28,9 @@
 #ifndef SDL_filesystem_h_
 #define SDL_filesystem_h_
 
-#include "SDL_stdinc.h"
+#include <SDL2/SDL_stdinc.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
@@ -92,7 +92,7 @@ extern DECLSPEC char *SDLCALL SDL_GetBasePath(void);
  *
  * `C:\\Users\\bob\\AppData\\Roaming\\My Company\\My Program Name\\`
  *
- * On Linux, the string might look like"
+ * On Linux, the string might look like:
  *
  * `/home/bob/.local/share/My Program Name/`
  *
@@ -138,7 +138,7 @@ extern DECLSPEC char *SDLCALL SDL_GetPrefPath(const char *org, const char *app);
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_filesystem_h_ */
 

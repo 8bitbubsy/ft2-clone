@@ -28,18 +28,18 @@
 #ifndef SDL_events_h_
 #define SDL_events_h_
 
-#include "SDL_stdinc.h"
-#include "SDL_error.h"
-#include "SDL_video.h"
-#include "SDL_keyboard.h"
-#include "SDL_mouse.h"
-#include "SDL_joystick.h"
-#include "SDL_gamecontroller.h"
-#include "SDL_quit.h"
-#include "SDL_gesture.h"
-#include "SDL_touch.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_error.h>
+#include <SDL2/SDL_video.h>
+#include <SDL2/SDL_keyboard.h>
+#include <SDL2/SDL_mouse.h>
+#include <SDL2/SDL_joystick.h>
+#include <SDL2/SDL_gamecontroller.h>
+#include <SDL2/SDL_quit.h>
+#include <SDL2/SDL_gesture.h>
+#include <SDL2/SDL_touch.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -118,6 +118,7 @@ typedef enum
     SDL_JOYBUTTONUP,            /**< Joystick button released */
     SDL_JOYDEVICEADDED,         /**< A new joystick has been inserted into the system */
     SDL_JOYDEVICEREMOVED,       /**< An opened joystick has been removed */
+    SDL_JOYBATTERYUPDATED,      /**< Joystick battery level change */
 
     /* Game controller events */
     SDL_CONTROLLERAXISMOTION  = 0x650, /**< Game controller axis motion */
@@ -395,6 +396,16 @@ typedef struct SDL_JoyDeviceEvent
     Sint32 which;       /**< The joystick device index for the ADDED event, instance id for the REMOVED event */
 } SDL_JoyDeviceEvent;
 
+/**
+ *  \brief Joysick battery level change event structure (event.jbattery.*)
+ */
+typedef struct SDL_JoyBatteryEvent
+{
+    Uint32 type;        /**< ::SDL_JOYBATTERYUPDATED */
+    Uint32 timestamp;   /**< In milliseconds, populated using SDL_GetTicks() */
+    SDL_JoystickID which; /**< The joystick instance id */
+    SDL_JoystickPowerLevel level; /**< The joystick battery level */
+} SDL_JoyBatteryEvent;
 
 /**
  *  \brief Game controller axis motion event structure (event.caxis.*)
@@ -625,6 +636,7 @@ typedef union SDL_Event
     SDL_JoyHatEvent jhat;                   /**< Joystick hat event data */
     SDL_JoyButtonEvent jbutton;             /**< Joystick button event data */
     SDL_JoyDeviceEvent jdevice;             /**< Joystick device change event data */
+    SDL_JoyBatteryEvent jbattery;           /**< Joystick battery event data */
     SDL_ControllerAxisEvent caxis;          /**< Game Controller axis event data */
     SDL_ControllerButtonEvent cbutton;      /**< Game Controller button event data */
     SDL_ControllerDeviceEvent cdevice;      /**< Game Controller device event data */
@@ -1143,7 +1155,7 @@ extern DECLSPEC Uint32 SDLCALL SDL_RegisterEvents(int numevents);
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_events_h_ */
 
