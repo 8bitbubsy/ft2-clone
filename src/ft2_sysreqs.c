@@ -637,7 +637,7 @@ int16_t okBoxThreadSafe(int16_t type, const char *headline, const char *text)
 
 	// block multiple calls before they are completed (for safety)
 	while (okBoxData.active)
-		SDL_Delay(1000 / VBLANK_HZ);
+		SDL_Delay(1000 / VBLANK_HZ); // accuracy is not important here
 
 	okBoxData.type = type;
 	okBoxData.headline = headline;
@@ -645,7 +645,7 @@ int16_t okBoxThreadSafe(int16_t type, const char *headline, const char *text)
 	okBoxData.active = true;
 
 	while (okBoxData.active)
-		SDL_Delay(1000 / VBLANK_HZ);
+		SDL_Delay(1000 / VBLANK_HZ); // accuracy is not important here
 
 	return okBoxData.returnData;
 }
