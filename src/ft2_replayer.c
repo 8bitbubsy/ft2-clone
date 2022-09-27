@@ -2229,7 +2229,6 @@ void resumeMusic(void) // starts reading pattern data
 	musicPaused = false;
 }
 
-
 void tickReplayer(void) // periodically called from audio callback
 {
 	int32_t i;
