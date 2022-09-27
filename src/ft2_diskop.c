@@ -2253,7 +2253,7 @@ void showDiskOpScreen(void)
 		{
 			// nope, couldn't do that, set Disk Op. path to user/home directory
 #ifdef _WIN32
-			SHGetFolderPathW(NULL, CSIDL_PROFILE, NULL, 0, FReq_ModCurPathU);
+			SHGetFolderPathW(NULL, CSIDL_DESKTOPDIRECTORY, NULL, 0, FReq_ModCurPathU);
 #else
 			char *home = getenv("HOME");
 			if (home != NULL)
