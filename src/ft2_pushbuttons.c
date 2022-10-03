@@ -382,7 +382,7 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 
 	// ------ WAV RENDERER PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,         funcOnUp
-	{   3, 111, 73, 43, 0, 0, "Export",          NULL,    NULL,               pbWavRender },
+	{   3, 138, 73, 16, 0, 0, "Export",          NULL,    NULL,               pbWavRender },
 	{   3, 155, 73, 16, 0, 0, "Exit",            NULL,    NULL,               pbWavExit },
 	{ 253, 114, 18, 13, 1, 6, ARROW_UP_STRING,   NULL,    pbWavFreqUp,        NULL },
 	{ 270, 114, 18, 13, 1, 6, ARROW_DOWN_STRING, NULL,    pbWavFreqDown,      NULL },

@@ -14,6 +14,7 @@
 #include "ft2_mouse.h"
 #include "ft2_edit.h"
 #include "ft2_bmp.h"
+#include "ft2_wav_renderer.h"
 #include "ft2_structs.h"
 
 checkBox_t checkBoxes[NUM_CHECKBOXES] =
@@ -112,7 +113,11 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 113, 115,  75, 12, cbVsyncOff },
 	{ 113, 128,  78, 12, cbFullScreen },
 	{ 113, 141,  75, 12, cbStretchImage },
-	{ 113, 154,  78, 12, cbPixelFilter }
+	{ 113, 154,  78, 12, cbPixelFilter },
+
+	// WAV RENDERER BPM MODE
+	//x,   y,   w,   h,  funcOnUp
+	{   3, 112,  71, 24, cbToggleWavRenderBPMMode }
 };
 
 void drawCheckBox(uint16_t checkBoxID)
