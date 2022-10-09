@@ -28,11 +28,11 @@
 #ifndef SDL_touch_h_
 #define SDL_touch_h_
 
-#include "SDL_stdinc.h"
-#include "SDL_error.h"
-#include "SDL_video.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_error.h>
+#include <SDL2/SDL_video.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -96,6 +96,14 @@ extern DECLSPEC int SDLCALL SDL_GetNumTouchDevices(void);
 extern DECLSPEC SDL_TouchID SDLCALL SDL_GetTouchDevice(int index);
 
 /**
+ * Get the touch device name as reported from the driver or NULL if the index
+ * is invalid.
+ *
+ * \since This function is available since SDL 2.0.22.
+ */
+extern DECLSPEC const char* SDLCALL SDL_GetTouchName(int index);
+
+/**
  * Get the type of the given touch device.
  *
  * \since This function is available since SDL 2.0.10.
@@ -135,7 +143,7 @@ extern DECLSPEC SDL_Finger * SDLCALL SDL_GetTouchFinger(SDL_TouchID touchID, int
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_touch_h_ */
 

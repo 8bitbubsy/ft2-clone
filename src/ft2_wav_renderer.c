@@ -20,6 +20,7 @@
 #include "ft2_wav_renderer.h"
 #include "ft2_structs.h"
 
+#define UPDATE_VISUALS_AT_TICK 4
 #define TICKS_PER_RENDER_CHUNK 64
 
 enum
@@ -37,9 +38,10 @@ typedef struct wavHeader_t
 	uint32_t subchunk2ID, subchunk2Size;
 } wavHeader_t;
 
+static bool useLegacyBPM = false;
 static uint8_t WDBitDepth = 16, WDStartPos, WDStopPos, *wavRenderBuffer;
 static int16_t WDAmp;
-static uint32_t WDFrequency = DEFAULT_AUDIO_FREQ;
+static uint32_t WDFrequency = 44100;
 static SDL_Thread *thread;
 
 static void updateWavRenderer(void)
@@ -58,22 +60,9 @@ static void updateWavRenderer(void)
 	hexOut(237, 158, PAL_FORGRND, WDStopPos,  2);
 }
 
-void setWavRenderFrequency(int32_t freq)
+void cbToggleWavRenderBPMMode(void)
 {
-	WDFrequency = CLAMP(freq, MIN_WAV_RENDER_FREQ, MAX_WAV_RENDER_FREQ);
-	if (ui.wavRendererShown)
-		updateWavRenderer();
-}
-
-void setWavRenderBitDepth(uint8_t bitDepth)
-{
-	if (bitDepth == 16)
-		WDBitDepth = 16;
-	else if (bitDepth == 32)
-		WDBitDepth = 32;
-
-	if (ui.wavRendererShown)
-		updateWavRenderer();
+	useLegacyBPM ^= 1;
 }
 
 void updateWavRendererSettings(void) // called when changing config.boostLevel
@@ -91,6 +80,9 @@ void drawWavRenderer(void)
 	textOutShadow(156, 96, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
 	textOutShadow(221, 96, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
 
+	textOutShadow(19, 114, PAL_FORGRND, PAL_DSKTOP2, "Imprecise");
+	textOutShadow(4,  127, PAL_FORGRND, PAL_DSKTOP2, "BPM (FT2)");
+
 	textOutShadow(85, 116, PAL_FORGRND, PAL_DSKTOP2, "Frequency");
 	textOutShadow(85, 130, PAL_FORGRND, PAL_DSKTOP2, "Amplification");
 	textOutShadow(85, 144, PAL_FORGRND, PAL_DSKTOP2, "Start song position");
@@ -106,6 +98,8 @@ void drawWavRenderer(void)
 	showPushButton(PB_WAV_START_DOWN);
 	showPushButton(PB_WAV_END_UP);
 	showPushButton(PB_WAV_END_DOWN);
+
+	showCheckBox(CB_WAV_BPM_MODE);
 
 	// bitdepth radiobuttons
 
@@ -162,6 +156,7 @@ void hideWavRenderer(void)
 	hidePushButton(PB_WAV_START_DOWN);
 	hidePushButton(PB_WAV_END_UP);
 	hidePushButton(PB_WAV_END_DOWN);
+	hideCheckBox(CB_WAV_BPM_MODE);
 	hideRadioButtonGroup(RB_GROUP_WAV_RENDER_BITDEPTH);
 
 	ui.scopesShown = true;
@@ -325,7 +320,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 
 	uint32_t sampleCounter = 0;
 	bool overflow = false, renderDone = false;
-	uint8_t tickCounter = 4;
+	uint8_t tickCounter = UPDATE_VISUALS_AT_TICK;
 	int64_t tickSampleCounter64 = 0;
 
 	uint64_t bytesInFile = sizeof (wavHeader_t);
@@ -345,31 +340,43 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 				break;
 			}
 
-			if (tickSampleCounter64 <= 0) // new replayer tick
+			int32_t tickSamples;
+
+			if (useLegacyBPM)
 			{
 				dump_TickReplayer();
-				tickSampleCounter64 += audio.samplesPerTick64;
+				tickSamples = audio.samplesPerTick64 >> 32; // truncate
+			}
+			else
+			{
+				if (tickSampleCounter64 <= 0) // new replayer tick
+				{
+					dump_TickReplayer();
+					tickSampleCounter64 += audio.samplesPerTick64;
+				}
+
+				tickSamples = (tickSampleCounter64 + UINT32_MAX) >> 32; // ceil (rounded upwards)
 			}
 
-			int32_t remainingTick = (tickSampleCounter64 + UINT32_MAX) >> 32; // ceil (rounded upwards)
+			mixReplayerTickToBuffer(tickSamples, ptr8, WDBitDepth);
 
-			mixReplayerTickToBuffer(remainingTick, ptr8, WDBitDepth);
-			tickSampleCounter64 -= (int64_t)remainingTick << 32;
+			if (!useLegacyBPM)
+				tickSampleCounter64 -= (int64_t)tickSamples << 32;
 
-			remainingTick *= 2; // stereo
-			samplesInChunk += remainingTick;
-			sampleCounter += remainingTick;
+			tickSamples *= 2; // stereo
+			samplesInChunk += tickSamples;
+			sampleCounter += tickSamples;
 
 			// increase buffer pointer
 			if (WDBitDepth == 16)
 			{
-				ptr8 += remainingTick * sizeof (int16_t);
-				bytesInFile += remainingTick * sizeof (int16_t);
+				ptr8 += tickSamples * sizeof (int16_t);
+				bytesInFile += tickSamples * sizeof (int16_t);
 			}
 			else
 			{
-				ptr8 += remainingTick * sizeof (float);
-				bytesInFile += remainingTick * sizeof (float);
+				ptr8 += tickSamples * sizeof (float);
+				bytesInFile += tickSamples * sizeof (float);
 			}
 
 			if (bytesInFile >= INT32_MAX)
@@ -379,7 +386,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 				break;
 			}
 
-			if (++tickCounter >= 4)
+			if (++tickCounter >= UPDATE_VISUALS_AT_TICK)
 			{
 				tickCounter = 0;
 				updateVisuals();

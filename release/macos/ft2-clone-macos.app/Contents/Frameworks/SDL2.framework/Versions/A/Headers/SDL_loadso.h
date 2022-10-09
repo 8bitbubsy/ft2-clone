@@ -41,10 +41,10 @@
 #ifndef SDL_loadso_h_
 #define SDL_loadso_h_
 
-#include "SDL_stdinc.h"
-#include "SDL_error.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_error.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -108,7 +108,7 @@ extern DECLSPEC void SDLCALL SDL_UnloadObject(void *handle);
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_loadso_h_ */
 

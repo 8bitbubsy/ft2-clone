@@ -515,45 +515,48 @@ void drawTextBox(uint16_t textBoxID)
 	if (t->textPtr == NULL)
 		return;
 
-	// draw text mark background
-	if (textIsMarked())
+	// draw text mark background (if this is the textbox we last interacted with)
+	if (mouse.lastEditBox == textBoxID)
 	{
-		hideSprite(SPRITE_TEXT_CURSOR);
-
-		int32_t start = getTextMarkStart();
-		int32_t end = getTextMarkEnd();
-
-		assert(start < t->maxChars && end <= t->maxChars);
-
-		// find pixel start/length from markX1 and markX2
-
-		int32_t x1 = 0;
-		int32_t x2 = 0;
-
-		for (int32_t i = 0; i < end; i++)
+		if (textIsMarked())
 		{
-			const char ch = t->textPtr[i];
-			if (ch == '\0')
-				break;
+			hideSprite(SPRITE_TEXT_CURSOR);
 
-			cw = charWidth(ch);
-			if (i < start)
-				x1 += cw;
+			int32_t start = getTextMarkStart();
+			int32_t end = getTextMarkEnd();
 
-			x2 += cw;
-		}
+			assert(start < t->maxChars && end <= t->maxChars);
 
-		// render text mark background
-		if (x1 != x2)
-		{
-			start = x1;
-			const int32_t length = x2 - x1;
+			// find pixel start/length from markX1 and markX2
 
-			assert(start+length <= t->renderBufW);
+			int32_t x1 = 0;
+			int32_t x2 = 0;
 
-			uint8_t *ptr32 = &t->renderBuf[start];
-			for (uint16_t y = 0; y < t->renderBufH; y++, ptr32 += t->renderBufW)
-				memset(ptr32, PAL_TEXTMRK, length);
+			for (int32_t i = 0; i < end; i++)
+			{
+				const char ch = t->textPtr[i];
+				if (ch == '\0')
+					break;
+
+				cw = charWidth(ch);
+				if (i < start)
+					x1 += cw;
+
+				x2 += cw;
+			}
+
+			// render text mark background
+			if (x1 != x2)
+			{
+				start = x1;
+				const int32_t length = x2 - x1;
+
+				assert(start+length <= t->renderBufW);
+
+				uint8_t *ptr32 = &t->renderBuf[start];
+				for (uint16_t y = 0; y < t->renderBufH; y++, ptr32 += t->renderBufW)
+					memset(ptr32, PAL_TEXTMRK, length);
+			}
 		}
 	}
 
@@ -893,7 +896,7 @@ void handleTextEditControl(SDL_Keycode keycode)
 		{
 			// ALT+ENTER = toggle fullscreen, even while text editing
 			if (keyb.leftAltPressed)
-				toggleFullScreen();
+				toggleFullscreen();
 			else
 				exitTextEditing();
 		}

@@ -41,7 +41,7 @@ function compile() {
 }
 
 echo Compiling x86_64 binary, please wait patiently...
-CFLAGS="-target x86_64-apple-macos10.7 -mmacosx-version-min=10.7 -arch x86_64 -mmmx -mfpmath=sse -msse2 -O3"
+CFLAGS="-target x86_64-apple-macos10.9 -mmacosx-version-min=10.9 -arch x86_64 -mmmx -mfpmath=sse -msse2 -O3"
 LDFLAGS=
 export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
 compile $TARGET_X86_64
@@ -72,7 +72,7 @@ rm $TARGET_X86_64
 rm $TARGET_ARM64
 strip $TARGET_UNIVERSAL
 install_name_tool -change @rpath/SDL2.framework/Versions/A/SDL2 @executable_path/../Frameworks/SDL2.framework/Versions/A/SDL2 $TARGET_UNIVERSAL
-codesign -s - --entitlements pt2-clone.entitlements release/macOS/pt2-clone-macos.app
+codesign -s - --entitlements ft2-clone.entitlements release/macOS/ft2-clone-macos.app
 echo Done. The executable can be found in \'${RELEASE_MACOS_DIR}\' if everything went well.
 
 #

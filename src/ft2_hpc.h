@@ -6,7 +6,7 @@
 typedef struct
 {
 	uint64_t freq64;
-	double dFreq, dFreqMulMicro;
+	double dFreq, dFreqMulMicro, dFreqMulMs;
 } hpcFreq_t;
 
 typedef struct

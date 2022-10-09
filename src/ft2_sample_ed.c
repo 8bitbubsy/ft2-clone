@@ -153,26 +153,34 @@ bool cloneSample(sample_t *src, sample_t *dst)
 	smpPtr_t sp;
 
 	freeSmpData(dst);
-	memcpy(dst, src, sizeof (sample_t));
 
-	// zero out stuff that wasn't supposed to be cloned
-	dst->origDataPtr = dst->dataPtr = NULL;
-	dst->isFixed = false;
-	dst->fixedPos = 0;
-
-	// if source sample isn't empty, allocate room and copy it over (and fix it)
-	if (src->length > 0 && src->dataPtr != NULL)
+	if (src == NULL)
 	{
-		bool sample16Bit = !!(src->flags & SAMPLE_16BIT);
-		if (!allocateSmpDataPtr(&sp, src->length, sample16Bit))
-		{
-			dst->length = 0;
-			return false;
-		}
+		memset(dst, 0, sizeof (sample_t));
+	}
+	else
+	{
+		memcpy(dst, src, sizeof (sample_t));
 
-		setSmpDataPtr(dst, &sp);
-		memcpy(dst->dataPtr, src->dataPtr, src->length << sample16Bit);
-		fixSample(dst);
+		// zero out stuff that wasn't supposed to be cloned
+		dst->origDataPtr = dst->dataPtr = NULL;
+		dst->isFixed = false;
+		dst->fixedPos = 0;
+
+		// if source sample isn't empty, allocate room and copy it over (and fix it)
+		if (src->length > 0 && src->dataPtr != NULL)
+		{
+			bool sample16Bit = !!(src->flags & SAMPLE_16BIT);
+			if (!allocateSmpDataPtr(&sp, src->length, sample16Bit))
+			{
+				dst->length = 0;
+				return false;
+			}
+
+			setSmpDataPtr(dst, &sp);
+			memcpy(dst->dataPtr, src->dataPtr, src->length << sample16Bit);
+			fixSample(dst);
+		}
 	}
 
 	return true;
@@ -695,14 +703,18 @@ static bool getCopyBuffer(int32_t size, bool sample16Bit)
 
 static int32_t SDLCALL copySampleThread(void *ptr)
 {
-	sample_t *src = &instr[editor.srcInstr]->smp[editor.srcSmp];
-	sample_t *dst = &instr[editor.curInstr]->smp[editor.curSmp];
-
 	pauseAudio();
+
+	sample_t *src;
+	if (instr[editor.srcInstr] == NULL)
+		src = NULL;
+	else
+		src = &instr[editor.srcInstr]->smp[editor.srcSmp];
 
 	if (instr[editor.curInstr] == NULL && !allocateInstr(editor.curInstr))
 		goto error;
 
+	sample_t *dst = &instr[editor.curInstr]->smp[editor.curSmp];
 	if (!cloneSample(src, dst))
 		goto error;
 

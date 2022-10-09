@@ -29,10 +29,10 @@
 #ifndef SDL_rwops_h_
 #define SDL_rwops_h_
 
-#include "SDL_stdinc.h"
-#include "SDL_error.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_error.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -45,9 +45,6 @@ extern "C" {
 #define SDL_RWOPS_JNIFILE   3U  /**< Android asset */
 #define SDL_RWOPS_MEMORY    4U  /**< Memory stream */
 #define SDL_RWOPS_MEMORY_RO 5U  /**< Read-Only memory stream */
-#if defined(__VITA__)
-#define SDL_RWOPS_VITAFILE  6U  /**< Vita file */
-#endif
 
 /**
  * This is the read/write operation structure -- very basic.
@@ -101,7 +98,7 @@ typedef struct SDL_RWops
         {
             void *asset;
         } androidio;
-#elif defined(__WIN32__)
+#elif defined(__WIN32__) || defined(__GDK__)
         struct
         {
             SDL_bool append;
@@ -113,17 +110,6 @@ typedef struct SDL_RWops
                 size_t left;
             } buffer;
         } windowsio;
-#elif defined(__VITA__)
-        struct
-        {
-            int h;
-            struct
-            {
-                void *data;
-                size_t size;
-                size_t left;
-            } buffer;
-        } vitaio;
 #endif
 
 #ifdef HAVE_STDIO_H
@@ -848,7 +834,7 @@ extern DECLSPEC size_t SDLCALL SDL_WriteBE64(SDL_RWops * dst, Uint64 value);
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_rwops_h_ */
 

@@ -1,5 +1,5 @@
-/* Code taken from the OpenMPT project, which has a BSD
-** license which is compatible with this project.
+/* Code taken from the OpenMPT project, which has a BSD license which is
+** compatible with this project.
 **
 ** The code has been slightly modified.
 */
@@ -10,10 +10,7 @@
 #include <math.h>
 #include "ft2_windowed_sinc.h"
 
-// globalized
-float *fKaiserSinc = NULL;
-float *fDownSample1 = NULL;
-float *fDownSample2 = NULL;
+float *fKaiserSinc = NULL, *fDownSample1 = NULL, *fDownSample2 = NULL; // globalized
 
 static double Izero(double y) // Compute Bessel function Izero(y) using a series approximation
 {
@@ -71,7 +68,7 @@ bool calcWindowedSincTables(void)
 
 	getSinc(fKaiserSinc, 9.6377, 0.97);
 	getSinc(fDownSample1, 8.5, 0.5);
-	getSinc(fDownSample2, 2.7625, 0.425);
+	getSinc(fDownSample2, 7.3, 0.425);
 
 	return true;
 }

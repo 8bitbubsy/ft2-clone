@@ -14,8 +14,7 @@
 
 #define MAX_WAV_RENDER_SAMPLES_PER_TICK (((MAX_WAV_RENDER_FREQ * 5) / 2) / MIN_BPM)
 
-void setWavRenderFrequency(int32_t freq);
-void setWavRenderBitDepth(uint8_t bitDepth);
+void cbToggleWavRenderBPMMode(void);
 void updateWavRendererSettings(void);
 void drawWavRenderer(void);
 void showWavRenderer(void);

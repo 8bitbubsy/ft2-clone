@@ -29,41 +29,42 @@
 #ifndef SDL_h_
 #define SDL_h_
 
-#include "SDL_main.h"
-#include "SDL_stdinc.h"
-#include "SDL_assert.h"
-#include "SDL_atomic.h"
-#include "SDL_audio.h"
-#include "SDL_clipboard.h"
-#include "SDL_cpuinfo.h"
-#include "SDL_endian.h"
-#include "SDL_error.h"
-#include "SDL_events.h"
-#include "SDL_filesystem.h"
-#include "SDL_gamecontroller.h"
-#include "SDL_haptic.h"
-#include "SDL_hidapi.h"
-#include "SDL_hints.h"
-#include "SDL_joystick.h"
-#include "SDL_loadso.h"
-#include "SDL_log.h"
-#include "SDL_messagebox.h"
-#include "SDL_metal.h"
-#include "SDL_mutex.h"
-#include "SDL_power.h"
-#include "SDL_render.h"
-#include "SDL_rwops.h"
-#include "SDL_sensor.h"
-#include "SDL_shape.h"
-#include "SDL_system.h"
-#include "SDL_thread.h"
-#include "SDL_timer.h"
-#include "SDL_version.h"
-#include "SDL_video.h"
-#include "SDL_locale.h"
-#include "SDL_misc.h"
+#include <SDL2/SDL_main.h>
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_assert.h>
+#include <SDL2/SDL_atomic.h>
+#include <SDL2/SDL_audio.h>
+#include <SDL2/SDL_clipboard.h>
+#include <SDL2/SDL_cpuinfo.h>
+#include <SDL2/SDL_endian.h>
+#include <SDL2/SDL_error.h>
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_filesystem.h>
+#include <SDL2/SDL_gamecontroller.h>
+#include <SDL2/SDL_guid.h>
+#include <SDL2/SDL_haptic.h>
+#include <SDL2/SDL_hidapi.h>
+#include <SDL2/SDL_hints.h>
+#include <SDL2/SDL_joystick.h>
+#include <SDL2/SDL_loadso.h>
+#include <SDL2/SDL_log.h>
+#include <SDL2/SDL_messagebox.h>
+#include <SDL2/SDL_metal.h>
+#include <SDL2/SDL_mutex.h>
+#include <SDL2/SDL_power.h>
+#include <SDL2/SDL_render.h>
+#include <SDL2/SDL_rwops.h>
+#include <SDL2/SDL_sensor.h>
+#include <SDL2/SDL_shape.h>
+#include <SDL2/SDL_system.h>
+#include <SDL2/SDL_thread.h>
+#include <SDL2/SDL_timer.h>
+#include <SDL2/SDL_version.h>
+#include <SDL2/SDL_video.h>
+#include <SDL2/SDL_locale.h>
+#include <SDL2/SDL_misc.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -225,7 +226,7 @@ extern DECLSPEC void SDLCALL SDL_Quit(void);
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_h_ */
 

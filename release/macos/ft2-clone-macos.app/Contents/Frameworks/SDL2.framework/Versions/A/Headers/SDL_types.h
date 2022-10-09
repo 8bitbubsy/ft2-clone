@@ -26,4 +26,4 @@
  */
 
 /* DEPRECATED */
-#include "SDL_stdinc.h"
+#include <SDL2/SDL_stdinc.h>

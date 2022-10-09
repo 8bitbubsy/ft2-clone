@@ -28,14 +28,14 @@
  *  Header for the SDL thread management routines.
  */
 
-#include "SDL_stdinc.h"
-#include "SDL_error.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_error.h>
 
 /* Thread synchronization primitives */
-#include "SDL_atomic.h"
-#include "SDL_mutex.h"
+#include <SDL2/SDL_atomic.h>
+#include <SDL2/SDL_mutex.h>
 
-#if defined(__WIN32__)
+#if defined(__WIN32__) || defined(__GDK__)
 #include <process.h> /* _beginthreadex() and _endthreadex() */
 #endif
 #if defined(__OS2__) /* for _beginthread() and _endthread() */
@@ -46,7 +46,7 @@
 #endif
 #endif
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -88,7 +88,7 @@ typedef enum {
 typedef int (SDLCALL * SDL_ThreadFunction) (void *data);
 
 
-#if defined(__WIN32__)
+#if defined(__WIN32__) || defined(__GDK__)
 /**
  *  \file SDL_thread.h
  *
@@ -129,7 +129,7 @@ SDL_CreateThread(SDL_ThreadFunction fn, const char *name, void *data,
                  pfnSDL_CurrentEndThread pfnEndThread);
 
 extern DECLSPEC SDL_Thread *SDLCALL
-SDL_CreateThreadWithStackSize(int (SDLCALL * fn) (void *),
+SDL_CreateThreadWithStackSize(SDL_ThreadFunction fn,
                  const char *name, const size_t stacksize, void *data,
                  pfnSDL_CurrentBeginThread pfnBeginThread,
                  pfnSDL_CurrentEndThread pfnEndThread);
@@ -457,7 +457,7 @@ extern DECLSPEC void SDLCALL SDL_TLSCleanup(void);
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_thread_h_ */
 

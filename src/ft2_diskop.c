@@ -2251,13 +2251,18 @@ void showDiskOpScreen(void)
 		// first test if we can change the dir to the one stored in the config (if present)
 		if (FReq_ModCurPathU[0] == '\0' || UNICHAR_CHDIR(FReq_ModCurPathU) != 0)
 		{
-			// nope, couldn't do that, set Disk Op. path to user/home directory
+			// nope, couldn't do that, set Disk Op. path to the user's desktop directory
 #ifdef _WIN32
-			SHGetFolderPathW(NULL, CSIDL_PROFILE, NULL, 0, FReq_ModCurPathU);
+			SHGetFolderPathW(NULL, CSIDL_DESKTOPDIRECTORY, NULL, 0, FReq_ModCurPathU);
 #else
 			char *home = getenv("HOME");
 			if (home != NULL)
+			{
+				UNICHAR_CHDIR(home);
 				UNICHAR_STRCPY(FReq_ModCurPathU, home);
+
+				UNICHAR_STRCAT(FReq_ModCurPathU, "/Desktop");
+			}
 #endif
 			UNICHAR_CHDIR(FReq_ModCurPathU);
 		}

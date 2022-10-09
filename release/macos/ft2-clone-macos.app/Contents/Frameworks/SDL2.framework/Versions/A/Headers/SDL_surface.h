@@ -28,13 +28,13 @@
 #ifndef SDL_surface_h_
 #define SDL_surface_h_
 
-#include "SDL_stdinc.h"
-#include "SDL_pixels.h"
-#include "SDL_rect.h"
-#include "SDL_blendmode.h"
-#include "SDL_rwops.h"
+#include <SDL2/SDL_stdinc.h>
+#include <SDL2/SDL_pixels.h>
+#include <SDL2/SDL_rect.h>
+#include <SDL2/SDL_blendmode.h>
+#include <SDL2/SDL_rwops.h>
 
-#include "begin_code.h"
+#include <SDL2/begin_code.h>
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +60,8 @@ extern "C" {
  *  Evaluates to true if the surface needs to be locked before access.
  */
 #define SDL_MUSTLOCK(S) (((S)->flags & SDL_RLEACCEL) != 0)
+
+typedef struct SDL_BlitMap SDL_BlitMap;  /* this is an opaque type. */
 
 /**
  * \brief A collection of pixels used in software blitting.
@@ -88,7 +90,7 @@ typedef struct SDL_Surface
     SDL_Rect clip_rect;         /**< Read-only */
 
     /** info for fast blit mapping to other surfaces */
-    struct SDL_BlitMap *map;    /**< Private */
+    SDL_BlitMap *map;           /**< Private */
 
     /** Reference count -- used when freeing surface */
     int refcount;               /**< Read-mostly */
@@ -988,7 +990,7 @@ extern DECLSPEC SDL_YUV_CONVERSION_MODE SDLCALL SDL_GetYUVConversionModeForResol
 #ifdef __cplusplus
 }
 #endif
-#include "close_code.h"
+#include <SDL2/close_code.h>
 
 #endif /* SDL_surface_h_ */
 
