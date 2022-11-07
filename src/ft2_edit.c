@@ -118,7 +118,15 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 		}
 
 		if (i == KEY2VOL_ENTRIES)
-			i = -1; // invalid key for slot
+		{
+			// volume column key not found, let's try a hack for '-' and '+' keys first
+			if (scancode == SDL_SCANCODE_MINUS)
+				i = 5;
+			else if (scancode == SDL_SCANCODE_EQUALS)
+				i = 6;
+			else
+				i = -1; // invalid key for slot
+		}
 	}
 	else if (cursor.object == CURSOR_EFX0)
 	{
