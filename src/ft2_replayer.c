@@ -311,7 +311,7 @@ void setFrequencyTable(bool linearPeriodsFlag)
 	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
 	{
 		// update "frequency table" radiobutton, if it's shown
-		setConfigIORadioButtonStates(); 
+		setConfigIORadioButtonStates();
 
 		// update mid-C freq. in instr. editor (it can slightly differ between Amiga/linear)
 		if (ui.instEditorShown)
@@ -404,7 +404,7 @@ void calcReplayerLogTab(void) // for linear period -> hz calculation
 		dExp2MulTab[i] = 1.0 / exp2(i); // 1/(2^i)
 
 	for (int32_t i = 0; i < 4*12*16; i++)
-		dLogTab[i] = 8363.0 * exp2(i / 768.0) * 256.0;
+		dLogTab[i] = (8363.0 * 256.0) * exp2(i / (4.0 * 12.0 * 16.0));
 }
 
 void calcReplayerVars(int32_t audioFreq)
