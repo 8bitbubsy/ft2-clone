@@ -269,8 +269,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 	// if destination volume and current volume is the same (and we have no sample trigger), don't do ramp
 	if (fVolumeL == v->fVolumeL && fVolumeR == v->fVolumeR && !(status & IS_Trigger))
 	{
-		// there is no volume change
-		v->volumeRampLength = 0;
+		v->volumeRampLength = 0; // there is no volume change
 	}
 	else
 	{
@@ -982,41 +981,28 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 
 static bool setupAudioBuffers(void)
 {
-	const uint32_t sampleSize = sizeof (float);
+	audio.fMixBufferL = (float *)calloc(MAX_WAV_RENDER_SAMPLES_PER_TICK, sizeof (float));
+	audio.fMixBufferR = (float *)calloc(MAX_WAV_RENDER_SAMPLES_PER_TICK, sizeof (float));
 
-	audio.fMixBufferLUnaligned = (float *)MALLOC_PAD(MAX_WAV_RENDER_SAMPLES_PER_TICK * sampleSize, 256);
-	audio.fMixBufferRUnaligned = (float *)MALLOC_PAD(MAX_WAV_RENDER_SAMPLES_PER_TICK * sampleSize, 256);
-
-	if (audio.fMixBufferLUnaligned == NULL || audio.fMixBufferRUnaligned == NULL)
+	if (audio.fMixBufferL == NULL || audio.fMixBufferR == NULL)
 		return false;
-
-	// make aligned main pointers
-	audio.fMixBufferL = (float *)ALIGN_PTR(audio.fMixBufferLUnaligned, 256);
-	audio.fMixBufferR = (float *)ALIGN_PTR(audio.fMixBufferRUnaligned, 256);
-
-	// clear buffers
-	memset(audio.fMixBufferL, 0, MAX_WAV_RENDER_SAMPLES_PER_TICK * sampleSize);
-	memset(audio.fMixBufferR, 0, MAX_WAV_RENDER_SAMPLES_PER_TICK * sampleSize);
 
 	return true;
 }
 
 static void freeAudioBuffers(void)
 {
-	if (audio.fMixBufferLUnaligned != NULL)
+	if (audio.fMixBufferL != NULL)
 	{
-		free(audio.fMixBufferLUnaligned);
-		audio.fMixBufferLUnaligned = NULL;
+		free(audio.fMixBufferL);
+		audio.fMixBufferL = NULL;
 	}
 
-	if (audio.fMixBufferRUnaligned != NULL)
+	if (audio.fMixBufferR != NULL)
 	{
-		free(audio.fMixBufferRUnaligned);
-		audio.fMixBufferRUnaligned = NULL;
+		free(audio.fMixBufferR);
+		audio.fMixBufferR = NULL;
 	}
-
-	audio.fMixBufferL = NULL;
-	audio.fMixBufferR = NULL;
 }
 
 void updateSendAudSamplesRoutine(bool lockMixer)

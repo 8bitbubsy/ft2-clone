@@ -795,13 +795,11 @@ void closeVideo(void)
 		video.window = NULL;
 	}
 
-	if (video.frameBufferUnaligned != NULL)
+	if (video.frameBuffer != NULL)
 	{
-		free(video.frameBufferUnaligned);
-		video.frameBufferUnaligned = NULL;
+		free(video.frameBuffer);
+		video.frameBuffer = NULL;
 	}
-
-	video.frameBuffer = NULL;
 }
 
 void setWindowSizeFromConfig(bool updateRenderer)
@@ -1030,15 +1028,12 @@ bool setupRenderer(void)
 	}
 
 	// framebuffer used by SDL (for texture)
-	video.frameBufferUnaligned = (uint32_t *)MALLOC_PAD(SCREEN_W * SCREEN_H * sizeof (int32_t), 256);
-	if (video.frameBufferUnaligned == NULL)
+	video.frameBuffer = (uint32_t *)malloc(SCREEN_W * SCREEN_H * sizeof (int32_t));
+	if (video.frameBuffer == NULL)
 	{
 		showErrorMsgBox("Not enough memory!");
 		return false;
 	}
-
-	// we want an aligned pointer
-	video.frameBuffer = (uint32_t *)ALIGN_PTR(video.frameBufferUnaligned, 256);
 
 	if (!setupSprites())
 		return false;

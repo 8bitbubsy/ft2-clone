@@ -40,7 +40,7 @@ typedef struct audio_t
 	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, samplesPerTickFrac, musicTimeSpeedVal;
 	uint64_t tickTime64, tickTime64Frac;
 	float fRampQuickVolMul, fRampTickMul, fRampTickMulTab[(MAX_BPM-MIN_BPM)+1];
-	float *fMixBufferL, *fMixBufferR, *fMixBufferLUnaligned, *fMixBufferRUnaligned;
+	float *fMixBufferL, *fMixBufferR;
 	double dHz2MixDeltaMul, dAudioLatencyMs;
 
 	SDL_AudioDeviceID dev;
