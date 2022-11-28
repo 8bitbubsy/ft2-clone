@@ -57,7 +57,7 @@ typedef struct
 	uint32_t volumeRampLength;
 
 	uintCPUWord_t positionFrac, delta, oldDelta, scopeDelta;
-#
+
 	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;
 	const int16_t *leftEdgeTaps16;
@@ -66,12 +66,22 @@ typedef struct
 	float fVolume, fVolumeL, fVolumeR, fVolumeLDelta, fVolumeRDelta, fVolumeLTarget, fVolumeRTarget;
 } voice_t;
 
-typedef struct pattSyncData_t
+#ifdef _MSC_VER
+#pragma pack(push)
+#pragma pack(1)
+#endif
+typedef struct pattSyncData_t // used for audio/video sync queue (pack to save RAM)
 {
-	uint8_t pattNum, globalVolume, songPos, tick, speed, row;
-	uint16_t BPM;
+	uint8_t pattNum, globalVolume, songPos, tick, speed, row, BPM;
 	uint64_t timestamp;
-} pattSyncData_t;
+}
+#ifdef __GNUC__
+__attribute__ ((packed))
+#endif
+pattSyncData_t;
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 typedef struct pattSync_t
 {

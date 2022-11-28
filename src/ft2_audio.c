@@ -885,7 +885,7 @@ static void fillVisualsSyncBuffer(void)
 		pattSyncData.row = song.curReplayerRow;
 		pattSyncData.pattNum = song.curReplayerPattNum;
 		pattSyncData.songPos = song.curReplayerSongPos;
-		pattSyncData.BPM = song.BPM;
+		pattSyncData.BPM = (uint8_t)song.BPM;
 		pattSyncData.speed = (uint8_t)song.speed;
 		pattSyncData.globalVolume = (uint8_t)song.globalVolume;
 		pattSyncData.timestamp = audio.tickTime64;
