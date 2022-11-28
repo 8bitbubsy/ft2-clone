@@ -2215,6 +2215,15 @@ static void getNextPos(void)
 			song.pattNum = song.orders[song.songPos & 0xFF];
 			song.currNumRows = patternNumRows[song.pattNum & 0xFF];
 		}
+
+		/*
+		** Because of a bug in FT2, pattern loop commands will manipulate
+		** the row the next pattern will begin at (should be 0).
+		** However, this can overflow the number of rows (length) for that
+		** pattern and cause out-of-bounds reads. Set to row 0 in this case.
+		*/
+		if (song.row >= song.currNumRows)
+			song.row = 0;
 	}
 }
 
