@@ -10,11 +10,11 @@
 		</data>
 		<key>Resources/CMake/sdl2-config.cmake</key>
 		<data>
-		HIVCk4pjc2SA8Q0CeOuI9See/ig=
+		XSGoflduFZf82qGl/+WskdKOBw0=
 		</data>
 		<key>Resources/Info.plist</key>
 		<data>
-		cbKsc5qfmkednkZS7bwfnSPYv6E=
+		G5afrcjIQY7IyFa2ddwCUvyFlPc=
 		</data>
 		<key>Resources/License.txt</key>
 		<data>
@@ -26,7 +26,7 @@
 		</data>
 		<key>Resources/default.metallib</key>
 		<data>
-		50m0avYLiIBc6a4gWqXN3tnFlpU=
+		4l5HIH0YrJO09WMMo9BAQG+BSjY=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -57,11 +57,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			MtIOolKuZrr/MtJ6Z+xtKqdoxy4=
+			S7vGRTzBHVXKyXwYhhvUpfME4bs=
 			</data>
 			<key>hash2</key>
 			<data>
-			mUsfflKl2MaXdbOJS7PEhdEuZLHLYsbJDnSTyB1MVow=
+			yyqMgvtuNLSklwq2qM62TTuiLks55E6BNKOB08e6EzQ=
 			</data>
 		</dict>
 		<key>Headers/SDL_audio.h</key>
@@ -563,11 +563,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			64trCQYpUO9fsjyAvv5Nq2/dfe8=
+			gJvueJVaGjBAoAUZ/ZZDSlXPmzk=
 			</data>
 			<key>hash2</key>
 			<data>
-			4/jo/mbVJ1mMXX+pJeEEssA8uR5Q9NPMHHrmO982jmo=
+			GDPtrgtgxZaH6s2Tg8aNSgKCEYdL5Dyz4FTbKb5GiT0=
 			</data>
 		</dict>
 		<key>Headers/SDL_rwops.h</key>
@@ -706,11 +706,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			EyeV0WK7AxR0Z06kMqeNkDV1k/k=
+			A9pTspEqTiDa5Jo5uKp0lRdX8jo=
 			</data>
 			<key>hash2</key>
 			<data>
-			R7JfwFDH+owMGrurdDlPvA/S6LV896v6hB7VzS6dtOI=
+			maEtnUY+anHONL0tYQVIhjvxe4bQ8GEd8NzqfLyr8NE=
 			</data>
 		</dict>
 		<key>Headers/SDL_video.h</key>
@@ -772,22 +772,22 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			HIVCk4pjc2SA8Q0CeOuI9See/ig=
+			XSGoflduFZf82qGl/+WskdKOBw0=
 			</data>
 			<key>hash2</key>
 			<data>
-			DQWiQSoU3Pk8K0eKagpm71Vyr+2ssJ4/qlUgXfc1Mmo=
+			oO7paOWdt4AGUK6i7ifbCbWdp4I741YtJf3U2SIi9ro=
 			</data>
 		</dict>
 		<key>Resources/Info.plist</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			cbKsc5qfmkednkZS7bwfnSPYv6E=
+			G5afrcjIQY7IyFa2ddwCUvyFlPc=
 			</data>
 			<key>hash2</key>
 			<data>
-			jc5irzEV/JMBrsSVKo1Y4EpkPvKJb8KqEBgmWS9RBoc=
+			x80g0iIVcnoeE4ew8iJZBg8GD0oM9s7EhHkplaKUqz8=
 			</data>
 		</dict>
 		<key>Resources/License.txt</key>
@@ -816,11 +816,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			50m0avYLiIBc6a4gWqXN3tnFlpU=
+			4l5HIH0YrJO09WMMo9BAQG+BSjY=
 			</data>
 			<key>hash2</key>
 			<data>
-			w8jS3DIw3CKDRfJsmiA4MWFVPhdpi2zi+WEO1Zfw8+8=
+			mG4gq0ZWuiydHgb5Xh0OvlnGHDkCdvaqQKnD5G1m7xc=
 			</data>
 		</dict>
 	</dict>

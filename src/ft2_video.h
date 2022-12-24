@@ -32,7 +32,6 @@ typedef struct video_t
 	uint8_t upscaleFactor;
 	bool vsync60HzPresent, windowHidden;
 	int32_t renderX, renderY, renderW, renderH, displayW, displayH, windowW, windowH;
-	uint32_t *frameBufferUnaligned;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
 	SDL_Surface *iconSurface;

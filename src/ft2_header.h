@@ -12,7 +12,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.59"
+#define PROG_VER_STR "1.62"
 
 // do NOT change these! It will only mess things up...
 
@@ -68,9 +68,6 @@
 
 // fast 32-bit -> 16-bit clamp
 #define CLAMP16(i) if ((int16_t)(i) != i) i = 0x7FFF ^ (i >> 31)
-
-#define ALIGN_PTR(p, x) (((uintptr_t)(p) + ((x)-1)) & ~((x)-1))
-#define MALLOC_PAD(size, pad) (malloc((size) + (pad)))
 
 #define SWAP16(x) \
 ( \
