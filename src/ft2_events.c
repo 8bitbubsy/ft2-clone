@@ -368,7 +368,7 @@ void handleWaitVblQuirk(SDL_Event *event)
 
 		// reset vblank end time if we minimize window
 		if (event->window.event == SDL_WINDOWEVENT_MINIMIZED || event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
-			hpc_ResetEndTime(&video.vblankHpc);
+			hpc_ResetCounters(&video.vblankHpc);
 	}
 }
 

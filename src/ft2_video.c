@@ -187,7 +187,7 @@ void endFPSCounter(void)
 		if (frameTimeDiff64 > INT32_MAX)
 			frameTimeDiff64 = INT32_MAX;
 
-		dRunningFrameDuration += (int32_t)frameTimeDiff64 / (hpcFreq.dFreq / 1000.0);
+		dRunningFrameDuration += (int32_t)frameTimeDiff64 * hpcFreq.dFreqMulMs;
 	}
 }
 
