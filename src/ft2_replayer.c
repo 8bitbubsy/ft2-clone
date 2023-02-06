@@ -839,7 +839,7 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 	}
 
 	// *** PANNING ENVELOPE ***
-	if (ins->volEnvFlags & ENV_SUSTAIN) // What..? An FT2 bug!?
+	if (ins->volEnvFlags & ENV_SUSTAIN) // FT2 PLAYER BUG: Should've been ins->panEnvFlags
 	{
 		ch->panEnvTick = param-1;
 
