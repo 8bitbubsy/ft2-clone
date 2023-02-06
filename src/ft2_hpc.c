@@ -99,7 +99,6 @@ void hpc_SetDurationInHz(hpc_t *hpc, uint32_t hz)
 	hpc->durationFrac = getFrac64FromU64DivU32(hpcFreq.freq64, hz) >> 1;
 
 	hpc->resetFrame = hz * 3600; // reset counters every hour
-
 }
 
 void hpc_ResetCounters(hpc_t *hpc)
