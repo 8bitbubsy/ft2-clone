@@ -125,7 +125,7 @@
 
 // 2-tap linear interpolation (like FT2)
 
-/* 8bitbubsy: It may look like we are potentially going out of bounds while looking up the sample points,
+/* It may look like we are potentially going out of bounds while looking up the sample points,
 ** but the sample data has a fixed sample after the end (sampleEnd/loopEnd).
 */
 
@@ -160,7 +160,7 @@
 
 // 8-tap windowed-sinc interpolation (better quality, through LUT: mixer/ft2_windowed_sinc.c)
 
-/* 8bitbubsy: It may look like we are potentially going out of bounds while looking up the sample points,
+/* It may look like we are potentially going out of bounds while looking up the sample points,
 ** but the sample data is actually padded on both the left (negative) and right side, where correct tap
 ** samples are stored according to loop mode (or no loop).
 **

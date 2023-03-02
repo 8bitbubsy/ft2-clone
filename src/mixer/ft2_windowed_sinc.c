@@ -16,7 +16,7 @@ static double Izero(double y) // Compute Bessel function Izero(y) using a series
 {
 	double s = 1.0, ds = 1.0, d = 0.0;
 
-	const double epsilon = 1E-9; // 8bb: 1E-7 -> 1E-9 for added precision (still fast to calculate)
+	const double epsilon = 1E-9; // 8bitbubsy: 1E-7 -> 1E-9 for added precision (still fast to calculate)
 
 	do
 	{
@@ -32,7 +32,7 @@ static double Izero(double y) // Compute Bessel function Izero(y) using a series
 static void getSinc(float *fLUTPtr, const double beta, const double cutoff)
 {
 	const double izeroBeta = Izero(beta);
-	const double kPi = 4.0 * atan(1.0) * cutoff; // M_PI can't be trusted
+	const double kPi = (4.0 * atan(1.0)) * cutoff; // M_PI can't be trusted
 
 	for (int32_t i = 0; i < SINC_LUT_LEN; i++)
 	{
@@ -68,7 +68,7 @@ bool calcWindowedSincTables(void)
 
 	getSinc(fKaiserSinc, 9.6377, 0.97);
 	getSinc(fDownSample1, 8.5, 0.5);
-	getSinc(fDownSample2, 7.3, 0.425);
+	getSinc(fDownSample2, 7.3, 0.425); // 8bitbubsy: tweaked the beta value (was aliasing quite a bit)
 
 	return true;
 }

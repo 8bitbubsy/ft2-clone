@@ -200,7 +200,7 @@ void showAboutScreen(void) // called once when About screen is opened
 	customText3X = (SCREEN_W-8) - textWidth(customText3);
 	customText1Y = 157;
 	customText2Y = 157-12;
-	customText3Y = 157;	
+	customText3Y = 157;
 
 	aboutInit();
 	frameCounter = 0;

@@ -59,9 +59,10 @@ typedef struct quitType_t
 
 #define QUIT_MESSAGES 11
 
-// 8bitbubsy: Removed unsuitable/offensive ones...
 static quitType_t quitMessage[QUIT_MESSAGES] =
 {
+	// removed unsuitable/offensive ones...
+
 	{ "Do you really want to quit?", 2 },
 	{ "Tired already?", 2 },
 	{ "Dost thou wish to leave with such hasty abandon?", 2 },
