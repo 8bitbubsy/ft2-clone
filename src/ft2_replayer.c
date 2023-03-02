@@ -424,18 +424,18 @@ void calcReplayerVars(int32_t audioFreq)
 		const double dBpmHz = bpm / 2.5;
 		const double dSamplesPerTick = audioFreq / dBpmHz;
 
-		// convert to 32.32 fixed-point
-		audio.samplesPerTick64Tab[i] = (int64_t)((dSamplesPerTick * (UINT32_MAX+1.0)) + 0.5); // rounded
+		double dSamplesPerTickInt;
+		double dSamplesPerTickFrac = modf(dSamplesPerTick, &dSamplesPerTickInt);
+
+		audio.samplesPerTickIntTab[i] = (uint32_t)dSamplesPerTickInt;
+		audio.samplesPerTickFracTab[i] = (uint64_t)((dSamplesPerTickFrac * BPM_FRAC_SCALE) + 0.5); // rounded
 
 		// BPM Hz -> tick length for performance counter (syncing visuals to audio)
 		double dTimeInt;
 		double dTimeFrac = modf(editor.dPerfFreq / dBpmHz, &dTimeInt);
-		const int32_t timeInt = (int32_t)dTimeInt;
 
-		dTimeFrac = floor((UINT32_MAX+1.0) * dTimeFrac); // fractional part (scaled to 0..2^32-1)
-
-		audio.tickTimeTab[i] = (uint32_t)timeInt;
-		audio.tickTimeFracTab[i] = (uint32_t)dTimeFrac;
+		audio.tickTimeIntTab[i] = (uint32_t)dTimeInt;
+		audio.tickTimeFracTab[i] = (uint64_t)((dTimeFrac * TICK_TIME_FRAC_SCALE) + 0.5);
 
 		// for calculating volume ramp length for tick-lenghted ramps
 		const int32_t samplesPerTickRounded = (int32_t)(dSamplesPerTick + 0.5); // must be rounded
@@ -2254,7 +2254,14 @@ void tickReplayer(void) // periodically called from audio callback
 
 	// for song playback counter (hh:mm:ss)
 	if (song.BPM >= MIN_BPM && song.BPM <= MAX_BPM)
-		song.musicTime64 += musicTimeTab64[song.BPM-MIN_BPM];
+	{
+		song.playbackSecondsFrac += musicTimeTab52[song.BPM-MIN_BPM];
+		if (song.playbackSecondsFrac >= 1ULL << 52)
+		{
+			song.playbackSecondsFrac &= (1ULL << 52)-1;
+			song.playbackSeconds++;
+		}
+	}
 
 	bool tickZero = false;
 	if (--song.tick == 0)
@@ -2855,7 +2862,8 @@ void startPlaying(int8_t mode, int16_t row)
 	if (song.speed == 0)
 		song.speed = song.initialSpeed;
 
-	audio.tickSampleCounter64 = 0; // zero tick sample counter so that it will instantly initiate a tick
+	audio.tickSampleCounter = 0; // zero tick sample counter so that it will instantly initiate a tick
+	audio.tickSampleCounterFrac = 0;
 
 	unlockMixerCallback();
 

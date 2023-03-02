@@ -2135,7 +2135,9 @@ void drawIDAdd(void)
 
 void resetPlaybackTime(void)
 {
-	song.musicTime64 = 0;
+	song.playbackSeconds = 0;
+	song.playbackSecondsFrac = 0;
+
 	last_TimeH = 0;
 	last_TimeM = 0;
 	last_TimeS = 0;
@@ -2145,8 +2147,7 @@ void drawPlaybackTime(void)
 {
 	if (songPlaying)
 	{
-		const uint32_t ms1024 = song.musicTime64 >> 32; // milliseconds (scaled from 1000 to 1024)
-		uint32_t seconds = ms1024 >> 10;
+		uint32_t seconds = song.playbackSeconds;
 
 		last_TimeH = seconds / 3600;
 		seconds -= last_TimeH * 3600;

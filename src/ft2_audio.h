@@ -24,6 +24,16 @@ enum
 
 #define MAX_AUDIO_DEVICES 99
 
+// more bits makes little sense here
+
+#define BPM_FRAC_BITS 52
+#define BPM_FRAC_SCALE (1ULL << BPM_FRAC_BITS)
+#define BPM_FRAC_MASK (BPM_FRAC_SCALE-1)
+
+#define TICK_TIME_FRAC_BITS 52
+#define TICK_TIME_FRAC_SCALE (1ULL << TICK_TIME_FRAC_BITS)
+#define TICK_TIME_FRAC_MASK (TICK_TIME_FRAC_SCALE-1)
+
 // for audio/video sync queue. (2^n-1 - don't change this! Queue buffer is already BIG in size)
 #define SYNC_QUEUE_LEN 4095
 
@@ -35,10 +45,16 @@ typedef struct audio_t
 	bool linearPeriodsFlag, rescanAudioDevicesSupported;
 	volatile uint8_t interpolationType;
 	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
-	uint32_t tickTimeTab[(MAX_BPM-MIN_BPM)+1], tickTimeFracTab[(MAX_BPM-MIN_BPM)+1];
-	int64_t tickSampleCounter64, samplesPerTick64, samplesPerTick64Tab[(MAX_BPM-MIN_BPM)+1];
-	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, samplesPerTickFrac, musicTimeSpeedVal;
+	uint32_t freq, musicTimeSpeedVal;
+
+	uint32_t tickSampleCounter, samplesPerTickInt, samplesPerTickIntTab[(MAX_BPM-MIN_BPM)+1];
+	uint64_t tickSampleCounterFrac, samplesPerTickFrac, samplesPerTickFracTab[(MAX_BPM-MIN_BPM)+1];
+
+	uint32_t audLatencyPerfValInt, tickTimeIntTab[(MAX_BPM-MIN_BPM)+1];
+	uint64_t audLatencyPerfValFrac, tickTimeFracTab[(MAX_BPM-MIN_BPM)+1];
+
 	uint64_t tickTime64, tickTime64Frac;
+
 	float fRampQuickVolMul, fRampTickMul, fRampTickMulTab[(MAX_BPM-MIN_BPM)+1];
 	float *fMixBufferL, *fMixBufferR;
 	double dHz2MixDeltaMul, dAudioLatencyMs;

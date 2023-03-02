@@ -12,8 +12,6 @@
 #define MAX_WAV_RENDER_FREQ 48000
 #endif
 
-#define MAX_WAV_RENDER_SAMPLES_PER_TICK (((MAX_WAV_RENDER_FREQ * 5) / 2) / MIN_BPM)
-
 void cbToggleWavRenderBPMMode(void);
 void updateWavRendererSettings(void);
 void drawWavRenderer(void);

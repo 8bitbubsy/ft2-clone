@@ -274,7 +274,9 @@ typedef struct song_t
 	int16_t songPos, pattNum, row, currNumRows;
 	uint16_t songLength, songLoopStart, BPM, speed, initialSpeed, globalVolume, tick;
 	int32_t numChannels;
-	uint64_t musicTime64;
+
+	uint32_t playbackSeconds;
+	uint64_t playbackSecondsFrac;
 } song_t;
 
 double getSampleC4Rate(sample_t *s);

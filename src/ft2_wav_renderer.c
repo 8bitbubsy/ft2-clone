@@ -170,11 +170,11 @@ void exitWavRenderer(void)
 
 static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 {
-	const int32_t maxSamplesPerTick = (const int32_t)ceil((frq * 2.5) / MIN_BPM); // absolute max samples per tick
-	uint32_t sampleSize = (WDBitDepth / 8) * 2; // 2 channels
+	int32_t bytesPerSample = (WDBitDepth / 8) * 2; // 2 channels
+	int32_t maxSamplesPerTick = (int32_t)ceil(frq / (MIN_BPM / 2.5)) + 1;
 
 	// *2 for stereo
-	wavRenderBuffer = (uint8_t *)malloc((TICKS_PER_RENDER_CHUNK * maxSamplesPerTick) * sampleSize);
+	wavRenderBuffer = (uint8_t *)malloc((TICKS_PER_RENDER_CHUNK * maxSamplesPerTick) * bytesPerSample);
 	if (wavRenderBuffer == NULL)
 		return false;
 
@@ -261,7 +261,7 @@ static bool dump_EndOfTune(int16_t endSongPos)
 {
 	bool returnValue = (editor.wavReachedEndFlag && song.row == 0 && song.tick == 1) || (song.speed == 0);
 
-	// 8bitbubsy: FT2 bugfix for EEx (pattern delay) on first row of a pattern
+	// FT2 bugfix for EEx (pattern delay) on first row of a pattern
 	if (song.pattDelTime2 > 0)
 		returnValue = false;
 
@@ -321,7 +321,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	uint32_t sampleCounter = 0;
 	bool overflow = false, renderDone = false;
 	uint8_t tickCounter = UPDATE_VISUALS_AT_TICK;
-	int64_t tickSampleCounter64 = 0;
+	uint64_t tickSamplesFrac = 0;
 
 	uint64_t bytesInFile = sizeof (wavHeader_t);
 
@@ -340,28 +340,20 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 				break;
 			}
 
-			int32_t tickSamples;
+			dump_TickReplayer();
+			uint32_t tickSamples = audio.samplesPerTickInt;
 
-			if (useLegacyBPM)
+			if (!useLegacyBPM)
 			{
-				dump_TickReplayer();
-				tickSamples = audio.samplesPerTick64 >> 32; // truncate
-			}
-			else
-			{
-				if (tickSampleCounter64 <= 0) // new replayer tick
+				tickSamplesFrac += audio.samplesPerTickFrac;
+				if (tickSamplesFrac >= BPM_FRAC_SCALE)
 				{
-					dump_TickReplayer();
-					tickSampleCounter64 += audio.samplesPerTick64;
+					tickSamplesFrac &= BPM_FRAC_MASK;
+					tickSamples++;
 				}
-
-				tickSamples = (tickSampleCounter64 + UINT32_MAX) >> 32; // ceil (rounded upwards)
 			}
 
 			mixReplayerTickToBuffer(tickSamples, ptr8, WDBitDepth);
-
-			if (!useLegacyBPM)
-				tickSampleCounter64 -= (int64_t)tickSamples << 32;
 
 			tickSamples *= 2; // stereo
 			samplesInChunk += tickSamples;
