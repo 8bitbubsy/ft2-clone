@@ -115,7 +115,8 @@
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>SDL2main.lib;SDL2.lib;shlwapi.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
-      <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
+      <MinimumRequiredVersion>
+      </MinimumRequiredVersion>
       <FullProgramDatabaseFile>
       </FullProgramDatabaseFile>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
@@ -212,7 +213,8 @@
       <AdditionalDependencies>SDL2main.lib;SDL2.lib;shlwapi.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
-      <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
+      <MinimumRequiredVersion>
+      </MinimumRequiredVersion>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <TreatLinkerWarningAsErrors>true</TreatLinkerWarningAsErrors>
       <LargeAddressAware>true</LargeAddressAware>
