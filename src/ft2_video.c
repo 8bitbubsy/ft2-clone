@@ -227,7 +227,11 @@ void flipFrame(void)
 		if (minimized || !(windowFlags & SDL_WINDOW_INPUT_FOCUS))
 			hpc_Wait(&video.vblankHpc);
 #elif __unix__
-		// *NIX: VSync gets disabled in fullscreen mode (at least on some distros/systems). Let's add a fix:
+		/* *NIX: VSync can get disabled in fullscreen mode in some distros/systems. Let's add a fix.
+		**
+		** TODO/XXX: This is probably a BAD hack and can cause a poor fullscreen experience if VSync did
+		**           in fact work in fullscreen mode...
+		*/
 		if (minimized || video.fullscreen)
 			hpc_Wait(&video.vblankHpc);
 #else
@@ -237,6 +241,13 @@ void flipFrame(void)
 	}
 
 	editor.framesPassed++;
+
+	/* Reset audio/video sync timestamp every half an hour to prevent
+	** possible sync drifting after hours of playing a song without
+	** a single song stop (resets timestamp) in-between.
+	*/
+	if (editor.framesPassed >= VBLANK_HZ*60*30)
+		audio.resetSyncTickTimeFlag = true;
 }
 
 void showErrorMsgBox(const char *fmt, ...)
