@@ -188,9 +188,6 @@ void setMixerBPM(int32_t bpm)
 	// for audio/video sync timestamp
 	tickTimeLenInt = audio.tickTimeIntTab[i];
 	tickTimeLenFrac = audio.tickTimeFracTab[i];
-
-	// for calculating volume ramp length for tick-length ramps
-	audio.fRampTickMul = audio.fRampTickMulTab[i];
 }
 
 void audioSetVolRamp(bool volRamp)
@@ -244,13 +241,12 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 
 			*f = *v; // copy voice
 
-			f->volumeRampLength = audio.quickVolRampSamples;
-
 			const float fVolumeLTarget = -f->fVolumeL;
 			const float fVolumeRTarget = -f->fVolumeR;
 
-			f->fVolumeLDelta = fVolumeLTarget * audio.fRampQuickVolMul;
-			f->fVolumeRDelta = fVolumeRTarget * audio.fRampQuickVolMul;
+			f->volumeRampLength = audio.quickVolRampSamples;
+			f->fVolumeLDelta = fVolumeLTarget / (int32_t)f->volumeRampLength;
+			f->fVolumeRDelta = fVolumeRTarget / (int32_t)f->volumeRampLength;
 
 			f->isFadeOutVoice = true;
 		}
@@ -279,16 +275,15 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 
 		if (status & IS_QuickVol)
 		{
-			v->fVolumeLDelta = fVolumeLTarget * audio.fRampQuickVolMul;
-			v->fVolumeRDelta = fVolumeRTarget * audio.fRampQuickVolMul;
 			v->volumeRampLength = audio.quickVolRampSamples;
-
+			v->fVolumeLDelta = fVolumeLTarget / (int32_t)v->volumeRampLength;
+			v->fVolumeRDelta = fVolumeRTarget / (int32_t)v->volumeRampLength;
 		}
 		else
 		{
-			v->fVolumeLDelta = fVolumeLTarget * audio.fRampTickMul;
-			v->fVolumeRDelta = fVolumeRTarget * audio.fRampTickMul;
 			v->volumeRampLength = audio.samplesPerTickInt;
+			v->fVolumeLDelta = fVolumeLTarget / (int32_t)v->volumeRampLength;
+			v->fVolumeRDelta = fVolumeRTarget / (int32_t)v->volumeRampLength;
 		}
 	}
 }
@@ -1048,7 +1043,7 @@ static void calcAudioLatencyVars(int32_t audioBufferSize, int32_t audioFreq)
 	double dFrac = modf(dAudioLatencySecs * editor.dPerfFreq, &dInt);
 
 	audio.audLatencyPerfValInt = (uint32_t)dInt;
-	audio.audLatencyPerfValFrac = (uint64_t)((dFrac * TICK_TIME_FRAC_SCALE) + 0.5);
+	audio.audLatencyPerfValFrac = (uint64_t)((dFrac * TICK_TIME_FRAC_SCALE) + 0.5); // rounded
 
 	audio.dAudioLatencyMs = dAudioLatencySecs * 1000.0;
 }

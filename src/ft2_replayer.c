@@ -415,7 +415,6 @@ void calcReplayerVars(int32_t audioFreq)
 
 	audio.dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
 	audio.quickVolRampSamples = (int32_t)round(audioFreq / (double)FT2_QUICKRAMP_SAMPLES);
-	audio.fRampQuickVolMul = (float)(1.0 / audio.quickVolRampSamples);
 
 	for (int32_t bpm = MIN_BPM; bpm <= MAX_BPM; bpm++)
 	{
@@ -435,11 +434,7 @@ void calcReplayerVars(int32_t audioFreq)
 		double dTimeFrac = modf(editor.dPerfFreq / dBpmHz, &dTimeInt);
 
 		audio.tickTimeIntTab[i] = (uint32_t)dTimeInt;
-		audio.tickTimeFracTab[i] = (uint64_t)((dTimeFrac * TICK_TIME_FRAC_SCALE) + 0.5);
-
-		// for calculating volume ramp length for tick-lenghted ramps
-		const int32_t samplesPerTickRounded = (int32_t)(dSamplesPerTick + 0.5); // must be rounded
-		audio.fRampTickMulTab[i] = (float)(1.0 / samplesPerTickRounded);
+		audio.tickTimeFracTab[i] = (uint64_t)((dTimeFrac * TICK_TIME_FRAC_SCALE) + 0.5); // rounded
 	}
 }
 

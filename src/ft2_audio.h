@@ -45,7 +45,7 @@ typedef struct audio_t
 	bool linearPeriodsFlag, rescanAudioDevicesSupported;
 	volatile uint8_t interpolationType;
 	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
-	uint32_t freq, musicTimeSpeedVal;
+	uint32_t freq;
 
 	uint32_t tickSampleCounter, samplesPerTickInt, samplesPerTickIntTab[(MAX_BPM-MIN_BPM)+1];
 	uint64_t tickSampleCounterFrac, samplesPerTickFrac, samplesPerTickFracTab[(MAX_BPM-MIN_BPM)+1];
@@ -55,7 +55,6 @@ typedef struct audio_t
 
 	uint64_t tickTime64, tickTime64Frac;
 
-	float fRampQuickVolMul, fRampTickMul, fRampTickMulTab[(MAX_BPM-MIN_BPM)+1];
 	float *fMixBufferL, *fMixBufferR;
 	double dHz2MixDeltaMul, dAudioLatencyMs;
 
