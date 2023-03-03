@@ -98,7 +98,7 @@ void hpc_SetDurationInHz(hpc_t *hpc, uint32_t hz)
 	hpc->durationInt = hpcFreq.freq64 / hz;
 	hpc->durationFrac = getFrac64FromU64DivU32(hpcFreq.freq64, hz) >> 1;
 
-	hpc->resetFrame = hz * 3600; // reset counters every hour
+	hpc->resetFrame = hz * (60 * 30); // reset counters every half an hour
 }
 
 void hpc_ResetCounters(hpc_t *hpc)
@@ -151,8 +151,8 @@ void hpc_Wait(hpc_t *hpc)
 
 	/* The counter ("endTimeInt") can accumulate major errors after a couple of hours,
 	** since each frame is not happening at perfect intervals.
-	** To fix this, reset the counter's int & frac once every hour. We should only get
-	** up to one frame of stutter while they are resetting, then it's back to normal.
+	** To fix this, reset the counter's int & frac once every half an hour. We should only
+	** get up to one frame of stutter while they are resetting, then it's back to normal.
 	*/
 	hpc->frameCounter++;
 	if (hpc->frameCounter >= hpc->resetFrame)
