@@ -121,9 +121,9 @@ static void drawFPSCounter(void)
 	             "Frames per second: %.3f\n" \
 	             "Monitor refresh rate: %.1fHz (+/-)\n" \
 	             "59..61Hz GPU VSync used: %s\n" \
+	             "HPC frequency (timer): %.4fMHz\n" \
 	             "Audio frequency: %.1fkHz (expected %.1fkHz)\n" \
 	             "Audio buffer samples: %d (expected %d)\n" \
-	             "Audio channels: %d (expected %d)\n" \
 	             "Audio latency: %.1fms (expected %.1fms)\n" \
 	             "Render size: %dx%d (offset %d,%d)\n" \
 	             "Disp. size: %dx%d (window: %dx%d)\n" \
@@ -136,9 +136,9 @@ static void drawFPSCounter(void)
 	             dAvgFPS,
 	             dRefreshRate,
 	             video.vsync60HzPresent ? "yes" : "no",
-	             audio.haveFreq * (1.0 / 1000.0), audio.wantFreq * (1.0 / 1000.0),
+	             hpcFreq.freq64 / (1000.0 * 1000.0),
+	             audio.haveFreq / 1000.0, audio.wantFreq / 1000.0,
 	             audio.haveSamples, audio.wantSamples,
-	             audio.haveChannels, audio.wantChannels,
 	             dAudLatency, ((audio.wantSamples * 1000.0) / audio.wantFreq),
 	             video.renderW, video.renderH, video.renderX, video.renderY,
 	             video.displayW, video.displayH, video.windowW, video.windowH,

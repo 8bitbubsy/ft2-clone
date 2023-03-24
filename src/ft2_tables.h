@@ -13,7 +13,7 @@
 extern const uint16_t ptPeriods[3 * 12];
 
 extern const uint8_t arpTab[256];
-extern const int8_t vibSineTab[256]; // for auto-vibrato
+extern const int8_t autoVibSineTab[256];
 extern const uint8_t vibTab[32];
 extern const uint16_t amigaPeriod[8 * 12];
 extern const uint16_t linearPeriods[1936];

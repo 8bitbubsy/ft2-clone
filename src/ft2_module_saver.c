@@ -187,10 +187,10 @@ bool saveXM(UNICHAR *filenameU)
 			ih.panEnvLoopEnd = ins->panEnvLoopEnd;
 			ih.volEnvFlags = ins->volEnvFlags;
 			ih.panEnvFlags = ins->panEnvFlags;
-			ih.vibType = ins->vibType;
-			ih.vibSweep = ins->vibSweep;
-			ih.vibDepth = ins->vibDepth;
-			ih.vibRate = ins->vibRate;
+			ih.vibType = ins->autoVibType;
+			ih.vibSweep = ins->autoVibSweep;
+			ih.vibDepth = ins->autoVibDepth;
+			ih.vibRate = ins->autoVibRate;
 			ih.fadeout = ins->fadeout;
 			ih.midiOn = ins->midiOn ? 1 : 0;
 			ih.midiChannel = ins->midiChannel;
@@ -363,7 +363,7 @@ static bool saveMOD(UNICHAR *filenameU)
 
 		if (j == 1)
 		{
-			if (ins->fadeout != 0 || ins->volEnvFlags != 0 || ins->panEnvFlags != 0 || ins->vibRate > 0 ||
+			if (ins->fadeout != 0 || ins->volEnvFlags != 0 || ins->panEnvFlags != 0 || ins->autoVibRate > 0 ||
 				GET_LOOPTYPE(smp->flags) == LOOP_BIDI || smp->relativeNote != 0 || ins->midiOn)
 			{
 				test = true;

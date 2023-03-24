@@ -59,7 +59,7 @@ typedef struct audio_t
 	double dHz2MixDeltaMul, dAudioLatencyMs;
 
 	SDL_AudioDeviceID dev;
-	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
+	uint32_t wantFreq, haveFreq, wantSamples, haveSamples;
 } audio_t;
 
 typedef struct
@@ -78,7 +78,8 @@ typedef struct
 	const int16_t *leftEdgeTaps16;
 
 	const float *fSincLUT;
-	float fVolume, fVolumeL, fVolumeR, fVolumeLDelta, fVolumeRDelta, fVolumeLTarget, fVolumeRTarget;
+	double dVolume;
+	float fVolumeL, fVolumeR, fVolumeLDelta, fVolumeRDelta, fVolumeLTarget, fVolumeRTarget;
 } voice_t;
 
 #ifdef _MSC_VER
@@ -153,7 +154,6 @@ void lockAudio(void);
 void unlockAudio(void);
 void lockMixerCallback(void);
 void unlockMixerCallback(void);
-void updateSendAudSamplesRoutine(bool lockMixer);
 void resetRampVolumes(void);
 void updateVoices(void);
 void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bitDepth);

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "../ft2_cpu.h"
 
+// the fractional bits are hardcoded, changing these will break things!
 #if CPU_64BIT
 #define MIXER_FRAC_BITS 32
 #else

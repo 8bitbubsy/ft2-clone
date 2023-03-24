@@ -335,8 +335,6 @@ static void retrigEnvelopeVibrato(channel_t *ch)
 	ch->retrigCnt = 0;
 	ch->tremorPos = 0;
 
-	ch->envSustainActive = true;
-
 	instr_t *ins = ch->instrPtr;
 	assert(ins != NULL);
 
@@ -352,29 +350,29 @@ static void retrigEnvelopeVibrato(channel_t *ch)
 		ch->panEnvPos = 0;
 	}
 
+	ch->keyOff = false;
 	ch->fadeoutSpeed = ins->fadeout; // FT2 doesn't check if fadeout is more than 4095!
 	ch->fadeoutVol = 32768;
 
-	if (ins->vibDepth > 0)
+	if (ins->autoVibDepth > 0)
 	{
-		ch->eVibPos = 0;
-
-		if (ins->vibSweep > 0)
+		ch->autoVibPos = 0;
+		if (ins->autoVibSweep > 0)
 		{
-			ch->eVibAmp = 0;
-			ch->eVibSweep = (ins->vibDepth << 8) / ins->vibSweep;
+			ch->autoVibAmp = 0;
+			ch->autoVibSweep = (ins->autoVibDepth << 8) / ins->autoVibSweep;
 		}
 		else
 		{
-			ch->eVibAmp = ins->vibDepth << 8;
-			ch->eVibSweep = 0;
+			ch->autoVibAmp = ins->autoVibDepth << 8;
+			ch->autoVibSweep = 0;
 		}
 	}
 }
 
 void keyOff(channel_t *ch)
 {
-	ch->envSustainActive = false;
+	ch->keyOff = true;
 
 	instr_t *ins = ch->instrPtr;
 	assert(ins != NULL);
@@ -571,8 +569,8 @@ static void finePortaDown(channel_t *ch, uint8_t param)
 	ch->fPortaDownSpeed = param;
 
 	ch->realPeriod += param << 2;
-	if ((int16_t)ch->realPeriod > MAX_FRQ-1) // FT2 bug, should've been unsigned comparison
-		ch->realPeriod = MAX_FRQ-1;
+	if ((int16_t)ch->realPeriod >= 32000) // FT2 bug, should've been unsigned comparison
+		ch->realPeriod = 32000-1;
 
 	ch->outPeriod = ch->realPeriod;
 	ch->status |= IS_Period;
@@ -1128,8 +1126,8 @@ static void xFinePorta(channel_t *ch, uint8_t param)
 		uint16_t newPeriod = ch->realPeriod;
 
 		newPeriod += param;
-		if ((int16_t)newPeriod > MAX_FRQ-1) // FT2 bug, should've been unsigned comparison
-			newPeriod = MAX_FRQ-1;
+		if ((int16_t)newPeriod >= 32000) // FT2 bug, should've been unsigned comparison
+			newPeriod = 32000-1;
 
 		ch->outPeriod = ch->realPeriod = newPeriod;
 		ch->status |= IS_Period;
@@ -1377,28 +1375,25 @@ static void updateChannel(channel_t *ch)
 {
 	bool envInterpolateFlag, envDidInterpolate;
 	uint8_t envPos;
-	int16_t autoVibVal;
-	uint16_t autoVibAmp;
 	int32_t envVal;
-	float fVol;
+	double dVol;
 
 	instr_t *ins = ch->instrPtr;
 	assert(ins != NULL);
 
 	// *** FADEOUT ***
-	if (!ch->envSustainActive)
+	if (ch->keyOff)
 	{
-		ch->status |= IS_Vol;
+		ch->status |= IS_Vol; // always update volume, even if fadeout has reached 0
 
-		// unsigned clamp + reset
-		if (ch->fadeoutVol >= ch->fadeoutSpeed)
+		if (ch->fadeoutSpeed > 0) // 0..4095
 		{
 			ch->fadeoutVol -= ch->fadeoutSpeed;
-		}
-		else
-		{
-			ch->fadeoutVol = 0;
-			ch->fadeoutSpeed = 0;
+			if (ch->fadeoutVol <= 0)
+			{
+				ch->fadeoutVol = 0;
+				ch->fadeoutSpeed = 0;
+			}
 		}
 	}
 
@@ -1424,7 +1419,7 @@ static void updateChannel(channel_t *ch)
 
 					if (envPos == ins->volEnvLoopEnd)
 					{
-						if (!(ins->volEnvFlags & ENV_SUSTAIN) || envPos != ins->volEnvSustain || ch->envSustainActive)
+						if (!(ins->volEnvFlags & ENV_SUSTAIN) || envPos != ins->volEnvSustain || !ch->keyOff)
 						{
 							envPos = ins->volEnvLoopStart;
 							ch->volEnvTick = ins->volEnvPoints[envPos][0];
@@ -1438,7 +1433,7 @@ static void updateChannel(channel_t *ch)
 				if (envPos < ins->volEnvLength)
 				{
 					envInterpolateFlag = true;
-					if ((ins->volEnvFlags & ENV_SUSTAIN) && ch->envSustainActive)
+					if ((ins->volEnvFlags & ENV_SUSTAIN) && !ch->keyOff)
 					{
 						if (envPos-1 == ins->volEnvSustain)
 						{
@@ -1488,25 +1483,26 @@ static void updateChannel(channel_t *ch)
 
 			const int32_t vol = song.globalVolume * ch->outVol * ch->fadeoutVol;
 
-			fVol = vol * (1.0f / (64.0f * 64.0f * 32768.0f));
-			fVol *= (int32_t)envVal * (1.0f / (64.0f * (1 << 16))); // volume envelope value
+			dVol = vol * (1.0 / (64.0 * 64.0 * 32768.0));
+			dVol *= envVal * (1.0 / (64.0 * (1 << 16))); // volume envelope value
 
 			ch->status |= IS_Vol; // update mixer vol every tick when vol envelope is enabled
 		}
 		else
 		{
 			const int32_t vol = song.globalVolume * ch->outVol * ch->fadeoutVol;
-			fVol = vol * (1.0f / (64.0f * 64.0f * 32768.0f));
+
+			dVol = vol * (1.0 / (64.0 * 64.0 * 32768.0));
 		}
 
 		/* FT2 doesn't clamp here, but it's actually important if you
 		** move envelope points with the mouse while playing the instrument.
 		*/
-		ch->fFinalVol = CLAMP(fVol, 0.0f, 1.0f);
+		ch->dFinalVol = CLAMP(dVol, 0.0, 1.0);
 	}
 	else
 	{
-		ch->fFinalVol = 0.0f;
+		ch->dFinalVol = 0.0;
 	}
 
 	// *** PANNING ENVELOPE ***
@@ -1528,7 +1524,7 @@ static void updateChannel(channel_t *ch)
 
 				if (envPos == ins->panEnvLoopEnd)
 				{
-					if (!(ins->panEnvFlags & ENV_SUSTAIN) || envPos != ins->panEnvSustain || ch->envSustainActive)
+					if (!(ins->panEnvFlags & ENV_SUSTAIN) || envPos != ins->panEnvSustain || !ch->keyOff)
 					{
 						envPos = ins->panEnvLoopStart;
 
@@ -1543,7 +1539,7 @@ static void updateChannel(channel_t *ch)
 			if (envPos < ins->panEnvLength)
 			{
 				envInterpolateFlag = true;
-				if ((ins->panEnvFlags & ENV_SUSTAIN) && ch->envSustainActive)
+				if ((ins->panEnvFlags & ENV_SUSTAIN) && !ch->keyOff)
 				{
 					if (envPos-1 == ins->panEnvSustain)
 					{
@@ -1606,51 +1602,53 @@ static void updateChannel(channel_t *ch)
 
 	// *** AUTO VIBRATO ***
 #ifdef HAS_MIDI
-	if (ch->midiVibDepth > 0 || ins->vibDepth > 0)
+	if (ch->midiVibDepth > 0 || ins->autoVibDepth > 0)
 #else
 	if (ins->vibDepth > 0)
 #endif
 	{
-		if (ch->eVibSweep > 0)
+		uint16_t autoVibAmp;
+
+		if (ch->autoVibSweep > 0)
 		{
-			autoVibAmp = ch->eVibSweep;
-			if (ch->envSustainActive)
+			autoVibAmp = ch->autoVibSweep;
+			if (!ch->keyOff)
 			{
-				autoVibAmp += ch->eVibAmp;
-				if ((autoVibAmp >> 8) > ins->vibDepth)
+				autoVibAmp += ch->autoVibAmp;
+				if ((autoVibAmp >> 8) > ins->autoVibDepth)
 				{
-					autoVibAmp = ins->vibDepth << 8;
-					ch->eVibSweep = 0;
+					autoVibAmp = ins->autoVibDepth << 8;
+					ch->autoVibSweep = 0;
 				}
 
-				ch->eVibAmp = autoVibAmp;
+				ch->autoVibAmp = autoVibAmp;
 			}
 		}
 		else
 		{
-			autoVibAmp = ch->eVibAmp;
+			autoVibAmp = ch->autoVibAmp;
 		}
 
 #ifdef HAS_MIDI
 		// non-FT2 hack to make modulation wheel work when auto vibrato rate is zero
-		if (ch->midiVibDepth > 0 && ins->vibRate == 0)
-			ins->vibRate = 0x20;
+		if (ch->midiVibDepth > 0 && ins->autoVibRate == 0)
+			ins->autoVibRate = 0x20;
 
 		autoVibAmp += ch->midiVibDepth;
 #endif
-		ch->eVibPos += ins->vibRate;
+		ch->autoVibPos += ins->autoVibRate;
 
-		     if (ins->vibType == 1) autoVibVal = (ch->eVibPos > 127) ? 64 : -64; // square
-		else if (ins->vibType == 2) autoVibVal = (((ch->eVibPos >> 1) + 64) & 127) - 64; // ramp up
-		else if (ins->vibType == 3) autoVibVal = ((-(ch->eVibPos >> 1) + 64) & 127) - 64; // ramp down
-		else autoVibVal = vibSineTab[ch->eVibPos]; // sine
+		int16_t autoVibVal;
+		     if (ins->autoVibType == 1) autoVibVal = (ch->autoVibPos > 127) ? 64 : -64; // square
+		else if (ins->autoVibType == 2) autoVibVal = (((ch->autoVibPos >> 1) + 64) & 127) - 64; // ramp up
+		else if (ins->autoVibType == 3) autoVibVal = ((-(ch->autoVibPos >> 1) + 64) & 127) - 64; // ramp down
+		else autoVibVal = autoVibSineTab[ch->autoVibPos]; // sine
 
-		autoVibVal <<= 2;
-		uint16_t tmpPeriod = (autoVibVal * (int16_t)autoVibAmp) >> 16;
+		autoVibVal = (autoVibVal * (int16_t)autoVibAmp) >> (6+8);
 
-		tmpPeriod += ch->outPeriod;
-		if (tmpPeriod > MAX_FRQ-1)
-			tmpPeriod = 0; // yes, FT2 does this (!)
+		uint16_t tmpPeriod = ch->outPeriod + autoVibVal;
+		if (tmpPeriod >= 32000) // unsigned comparison
+			tmpPeriod = 0;
 
 #ifdef HAS_MIDI
 		if (midi.enable)
@@ -1787,8 +1785,8 @@ static void portaDown(channel_t *ch, uint8_t param)
 	ch->portaDownSpeed = param;
 
 	ch->realPeriod += param << 2;
-	if ((int16_t)ch->realPeriod > MAX_FRQ-1) // FT2 bug, should've been unsigned comparison
-		ch->realPeriod = MAX_FRQ-1;
+	if ((int16_t)ch->realPeriod >= 32000) // FT2 bug, should've been unsigned comparison
+		ch->realPeriod = 32000-1;
 
 	ch->outPeriod = ch->realPeriod;
 	ch->status |= IS_Period;
@@ -2590,10 +2588,10 @@ void setStdEnvelope(instr_t *ins, int16_t i, uint8_t type)
 		ins->volEnvLoopStart = (uint8_t)config.stdVolEnvLoopStart[i];
 		ins->volEnvLoopEnd = (uint8_t)config.stdVolEnvLoopEnd[i];
 		ins->fadeout = config.stdFadeout[i];
-		ins->vibRate = (uint8_t)config.stdVibRate[i];
-		ins->vibDepth = (uint8_t)config.stdVibDepth[i];
-		ins->vibSweep = (uint8_t)config.stdVibSweep[i];
-		ins->vibType = (uint8_t)config.stdVibType[i];
+		ins->autoVibRate = (uint8_t)config.stdVibRate[i];
+		ins->autoVibDepth = (uint8_t)config.stdVibDepth[i];
+		ins->autoVibSweep = (uint8_t)config.stdVibSweep[i];
+		ins->autoVibType = (uint8_t)config.stdVibType[i];
 		ins->volEnvFlags = (uint8_t)config.stdVolEnvFlags[i];
 	}
 
@@ -2632,10 +2630,10 @@ void setNoEnvelope(instr_t *ins)
 	ins->panEnvFlags = 0;
 
 	ins->fadeout = 0;
-	ins->vibRate = 0;
-	ins->vibDepth = 0;
-	ins->vibSweep = 0;
-	ins->vibType = 0;
+	ins->autoVibRate = 0;
+	ins->autoVibDepth = 0;
+	ins->autoVibSweep = 0;
+	ins->autoVibType = 0;
 
 	resumeMusic();
 }
@@ -2857,8 +2855,8 @@ void startPlaying(int8_t mode, int16_t row)
 	if (song.speed == 0)
 		song.speed = song.initialSpeed;
 
-	audio.tickSampleCounter = 0; // zero tick sample counter so that it will instantly initiate a tick
-	audio.tickSampleCounterFrac = 0;
+	// zero tick sample counter so that it will instantly initiate a tick
+	audio.tickSampleCounterFrac = audio.tickSampleCounter = 0;
 
 	unlockMixerCallback();
 
@@ -3104,7 +3102,7 @@ void stopVoices(void)
 		ch->realVol = 0;
 		ch->outVol = 0;
 		ch->oldVol = 0;
-		ch->fFinalVol = 0.0f;
+		ch->dFinalVol = 0.0;
 		ch->oldPan = 128;
 		ch->outPan = 128;
 		ch->finalPan = 128;
