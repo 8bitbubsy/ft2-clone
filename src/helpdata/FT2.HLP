@@ -444,7 +444,7 @@ Delete  @T160Delete note or volume column at cursor.
 @X040@C001Miscellaneous:
 >@X060@C002
 Right ctrl.  @T160Play song.
->Alt Gr    @T160Play pattern.
+>Right alt    @T160Play pattern.
 >Right shift  @T160Record pattern.
 >Space    @T160Stop/Edit.
 >F1..F7 @T160Select octave.
