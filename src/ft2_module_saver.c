@@ -290,8 +290,11 @@ static bool saveMOD(UNICHAR *filenameU)
 	sample_t *smp;
 	modHdr_t hdr;
 
+	// Commented out. This one was probably confusing to many people...
+	/*
 	if (audio.linearPeriodsFlag)
-		okBoxThreadSafe(0, "System message", "Warning: Amiga frequency table isn't used!");
+		okBoxThreadSafe(0, "System message", "Warning: \"Frequency slides\" is not set to Amiga!");
+	*/
 
 	int32_t songLength = song.songLength;
 	if (songLength > 128)

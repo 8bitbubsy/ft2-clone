@@ -17,7 +17,7 @@ enum
 #define MIN_AUDIO_FREQ 44100
 
 #if CPU_64BIT
-#define MAX_AUDIO_FREQ 192000
+#define MAX_AUDIO_FREQ 96000
 #else
 #define MAX_AUDIO_FREQ 48000
 #endif
@@ -44,8 +44,8 @@ typedef struct audio_t
 	volatile bool locked, resetSyncTickTimeFlag, volumeRampingFlag;
 	bool linearPeriodsFlag, rescanAudioDevicesSupported;
 	volatile uint8_t interpolationType;
-	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
-	uint32_t freq;
+	int32_t inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
+	uint32_t quickVolRampSamples, freq;
 
 	uint32_t tickSampleCounter, samplesPerTickInt, samplesPerTickIntTab[(MAX_BPM-MIN_BPM)+1];
 	uint64_t tickSampleCounterFrac, samplesPerTickFrac, samplesPerTickFracTab[(MAX_BPM-MIN_BPM)+1];
@@ -73,13 +73,13 @@ typedef struct
 
 	uintCPUWord_t positionFrac, delta, oldDelta, scopeDelta;
 
-	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_LEFT_TAPS) readFixedTapsFromThisPointer();
+	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;
 	const int16_t *leftEdgeTaps16;
 
 	const float *fSincLUT;
 	double dVolume;
-	float fVolumeL, fVolumeR, fVolumeLDelta, fVolumeRDelta, fVolumeLTarget, fVolumeRTarget;
+	float fCurrVolumeL, fCurrVolumeR, fVolumeLDelta, fVolumeRDelta, fTargetVolumeL, fTargetVolumeR;
 } voice_t;
 
 #ifdef _MSC_VER

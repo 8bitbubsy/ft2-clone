@@ -2592,7 +2592,7 @@ static void zapSong(void)
 	resetPlaybackTime();
 
 	if (!audio.linearPeriodsFlag)
-		setFrequencyTable(true);
+		setLinearPeriods(true);
 
 	clearPattMark();
 	resetWavRenderer();

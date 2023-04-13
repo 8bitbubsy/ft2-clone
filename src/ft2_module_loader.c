@@ -475,7 +475,7 @@ static void setupLoadedModule(void)
 	editor.tick = song.tick;
 	editor.globalVolume = song.globalVolume;
 
-	setFrequencyTable(tmpLinearPeriodsFlag);
+	setLinearPeriods(tmpLinearPeriodsFlag);
 
 	unlockMixerCallback();
 

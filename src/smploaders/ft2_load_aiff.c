@@ -14,7 +14,7 @@
 #include "../ft2_sysreqs.h"
 #include "../ft2_sample_loader.h"
 
-static int32_t getAIFFSampleRate(uint8_t *in);
+static uint32_t getAIFFSampleRate(uint8_t *in);
 static bool aiffIsStereo(FILE *f); // only ran on files that are confirmed to be AIFFs
 
 bool loadAIFF(FILE *f, uint32_t filesize)
@@ -582,22 +582,23 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 	return true;
 }
 
-static int32_t getAIFFSampleRate(uint8_t *in)
+static uint32_t getAIFFSampleRate(uint8_t *in)
 {
-	uint32_t mantissa = (in[2] << 24) | (in[3] << 16) | (in[4] << 8) | in[5];
-	uint8_t exp = 30 - in[1];
+	/* 80-bit IEEE-754 to unsigned 32-bit integer (rounded).
+	** Sign bit is ignored.
+	*/
 
-	uint32_t lastMantissa = 0;
-	while (exp--)
-	{
-		lastMantissa = mantissa;
-		mantissa >>= 1;
-	}
+#define EXP_BIAS 16383
 
-	if (lastMantissa & 1)
-		mantissa++;
+	const uint16_t exp15 = ((in[0] & 0x7F) << 8) | in[1];
+	const uint64_t mantissaBits = *(uint64_t *)&in[2];
+	const uint64_t mantissa63 = SWAP64(mantissaBits) & INT64_MAX;
 
-	return mantissa;
+	double dExp = exp15 - EXP_BIAS;
+	double dMantissa = mantissa63 / (INT64_MAX+1.0);
+
+	double dResult = (1.0 + dMantissa) * exp2(dExp);
+	return (uint32_t)round(dResult);
 }
 
 static bool aiffIsStereo(FILE *f) // only ran on files that are confirmed to be AIFFs

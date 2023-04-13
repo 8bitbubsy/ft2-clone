@@ -11,7 +11,7 @@
 
 enum
 {
-	CONFIG_SCREEN_IO_DEVICES,
+	CONFIG_SCREEN_AUDIO,
 	CONFIG_SCREEN_LAYOUT,
 	CONFIG_SCREEN_MISCELLANEOUS,
 	CONFIG_SCREEN_MIDI_INPUT,
@@ -19,9 +19,12 @@ enum
 	CONFIG_HIDE_ERRORS = 0,
 	CONFIG_SHOW_ERRORS = 1,
 
-	INTERPOLATION_NONE = 0,
-	INTERPOLATION_SINC = 1,
+	// don't change the order of these! (yes, it looks off)
+	INTERPOLATION_DISABLED = 0,
+	INTERPOLATION_SINC8 = 1,
 	INTERPOLATION_LINEAR = 2,
+	INTERPOLATION_SINC16 = 3,
+	// ------
 
 	MOUSE_IDLE_SHAPE_NICE = 0,
 	MOUSE_IDLE_SHAPE_UGLY = 1,
@@ -186,7 +189,7 @@ void loadConfigOrSetDefaults(void);
 void showConfigScreen(void);
 void hideConfigScreen(void);
 void exitConfigScreen(void);
-void setConfigIORadioButtonStates(void);
+void setConfigAudioRadioButtonStates(void);
 void configToggleImportWarning(void);
 void configToggleNotYetAppliedWarning(void);
 void drawAudioOutputList(void);
@@ -203,31 +206,31 @@ void configMIDITransUp(void);
 void configMIDITransDown(void);
 void configMIDISensDown(void);
 void configMIDISensUp(void);
-void rbConfigIODevices(void);
+void rbConfigAudio(void);
 void rbConfigLayout(void);
 void rbConfigMiscellaneous(void);
 #ifdef HAS_MIDI
 void rbConfigMidiInput(void);
 #endif
-void rbConfigSbs512(void);
-void rbConfigSbs1024(void);
-void rbConfigSbs2048(void);
-void rbConfigAudio16bit(void);
-void rbConfigAudio24bit(void);
-void rbConfigAudioIntrpNone(void);
+void rbConfigAudioBuffSmall(void);
+void rbConfigAudioBuffMedium(void);
+void rbConfigAudioBuffLarge(void);
+void rbConfigAudio16Bit(void);
+void rbConfigAudio32BitFloat(void);
+void rbConfigAudioIntrpDisabled(void);
 void rbConfigAudioIntrpLinear(void);
-void rbConfigAudioIntrpSinc(void);
+void rbConfigAudioIntrp8PointSinc(void);
+void rbConfigAudioIntrp16PointSinc(void);
 void rbConfigAudio44kHz(void);
 void rbConfigAudio48kHz(void);
 #if CPU_64BIT
 void rbConfigAudio96kHz(void);
-void rbConfigAudio192kHz(void);
 #endif
 void rbConfigAudioInput44kHz(void);
 void rbConfigAudioInput48kHz(void);
 void rbConfigAudioInput96kHz(void);
-void rbConfigFreqTableAmiga(void);
-void rbConfigFreqTableLinear(void);
+void rbConfigFreqSlidesAmiga(void);
+void rbConfigFreqSlidesLinear(void);
 void rbConfigMouseNice(void);
 void rbConfigMouseUgly(void);
 void rbConfigMouseAwful(void);

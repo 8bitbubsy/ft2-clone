@@ -59,14 +59,14 @@ static void fileRestoreFixedSampleData(UNICHAR *filenameU, uint32_t sampleDataOf
 
 	int32_t sampleFixPos = s->fixedPos;
 	int32_t sampleFixOffset = 0;
-	int32_t samplesToWrite = SINC_RIGHT_TAPS;
+	int32_t samplesToWrite = SINC_MAX_RIGHT_TAPS;
 
 	if (saveRangeFlag)
 	{
 		const int32_t markStart = getSampleRangeStart();
 		const int32_t markEnd = getSampleRangeEnd();
 
-		if (markStart > sampleFixPos+SINC_RIGHT_TAPS || markEnd < sampleFixPos)
+		if (markStart > sampleFixPos+SINC_MAX_RIGHT_TAPS || markEnd < sampleFixPos)
 			return; // nothing to do here
 
 		if (markStart > sampleFixPos)
@@ -80,7 +80,7 @@ static void fileRestoreFixedSampleData(UNICHAR *filenameU, uint32_t sampleDataOf
 		if (sampleFixPos + samplesToWrite > markEnd)
 			samplesToWrite = markEnd - sampleFixPos;
 
-		if (samplesToWrite < 0 || samplesToWrite > SINC_RIGHT_TAPS || sampleFixPos < 0 || sampleFixOffset < 0 || sampleFixOffset >= SINC_RIGHT_TAPS)
+		if (samplesToWrite < 0 || samplesToWrite > SINC_MAX_RIGHT_TAPS || sampleFixPos < 0 || sampleFixOffset < 0 || sampleFixOffset >= SINC_MAX_RIGHT_TAPS)
 			return;
 
 	}

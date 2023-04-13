@@ -232,7 +232,7 @@ void drawAudioInputList(void)
 
 bool testAudioDeviceListsMouseDown(void)
 {
-	if (!ui.configScreenShown || editor.currConfigScreen != CONFIG_SCREEN_IO_DEVICES)
+	if (!ui.configScreenShown || editor.currConfigScreen != CONFIG_SCREEN_AUDIO)
 		return false;
 
 	const int32_t mx = mouse.x;
@@ -400,7 +400,7 @@ void setToDefaultAudioInputDevice(void)
 
 void rescanAudioDevices(void)
 {
-	const bool listShown = (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES);
+	const bool listShown = (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_AUDIO);
 
 	freeAudioDeviceLists();
 
@@ -492,7 +492,7 @@ void scrollAudOutputDevListDown(void)
 
 void sbAudOutputSetPos(uint32_t pos)
 {
-	if (ui.configScreenShown && (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES))
+	if (ui.configScreenShown && (editor.currConfigScreen == CONFIG_SCREEN_AUDIO))
 		drawAudioOutputList();
 
 	(void)pos;
@@ -500,7 +500,7 @@ void sbAudOutputSetPos(uint32_t pos)
 
 void sbAudInputSetPos(uint32_t pos)
 {
-	if (ui.configScreenShown && (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES))
+	if (ui.configScreenShown && (editor.currConfigScreen == CONFIG_SCREEN_AUDIO))
 		drawAudioInputList();
 
 	(void)pos;

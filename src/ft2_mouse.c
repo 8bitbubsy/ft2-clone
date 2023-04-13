@@ -496,7 +496,7 @@ void mouseWheelHandler(bool directionUp)
 		}
 		else if (ui.configScreenShown)
 		{
-			if (editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+			if (editor.currConfigScreen == CONFIG_SCREEN_AUDIO)
 			{
 				// audio device selectors
 				if (mouse.x >= 110 && mouse.x <= 355 && mouse.y <= 173)

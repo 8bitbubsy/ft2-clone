@@ -88,7 +88,10 @@ bool setupExecutablePath(void)
 {
 	editor.binaryPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
 	if (editor.binaryPathU == NULL)
+	{
+		showErrorMsgBox("Not enough memory!");
 		return false;
+	}
 
 	editor.binaryPathU[0] = 0;
 	UNICHAR_GETCWD(editor.binaryPathU, PATH_MAX);

@@ -15,4 +15,4 @@
 
 typedef void (*mixFunc)(void *, uint32_t, uint32_t);
 
-extern const mixFunc mixFuncTab[72]; // ft2_mix.c
+extern const mixFunc mixFuncTab[]; // ft2_mix.c

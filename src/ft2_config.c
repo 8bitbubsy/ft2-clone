@@ -155,7 +155,7 @@ static void loadConfigFromBuffer(bool defaults)
 	}
 
 #if CPU_64BIT
-	if (config.audioFreq != 44100 && config.audioFreq != 48000 && config.audioFreq != 96000 && config.audioFreq != 192000)
+	if (config.audioFreq != 44100 && config.audioFreq != 48000 && config.audioFreq != 96000)
 #else
 	if (config.audioFreq != 44100 && config.audioFreq != 48000)
 #endif
@@ -201,7 +201,15 @@ static void configDrawAmp(void)
 {
 	char str[8];
 	sprintf(str, "%02d", config.boostLevel);
-	textOutFixed(607, 120, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(607, 105, PAL_FORGRND, PAL_DESKTOP, str);
+}
+
+static void configDrawMasterVol(void)
+{
+	char str[9];
+	sprintf(str, "%3d", config.masterVol);
+	fillRect(607, 133, 20, 8, PAL_DESKTOP);
+	textOutFixed(607, 133, PAL_FORGRND, PAL_DESKTOP, str);
 }
 
 static void setDefaultConfigSettings(void)
@@ -781,7 +789,7 @@ static void setConfigRadioButtonStates(void)
 	switch (editor.currConfigScreen)
 	{
 		default:
-		case CONFIG_SCREEN_IO_DEVICES:    tmpID = RB_CONFIG_IO_DEVICES;    break;
+		case CONFIG_SCREEN_AUDIO:         tmpID = RB_CONFIG_AUDIO;         break;
 		case CONFIG_SCREEN_LAYOUT:        tmpID = RB_CONFIG_LAYOUT;        break;
 		case CONFIG_SCREEN_MISCELLANEOUS: tmpID = RB_CONFIG_MISCELLANEOUS; break;
 #ifdef HAS_MIDI
@@ -793,7 +801,7 @@ static void setConfigRadioButtonStates(void)
 	showRadioButtonGroup(RB_GROUP_CONFIG_SELECT);
 }
 
-void setConfigIORadioButtonStates(void) // accessed by other .c files
+void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 {
 	uint16_t tmpID;
 
@@ -820,12 +828,14 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	// AUDIO INTERPOLATION
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INTERPOLATION);
 
-	if (config.interpolation == INTERPOLATION_NONE)
-		tmpID = RB_CONFIG_AUDIO_INTRP_NONE;
+	if (config.interpolation == INTERPOLATION_DISABLED)
+		tmpID = RB_CONFIG_AUDIO_INTRP_DISABLED;
 	else if (config.interpolation == INTERPOLATION_LINEAR)
 		tmpID = RB_CONFIG_AUDIO_INTRP_LINEAR;
+	else if (config.interpolation == INTERPOLATION_SINC16)
+		tmpID = RB_CONFIG_AUDIO_INTRP_SINC16;
 	else
-		tmpID = RB_CONFIG_AUDIO_INTRP_SINC;
+		tmpID = RB_CONFIG_AUDIO_INTRP_SINC8; // default case
 
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -837,7 +847,6 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 		default: case 48000:  tmpID = RB_CONFIG_AUDIO_48KHZ;  break;
 #if CPU_64BIT
 		         case 96000:  tmpID = RB_CONFIG_AUDIO_96KHZ;  break;
-		         case 192000: tmpID = RB_CONFIG_AUDIO_192KHZ; break;
 #endif
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
@@ -852,9 +861,9 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
-	// FREQUENCY TABLE
-	uncheckRadioButtonGroup(RB_GROUP_CONFIG_FREQ_TABLE);
-	tmpID = audio.linearPeriodsFlag ? RB_CONFIG_FREQ_LINEAR : RB_CONFIG_FREQ_AMIGA;
+	// FREQUENCY SLIDES
+	uncheckRadioButtonGroup(RB_GROUP_CONFIG_FREQ_SLIDES);
+	tmpID = audio.linearPeriodsFlag ? RB_CONFIG_FREQ_SLIDES_LINEAR : RB_CONFIG_FREQ_SLIDES_AMIGA;
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
 	// show result
@@ -864,10 +873,10 @@ void setConfigIORadioButtonStates(void) // accessed by other .c files
 	showRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INTERPOLATION);
 	showRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	showRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INPUT_FREQ);
-	showRadioButtonGroup(RB_GROUP_CONFIG_FREQ_TABLE);
+	showRadioButtonGroup(RB_GROUP_CONFIG_FREQ_SLIDES);
 }
 
-static void setConfigIOCheckButtonStates(void)
+static void setConfigAudioCheckButtonStates(void)
 {
 	checkBoxes[CB_CONF_VOL_RAMP].checked = (config.specialFlags & NO_VOLRAMP_FLAG) ? false : true;
 	showCheckBox(CB_CONF_VOL_RAMP);
@@ -1100,7 +1109,7 @@ void showConfigScreen(void)
 	showPushButton(PB_CONFIG_EXIT);
 
 	textOutShadow(4,   4, PAL_FORGRND, PAL_DSKTOP2, "Configuration:");
-	textOutShadow(21, 19, PAL_FORGRND, PAL_DSKTOP2, "I/O devices");
+	textOutShadow(21, 19, PAL_FORGRND, PAL_DSKTOP2, "Audio");
 	textOutShadow(21, 35, PAL_FORGRND, PAL_DSKTOP2, "Layout");
 	textOutShadow(21, 51, PAL_FORGRND, PAL_DSKTOP2, "Miscellaneous");
 #ifdef HAS_MIDI
@@ -1111,18 +1120,18 @@ void showConfigScreen(void)
 	switch (editor.currConfigScreen)
 	{
 		default:
-		case CONFIG_SCREEN_IO_DEVICES:
+		case CONFIG_SCREEN_AUDIO:
 		{
 			drawFramework(110,   0, 276, 87, FRAMEWORK_TYPE1);
 			drawFramework(110,  87, 276, 86, FRAMEWORK_TYPE1);
 
-			drawFramework(386,   0, 119,  58, FRAMEWORK_TYPE1);
-			drawFramework(386,  58, 119,  44, FRAMEWORK_TYPE1);
-			drawFramework(386, 102, 119,  71, FRAMEWORK_TYPE1);
+			drawFramework(386,   0, 119, 58, FRAMEWORK_TYPE1);
+			drawFramework(386,  58, 119, 44, FRAMEWORK_TYPE1);
+			drawFramework(386, 102, 119, 71, FRAMEWORK_TYPE1);
 
-			drawFramework(505,   0, 127,  73, FRAMEWORK_TYPE1);
-			drawFramework(505, 117, 127,  56, FRAMEWORK_TYPE1);
-			drawFramework(505,  73, 127,  44, FRAMEWORK_TYPE1);
+			drawFramework(505,   0, 127, 58, FRAMEWORK_TYPE1);
+			drawFramework(505, 102, 127, 71, FRAMEWORK_TYPE1);
+			drawFramework(505,  58, 127, 44, FRAMEWORK_TYPE1);
 
 			drawFramework(112,  16, AUDIO_SELECTORS_BOX_WIDTH+4, 69, FRAMEWORK_TYPE2);
 			drawFramework(112, 103, AUDIO_SELECTORS_BOX_WIDTH+4, 47, FRAMEWORK_TYPE2);
@@ -1160,30 +1169,31 @@ void showConfigScreen(void)
 			textOutShadow(406,  89, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
 
 			textOutShadow(390, 105, PAL_FORGRND, PAL_DSKTOP2, "Interpolation:");
-			textOutShadow(406, 118, PAL_FORGRND, PAL_DSKTOP2, "None");
-			textOutShadow(406, 132, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
-			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Windowed-sinc");
-			textOutShadow(406, 161, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
+			textOutShadow(406, 118, PAL_FORGRND, PAL_DSKTOP2, "Disabled");
+			textOutShadow(406, 132, PAL_FORGRND, PAL_DSKTOP2, "Linear (2 point)");
+			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
+			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
 
-			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Mixing frequency:");
+			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Output frequency:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
 			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz (default)");
 #if CPU_64BIT
 			textOutShadow(525,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
-			textOutShadow(525,  59, PAL_FORGRND, PAL_DSKTOP2, "192000Hz");
 #endif
-			textOutShadow(509,  76, PAL_FORGRND, PAL_DSKTOP2, "Frequency table:");
-			textOutShadow(525,  90, PAL_FORGRND, PAL_DSKTOP2, "Amiga freq. table");
-			textOutShadow(525, 104, PAL_FORGRND, PAL_DSKTOP2, "Linear freq. table");
+			textOutShadow(509,  61, PAL_FORGRND, PAL_DSKTOP2, "Frequency slides:");
+			textOutShadow(525,  75, PAL_FORGRND, PAL_DSKTOP2, "Amiga");
+			textOutShadow(525,  89, PAL_FORGRND, PAL_DSKTOP2, "Linear (default)");
 
-			textOutShadow(509, 120, PAL_FORGRND, PAL_DSKTOP2, "Amplification:");
-			charOutShadow(621, 120, PAL_FORGRND, PAL_DSKTOP2, 'X');
-			textOutShadow(509, 148, PAL_FORGRND, PAL_DSKTOP2, "Master volume:");
+			textOutShadow(509, 105, PAL_FORGRND, PAL_DSKTOP2, "Amplification:");
+			charOutShadow(621, 105, PAL_FORGRND, PAL_DSKTOP2, 'X');
+			textOutShadow(509, 133, PAL_FORGRND, PAL_DSKTOP2, "Master volume:");
+			textOutShadow(525, 160, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
 
-			setConfigIORadioButtonStates();
-			setConfigIOCheckButtonStates();
+			setConfigAudioRadioButtonStates();
+			setConfigAudioCheckButtonStates();
 
 			configDrawAmp();
+			configDrawMasterVol();
 
 			setScrollBarPos(SB_AMP_SCROLL,       config.boostLevel - 1, false);
 			setScrollBarPos(SB_MASTERVOL_SCROLL, config.masterVol,      false);
@@ -1239,7 +1249,7 @@ void showConfigScreen(void)
 			textOutShadow(338, 129, PAL_FORGRND, PAL_DSKTOP2, "Bold");
 
 			textOutShadow(256, 146, PAL_FORGRND, PAL_DSKTOP2, "Scopes:");
-			textOutShadow(319, 146, PAL_FORGRND, PAL_DSKTOP2, "Std.");
+			textOutShadow(319, 146, PAL_FORGRND, PAL_DSKTOP2, "FT2");
 			textOutShadow(360, 146, PAL_FORGRND, PAL_DSKTOP2, "Lined");
 
 			textOutShadow(272, 160, PAL_FORGRND, PAL_DSKTOP2, "Software mouse");
@@ -1410,7 +1420,7 @@ void hideConfigScreen(void)
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INTERPOLATION);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INPUT_FREQ);
-	hideRadioButtonGroup(RB_GROUP_CONFIG_FREQ_TABLE);
+	hideRadioButtonGroup(RB_GROUP_CONFIG_FREQ_SLIDES);
 	hideCheckBox(CB_CONF_VOL_RAMP);
 	hidePushButton(PB_CONFIG_AUDIO_RESCAN);
 	hidePushButton(PB_CONFIG_AUDIO_OUTPUT_DOWN);
@@ -1523,10 +1533,10 @@ void configToggleNotYetAppliedWarning(void)
 	config.dontShowAgainFlags ^= DONT_SHOW_NOT_YET_APPLIED_WARNING_FLAG;
 }
 
-void rbConfigIODevices(void)
+void rbConfigAudio(void)
 {
-	checkRadioButton(RB_CONFIG_IO_DEVICES);
-	editor.currConfigScreen = CONFIG_SCREEN_IO_DEVICES;
+	checkRadioButton(RB_CONFIG_AUDIO);
+	editor.currConfigScreen = CONFIG_SCREEN_AUDIO;
 
 	hideConfigScreen();
 	showConfigScreen();
@@ -1561,7 +1571,7 @@ void rbConfigMidiInput(void)
 }
 #endif
 
-void rbConfigSbs512(void)
+void rbConfigAudioBuffSmall(void)
 {
 	config.specialFlags &= ~(BUFFSIZE_1024 + BUFFSIZE_2048);
 	config.specialFlags |= BUFFSIZE_512;
@@ -1569,7 +1579,7 @@ void rbConfigSbs512(void)
 	setNewAudioSettings();
 }
 
-void rbConfigSbs1024(void)
+void rbConfigAudioBuffMedium(void)
 {
 	config.specialFlags &= ~(BUFFSIZE_512 + BUFFSIZE_2048);
 	config.specialFlags |= BUFFSIZE_1024;
@@ -1577,7 +1587,7 @@ void rbConfigSbs1024(void)
 	setNewAudioSettings();
 }
 
-void rbConfigSbs2048(void)
+void rbConfigAudioBuffLarge(void)
 {
 	config.specialFlags &= ~(BUFFSIZE_512 + BUFFSIZE_1024);
 	config.specialFlags |= BUFFSIZE_2048;
@@ -1585,7 +1595,7 @@ void rbConfigSbs2048(void)
 	setNewAudioSettings();
 }
 
-void rbConfigAudio16bit(void)
+void rbConfigAudio16Bit(void)
 {
 	config.specialFlags &= ~BITDEPTH_32;
 	config.specialFlags |=  BITDEPTH_16;
@@ -1593,7 +1603,7 @@ void rbConfigAudio16bit(void)
 	setNewAudioSettings();
 }
 
-void rbConfigAudio24bit(void)
+void rbConfigAudio32BitFloat(void)
 {
 	config.specialFlags &= ~BITDEPTH_16;
 	config.specialFlags |=  BITDEPTH_32;
@@ -1601,11 +1611,11 @@ void rbConfigAudio24bit(void)
 	setNewAudioSettings();
 }
 
-void rbConfigAudioIntrpNone(void)
+void rbConfigAudioIntrpDisabled(void)
 {
-	config.interpolation = INTERPOLATION_NONE;
+	config.interpolation = INTERPOLATION_DISABLED;
 	audioSetInterpolationType(config.interpolation);
-	checkRadioButton(RB_CONFIG_AUDIO_INTRP_NONE);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_DISABLED);
 }
 
 void rbConfigAudioIntrpLinear(void)
@@ -1615,11 +1625,18 @@ void rbConfigAudioIntrpLinear(void)
 	checkRadioButton(RB_CONFIG_AUDIO_INTRP_LINEAR);
 }
 
-void rbConfigAudioIntrpSinc(void)
+void rbConfigAudioIntrp8PointSinc(void)
 {
-	config.interpolation = INTERPOLATION_SINC;
+	config.interpolation = INTERPOLATION_SINC8;
 	audioSetInterpolationType(config.interpolation);
-	checkRadioButton(RB_CONFIG_AUDIO_INTRP_SINC);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_SINC8);
+}
+
+void rbConfigAudioIntrp16PointSinc(void)
+{
+	config.interpolation = INTERPOLATION_SINC16;
+	audioSetInterpolationType(config.interpolation);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_SINC16);
 }
 
 void rbConfigAudio44kHz(void)
@@ -1638,12 +1655,6 @@ void rbConfigAudio48kHz(void)
 void rbConfigAudio96kHz(void)
 {
 	config.audioFreq = 96000;
-	setNewAudioSettings();
-}
-
-void rbConfigAudio192kHz(void)
-{
-	config.audioFreq = 192000;
 	setNewAudioSettings();
 }
 #endif
@@ -1666,17 +1677,17 @@ void rbConfigAudioInput96kHz(void)
 	checkRadioButton(RB_CONFIG_AUDIO_INPUT_96KHZ);
 }
 
-void rbConfigFreqTableAmiga(void)
+void rbConfigFreqSlidesAmiga(void)
 {
 	lockMixerCallback();
-	setFrequencyTable(false);
+	setLinearPeriods(false);
 	unlockMixerCallback();
 }
 
-void rbConfigFreqTableLinear(void)
+void rbConfigFreqSlidesLinear(void)
 {
 	lockMixerCallback();
-	setFrequencyTable(true);
+	setLinearPeriods(true);
 	unlockMixerCallback();
 }
 
@@ -2235,6 +2246,7 @@ void sbMasterVol(uint32_t pos)
 	{
 		config.masterVol = (int16_t)pos;
 		setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
+		configDrawMasterVol();
 	}
 }
 

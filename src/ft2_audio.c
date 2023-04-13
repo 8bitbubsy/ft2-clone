@@ -28,7 +28,7 @@
 static int32_t smpShiftValue;
 static uint32_t oldAudioFreq, tickTimeLenInt, randSeed = INITIAL_DITHER_SEED;
 static uint64_t tickTimeLenFrac;
-static double dAudioNormalizeMul, dPanningTab[256+1], dPrngStateL, dPrngStateR;
+static double dAudioNormalizeMul, dSqrtPanningTable[256+1], dPrngStateL, dPrngStateR;
 static voice_t voice[MAX_CHANNELS * 2];
 
 // globalized
@@ -89,8 +89,8 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 		}
 
 		// also update config audio radio buttons if we're on that screen at the moment
-		if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
-			setConfigIORadioButtonStates();
+		if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_AUDIO)
+			setConfigAudioRadioButtonStates();
 
 		// if it didn't work to use the old settings again, then something is seriously wrong...
 		if (!setupAudio(CONFIG_HIDE_ERRORS))
@@ -127,8 +127,8 @@ void decreaseMasterVol(void)
 
 	setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
 
-	// if Config -> I/O Devices is open, update master volume scrollbar
-	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+	// if Config -> Audio is open, update master volume scrollbar
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_AUDIO)
 		drawScrollBar(SB_MASTERVOL_SCROLL);
 }
 
@@ -141,8 +141,8 @@ void increaseMasterVol(void)
 
 	setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
 
-	// if Config -> I/O Devices is open, update master volume scrollbar
-	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+	// if Config -> Audio is open, update master volume scrollbar
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_AUDIO)
 		drawScrollBar(SB_MASTERVOL_SCROLL);
 }
 
@@ -195,78 +195,94 @@ void audioSetInterpolationType(uint8_t interpolationType)
 {
 	lockMixerCallback();
 	audio.interpolationType = interpolationType;
+
+	// set sinc polyphase LUT pointers
+	if (config.interpolation == INTERPOLATION_SINC8)
+	{
+		fKaiserSinc = fKaiserSinc_8;
+		fDownSample1 = fDownSample1_8;
+		fDownSample2 = fDownSample2_8;
+	}
+	else if (config.interpolation == INTERPOLATION_SINC16)
+	{
+		fKaiserSinc = fKaiserSinc_16;
+		fDownSample1 = fDownSample1_16;
+		fDownSample2 = fDownSample2_16;
+	}
+
 	unlockMixerCallback();
 }
 
 void calcPanningTable(void)
 {
-	// same formula as FT2's panning table (with 0.0..1.0 range)
+	// same formula as FT2's panning table (with 0.0 .. 1.0 scale)
 	for (int32_t i = 0; i <= 256; i++)
-		dPanningTab[i] = sqrt(i / 256.0);
+		dSqrtPanningTable[i] = sqrt(i / 256.0);
 }
 
 static void voiceUpdateVolumes(int32_t i, uint8_t status)
 {
 	voice_t *v = &voice[i];
 
-	const float fVolumeL = (float)(v->dVolume * dPanningTab[256-v->panning]);
-	const float fVolumeR = (float)(v->dVolume * dPanningTab[    v->panning]);
+	v->fTargetVolumeL = (float)(v->dVolume * dSqrtPanningTable[256-v->panning]);
+	v->fTargetVolumeR = (float)(v->dVolume * dSqrtPanningTable[    v->panning]);
 
 	if (!audio.volumeRampingFlag)
 	{
-		// volume ramping is disabled
-		v->fVolumeL = fVolumeL;
-		v->fVolumeR = fVolumeR;
+		// volume ramping is disabled, set volume directly
+		v->fCurrVolumeL = v->fTargetVolumeL;
+		v->fCurrVolumeR = v->fTargetVolumeR;
 		v->volumeRampLength = 0;
 		return;
 	}
 
-	v->fVolumeLTarget = fVolumeL;
-	v->fVolumeRTarget = fVolumeR;
+	// now we need to handle volume ramping
 
-	if (status & IS_Trigger)
+	const bool voiceSampleTrigger = !!(status & IS_Trigger);
+
+	if (voiceSampleTrigger)
 	{
 		// sample is about to start, ramp out/in at the same time
 
-		// setup "fade out" voice (only if current voice volume > 0)
-		if (v->fVolumeL > 0.0f || v->fVolumeR > 0.0f)
+		if (v->fCurrVolumeL > 0.0f || v->fCurrVolumeR > 0.0f)
 		{
+			// setup fadeout voice
+
 			voice_t *f = &voice[MAX_CHANNELS+i];
 
-			*f = *v; // copy voice
+			*f = *v; // store current voice in respective fadeout ramp voice
 
-			const float fVolumeLTarget = -f->fVolumeL;
-			const float fVolumeRTarget = -f->fVolumeR;
+			const float fVolumeLDiff = 0.0f - f->fCurrVolumeL;
+			const float fVolumeRDiff = 0.0f - f->fCurrVolumeR;
 
 			f->volumeRampLength = audio.quickVolRampSamples; // 5ms
 			const float fVolumeRampLength = (float)(int32_t)f->volumeRampLength;
 
-			f->fVolumeLDelta = fVolumeLTarget / fVolumeRampLength;
-			f->fVolumeRDelta = fVolumeRTarget / fVolumeRampLength;
+			f->fVolumeLDelta = fVolumeLDiff / fVolumeRampLength;
+			f->fVolumeRDelta = fVolumeRDiff / fVolumeRampLength;
 
 			f->isFadeOutVoice = true;
 		}
 
 		// make current voice fade in from zero when it starts
-		v->fVolumeL = v->fVolumeR = 0.0f;
+		v->fCurrVolumeL = v->fCurrVolumeR = 0.0f;
 	}
 
-	// if destination volume and current volume is the same (and we have no sample trigger), don't do ramp
-	if (fVolumeL == v->fVolumeL && fVolumeR == v->fVolumeR && !(status & IS_Trigger))
+	if (!voiceSampleTrigger && v->fTargetVolumeL == v->fCurrVolumeL && v->fTargetVolumeR == v->fCurrVolumeR)
 	{
-		v->volumeRampLength = 0;
+		v->volumeRampLength = 0; // no ramp needed for now
 	}
 	else
 	{
-		const float fVolumeLTarget = fVolumeL - v->fVolumeL;
-		const float fVolumeRTarget = fVolumeR - v->fVolumeR;
+		const float fVolumeLDiff = v->fTargetVolumeL - v->fCurrVolumeL;
+		const float fVolumeRDiff = v->fTargetVolumeR - v->fCurrVolumeR;
 
 		// IS_QuickVol = 5ms, otherwise the duration of a tick
 		v->volumeRampLength = (status & IS_QuickVol) ? audio.quickVolRampSamples : audio.samplesPerTickInt;
 		const float fVolumeRampLength = (float)(int32_t)v->volumeRampLength;
 
-		v->fVolumeLDelta = fVolumeLTarget / fVolumeRampLength;
-		v->fVolumeRDelta = fVolumeRTarget / fVolumeRampLength;
+		v->fVolumeLDelta = fVolumeLDiff / fVolumeRampLength;
+		v->fVolumeRDelta = fVolumeRDiff / fVolumeRampLength;
 	}
 }
 
@@ -294,13 +310,13 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 	{
 		v->base16 = (const int16_t *)s->dataPtr;
 		v->revBase16 = &v->base16[loopStart + loopEnd]; // for pingpong loops
-		v->leftEdgeTaps16 = s->leftEdgeTapSamples16 + SINC_LEFT_TAPS;
+		v->leftEdgeTaps16 = s->leftEdgeTapSamples16 + SINC_MAX_LEFT_TAPS;
 	}
 	else
 	{
 		v->base8 = s->dataPtr;
 		v->revBase8 = &v->base8[loopStart + loopEnd]; // for pingpong loops
-		v->leftEdgeTaps8 = s->leftEdgeTapSamples8 + SINC_LEFT_TAPS;
+		v->leftEdgeTaps8 = s->leftEdgeTapSamples8 + SINC_MAX_LEFT_TAPS;
 	}
 
 	v->hasLooped = false; // for sinc interpolation special case
@@ -319,7 +335,7 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 		return;
 	}
 
-	v->mixFuncOffset = (sample16Bit * 9) + (audio.interpolationType * 3) + loopType;
+	v->mixFuncOffset = ((int32_t)sample16Bit * 12) + (audio.interpolationType * 3) + loopType;
 	v->active = true;
 }
 
@@ -328,8 +344,8 @@ void resetRampVolumes(void)
 	voice_t *v = voice;
 	for (int32_t i = 0; i < song.numChannels; i++, v++)
 	{
-		v->fVolumeL = v->fVolumeLTarget;
-		v->fVolumeR = v->fVolumeRTarget;
+		v->fCurrVolumeL = v->fTargetVolumeL;
+		v->fCurrVolumeR = v->fTargetVolumeR;
 		v->volumeRampLength = 0;
 	}
 }
@@ -486,26 +502,26 @@ static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 			const bool volRampFlag = (v->volumeRampLength > 0);
 			if (volRampFlag)
 			{
-				centerMixFlag = (v->fVolumeLTarget == v->fVolumeRTarget) && (v->fVolumeLDelta == v->fVolumeRDelta);
+				centerMixFlag = (v->fTargetVolumeL == v->fTargetVolumeR) && (v->fVolumeLDelta == v->fVolumeRDelta);
 			}
 			else // no volume ramping active
 			{
-				if (v->fVolumeL == 0.0f && v->fVolumeR == 0.0f)
+				if (v->fCurrVolumeL == 0.0f && v->fCurrVolumeR == 0.0f)
 				{
 					silenceMixRoutine(v, samplesToMix);
 					continue;
 				}
 
-				centerMixFlag = (v->fVolumeL == v->fVolumeR);
+				centerMixFlag = (v->fCurrVolumeL == v->fCurrVolumeR);
 			}
 
-			mixFuncTab[((int32_t)centerMixFlag * 36) + ((int32_t)volRampFlag * 18) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
+			mixFuncTab[((int32_t)centerMixFlag * (3*4*2*2)) + ((int32_t)volRampFlag * (3*4*2)) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
 		}
 
 		if (r->active) // volume ramp fadeout-voice
 		{
-			const bool centerMixFlag = (r->fVolumeLTarget == r->fVolumeRTarget) && (r->fVolumeLDelta == r->fVolumeRDelta);
-			mixFuncTab[((int32_t)centerMixFlag * 36) + 18 + r->mixFuncOffset](r, bufferPosition, samplesToMix);
+			const bool centerMixFlag = (r->fTargetVolumeL == r->fTargetVolumeR) && (r->fVolumeLDelta == r->fVolumeRDelta);
+			mixFuncTab[((int32_t)centerMixFlag * (3*4*2*2)) + (3*4*2) + r->mixFuncOffset](r, bufferPosition, samplesToMix);
 		}
 	}
 }
@@ -1016,7 +1032,7 @@ bool setupAudio(bool showErrorMsg)
 	}
 
 #if CPU_64BIT
-	if (have.freq != 44100 && have.freq != 48000 && have.freq != 96000 && have.freq != 192000)
+	if (have.freq != 44100 && have.freq != 48000 && have.freq != 96000)
 #else // 32-bit CPUs only support .16fp resampling precision. Not sensible with high rates.
 	if (have.freq != 44100 && have.freq != 48000)
 #endif
@@ -1064,7 +1080,7 @@ bool setupAudio(bool showErrorMsg)
 	setLastWorkingAudioDevName();
 
 	// update config audio radio buttons if we're on that screen at the moment
-	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_AUDIO)
 		showConfigScreen();
 
 	updateWavRendererSettings();

@@ -295,7 +295,7 @@ double getSampleC4Rate(sample_t *s)
 	return dPeriod2Hz(period);
 }
 
-void setFrequencyTable(bool linearPeriodsFlag)
+void setLinearPeriods(bool linearPeriodsFlag)
 {
 	pauseAudio();
 
@@ -308,15 +308,15 @@ void setFrequencyTable(bool linearPeriodsFlag)
 
 	resumeAudio();
 
-	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+	if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_AUDIO)
 	{
-		// update "frequency table" radiobutton, if it's shown
-		setConfigIORadioButtonStates();
-
-		// update mid-C freq. in instr. editor (it can slightly differ between Amiga/linear)
-		if (ui.instEditorShown)
-			drawC4Rate();
+		// update "frequency slides" radiobutton, if it's shown
+		setConfigAudioRadioButtonStates();
 	}
+
+	// update mid-C freq. in instr. editor (it can slightly differ between Amiga/linear)
+	if (ui.instEditorShown)
+		drawC4Rate();
 }
 
 static void retrigVolume(channel_t *ch)
@@ -412,7 +412,7 @@ void calcReplayerVars(int32_t audioFreq)
 		return;
 
 	audio.dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
-	audio.quickVolRampSamples = (int32_t)round(audioFreq / (double)FT2_QUICKRAMP_SAMPLES);
+	audio.quickVolRampSamples = (uint32_t)round(audioFreq / (double)FT2_QUICKRAMP_SAMPLES);
 
 	for (int32_t bpm = MIN_BPM; bpm <= MAX_BPM; bpm++)
 	{
@@ -2796,12 +2796,6 @@ bool setupReplayer(void)
 	editor.globalVolume = song.globalVolume = 64;
 	audio.linearPeriodsFlag = true;
 	note2Period = linearPeriods;
-
-	if (!calcWindowedSincTables())
-	{
-		showErrorMsgBox("Not enough memory!");
-		return false;
-	}
 
 	calcPanningTable();
 

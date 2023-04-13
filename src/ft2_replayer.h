@@ -217,9 +217,9 @@ typedef struct sample_t
 	int32_t length, loopStart, loopLength;
 
 	// fix for resampling interpolation taps
-	int8_t leftEdgeTapSamples8[SINC_TAPS+SINC_LEFT_TAPS];
-	int16_t leftEdgeTapSamples16[SINC_TAPS+SINC_LEFT_TAPS];
-	int16_t fixedSmp[SINC_RIGHT_TAPS];
+	int8_t leftEdgeTapSamples8[32];
+	int16_t leftEdgeTapSamples16[32];
+	int16_t fixedSmp[32];
 	int32_t fixedPos;
 } sample_t;
 
@@ -328,7 +328,7 @@ void conv16BitSample(int8_t *p, int32_t length, bool stereo); // changes sample 
 void delta2Samp(int8_t *p, int32_t length, uint8_t smpFlags);
 void samp2Delta(int8_t *p, int32_t length, uint8_t smpFlags);
 void setPatternLen(uint16_t pattNum, int16_t numRows);
-void setFrequencyTable(bool linearPeriodsFlag);
+void setLinearPeriods(bool linearPeriodsFlag);
 void tickReplayer(void); // periodically called from audio callback
 void resetChannels(void);
 bool patternEmpty(uint16_t pattNum);
