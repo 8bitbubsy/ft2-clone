@@ -1174,7 +1174,7 @@ void showConfigScreen(void)
 			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
 			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
 
-			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Output frequency:");
+			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Output rate:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
 			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz (default)");
 #if CPU_64BIT
