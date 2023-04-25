@@ -46,23 +46,46 @@ static SDL_Thread *thread;
 
 static void updateWavRenderer(void)
 {
-	char str[10];
+	char str[16];
 
-	fillRect(209, 116, 41, 51, PAL_DESKTOP);
-
+	fillRect(195, 116, 56, 8, PAL_DESKTOP);
+	textOut(237, 116, PAL_FORGRND, "Hz");
 	sprintf(str, "%6d", WDFrequency);
-	textOutFixed(209, 116, PAL_FORGRND, PAL_DESKTOP, str);
-
+	textOutFixed(195, 116, PAL_FORGRND, PAL_DESKTOP, str);
+	
+	fillRect(229, 130, 21, 8, PAL_DESKTOP);
+	charOut(243, 130, PAL_FORGRND, 'x');
 	sprintf(str, "%02d", WDAmp);
-	textOut(237, 130, PAL_FORGRND, str);
+	textOut(229, 130, PAL_FORGRND, str);
 
+	fillRect(237, 144, 13, 8, PAL_DESKTOP);
 	hexOut(237, 144, PAL_FORGRND, WDStartPos, 2);
-	hexOut(237, 158, PAL_FORGRND, WDStopPos,  2);
+
+	fillRect(237, 158, 13, 8, PAL_DESKTOP);
+	hexOut(237, 158, PAL_FORGRND, WDStopPos, 2);
 }
 
 void cbToggleWavRenderBPMMode(void)
 {
 	useLegacyBPM ^= 1;
+}
+
+void setWavRenderFrequency(int32_t freq)
+{
+	WDFrequency = CLAMP(freq, MIN_WAV_RENDER_FREQ, MAX_WAV_RENDER_FREQ);
+	if (ui.wavRendererShown)
+		updateWavRenderer();
+}
+
+void setWavRenderBitDepth(uint8_t bitDepth)
+{
+	if (bitDepth == 16)
+		WDBitDepth = 16;
+	else if (bitDepth == 32)
+		WDBitDepth = 32;
+
+	if (ui.wavRendererShown)
+		updateWavRenderer();
 }
 
 void updateWavRendererSettings(void) // called when changing config.boostLevel
@@ -77,13 +100,13 @@ void drawWavRenderer(void)
 	drawFramework(79, 109, 212, 64, FRAMEWORK_TYPE1);
 
 	textOutShadow(4,   96, PAL_FORGRND, PAL_DSKTOP2, "WAV exporting:");
-	textOutShadow(156, 96, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
-	textOutShadow(221, 96, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
+	textOutShadow(146, 96, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
+	textOutShadow(211, 96, PAL_FORGRND, PAL_DSKTOP2, "32-bit (float)");
 
 	textOutShadow(19, 114, PAL_FORGRND, PAL_DSKTOP2, "Imprecise");
 	textOutShadow(4,  127, PAL_FORGRND, PAL_DSKTOP2, "BPM (FT2)");
 
-	textOutShadow(85, 116, PAL_FORGRND, PAL_DSKTOP2, "Frequency");
+	textOutShadow(85, 116, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate");
 	textOutShadow(85, 130, PAL_FORGRND, PAL_DSKTOP2, "Amplification");
 	textOutShadow(85, 144, PAL_FORGRND, PAL_DSKTOP2, "Start song position");
 	textOutShadow(85, 158, PAL_FORGRND, PAL_DSKTOP2, "Stop song position");
@@ -459,10 +482,11 @@ void pbWavFreqUp(void)
 {
 	if (WDFrequency < MAX_WAV_RENDER_FREQ)
 	{
-		     if (WDFrequency == 44100) WDFrequency = 48000;
+		     if (WDFrequency ==  44100) WDFrequency = 48000;
 #if CPU_64BIT
-		else if (WDFrequency == 48000) WDFrequency = 96000;
-		else if (WDFrequency == 96000) WDFrequency = 192000;
+		else if (WDFrequency ==  48000) WDFrequency = 96000;
+		else if (WDFrequency ==  96000) WDFrequency = 192000;
+		else if (WDFrequency == 192000) WDFrequency = 384000;
 #endif
 		updateWavRenderer();
 	}
@@ -473,9 +497,10 @@ void pbWavFreqDown(void)
 	if (WDFrequency > MIN_WAV_RENDER_FREQ)
 	{
 #if CPU_64BIT
-		     if (WDFrequency == 192000) WDFrequency = 96000;
-		else if (WDFrequency == 96000) WDFrequency = 48000;
-		else if (WDFrequency == 48000) WDFrequency = 44100;
+		     if (WDFrequency == 384000) WDFrequency = 192000;
+		else if (WDFrequency == 192000) WDFrequency = 96000;
+		else if (WDFrequency ==  96000) WDFrequency = 48000;
+		else if (WDFrequency ==  48000) WDFrequency = 44100;
 #else
 		if (WDFrequency == 48000) WDFrequency = 44100;
 #endif

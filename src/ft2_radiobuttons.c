@@ -80,9 +80,9 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	{ 390, 44,  50, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigAudioBuffLarge },
 
 	// audio bit depth
-	//x,   y,   w,  group,                           funcOnUp
-	{ 390, 74, 107, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio16Bit },
-	{ 390, 88,  83, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio32BitFloat },
+	//x,   y,  w,  group,                           funcOnUp
+	{ 390, 74, 52, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio16Bit },
+	{ 390, 88, 93, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio32BitFloat },
 
 	// audio interpolation
 	//x,   y,   w,   group,                               funcOnUp
@@ -92,11 +92,11 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	{ 390, 159, 102, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrp16PointSinc },
 
 	// audio output frequency
-	//x,   y,   w,  group,                      funcOnUp
-	{ 509, 16,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
-	{ 509, 30, 121, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
+	//x,   y,  w,  group,                      funcOnUp
+	{ 509, 16, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
+	{ 509, 30, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
 #if CPU_64BIT
-	{ 509, 44,  66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio96kHz },
+	{ 509, 44, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio96kHz },
 #endif
 
 	// audio input frequency
@@ -106,7 +106,7 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	{ 322, 156, 60, RB_GROUP_CONFIG_AUDIO_INPUT_FREQ, rbConfigAudioInput96kHz },
 
 	// frequency slides
-	//x,   y,   w,   group,                      funcOnUp
+	//x,   y,  w,   group,                       funcOnUp
 	{ 509, 74,  50, RB_GROUP_CONFIG_FREQ_SLIDES, rbConfigFreqSlidesAmiga  },
 	{ 509, 88, 108, RB_GROUP_CONFIG_FREQ_SLIDES, rbConfigFreqSlidesLinear },
 
@@ -218,8 +218,8 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 
 	// WAV RENDERER BITDEPTH
 	//x,   y,  w,  group,                        funcOnUp
-	{ 140, 95, 52, RB_GROUP_WAV_RENDER_BITDEPTH, rbWavRenderBitDepth16 },
-	{ 205, 95, 83, RB_GROUP_WAV_RENDER_BITDEPTH, rbWavRenderBitDepth32 }
+	{ 130, 95, 52, RB_GROUP_WAV_RENDER_BITDEPTH, rbWavRenderBitDepth16 },
+	{ 195, 95, 93, RB_GROUP_WAV_RENDER_BITDEPTH, rbWavRenderBitDepth32 }
 };
 
 void drawRadioButton(uint16_t radioButtonID)

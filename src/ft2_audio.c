@@ -102,6 +102,8 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 
 	resumeAudio();
 
+	setWavRenderFrequency(audio.freq);
+	setWavRenderBitDepth((config.specialFlags & BITDEPTH_32) ? 32 : 16);
 	return true;
 }
 
@@ -1103,6 +1105,10 @@ bool setupAudio(bool showErrorMsg)
 	setMixerBPM(song.BPM); // this is important
 
 	audio.resetSyncTickTimeFlag = true;
+
+	setWavRenderFrequency(audio.freq);
+	setWavRenderBitDepth((config.specialFlags & BITDEPTH_32) ? 32 : 16);
+
 	return true;
 }
 

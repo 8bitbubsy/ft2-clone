@@ -1165,8 +1165,8 @@ void showConfigScreen(void)
 			textOutShadow(406,  45, PAL_FORGRND, PAL_DSKTOP2, "Large");
 
 			textOutShadow(390,  61, PAL_FORGRND, PAL_DSKTOP2, "Audio bit depth:");
-			textOutShadow(406,  75, PAL_FORGRND, PAL_DSKTOP2, "16-bit (default)");
-			textOutShadow(406,  89, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
+			textOutShadow(406,  75, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
+			textOutShadow(406,  89, PAL_FORGRND, PAL_DSKTOP2, "32-bit (float)");
 
 			textOutShadow(390, 105, PAL_FORGRND, PAL_DSKTOP2, "Interpolation:");
 			textOutShadow(406, 118, PAL_FORGRND, PAL_DSKTOP2, "Disabled");
@@ -1174,9 +1174,9 @@ void showConfigScreen(void)
 			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
 			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
 
-			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Output rate:");
+			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
-			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz (default)");
+			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz");
 #if CPU_64BIT
 			textOutShadow(525,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
 #endif
@@ -1185,7 +1185,7 @@ void showConfigScreen(void)
 			textOutShadow(525,  89, PAL_FORGRND, PAL_DSKTOP2, "Linear (default)");
 
 			textOutShadow(509, 105, PAL_FORGRND, PAL_DSKTOP2, "Amplification:");
-			charOutShadow(621, 105, PAL_FORGRND, PAL_DSKTOP2, 'X');
+			charOutShadow(621, 105, PAL_FORGRND, PAL_DSKTOP2, 'x');
 			textOutShadow(509, 133, PAL_FORGRND, PAL_DSKTOP2, "Master volume:");
 			textOutShadow(525, 160, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
 
