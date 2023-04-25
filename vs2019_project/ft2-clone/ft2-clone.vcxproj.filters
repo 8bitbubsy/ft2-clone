@@ -46,31 +46,31 @@
       <Filter>rtmidi</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_fonts.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_gui.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_instr.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_logo.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_looppins.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_midi.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_mouse.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_nibbles.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_scopes.c">
-      <Filter>libflac\graphics</Filter>
+      <Filter>graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\mixer\ft2_mix.c">
       <Filter>mixer</Filter>
@@ -327,9 +327,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Filter Include="headers">
-      <UniqueIdentifier>{559f399e-331e-4688-8a7d-328ca6739456}</UniqueIdentifier>
-    </Filter>
     <Filter Include="mixer">
       <UniqueIdentifier>{5c40c417-c4bb-4cf2-b71b-c557bf0a86cd}</UniqueIdentifier>
     </Filter>
@@ -348,7 +345,10 @@
     <Filter Include="scopes">
       <UniqueIdentifier>{8ac888cf-e1a5-4633-bcca-240a8eae2e23}</UniqueIdentifier>
     </Filter>
-    <Filter Include="libflac\graphics">
+    <Filter Include="headers">
+      <UniqueIdentifier>{559f399e-331e-4688-8a7d-328ca6739456}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="graphics">
       <UniqueIdentifier>{c6fad604-509b-4072-b181-d47835f08428}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
