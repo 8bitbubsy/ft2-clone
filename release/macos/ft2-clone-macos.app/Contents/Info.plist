@@ -124,7 +124,7 @@
     <string>Copyright © Olav "8bitbubsy" Sørensen
 https://16-bits.org</string>
     <key>LSMinimumSystemVersion</key>
-    <string>10.9</string>
+    <string>10.11</string>
     <key>CGDisableCoalescedUpdates</key>
     <true/>
     <key>NSHighResolutionCapable</key>
