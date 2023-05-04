@@ -1604,7 +1604,7 @@ static void updateChannel(channel_t *ch)
 #ifdef HAS_MIDI
 	if (ch->midiVibDepth > 0 || ins->autoVibDepth > 0)
 #else
-	if (ins->vibDepth > 0)
+	if (ins->autoVibDepth > 0)
 #endif
 	{
 		uint16_t autoVibAmp;
