@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 #include "../ft2_header.h"
 #include "../ft2_audio.h"
 #include "../ft2_sample_ed.h"
