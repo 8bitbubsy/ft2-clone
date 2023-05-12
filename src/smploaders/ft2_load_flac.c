@@ -289,7 +289,7 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__St
 			}
 			else if (length > 10 && !memcmp(tag, "LOOPSTART=", 10))
 			{
-				loopLength = atoi(&tag[10]);
+				loopStart = atoi(&tag[10]);
 			}
 			else if (length > 11 && !memcmp(tag, "LOOPLENGTH=", 11))
 			{
@@ -298,8 +298,8 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__St
 
 			if (loopLength > 0)
 			{
-				s->loopStart = loopLength;
-				s->loopLength = loopStart;
+				s->loopStart = loopStart;
+				s->loopLength = loopLength;
 
 				DISABLE_LOOP(s->flags);
 				s->flags |= LOOP_FWD;
