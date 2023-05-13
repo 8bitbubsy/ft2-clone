@@ -1007,7 +1007,7 @@ bool setupAudio(bool showErrorMsg)
 	if (audio.dev == 0)
 	{
 		if (showErrorMsg)
-			showErrorMsgBox("Couldn't open audio device:\n\"%s\"\n\nDo you have any audio device enabled and plugged in?", SDL_GetError());
+			showErrorMsgBox("Couldn't open audio device:\n\"%s\"\n\nDo you have an audio device enabled and plugged in?", SDL_GetError());
 
 		return false;
 	}
