@@ -77,7 +77,9 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 
 	for (int32_t i = 0; i < NUM_CURSORS; i++)
 	{
-		const int32_t scaleFactor = video.yScale;
+		int32_t scaleFactor = video.yScale;
+		if (scaleFactor > 8) // just in case
+			scaleFactor = 8;
 
 		SDL_Surface *surface = SDL_CreateRGBSurface(0, MOUSE_CURSOR_W*scaleFactor, MOUSE_CURSOR_H*scaleFactor, 32, 0, 0, 0, 0);
 		if (surface == NULL)
