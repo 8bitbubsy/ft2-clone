@@ -38,7 +38,7 @@
                    "Try to mention what you did before the crash happened.\n" \
                    "My email can be found at the bottom of www.16-bits.org."
 
-static bool backupMadeAfterCrash, didDropFile;
+static bool backupMadeAfterCrash;
 
 #ifdef _WIN32
 #define SYSMSG_FILE_ARG (WM_USER+1)
@@ -237,6 +237,12 @@ static void handleSysMsg(SDL_Event inputEvent)
 
 				UnmapViewOfFile(sharedMemBuf);
 				sharedMemBuf = NULL;
+
+				if (video.window != NULL)
+				{
+					SDL_RestoreWindow(video.window);
+					SDL_RaiseWindow(video.window);
+				}
 			}
 
 			CloseHandle(hMapFile);
@@ -449,9 +455,8 @@ static void handleSDLEvents(void)
 			loadDroppedFile(event.drop.file, true);
 			SDL_free(event.drop.file);
 
-			// kludge: allow focus-clickthrough after drag-n-drop
-			SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-			didDropFile = true;
+			SDL_RestoreWindow(video.window);
+			SDL_RaiseWindow(video.window);
 		}
 		else if (event.type == SDL_QUIT)
 		{
@@ -489,13 +494,6 @@ static void handleSDLEvents(void)
 		else if (event.type == SDL_MOUSEBUTTONUP)
 		{
 			mouseButtonUpHandler(event.button.button);
-
-			// kludge: we drag-n-dropped a file before this mouse click release, restore focus-clickthrough mode
-			if (didDropFile)
-			{
-				didDropFile = false;
-				SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "0");
-			}
 		}
 		else if (event.type == SDL_MOUSEBUTTONDOWN)
 		{
