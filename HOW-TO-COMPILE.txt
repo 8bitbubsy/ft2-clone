@@ -1,15 +1,7 @@
 ---- Guide on how to compile the FT2 clone for Windows/macOS/Linux ---
 
-LINUX NOTE: This code is NOT big-endian compatible! And converting it would take
-            a ton of time, as I fread()/fwrite() directly to/from structs and
-            stuff (like original FT2). The structs are also packed, with
-            unaligned 16-bit/32-bit entries, so the clone might fail on certain
-            CPUs (except x86/x86_64, ARM11 and never). The clone might also
-            behave slightly wrong if bitshift-right on signed numbers is
-            compiled into using logical shift (LSR/SHR) instead of arithmetic
-            shift (ASR/SAR). Most CPUs have ASR/SAR instructions.
-              
-      
+LINUX NOTE: This code is NOT big-endian compatible!
+
 Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
 
 
