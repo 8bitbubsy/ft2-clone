@@ -36,7 +36,7 @@
 #define CRASH_TEXT "Oh no! The Fasttracker II clone has crashed...\nA backup .xm was hopefully " \
                    "saved to the current module directory.\n\nPlease report this bug if you can.\n" \
                    "Try to mention what you did before the crash happened.\n" \
-                   "My email can be found at the bottom of www.16-bits.org."
+                   "My email is on the bottom of https://16-bits.org"
 
 static bool backupMadeAfterCrash;
 
