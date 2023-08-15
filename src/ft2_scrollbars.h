@@ -30,7 +30,7 @@ enum // SCROLLBARS
 	SB_INST_EXT_MIDI_PRG,
 	SB_INST_EXT_MIDI_BEND,
 
-	// Config I/O devices
+	// Config Audio
 	SB_AUDIO_OUTPUT_SCROLL,
 	SB_AUDIO_INPUT_SCROLL,
 	SB_AMP_SCROLL,
@@ -46,7 +46,7 @@ enum // SCROLLBARS
 	SB_MIDI_SENS,
 
 #ifdef HAS_MIDI
-	// Config Midi
+	// Config MIDI input
 	SB_MIDI_INPUT_SCROLL,
 #endif
 

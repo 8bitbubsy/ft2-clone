@@ -251,10 +251,10 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 		ins->panEnvLoopEnd = ih.panEnvLoopEnd;
 		ins->volEnvFlags = ih.volEnvFlags;
 		ins->panEnvFlags = ih.panEnvFlags;
-		ins->vibType = ih.vibType;
-		ins->vibSweep = ih.vibSweep;
-		ins->vibDepth = ih.vibDepth;
-		ins->vibRate = ih.vibRate;
+		ins->autoVibType = ih.vibType;
+		ins->autoVibSweep = ih.vibSweep;
+		ins->autoVibDepth = ih.vibDepth;
+		ins->autoVibRate = ih.vibRate;
 		ins->fadeout = ih.fadeout;
 		ins->midiOn = (ih.midiOn == 1) ? true : false;
 		ins->midiChannel = ih.midiChannel;

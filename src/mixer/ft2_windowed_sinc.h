@@ -2,29 +2,23 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "ft2_mix.h"
+#include "ft2_mix.h" // MIXER_FRAC_BITS
 
-// 8 or 16. 8 allows more unwanted frequencies, which may be preferred for lo-fi samples
-#define SINC_TAPS 8
-
-// log2(SINC_TAPS)
-#define SINC_TAPS_BITS 3
-
+// 8192 is a good compromise
 #define SINC_PHASES 8192
+#define SINC_PHASES_BITS 13 // log2(SINC_PHASES)
 
-// log2(SINC_PHASES)
-#define SINC_PHASES_BITS 13
+// do not change these!
+#define SINC8_FSHIFT (MIXER_FRAC_BITS-(SINC_PHASES_BITS+3))
+#define SINC8_FMASK ((8*SINC_PHASES)-8)
+#define SINC16_FSHIFT (MIXER_FRAC_BITS-(SINC_PHASES_BITS+4))
+#define SINC16_FMASK ((16*SINC_PHASES)-16)
+#define SINC_MAX_TAPS 16
+#define SINC_MAX_LEFT_TAPS ((SINC_MAX_TAPS/2)-1)
+#define SINC_MAX_RIGHT_TAPS (SINC_MAX_TAPS/2)
 
-#define SINC_LUT_LEN (SINC_TAPS * SINC_PHASES)
-#define SINC_FSHIFT (MIXER_FRAC_BITS-(SINC_PHASES_BITS+SINC_TAPS_BITS))
-#define SINC_FMASK ((SINC_TAPS*SINC_PHASES)-SINC_TAPS)
-
-#define SINC_CENTER_TAP (SINC_TAPS/2)
-#define SINC_LEFT_TAPS ((SINC_TAPS/2)-1)
-#define SINC_RIGHT_TAPS (SINC_TAPS/2)
-
-// for LUT calculation
-#define SINC_MID_TAP ((SINC_TAPS/2)*SINC_PHASES)
+extern float *fKaiserSinc_8, *fDownSample1_8, *fDownSample2_8;
+extern float *fKaiserSinc_16, *fDownSample1_16, *fDownSample2_16;
 
 extern float *fKaiserSinc, *fDownSample1, *fDownSample2;
 

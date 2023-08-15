@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -107,6 +107,15 @@
 #define SDL_PS2_SKIP_IOP_RESET() \
    void reset_IOP(); \
    void reset_IOP() {}
+
+#elif defined(__3DS__)
+/*
+  On N3DS, SDL provides a main function that sets up the screens
+  and storage.
+
+  If you provide this yourself, you may define SDL_MAIN_HANDLED
+*/
+#define SDL_MAIN_AVAILABLE
 
 #endif
 #endif /* SDL_MAIN_HANDLED */
@@ -253,6 +262,13 @@ extern DECLSPEC int SDLCALL SDL_UIKitRunApp(int argc, char *argv[], SDL_main_fun
  * \since This function is available since SDL 2.24.0.
  */
 extern DECLSPEC int SDLCALL SDL_GDKRunApp(SDL_main_func mainFunction, void *reserved);
+
+/**
+ * Callback from the application to let the suspend continue.
+ *
+ * \since This function is available since SDL 2.28.0.
+ */
+extern DECLSPEC void SDLCALL SDL_GDKSuspendComplete(void);
 
 #endif /* __GDK__ */
 

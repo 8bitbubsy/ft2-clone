@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "../ft2_cpu.h"
 
+// the fractional bits are hardcoded, changing these will break things!
 #if CPU_64BIT
 #define MIXER_FRAC_BITS 32
 #else
@@ -14,4 +15,4 @@
 
 typedef void (*mixFunc)(void *, uint32_t, uint32_t);
 
-extern const mixFunc mixFuncTab[72]; // ft2_mix.c
+extern const mixFunc mixFuncTab[]; // ft2_mix.c

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -187,7 +187,8 @@ typedef enum
     SDL_DISPLAYEVENT_NONE,          /**< Never used */
     SDL_DISPLAYEVENT_ORIENTATION,   /**< Display orientation has changed to data1 */
     SDL_DISPLAYEVENT_CONNECTED,     /**< Display has been added to the system */
-    SDL_DISPLAYEVENT_DISCONNECTED   /**< Display has been removed from the system */
+    SDL_DISPLAYEVENT_DISCONNECTED,  /**< Display has been removed from the system */
+    SDL_DISPLAYEVENT_MOVED          /**< Display has changed position */
 } SDL_DisplayEventID;
 
 /**
@@ -1047,6 +1048,27 @@ extern DECLSPEC int SDLCALL SDL_GetWindowBordersSize(SDL_Window * window,
                                                      int *bottom, int *right);
 
 /**
+ * Get the size of a window in pixels.
+ *
+ * This may differ from SDL_GetWindowSize() if we're rendering to a high-DPI
+ * drawable, i.e. the window was created with `SDL_WINDOW_ALLOW_HIGHDPI` on a
+ * platform with high-DPI support (Apple calls this "Retina"), and not
+ * disabled by the `SDL_HINT_VIDEO_HIGHDPI_DISABLED` hint.
+ *
+ * \param window the window from which the drawable size should be queried
+ * \param w a pointer to variable for storing the width in pixels, may be NULL
+ * \param h a pointer to variable for storing the height in pixels, may be
+ *          NULL
+ *
+ * \since This function is available since SDL 2.26.0.
+ *
+ * \sa SDL_CreateWindow
+ * \sa SDL_GetWindowSize
+ */
+extern DECLSPEC void SDLCALL SDL_GetWindowSizeInPixels(SDL_Window * window,
+                                                       int *w, int *h);
+
+/**
  * Set the minimum size of a window's client area.
  *
  * \param window the window to change
@@ -1254,6 +1276,17 @@ extern DECLSPEC int SDLCALL SDL_SetWindowFullscreen(SDL_Window * window,
                                                     Uint32 flags);
 
 /**
+ * Return whether the window has a surface associated with it.
+ *
+ * \returns SDL_TRUE if there is a surface associated with the window, or SDL_FALSE otherwise.
+ *
+ * \since This function is available since SDL 2.28.0.
+ *
+ * \sa SDL_GetWindowSurface
+ */
+extern DECLSPEC SDL_bool SDLCALL SDL_HasWindowSurface(SDL_Window *window);
+
+/**
  * Get the SDL surface associated with the window.
  *
  * A new surface will be created with the optimal format for the window, if
@@ -1273,6 +1306,8 @@ extern DECLSPEC int SDLCALL SDL_SetWindowFullscreen(SDL_Window * window,
  *
  * \since This function is available since SDL 2.0.0.
  *
+ * \sa SDL_DestroyWindowSurface
+ * \sa SDL_HasWindowSurface
  * \sa SDL_UpdateWindowSurface
  * \sa SDL_UpdateWindowSurfaceRects
  */
@@ -1307,7 +1342,7 @@ extern DECLSPEC int SDLCALL SDL_UpdateWindowSurface(SDL_Window * window);
  *
  * \param window the window to update
  * \param rects an array of SDL_Rect structures representing areas of the
- *              surface to copy
+ *              surface to copy, in pixels
  * \param numrects the number of rectangles
  * \returns 0 on success or a negative error code on failure; call
  *          SDL_GetError() for more information.
@@ -1320,6 +1355,20 @@ extern DECLSPEC int SDLCALL SDL_UpdateWindowSurface(SDL_Window * window);
 extern DECLSPEC int SDLCALL SDL_UpdateWindowSurfaceRects(SDL_Window * window,
                                                          const SDL_Rect * rects,
                                                          int numrects);
+
+/**
+ * Destroy the surface associated with the window.
+ *
+ * \param window the window to update
+ * \returns 0 on success or a negative error code on failure; call
+ *          SDL_GetError() for more information.
+ *
+ * \since This function is available since SDL 2.28.0.
+ *
+ * \sa SDL_GetWindowSurface
+ * \sa SDL_HasWindowSurface
+ */
+extern DECLSPEC int SDLCALL SDL_DestroyWindowSurface(SDL_Window *window);
 
 /**
  * Set a window's input grab mode.
@@ -1789,6 +1838,9 @@ extern DECLSPEC void SDLCALL SDL_EnableScreenSaver(void);
  *
  * If you disable the screensaver, it is automatically re-enabled when SDL
  * quits.
+ *
+ * The screensaver is disabled by default since SDL 2.0.2. Before SDL 2.0.2
+ * the screensaver was enabled by default.
  *
  * \since This function is available since SDL 2.0.0.
  *

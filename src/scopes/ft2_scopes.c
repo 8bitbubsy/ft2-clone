@@ -78,13 +78,13 @@ static void setChannel(int32_t chNr, bool on)
 		ch->realVol = 0;
 		ch->outVol = 0;
 		ch->oldVol = 0;
-		ch->fFinalVol = 0.0f;
+		ch->dFinalVol = 0.0;
 		ch->outPan = 128;
 		ch->oldPan = 128;
 		ch->finalPan = 128;
 		ch->status = IS_Vol;
 
-		ch->envSustainActive = false; // non-FT2 bug fix for stuck piano keys
+		ch->keyOff = true; // non-FT2 bug fix for stuck piano keys
 	}
 
 	scope[chNr].wasCleared = false;
@@ -521,7 +521,7 @@ static int32_t SDLCALL scopeThreadFunc(void *ptr)
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 
 	hpc_SetDurationInHz(&scopeHpc, SCOPE_HZ);
-	hpc_ResetEndTime(&scopeHpc);
+	hpc_ResetCounters(&scopeHpc);
 
 	while (editor.programRunning)
 	{

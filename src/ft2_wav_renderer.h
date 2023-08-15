@@ -7,14 +7,14 @@
 #define MIN_WAV_RENDER_FREQ 44100
 
 #if CPU_64BIT
-#define MAX_WAV_RENDER_FREQ 192000
+#define MAX_WAV_RENDER_FREQ 384000
 #else
 #define MAX_WAV_RENDER_FREQ 48000
 #endif
 
-#define MAX_WAV_RENDER_SAMPLES_PER_TICK (((MAX_WAV_RENDER_FREQ * 5) / 2) / MIN_BPM)
-
 void cbToggleWavRenderBPMMode(void);
+void setWavRenderFrequency(int32_t freq);
+void setWavRenderBitDepth(uint8_t bitDepth);
 void updateWavRendererSettings(void);
 void drawWavRenderer(void);
 void showWavRenderer(void);

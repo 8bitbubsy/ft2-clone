@@ -156,9 +156,16 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	if (!calcWindowedSincTables()) // must be called before config is loaded
+	{
+		cleanUpAndExit();
+		return false;
+	}
+
 	loadConfigOrSetDefaults();
 	if (!setupWindow() || !setupRenderer())
 	{
+		// error message was shown in the functions above
 		cleanUpAndExit();
 		return 1;
 	}
@@ -233,11 +240,11 @@ int main(int argc, char *argv[])
 	SDL_DetachThread(initMidiThread); // don't wait for this thread, let it clean up when done
 #endif
 
-	hpc_ResetEndTime(&video.vblankHpc); // this is needed for potential okBox() calls in handleModuleLoadFromArg()
+	hpc_ResetCounters(&video.vblankHpc); // quirk: this is needed for potential okBox() calls in handleModuleLoadFromArg()
 	handleModuleLoadFromArg(argc, argv);
 
 	editor.mainLoopOngoing = true;
-	hpc_ResetEndTime(&video.vblankHpc); // this must be the very last thing done before entering the main loop
+	hpc_ResetCounters(&video.vblankHpc); // this must be the last thing we do before entering the main loop
 
 	while (editor.programRunning)
 	{

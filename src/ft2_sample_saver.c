@@ -59,14 +59,14 @@ static void fileRestoreFixedSampleData(UNICHAR *filenameU, uint32_t sampleDataOf
 
 	int32_t sampleFixPos = s->fixedPos;
 	int32_t sampleFixOffset = 0;
-	int32_t samplesToWrite = SINC_RIGHT_TAPS;
+	int32_t samplesToWrite = SINC_MAX_RIGHT_TAPS;
 
 	if (saveRangeFlag)
 	{
 		const int32_t markStart = getSampleRangeStart();
 		const int32_t markEnd = getSampleRangeEnd();
 
-		if (markStart > sampleFixPos+SINC_RIGHT_TAPS || markEnd < sampleFixPos)
+		if (markStart > sampleFixPos+SINC_MAX_RIGHT_TAPS || markEnd < sampleFixPos)
 			return; // nothing to do here
 
 		if (markStart > sampleFixPos)
@@ -80,7 +80,7 @@ static void fileRestoreFixedSampleData(UNICHAR *filenameU, uint32_t sampleDataOf
 		if (sampleFixPos + samplesToWrite > markEnd)
 			samplesToWrite = markEnd - sampleFixPos;
 
-		if (samplesToWrite < 0 || samplesToWrite > SINC_RIGHT_TAPS || sampleFixPos < 0 || sampleFixOffset < 0 || sampleFixOffset >= SINC_RIGHT_TAPS)
+		if (samplesToWrite < 0 || samplesToWrite > SINC_MAX_RIGHT_TAPS || sampleFixPos < 0 || sampleFixOffset < 0 || sampleFixOffset >= SINC_MAX_RIGHT_TAPS)
 			return;
 
 	}
@@ -421,10 +421,10 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 		mptExtraChunk.defaultPan = smp->panning; // 0..255
 		mptExtraChunk.defaultVolume = smp->volume * 4; // 0..256
 		mptExtraChunk.globalVolume = 64; // 0..64
-		mptExtraChunk.vibratoType = ins->vibType; // 0..3    0 = sine, 1 = square, 2 = ramp up, 3 = ramp down
-		mptExtraChunk.vibratoSweep = ins->vibSweep; // 0..255
-		mptExtraChunk.vibratoDepth = ins->vibDepth; // 0..15
-		mptExtraChunk.vibratoRate= ins->vibRate; // 0..63
+		mptExtraChunk.vibratoType = ins->autoVibType; // 0..3    0 = sine, 1 = square, 2 = ramp up, 3 = ramp down
+		mptExtraChunk.vibratoSweep = ins->autoVibSweep; // 0..255
+		mptExtraChunk.vibratoDepth = ins->autoVibDepth; // 0..15
+		mptExtraChunk.vibratoRate = ins->autoVibRate; // 0..63
 
 		fwrite(&mptExtraChunk, sizeof (mptExtraChunk), 1, f);
 		if (mptExtraChunk.chunkSize & 1)

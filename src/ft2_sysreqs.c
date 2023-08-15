@@ -61,8 +61,10 @@ typedef struct quitType_t
 
 // 8bitbubsy: Removed unsuitable/offensive ones...
 // Scratch that, re-added them :)
+
 static quitType_t quitMessage[QUIT_MESSAGES] =
 {
+
 	{ "Do you really want to quit?", 2 },
 	{ "Musicians, press >Cancel<.  Lamers, press >OK<", 1 },
 	{ "Tired already?", 2 },

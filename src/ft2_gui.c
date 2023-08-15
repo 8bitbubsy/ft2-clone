@@ -385,7 +385,7 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	}
 }
 
-static void charOutFade(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, int32_t fade) // for about screen
+void charOutAlpha(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, uint32_t alpha)
 {
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
@@ -393,7 +393,11 @@ static void charOutFade(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char
 	if (chr == ' ')
 		return;
 
+	if (alpha > 65536)
+		alpha = 65536;
+
 	const uint32_t pixVal = video.palette[paletteIndex];
+	const uint32_t palNum = paletteIndex << 24;
 	const uint8_t *srcPtr = &bmp.font1[chr * FONT1_CHAR_W];
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
@@ -401,14 +405,25 @@ static void charOutFade(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char
 	{
 		for (int32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
-			if (srcPtr[x] != 0)
-			{
-				const int32_t r = (RGB32_R(pixVal) * fade) >> 8;
-				const int32_t g = (RGB32_G(pixVal) * fade) >> 8;
-				const int32_t b = (RGB32_B(pixVal) * fade) >> 8;
+			const uint32_t srcPixel = srcPtr[x];
+			if (srcPixel == 0)
+				continue;
 
-				dstPtr[x] = RGB32(r, g, b) | 0xFF000000;
-			}
+			const uint32_t dstPixel = dstPtr[x];
+
+			const int32_t srcR = RGB32_R(pixVal);
+			const int32_t srcG = RGB32_G(pixVal);
+			const int32_t srcB = RGB32_B(pixVal);
+
+			int32_t dstR = RGB32_R(dstPixel);
+			int32_t dstG = RGB32_G(dstPixel);
+			int32_t dstB = RGB32_B(dstPixel);
+
+			dstR = ((dstR * (65536-alpha)) + (srcR * alpha)) >> 16;
+			dstG = ((dstG * (65536-alpha)) + (srcG * alpha)) >> 16;
+			dstB = ((dstB * (65536-alpha)) + (srcB * alpha)) >> 16;
+
+			dstPtr[x] = RGB32(dstR, dstG, dstB) | palNum;
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -621,12 +636,18 @@ void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 	}
 }
 
-void textOutFade(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, int32_t fade) // for about screen
+void textOutAlpha(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, uint32_t alpha)
 {
 	char chr;
 	uint16_t currX;
 
 	assert(textPtr != NULL);
+
+	if (alpha >= 65536)
+	{
+		textOut(x, y, paletteIndex, textPtr);
+		return;
+	}
 
 	currX = x;
 	while (true)
@@ -635,7 +656,7 @@ void textOutFade(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textP
 		if (chr == '\0')
 			break;
 
-		charOutFade(currX, y, paletteIndex, chr, fade);
+		charOutAlpha(currX, y, paletteIndex, chr, alpha);
 		currX += charWidth(chr);
 	}
 }
@@ -808,14 +829,11 @@ void clearRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h)
 {
 	assert(xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
-	const uint32_t width = w * sizeof (int32_t);
+	const uint32_t pitch = w * sizeof (int32_t);
 
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	for (int32_t y = 0; y < h; y++)
-	{
-		memset(dstPtr, 0, width);
-		dstPtr += SCREEN_W;
-	}
+	for (int32_t y = 0; y < h; y++, dstPtr += SCREEN_W)
+		memset(dstPtr, 0, pitch);
 }
 
 void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t paletteIndex)
@@ -834,7 +852,7 @@ void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t pale
 	}
 }
 
-void blit32(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h)
+void blit32(uint16_t xPos, uint16_t yPos, const uint32_t *srcPtr, uint16_t w, uint16_t h)
 {
 	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
@@ -852,24 +870,40 @@ void blit32(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, ui
 	}
 }
 
-void blit32Fade(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h, int32_t fade) // for about screen
+void blit32Alpha(uint16_t xPos, uint16_t yPos, const uint32_t *srcPtr, uint16_t w, uint16_t h, uint32_t alpha)
 {
 	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+
+	if (alpha >= 65536)
+	{
+		blit32(xPos, yPos, srcPtr, w, h);
+		return;
+	}
 
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	for (int32_t y = 0; y < h; y++)
 	{
 		for (int32_t x = 0; x < w; x++)
 		{
-			const uint32_t pixel = srcPtr[x];
-			if (pixel != 0x00FF00)
-			{
-				const int32_t r = (RGB32_R(pixel) * fade) >> 8;
-				const int32_t g = (RGB32_G(pixel) * fade) >> 8;
-				const int32_t b = (RGB32_B(pixel) * fade) >> 8;
+			const uint32_t srcPixel = srcPtr[x];
+			if (srcPixel == 0x00FF00)
+				continue;
 
-				dstPtr[x] = RGB32(r, g, b) | 0xFF000000; // most significant 8 bits = palette number. 0xFF because no true palette
-			}
+			const uint32_t dstPixel = dstPtr[x];
+
+			const int32_t srcR = RGB32_R(srcPixel);
+			const int32_t srcG = RGB32_G(srcPixel);
+			const int32_t srcB = RGB32_B(srcPixel);
+
+			int32_t dstR = RGB32_R(dstPixel);
+			int32_t dstG = RGB32_G(dstPixel);
+			int32_t dstB = RGB32_B(dstPixel);
+
+			dstR = ((dstR * (65536-alpha)) + (srcR * alpha)) >> 16;
+			dstG = ((dstG * (65536-alpha)) + (srcG * alpha)) >> 16;
+			dstB = ((dstB * (65536-alpha)) + (srcB * alpha)) >> 16;
+
+			dstPtr[x] = RGB32(dstR, dstG, dstB) | 0xFF000000; // most significant 8 bits = palette number. 0xFF because no true palette
 		}
 
 		srcPtr += w;

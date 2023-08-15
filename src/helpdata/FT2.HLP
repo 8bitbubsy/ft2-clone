@@ -134,7 +134,7 @@ Ex.: C-1  037
 Syntax: (1 or 2) + Speed
 
 Portamento is used to slide the sample pitch up or down. This is
-done using the period value. If Amiga frequency table is used, the
+done using the period value. If Amiga frequency slides is used, the
 sliding will be non-linear (the speed depends on the frequency).
 
 @X040@C001Tone portamento
@@ -444,7 +444,7 @@ Delete  @T160Delete note or volume column at cursor.
 @X040@C001Miscellaneous:
 >@X060@C002
 Right ctrl.  @T160Play song.
->Alt Gr    @T160Play pattern.
+>Right alt    @T160Play pattern.
 >Right shift  @T160Record pattern.
 >Space    @T160Stop/Edit.
 >F1..F7 @T160Select octave.
@@ -689,7 +689,7 @@ point in changing it on the synthesizer, do it in FT2 instead.
 synthesizer can be pitchbended. FT2 uses this value for
 transmitting the portamento up/down and tone-portamento
 commands correctly.
->The MIDI-pitchbend works correctly only with linear frequency table.
+>The MIDI-pitchbend works correctly only with linear frequency slides.
 
 @X020@C001Sample Editor:
 >
@@ -798,16 +798,16 @@ This settings only affects WAV export, and not tracker playback.
 If the auto save is on, FT2 will update the configuration file when
 you exit the program.
 
-@X020@C001Configuration, I/O devices:
+@X020@C001Configuration, Audio:
 >
 >@X040@C001Interpolation:
 >@X060@C002
 Selects what type of resampling interpolation to use.
-"None" uses no interpolation (nearest neighbor), which will result in
-aliasing (noise) in the sound. "Linear" is what real FT2 uses, which is a
-mediocre interpolation type. "Windowed-sinc" is the recommended setting
-for the best audio quality, although it may sometimes sound too filtered
-on low-quality samples (f.ex. Amiga MODs).
+"Disabled" uses no interpolation (nearest neighbor), which will result in
+aliasing (noise) in the sound. "Linear" is what real FT2 uses,
+which is a mediocre interpolation type. "Sinc" is the recommended
+setting for the best audio quality, although it may sometimes sound too filtered
+and timbre-changing on low-quality samples.
 
 >@X040@C001Volume ramping:
 >@X060@C002
@@ -820,11 +820,11 @@ clone only.
 Amplifies the volume when mixing. If you set this one too high, you'll
 get distortion. 32X equals full amplitude for one channel.
 
->@X040@C001Frequency table:
+>@X040@C001Frequency slides:
 >@X060@C002
-The linear frequency table makes all pitch bends run in constant
-speed, independent of the current frequency. If you switch this
-one, on a finished song, it might sound strange if the sound uses
+Linear mode makes all pitch slides run in constant speed,
+independent of the current frequency. If you switch this
+one, on a finished song, it might sound strange if the song uses
 portamentoes.
 
 @X020@C001Configuration, Layout:

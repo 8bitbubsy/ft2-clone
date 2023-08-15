@@ -187,16 +187,6 @@
 #define SCOPE_DRAW_SMP \
 	video.frameBuffer[((lineY - sample) * SCREEN_W) + x] = color;
 
-#define LINED_SCOPE_PREPARE_SMP8 \
-	SCOPE_GET_SMP8 \
-	y1 = lineY - sample; \
-	SCOPE_UPDATE_DRAWPOS
-
-#define LINED_SCOPE_PREPARE_SMP16 \
-	SCOPE_GET_SMP16 \
-	y1 = lineY - sample; \
-	SCOPE_UPDATE_DRAWPOS
-
 #define LINED_SCOPE_PREPARE_LERP_SMP8 \
 	SCOPE_GET_LERP_SMP8 \
 	y1 = lineY - sample; \

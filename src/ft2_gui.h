@@ -79,7 +79,8 @@ void line(int16_t x1, int16_t x2, int16_t y1, int16_t y2, uint8_t paletteIndex);
 void clearRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h);
 void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t paletteIndex);
 void drawFramework(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t type);
-void blit32(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h);
+void blit32(uint16_t xPos, uint16_t yPos, const uint32_t *srcPtr, uint16_t w, uint16_t h);
+void blit32Alpha(uint16_t xPos, uint16_t yPos, const uint32_t *srcPtr, uint16_t w, uint16_t h, uint32_t alpha);
 void blit(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h);
 void blitClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h, uint16_t clipX);
 void blitFast(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h); // no transparency/colorkey
@@ -90,6 +91,7 @@ void hexOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t sh
 void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color); // A..Z/a..z and 0..9
 void textOutTinyOutline(int32_t xPos, int32_t yPos, char *str); // A..Z/a..z and 0..9
 void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr);
+void charOutAlpha(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, uint32_t alpha);
 void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, char chr);
 void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr);
 void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, uint16_t clipX);
@@ -97,6 +99,7 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr);
 void charOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr);
 void charOutOutlined(uint16_t x, uint16_t y, uint8_t paletteIndex, char chr);
 void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr);
+void textOutAlpha(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, uint32_t alpha);
 void textOutBorder(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t borderPaletteIndex, const char *textPtr);
 void textOutFixed(uint16_t x, uint16_t y, uint8_t fgPaltete, uint8_t bgPalette, const char *textPtr);
 void bigTextOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr);
@@ -117,7 +120,3 @@ void hideTopLeftScreen(void);
 void hideTopScreen(void);
 void showTopScreen(bool restoreScreens);
 void showBottomScreen(void);
-
-// for about screen
-void textOutFade(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, int32_t fade);
-void blit32Fade(uint16_t xPos, uint16_t yPos, const uint32_t* srcPtr, uint16_t w, uint16_t h, int32_t fade);

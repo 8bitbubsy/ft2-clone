@@ -83,8 +83,8 @@ scrollBar_t scrollBars[NUM_SCROLLBARS] =
 	//x,   y,   w,  h,  type,                 style                   funcOnDown
 	{ 365,  29, 18, 43, SCROLLBAR_VERTICAL,   SCROLLBAR_THUMB_FLAT,   sbAudOutputSetPos },
 	{ 365, 116, 18, 21, SCROLLBAR_VERTICAL,   SCROLLBAR_THUMB_FLAT,   sbAudInputSetPos },
-	{ 529, 132, 79, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbAmp },
-	{ 529, 158, 79, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbMasterVol },
+	{ 529, 117, 79, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbAmp },
+	{ 529, 143, 79, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbMasterVol },
 
 	// ------ CONFIG LAYOUT SCROLLBARS ------
 	//x,   y,  w,  h,  type,                 style                   funcOnDown

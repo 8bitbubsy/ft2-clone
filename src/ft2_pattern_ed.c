@@ -23,7 +23,6 @@
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
 
-pattMark_t pattMark; // globalized
 
 // for pattern marking w/ keyboard
 static int8_t lastChMark;
@@ -41,6 +40,10 @@ static const uint16_t iSwitchExtX[4] = { 221, 262, 303, 344 };
 
 static int32_t lastMouseX, lastMouseY;
 static int32_t last_TimeH, last_TimeM, last_TimeS;
+
+static note_t tmpPattern[MAX_CHANNELS * MAX_PATT_LEN];
+
+pattMark_t pattMark; // globalized
 
 bool allocatePattern(uint16_t pattNum) // for tracker use only, not in loader!
 {
@@ -2135,7 +2138,9 @@ void drawIDAdd(void)
 
 void resetPlaybackTime(void)
 {
-	song.musicTime64 = 0;
+	song.playbackSeconds = 0;
+	song.playbackSecondsFrac = 0;
+
 	last_TimeH = 0;
 	last_TimeM = 0;
 	last_TimeS = 0;
@@ -2145,8 +2150,7 @@ void drawPlaybackTime(void)
 {
 	if (songPlaying)
 	{
-		const uint32_t ms1024 = song.musicTime64 >> 32; // milliseconds (scaled from 1000 to 1024)
-		uint32_t seconds = ms1024 >> 10;
+		uint32_t seconds = song.playbackSeconds;
 
 		last_TimeH = seconds / 3600;
 		seconds -= last_TimeH * 3600;
@@ -2591,7 +2595,7 @@ static void zapSong(void)
 	resetPlaybackTime();
 
 	if (!audio.linearPeriodsFlag)
-		setFrequencyTable(true);
+		setLinearPeriods(true);
 
 	clearPattMark();
 	resetWavRenderer();
@@ -2703,21 +2707,20 @@ void shrinkPattern(void)
 	note_t *p = pattern[editor.editPattern];
 	if (p != NULL)
 	{
-		const int32_t length = numRows >> 1;
-		for (int32_t i = 0; i < length; i++)
+		for (int32_t i = 0; i < numRows / 2; i++)
 		{
 			for (int32_t j = 0; j < MAX_CHANNELS; j++)
 				p[(i * MAX_CHANNELS) + j] = p[((i*2) * MAX_CHANNELS) + j];
 		}
 	}
 
-	patternNumRows[editor.editPattern] >>= 1;
+	patternNumRows[editor.editPattern] /= 2;
 	numRows = patternNumRows[editor.editPattern];
 
 	if (song.pattNum == editor.editPattern)
 		song.currNumRows = numRows;
 
-	song.row >>= 1;
+	song.row /= 2;
 	if (song.row >= numRows)
 		song.row = numRows-1;
 
@@ -2733,7 +2736,7 @@ void shrinkPattern(void)
 void expandPattern(void)
 {
 	int16_t numRows = patternNumRows[editor.editPattern];
-	if (numRows > 128)
+	if (numRows > MAX_PATT_LEN/2)
 	{
 		okBox(0, "System message", "Pattern is too long to be expanded.");
 	}
@@ -2743,24 +2746,16 @@ void expandPattern(void)
 
 		if (pattern[editor.editPattern] != NULL)
 		{
-			note_t *tmpPtn = (note_t *)malloc((numRows * 2) * TRACK_WIDTH);
-			if (tmpPtn == NULL)
-			{
-				unlockMixerCallback();
-				okBox(0, "System message", "Not enough memory!");
-				return;
-			}
-
+			note_t *p = pattern[editor.editPattern];
+			memcpy(tmpPattern, p, numRows * TRACK_WIDTH);
+			
 			for (int32_t i = 0; i < numRows; i++)
 			{
 				for (int32_t j = 0; j < MAX_CHANNELS; j++)
-					tmpPtn[((i * 2) * MAX_CHANNELS) + j] = pattern[editor.editPattern][(i * MAX_CHANNELS) + j];
+					p[((i * 2) * MAX_CHANNELS) + j] = tmpPattern[(i * MAX_CHANNELS) + j];
 
-				memset(&tmpPtn[((i * 2) + 1) * MAX_CHANNELS], 0, TRACK_WIDTH);
+				memset(&p[((i * 2) + 1) * MAX_CHANNELS], 0, TRACK_WIDTH);
 			}
-
-			free(pattern[editor.editPattern]);
-			pattern[editor.editPattern] = tmpPtn;
 		}
 
 		patternNumRows[editor.editPattern] *= 2;

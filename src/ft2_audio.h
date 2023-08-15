@@ -17,12 +17,22 @@ enum
 #define MIN_AUDIO_FREQ 44100
 
 #if CPU_64BIT
-#define MAX_AUDIO_FREQ 192000
+#define MAX_AUDIO_FREQ 96000
 #else
 #define MAX_AUDIO_FREQ 48000
 #endif
 
 #define MAX_AUDIO_DEVICES 99
+
+// more bits makes little sense here
+
+#define BPM_FRAC_BITS 52
+#define BPM_FRAC_SCALE (1ULL << BPM_FRAC_BITS)
+#define BPM_FRAC_MASK (BPM_FRAC_SCALE-1)
+
+#define TICK_TIME_FRAC_BITS 52
+#define TICK_TIME_FRAC_SCALE (1ULL << TICK_TIME_FRAC_BITS)
+#define TICK_TIME_FRAC_MASK (TICK_TIME_FRAC_SCALE-1)
 
 // for audio/video sync queue. (2^n-1 - don't change this! Queue buffer is already BIG in size)
 #define SYNC_QUEUE_LEN 4095
@@ -34,17 +44,22 @@ typedef struct audio_t
 	volatile bool locked, resetSyncTickTimeFlag, volumeRampingFlag;
 	bool linearPeriodsFlag, rescanAudioDevicesSupported;
 	volatile uint8_t interpolationType;
-	int32_t quickVolRampSamples, inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
-	uint32_t tickTimeTab[(MAX_BPM-MIN_BPM)+1], tickTimeFracTab[(MAX_BPM-MIN_BPM)+1];
-	int64_t tickSampleCounter64, samplesPerTick64, samplesPerTick64Tab[(MAX_BPM-MIN_BPM)+1];
-	uint32_t freq, audLatencyPerfValInt, audLatencyPerfValFrac, samplesPerTick, samplesPerTickFrac, musicTimeSpeedVal;
+	int32_t inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
+	uint32_t quickVolRampSamples, freq;
+
+	uint32_t tickSampleCounter, samplesPerTickInt, samplesPerTickIntTab[(MAX_BPM-MIN_BPM)+1];
+	uint64_t tickSampleCounterFrac, samplesPerTickFrac, samplesPerTickFracTab[(MAX_BPM-MIN_BPM)+1];
+
+	uint32_t audLatencyPerfValInt, tickTimeIntTab[(MAX_BPM-MIN_BPM)+1];
+	uint64_t audLatencyPerfValFrac, tickTimeFracTab[(MAX_BPM-MIN_BPM)+1];
+
 	uint64_t tickTime64, tickTime64Frac;
-	float fRampQuickVolMul, fRampTickMul, fRampTickMulTab[(MAX_BPM-MIN_BPM)+1];
+
 	float *fMixBufferL, *fMixBufferR;
 	double dHz2MixDeltaMul, dAudioLatencyMs;
 
 	SDL_AudioDeviceID dev;
-	uint32_t wantFreq, haveFreq, wantSamples, haveSamples, wantChannels, haveChannels;
+	uint32_t wantFreq, haveFreq, wantSamples, haveSamples;
 } audio_t;
 
 typedef struct
@@ -58,12 +73,13 @@ typedef struct
 
 	uintCPUWord_t positionFrac, delta, oldDelta, scopeDelta;
 
-	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_LEFT_TAPS) readFixedTapsFromThisPointer();
+	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;
 	const int16_t *leftEdgeTaps16;
 
 	const float *fSincLUT;
-	float fVolume, fVolumeL, fVolumeR, fVolumeLDelta, fVolumeRDelta, fVolumeLTarget, fVolumeRTarget;
+	double dVolume;
+	float fCurrVolumeL, fCurrVolumeR, fVolumeLDelta, fVolumeRDelta, fTargetVolumeL, fTargetVolumeR;
 } voice_t;
 
 #ifdef _MSC_VER
@@ -138,7 +154,6 @@ void lockAudio(void);
 void unlockAudio(void);
 void lockMixerCallback(void);
 void unlockMixerCallback(void);
-void updateSendAudSamplesRoutine(bool lockMixer);
 void resetRampVolumes(void);
 void updateVoices(void);
 void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bitDepth);

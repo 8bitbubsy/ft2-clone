@@ -44,7 +44,6 @@ enum
 #define MAX_SPEED 31
 #define MAX_CHANNELS 32
 #define TRACK_WIDTH (5 * MAX_CHANNELS)
-#define MAX_FRQ 32000
 #define C4_FREQ 8363
 #define NOTE_C4 (4*12)
 #define NOTE_OFF 97
@@ -218,9 +217,9 @@ typedef struct sample_t
 	int32_t length, loopStart, loopLength;
 
 	// fix for resampling interpolation taps
-	int8_t leftEdgeTapSamples8[SINC_TAPS+SINC_LEFT_TAPS];
-	int16_t leftEdgeTapSamples16[SINC_TAPS+SINC_LEFT_TAPS];
-	int16_t fixedSmp[SINC_RIGHT_TAPS];
+	int8_t leftEdgeTapSamples8[32];
+	int16_t leftEdgeTapSamples16[32];
+	int16_t fixedSmp[32];
 	int32_t fixedPos;
 } sample_t;
 
@@ -232,7 +231,7 @@ typedef struct instr_t
 	uint8_t volEnvSustain, volEnvLoopStart, volEnvLoopEnd;
 	uint8_t panEnvSustain, panEnvLoopStart, panEnvLoopEnd;
 	uint8_t volEnvFlags, panEnvFlags;
-	uint8_t vibType, vibSweep, vibDepth, vibRate;
+	uint8_t autoVibType, autoVibSweep, autoVibDepth, autoVibRate;
 	uint16_t fadeout;
 	int16_t volEnvPoints[12][2], panEnvPoints[12][2], midiProgram, midiBend;
 	int16_t numSamples; // used by loader only
@@ -241,7 +240,7 @@ typedef struct instr_t
 
 typedef struct channel_t
 {
-	bool envSustainActive, channelOff, mute;
+	bool keyOff, channelOff, mute;
 	volatile uint8_t status, tmpStatus;
 	int8_t relativeNote, finetune;
 	uint8_t smpNum, instrNum, efxData, efx, smpOffset, tremorSave, tremorPos;
@@ -250,16 +249,17 @@ typedef struct channel_t
 	uint8_t jumpToRow, patLoopCounter, volSlideSpeed, fVolSlideUpSpeed, fVolSlideDownSpeed;
 	uint8_t fPortaUpSpeed, fPortaDownSpeed, ePortaUpSpeed, ePortaDownSpeed;
 	uint8_t portaUpSpeed, portaDownSpeed, retrigSpeed, retrigCnt, retrigVol;
-	uint8_t volColumnVol, noteNum, panEnvPos, eVibPos, volEnvPos, realVol, oldVol, outVol;
+	uint8_t volColumnVol, noteNum, panEnvPos, autoVibPos, volEnvPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
 	int16_t midiPitch;
 	uint16_t outPeriod, realPeriod, finalPeriod, noteData, wantPeriod, portaSpeed;
-	uint16_t volEnvTick, panEnvTick, eVibAmp, eVibSweep;
-	uint16_t fadeoutVol, fadeoutSpeed, midiVibDepth;
+	uint16_t volEnvTick, panEnvTick, autoVibAmp, autoVibSweep;
+	uint16_t midiVibDepth;
+	int32_t fadeoutVol, fadeoutSpeed;
 	int32_t volEnvDelta, panEnvDelta, volEnvValue, panEnvValue;
 	int32_t oldFinalPeriod, smpStartPos;
 
-	float fFinalVol; // 0.0f .. 1.0f
+	double dFinalVol; // 0.0 .. 1.0
 
 	sample_t *smpPtr;
 	instr_t *instrPtr;
@@ -274,7 +274,9 @@ typedef struct song_t
 	int16_t songPos, pattNum, row, currNumRows;
 	uint16_t songLength, songLoopStart, BPM, speed, initialSpeed, globalVolume, tick;
 	int32_t numChannels;
-	uint64_t musicTime64;
+
+	uint32_t playbackSeconds;
+	uint64_t playbackSecondsFrac;
 } song_t;
 
 double getSampleC4Rate(sample_t *s);
@@ -326,7 +328,7 @@ void conv16BitSample(int8_t *p, int32_t length, bool stereo); // changes sample 
 void delta2Samp(int8_t *p, int32_t length, uint8_t smpFlags);
 void samp2Delta(int8_t *p, int32_t length, uint8_t smpFlags);
 void setPatternLen(uint16_t pattNum, int16_t numRows);
-void setFrequencyTable(bool linearPeriodsFlag);
+void setLinearPeriods(bool linearPeriodsFlag);
 void tickReplayer(void); // periodically called from audio callback
 void resetChannels(void);
 bool patternEmpty(uint16_t pattNum);

@@ -244,7 +244,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 					config.masterVol = 0;
 
 				setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
-				if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+				if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_AUDIO)
 					showConfigScreen();
 			}
 			else
@@ -277,7 +277,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 					config.masterVol = 256;
 
 				setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
-				if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_IO_DEVICES)
+				if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_AUDIO)
 					showConfigScreen();
 			}
 		}
@@ -1229,7 +1229,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			{
 				editor.currConfigScreen = 0;
 				showConfigScreen();
-				checkRadioButton(RB_CONFIG_IO_DEVICES);
+				checkRadioButton(RB_CONFIG_AUDIO);
 
 				return true;
 			}

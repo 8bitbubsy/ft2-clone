@@ -131,9 +131,9 @@ void sanitizeInstrument(instr_t *ins)
 	ins->midiBend = CLAMP(ins->midiBend, 0, 36);
 
 	if (ins->midiChannel > 15) ins->midiChannel = 15;
-	if (ins->vibDepth > 0x0F) ins->vibDepth = 0x0F;
-	if (ins->vibRate > 0x3F) ins->vibRate = 0x3F;
-	if (ins->vibType > 3) ins->vibType = 0;
+	if (ins->autoVibDepth > 0x0F) ins->autoVibDepth = 0x0F;
+	if (ins->autoVibRate > 0x3F) ins->autoVibRate = 0x3F;
+	if (ins->autoVibType > 3) ins->autoVibType = 0;
 
 	for (int32_t i = 0; i < 96; i++)
 	{
@@ -537,17 +537,17 @@ static void drawFadeout(void)
 
 static void drawVibSpeed(void)
 {
-	hexOutBg(505, 236, PAL_FORGRND, PAL_DESKTOP, getCurDispInstr()->vibRate, 2);
+	hexOutBg(505, 236, PAL_FORGRND, PAL_DESKTOP, getCurDispInstr()->autoVibRate, 2);
 }
 
 static void drawVibDepth(void)
 {
-	hexOutBg(512, 250, PAL_FORGRND, PAL_DESKTOP, getCurDispInstr()->vibDepth, 1);
+	hexOutBg(512, 250, PAL_FORGRND, PAL_DESKTOP, getCurDispInstr()->autoVibDepth, 1);
 }
 
 static void drawVibSweep(void)
 {
-	hexOutBg(505, 264, PAL_FORGRND, PAL_DESKTOP, getCurDispInstr()->vibSweep, 2);
+	hexOutBg(505, 264, PAL_FORGRND, PAL_DESKTOP, getCurDispInstr()->autoVibSweep, 2);
 }
 
 static void drawRelativeNote(void)
@@ -598,10 +598,10 @@ static void setStdVolEnvelope(instr_t *ins, uint8_t num)
 	ins->volEnvLoopEnd = (uint8_t)config.stdVolEnvLoopEnd[num];
 	ins->volEnvLength = (uint8_t)config.stdVolEnvLength[num];
 	ins->volEnvFlags = (uint8_t)config.stdVolEnvFlags[num];
-	ins->vibRate = (uint8_t)config.stdVibRate[num];
-	ins->vibDepth = (uint8_t)config.stdVibDepth[num];
-	ins->vibSweep = (uint8_t)config.stdVibSweep[num];
-	ins->vibType = (uint8_t)config.stdVibType[num];
+	ins->autoVibRate = (uint8_t)config.stdVibRate[num];
+	ins->autoVibDepth = (uint8_t)config.stdVibDepth[num];
+	ins->autoVibSweep = (uint8_t)config.stdVibSweep[num];
+	ins->autoVibType = (uint8_t)config.stdVibType[num];
 
 	memcpy(ins->volEnvPoints, config.stdEnvPoints[num][0], sizeof (int16_t) * 12 * 2);
 
@@ -641,10 +641,10 @@ static void setOrStoreVolEnvPreset(uint8_t num)
 		config.stdVolEnvLoopEnd[num] = ins->volEnvLoopEnd;
 		config.stdVolEnvLength[num] = ins->volEnvLength;
 		config.stdVolEnvFlags[num] = ins->volEnvFlags;
-		config.stdVibRate[num] = ins->vibRate;
-		config.stdVibDepth[num] = ins->vibDepth;
-		config.stdVibSweep[num] = ins->vibSweep;
-		config.stdVibType[num] = ins->vibType;
+		config.stdVibRate[num] = ins->autoVibRate;
+		config.stdVibDepth[num] = ins->autoVibDepth;
+		config.stdVibSweep[num] = ins->autoVibSweep;
+		config.stdVibType[num] = ins->autoVibType;
 
 		memcpy(config.stdEnvPoints[num][0], ins->volEnvPoints, sizeof (int16_t) * 12 * 2);
 	}
@@ -673,10 +673,10 @@ static void setOrStorePanEnvPreset(uint8_t num)
 		config.stdPanEnvLoopEnd[num] = ins->panEnvLoopEnd;
 		config.stdPanEnvLength[num] = ins->panEnvLength;
 		config.stdPanEnvFlags[num] = ins->panEnvFlags;
-		config.stdVibRate[num] = ins->vibRate;
-		config.stdVibDepth[num] = ins->vibDepth;
-		config.stdVibSweep[num] = ins->vibSweep;
-		config.stdVibType[num] = ins->vibType;
+		config.stdVibRate[num] = ins->autoVibRate;
+		config.stdVibDepth[num] = ins->autoVibDepth;
+		config.stdVibSweep[num] = ins->autoVibSweep;
+		config.stdVibType[num] = ins->autoVibType;
 
 		memcpy(config.stdEnvPoints[num][1], ins->panEnvPoints, sizeof (int16_t) * 12 * 2);
 	}
@@ -1376,9 +1376,9 @@ void setVibSpeedScroll(uint32_t pos)
 		return;
 	}
 
-	if (ins->vibRate != (uint8_t)pos)
+	if (ins->autoVibRate != (uint8_t)pos)
 	{
-		ins->vibRate = (uint8_t)pos;
+		ins->autoVibRate = (uint8_t)pos;
 		drawVibSpeed();
 		setSongModifiedFlag();
 	}
@@ -1393,9 +1393,9 @@ void setVibDepthScroll(uint32_t pos)
 		return;
 	}
 
-	if (ins->vibDepth != (uint8_t)pos)
+	if (ins->autoVibDepth != (uint8_t)pos)
 	{
-		ins->vibDepth = (uint8_t)pos;
+		ins->autoVibDepth = (uint8_t)pos;
 		drawVibDepth();
 		setSongModifiedFlag();
 	}
@@ -1410,9 +1410,9 @@ void setVibSweepScroll(uint32_t pos)
 		return;
 	}
 
-	if (ins->vibSweep != (uint8_t)pos)
+	if (ins->autoVibSweep != (uint8_t)pos)
 	{
-		ins->vibSweep = (uint8_t)pos;
+		ins->autoVibSweep = (uint8_t)pos;
 		drawVibSweep();
 		setSongModifiedFlag();
 	}
@@ -1423,7 +1423,7 @@ void rbVibWaveSine(void)
 	if (instr[editor.curInstr] == NULL || editor.curInstr == 0)
 		return;
 
-	instr[editor.curInstr]->vibType = 0;
+	instr[editor.curInstr]->autoVibType = 0;
 
 	uncheckRadioButtonGroup(RB_GROUP_INST_WAVEFORM);
 	radioButtons[RB_INST_WAVE_SINE].state = RADIOBUTTON_CHECKED;
@@ -1436,7 +1436,7 @@ void rbVibWaveSquare(void)
 	if (instr[editor.curInstr] == NULL || editor.curInstr == 0)
 		return;
 
-	instr[editor.curInstr]->vibType = 1;
+	instr[editor.curInstr]->autoVibType = 1;
 
 	uncheckRadioButtonGroup(RB_GROUP_INST_WAVEFORM);
 	radioButtons[RB_INST_WAVE_SQUARE].state = RADIOBUTTON_CHECKED;
@@ -1449,7 +1449,7 @@ void rbVibWaveRampDown(void)
 	if (instr[editor.curInstr] == NULL || editor.curInstr == 0)
 		return;
 
-	instr[editor.curInstr]->vibType = 2;
+	instr[editor.curInstr]->autoVibType = 2;
 
 	uncheckRadioButtonGroup(RB_GROUP_INST_WAVEFORM);
 	radioButtons[RB_INST_WAVE_RAMP_DOWN].state = RADIOBUTTON_CHECKED;
@@ -1462,7 +1462,7 @@ void rbVibWaveRampUp(void)
 	if (instr[editor.curInstr] == NULL || editor.curInstr == 0)
 		return;
 
-	instr[editor.curInstr]->vibType = 3;
+	instr[editor.curInstr]->autoVibType = 3;
 
 	uncheckRadioButtonGroup(RB_GROUP_INST_WAVEFORM);
 	radioButtons[RB_INST_WAVE_RAMP_UP].state = RADIOBUTTON_CHECKED;
@@ -1702,7 +1702,7 @@ void drawPiano(chSyncData_t *chSyncData)
 			channel_t *c = channel;
 			for (int32_t i = 0; i < song.numChannels; i++, c++)
 			{
-				if (c->instrNum == editor.curInstr && c->envSustainActive)
+				if (c->instrNum == editor.curInstr && !c->keyOff)
 				{
 					const int32_t note = getPianoKey(c->finalPeriod, c->finetune, c->relativeNote);
 					if (note >= 0 && note <= 95)
@@ -2214,14 +2214,14 @@ void updateInstEditor(void)
 	setScrollBarPos(SB_INST_PAN, s->panning, false);
 	setScrollBarPos(SB_INST_FTUNE, 128 + s->finetune, false);
 	setScrollBarPos(SB_INST_FADEOUT, ins->fadeout, false);
-	setScrollBarPos(SB_INST_VIBSPEED, ins->vibRate, false);
-	setScrollBarPos(SB_INST_VIBDEPTH, ins->vibDepth, false);
-	setScrollBarPos(SB_INST_VIBSWEEP, ins->vibSweep, false);
+	setScrollBarPos(SB_INST_VIBSPEED, ins->autoVibRate, false);
+	setScrollBarPos(SB_INST_VIBDEPTH, ins->autoVibDepth, false);
+	setScrollBarPos(SB_INST_VIBSWEEP, ins->autoVibSweep, false);
 
 	// set radio buttons
 
 	uncheckRadioButtonGroup(RB_GROUP_INST_WAVEFORM);
-	switch (ins->vibType)
+	switch (ins->autoVibType)
 	{
 		default:
 		case 0: tmpID = RB_INST_WAVE_SINE;      break;
@@ -2972,10 +2972,10 @@ static int32_t SDLCALL saveInstrThread(void *ptr)
 	ih.panEnvLoopEnd = ins->panEnvLoopEnd;
 	ih.volEnvFlags = ins->volEnvFlags;
 	ih.panEnvFlags = ins->panEnvFlags;
-	ih.vibType = ins->vibType;
-	ih.vibSweep = ins->vibSweep;
-	ih.vibDepth = ins->vibDepth;
-	ih.vibRate = ins->vibRate;
+	ih.vibType = ins->autoVibType;
+	ih.vibSweep = ins->autoVibSweep;
+	ih.vibDepth = ins->autoVibDepth;
+	ih.vibRate = ins->autoVibRate;
 	ih.fadeout = ins->fadeout;
 	ih.midiOn = ins->midiOn ? 1 : 0;
 	ih.midiChannel = ins->midiChannel;
@@ -3177,10 +3177,10 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 			ins->panEnvLoopEnd = xi_h.panEnvLoopEnd;
 			ins->volEnvFlags = xi_h.volEnvFlags;
 			ins->panEnvFlags = xi_h.panEnvFlags;
-			ins->vibType = xi_h.vibType;
-			ins->vibSweep = xi_h.vibSweep;
-			ins->vibDepth = xi_h.vibDepth;
-			ins->vibRate = xi_h.vibRate;
+			ins->autoVibType = xi_h.vibType;
+			ins->autoVibSweep = xi_h.vibSweep;
+			ins->autoVibDepth = xi_h.vibDepth;
+			ins->autoVibRate = xi_h.vibRate;
 			ins->fadeout = xi_h.fadeout;
 			ins->midiOn = (xi_h.midiOn == 1) ? true : false;
 			ins->midiChannel = xi_h.midiChannel;
@@ -3364,9 +3364,9 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 
 				if (i == 0)
 				{
-					ins->vibSweep = patWave_h.vibSweep;
-					ins->vibRate = (patWave_h.vibRate + 2) >> 2; // rounded
-					ins->vibDepth = (patWave_h.vibDepth + 1) >> 1; // rounded
+					ins->autoVibSweep = patWave_h.vibSweep;
+					ins->autoVibRate = (patWave_h.vibRate + 2) >> 2; // rounded
+					ins->autoVibDepth = (patWave_h.vibDepth + 1) >> 1; // rounded
 				}
 
 				s = &instr[editor.curInstr]->smp[i];

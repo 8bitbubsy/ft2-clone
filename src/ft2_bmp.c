@@ -11,6 +11,7 @@
 #include "ft2_palette.h"
 #include "ft2_gfxdata.h"
 #include "ft2_bmp.h"
+#include "ft2_video.h"
 
 enum
 {
@@ -102,7 +103,10 @@ bool loadBMPs(void)
 		bmp.mouseCursorBusyGlass == NULL || bmp.whitePianoKeys == NULL || bmp.blackPianoKeys == NULL ||
 		bmp.vibratoWaveforms == NULL || bmp.scopeRec == NULL || bmp.scopeMute == NULL ||
 		bmp.radiobuttonGfx == NULL || bmp.checkboxGfx == NULL)
+	{
+		showErrorMsgBox("Not enough memory!");
 		return false;
+	}
 
 	return true;
 }

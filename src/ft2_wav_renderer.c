@@ -46,23 +46,46 @@ static SDL_Thread *thread;
 
 static void updateWavRenderer(void)
 {
-	char str[10];
+	char str[16];
 
-	fillRect(209, 116, 41, 51, PAL_DESKTOP);
-
+	fillRect(195, 116, 56, 8, PAL_DESKTOP);
+	textOut(237, 116, PAL_FORGRND, "Hz");
 	sprintf(str, "%6d", WDFrequency);
-	textOutFixed(209, 116, PAL_FORGRND, PAL_DESKTOP, str);
-
+	textOutFixed(195, 116, PAL_FORGRND, PAL_DESKTOP, str);
+	
+	fillRect(229, 130, 21, 8, PAL_DESKTOP);
+	charOut(243, 130, PAL_FORGRND, 'x');
 	sprintf(str, "%02d", WDAmp);
-	textOut(237, 130, PAL_FORGRND, str);
+	textOut(229, 130, PAL_FORGRND, str);
 
+	fillRect(237, 144, 13, 8, PAL_DESKTOP);
 	hexOut(237, 144, PAL_FORGRND, WDStartPos, 2);
-	hexOut(237, 158, PAL_FORGRND, WDStopPos,  2);
+
+	fillRect(237, 158, 13, 8, PAL_DESKTOP);
+	hexOut(237, 158, PAL_FORGRND, WDStopPos, 2);
 }
 
 void cbToggleWavRenderBPMMode(void)
 {
 	useLegacyBPM ^= 1;
+}
+
+void setWavRenderFrequency(int32_t freq)
+{
+	WDFrequency = CLAMP(freq, MIN_WAV_RENDER_FREQ, MAX_WAV_RENDER_FREQ);
+	if (ui.wavRendererShown)
+		updateWavRenderer();
+}
+
+void setWavRenderBitDepth(uint8_t bitDepth)
+{
+	if (bitDepth == 16)
+		WDBitDepth = 16;
+	else if (bitDepth == 32)
+		WDBitDepth = 32;
+
+	if (ui.wavRendererShown)
+		updateWavRenderer();
 }
 
 void updateWavRendererSettings(void) // called when changing config.boostLevel
@@ -77,13 +100,13 @@ void drawWavRenderer(void)
 	drawFramework(79, 109, 212, 64, FRAMEWORK_TYPE1);
 
 	textOutShadow(4,   96, PAL_FORGRND, PAL_DSKTOP2, "WAV exporting:");
-	textOutShadow(156, 96, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
-	textOutShadow(221, 96, PAL_FORGRND, PAL_DSKTOP2, "32-bit float");
+	textOutShadow(146, 96, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
+	textOutShadow(211, 96, PAL_FORGRND, PAL_DSKTOP2, "32-bit (float)");
 
 	textOutShadow(19, 114, PAL_FORGRND, PAL_DSKTOP2, "Imprecise");
 	textOutShadow(4,  127, PAL_FORGRND, PAL_DSKTOP2, "BPM (FT2)");
 
-	textOutShadow(85, 116, PAL_FORGRND, PAL_DSKTOP2, "Frequency");
+	textOutShadow(85, 116, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate");
 	textOutShadow(85, 130, PAL_FORGRND, PAL_DSKTOP2, "Amplification");
 	textOutShadow(85, 144, PAL_FORGRND, PAL_DSKTOP2, "Start song position");
 	textOutShadow(85, 158, PAL_FORGRND, PAL_DSKTOP2, "Stop song position");
@@ -170,11 +193,11 @@ void exitWavRenderer(void)
 
 static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 {
-	const int32_t maxSamplesPerTick = (const int32_t)ceil((frq * 2.5) / MIN_BPM); // absolute max samples per tick
-	uint32_t sampleSize = (WDBitDepth / 8) * 2; // 2 channels
+	int32_t bytesPerSample = (WDBitDepth / 8) * 2; // 2 channels
+	int32_t maxSamplesPerTick = (int32_t)ceil(frq / (MIN_BPM / 2.5)) + 1;
 
 	// *2 for stereo
-	wavRenderBuffer = (uint8_t *)malloc((TICKS_PER_RENDER_CHUNK * maxSamplesPerTick) * sampleSize);
+	wavRenderBuffer = (uint8_t *)malloc((TICKS_PER_RENDER_CHUNK * maxSamplesPerTick) * bytesPerSample);
 	if (wavRenderBuffer == NULL)
 		return false;
 
@@ -261,7 +284,7 @@ static bool dump_EndOfTune(int16_t endSongPos)
 {
 	bool returnValue = (editor.wavReachedEndFlag && song.row == 0 && song.tick == 1) || (song.speed == 0);
 
-	// 8bitbubsy: FT2 bugfix for EEx (pattern delay) on first row of a pattern
+	// FT2 bugfix for EEx (pattern delay) on first row of a pattern
 	if (song.pattDelTime2 > 0)
 		returnValue = false;
 
@@ -321,7 +344,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	uint32_t sampleCounter = 0;
 	bool overflow = false, renderDone = false;
 	uint8_t tickCounter = UPDATE_VISUALS_AT_TICK;
-	int64_t tickSampleCounter64 = 0;
+	uint64_t tickSamplesFrac = 0;
 
 	uint64_t bytesInFile = sizeof (wavHeader_t);
 
@@ -340,28 +363,20 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 				break;
 			}
 
-			int32_t tickSamples;
+			dump_TickReplayer();
+			uint32_t tickSamples = audio.samplesPerTickInt;
 
-			if (useLegacyBPM)
+			if (!useLegacyBPM)
 			{
-				dump_TickReplayer();
-				tickSamples = audio.samplesPerTick64 >> 32; // truncate
-			}
-			else
-			{
-				if (tickSampleCounter64 <= 0) // new replayer tick
+				tickSamplesFrac += audio.samplesPerTickFrac;
+				if (tickSamplesFrac >= BPM_FRAC_SCALE)
 				{
-					dump_TickReplayer();
-					tickSampleCounter64 += audio.samplesPerTick64;
+					tickSamplesFrac &= BPM_FRAC_MASK;
+					tickSamples++;
 				}
-
-				tickSamples = (tickSampleCounter64 + UINT32_MAX) >> 32; // ceil (rounded upwards)
 			}
 
 			mixReplayerTickToBuffer(tickSamples, ptr8, WDBitDepth);
-
-			if (!useLegacyBPM)
-				tickSampleCounter64 -= (int64_t)tickSamples << 32;
 
 			tickSamples *= 2; // stereo
 			samplesInChunk += tickSamples;
@@ -467,10 +482,11 @@ void pbWavFreqUp(void)
 {
 	if (WDFrequency < MAX_WAV_RENDER_FREQ)
 	{
-		     if (WDFrequency == 44100) WDFrequency = 48000;
+		     if (WDFrequency ==  44100) WDFrequency = 48000;
 #if CPU_64BIT
-		else if (WDFrequency == 48000) WDFrequency = 96000;
-		else if (WDFrequency == 96000) WDFrequency = 192000;
+		else if (WDFrequency ==  48000) WDFrequency = 96000;
+		else if (WDFrequency ==  96000) WDFrequency = 192000;
+		else if (WDFrequency == 192000) WDFrequency = 384000;
 #endif
 		updateWavRenderer();
 	}
@@ -481,9 +497,10 @@ void pbWavFreqDown(void)
 	if (WDFrequency > MIN_WAV_RENDER_FREQ)
 	{
 #if CPU_64BIT
-		     if (WDFrequency == 192000) WDFrequency = 96000;
-		else if (WDFrequency == 96000) WDFrequency = 48000;
-		else if (WDFrequency == 48000) WDFrequency = 44100;
+		     if (WDFrequency == 384000) WDFrequency = 192000;
+		else if (WDFrequency == 192000) WDFrequency = 96000;
+		else if (WDFrequency ==  96000) WDFrequency = 48000;
+		else if (WDFrequency ==  48000) WDFrequency = 44100;
 #else
 		if (WDFrequency == 48000) WDFrequency = 44100;
 #endif

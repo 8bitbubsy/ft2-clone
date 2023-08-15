@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -1731,6 +1731,11 @@ extern DECLSPEC int SDLCALL SDL_RenderReadPixels(SDL_Renderer * renderer,
  *
  * \param renderer the rendering context
  *
+ * \threadsafety You may only call this function on the main thread. If this
+ *               happens to work on a background thread on any given platform
+ *               or backend, it's purely by luck and you should not rely on it
+ *               to work next time.
+ *
  * \since This function is available since SDL 2.0.0.
  *
  * \sa SDL_RenderClear
@@ -1764,6 +1769,9 @@ extern DECLSPEC void SDLCALL SDL_DestroyTexture(SDL_Texture * texture);
 
 /**
  * Destroy the rendering context for a window and free associated textures.
+ *
+ * If `renderer` is NULL, this function will return immediately after setting
+ * the SDL error message to "Invalid renderer". See SDL_GetError().
  *
  * \param renderer the rendering context
  *

@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2023 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -29,12 +29,6 @@
 #define SDL_stdinc_h_
 
 #include "SDL_config.h"
-
-#ifdef __APPLE__
-#ifndef _DARWIN_C_SOURCE
-#define _DARWIN_C_SOURCE 1 /* for memset_pattern4() */
-#endif
-#endif
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -80,12 +74,14 @@
 # include <ctype.h>
 #endif
 #ifdef HAVE_MATH_H
-# if defined(__WINRT__)
+# if defined(_MSC_VER)
 /* Defining _USE_MATH_DEFINES is required to get M_PI to be defined on
-   WinRT.  See http://msdn.microsoft.com/en-us/library/4hwaceh6.aspx
+   Visual Studio.  See http://msdn.microsoft.com/en-us/library/4hwaceh6.aspx
    for more information.
 */
-#  define _USE_MATH_DEFINES
+#  ifndef _USE_MATH_DEFINES
+#    define _USE_MATH_DEFINES
+#  endif
 # endif
 # include <math.h>
 #endif
@@ -248,7 +244,7 @@ typedef uint64_t Uint64;
 #ifdef FLT_EPSILON
 #define SDL_FLT_EPSILON FLT_EPSILON
 #else
-#define SDL_FLT_EPSILON 0.0000000001f /* 8bitbubsy: had to modify this for VC... */
+#define SDL_FLT_EPSILON 0.0000001f /* 8bitbubsy: had to modify this for MSVC... */
 #endif
 
 /* @} *//* Floating-point constants */
@@ -410,7 +406,7 @@ SDL_COMPILE_TIME_ASSERT(sint64, sizeof(Sint64) == 8);
 
 /** \cond */
 #ifndef DOXYGEN_SHOULD_IGNORE_THIS
-#if !defined(__ANDROID__) && !defined(__VITA__)
+#if !defined(__ANDROID__) && !defined(__VITA__) && !defined(__3DS__)
    /* TODO: include/SDL_stdinc.h:174: error: size of array 'SDL_dummy_enum' is negative */
 typedef enum
 {
@@ -528,9 +524,7 @@ extern DECLSPEC void *SDLCALL SDL_memset(SDL_OUT_BYTECAP(len) void *dst, int c, 
 /* Note that memset() is a byte assignment and this is a 32-bit assignment, so they're not directly equivalent. */
 SDL_FORCE_INLINE void SDL_memset4(void *dst, Uint32 val, size_t dwords)
 {
-#ifdef __APPLE__
-    memset_pattern4(dst, &val, dwords * 4);
-#elif defined(__GNUC__) && defined(__i386__)
+#if defined(__GNUC__) && defined(__i386__)
     int u0, u1, u2;
     __asm__ __volatile__ (
         "cld \n\t"
@@ -583,6 +577,7 @@ extern DECLSPEC char *SDLCALL SDL_strlwr(char *str);
 extern DECLSPEC char *SDLCALL SDL_strchr(const char *str, int c);
 extern DECLSPEC char *SDLCALL SDL_strrchr(const char *str, int c);
 extern DECLSPEC char *SDLCALL SDL_strstr(const char *haystack, const char *needle);
+extern DECLSPEC char *SDLCALL SDL_strcasestr(const char *haystack, const char *needle);
 extern DECLSPEC char *SDLCALL SDL_strtokr(char *s1, const char *s2, char **saveptr);
 extern DECLSPEC size_t SDLCALL SDL_utf8strlen(const char *str);
 extern DECLSPEC size_t SDLCALL SDL_utf8strnlen(const char *str, size_t bytes);
@@ -693,7 +688,7 @@ extern DECLSPEC size_t SDLCALL SDL_iconv(SDL_iconv_t cd, const char **inbuf,
                                          size_t * outbytesleft);
 
 /**
- * This function converts a string between encodings in one pass, returning a
+ * This function converts a buffer or string between encodings in one pass, returning a
  * string that must be freed with SDL_free() or NULL on error.
  *
  * \since This function is available since SDL 2.0.0.
@@ -720,6 +715,20 @@ size_t strlcpy(char* dst, const char* src, size_t size);
 #ifndef HAVE_STRLCAT
 size_t strlcat(char* dst, const char* src, size_t size);
 #endif
+
+#ifndef HAVE_WCSLCPY
+size_t wcslcpy(wchar_t *dst, const wchar_t *src, size_t size);
+#endif
+
+#ifndef HAVE_WCSLCAT
+size_t wcslcat(wchar_t *dst, const wchar_t *src, size_t size);
+#endif
+
+/* Starting LLVM 16, the analyser errors out if these functions do not have
+   their prototype defined (clang-diagnostic-implicit-function-declaration) */
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 #define SDL_malloc malloc
 #define SDL_calloc calloc

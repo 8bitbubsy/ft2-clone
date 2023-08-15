@@ -13,7 +13,7 @@
 extern const uint16_t ptPeriods[3 * 12];
 
 extern const uint8_t arpTab[256];
-extern const int8_t vibSineTab[256]; // for auto-vibrato
+extern const int8_t autoVibSineTab[256];
 extern const uint8_t vibTab[32];
 extern const uint16_t amigaPeriod[8 * 12];
 extern const uint16_t linearPeriods[1936];
@@ -49,4 +49,4 @@ extern const uint16_t scopeLenTab[16][32];
 
 extern const uint8_t defConfigData[CONFIG_FILE_SIZE];
 
-extern const uint64_t musicTimeTab64[(MAX_BPM-MIN_BPM)+1];
+extern const uint64_t musicTimeTab52[(MAX_BPM-MIN_BPM)+1];

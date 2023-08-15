@@ -121,9 +121,9 @@ static void drawFPSCounter(void)
 	             "Frames per second: %.3f\n" \
 	             "Monitor refresh rate: %.1fHz (+/-)\n" \
 	             "59..61Hz GPU VSync used: %s\n" \
+	             "HPC frequency (timer): %.4fMHz\n" \
 	             "Audio frequency: %.1fkHz (expected %.1fkHz)\n" \
 	             "Audio buffer samples: %d (expected %d)\n" \
-	             "Audio channels: %d (expected %d)\n" \
 	             "Audio latency: %.1fms (expected %.1fms)\n" \
 	             "Render size: %dx%d (offset %d,%d)\n" \
 	             "Disp. size: %dx%d (window: %dx%d)\n" \
@@ -136,9 +136,9 @@ static void drawFPSCounter(void)
 	             dAvgFPS,
 	             dRefreshRate,
 	             video.vsync60HzPresent ? "yes" : "no",
-	             audio.haveFreq * (1.0 / 1000.0), audio.wantFreq * (1.0 / 1000.0),
+	             hpcFreq.freq64 / (1000.0 * 1000.0),
+	             audio.haveFreq / 1000.0, audio.wantFreq / 1000.0,
 	             audio.haveSamples, audio.wantSamples,
-	             audio.haveChannels, audio.wantChannels,
 	             dAudLatency, ((audio.wantSamples * 1000.0) / audio.wantFreq),
 	             video.renderW, video.renderH, video.renderX, video.renderY,
 	             video.displayW, video.displayH, video.windowW, video.windowH,
@@ -187,7 +187,7 @@ void endFPSCounter(void)
 		if (frameTimeDiff64 > INT32_MAX)
 			frameTimeDiff64 = INT32_MAX;
 
-		dRunningFrameDuration += (int32_t)frameTimeDiff64 / (hpcFreq.dFreq / 1000.0);
+		dRunningFrameDuration += (int32_t)frameTimeDiff64 * hpcFreq.dFreqMulMs;
 	}
 }
 
@@ -227,7 +227,11 @@ void flipFrame(void)
 		if (minimized || !(windowFlags & SDL_WINDOW_INPUT_FOCUS))
 			hpc_Wait(&video.vblankHpc);
 #elif __unix__
-		// *NIX: VSync gets disabled in fullscreen mode (at least on some distros/systems). Let's add a fix:
+		/* *NIX: VSync can get disabled in fullscreen mode in some distros/systems. Let's add a fix.
+		**
+		** TODO/XXX: This is probably a BAD hack and can cause a poor fullscreen experience if VSync did
+		**           in fact work in fullscreen mode...
+		*/
 		if (minimized || video.fullscreen)
 			hpc_Wait(&video.vblankHpc);
 #else
@@ -237,6 +241,13 @@ void flipFrame(void)
 	}
 
 	editor.framesPassed++;
+
+	/* Reset audio/video sync timestamp every half an hour to prevent
+	** possible sync drifting after hours of playing a song without
+	** a single song stop (resets timestamp) in-between.
+	*/
+	if (editor.framesPassed >= VBLANK_HZ*60*30)
+		audio.resetSyncTickTimeFlag = true;
 }
 
 void showErrorMsgBox(const char *fmt, ...)
@@ -809,18 +820,6 @@ void setWindowSizeFromConfig(bool updateRenderer)
 	uint8_t i;
 	SDL_DisplayMode dm;
 
-	/* Kludge for Raspbarry Pi. Upscaling of 3x or higher makes everything slow as a snail.
-	** This hack unfortunately applies to any ARM based device, but I doubt 3x/4x would run
-	** smooth on any ARM device suitable for the FT2 clone anyway (excluding tablets/phones).
-	*/
-#ifdef __arm__
-	if ((config.windowFlags & WINSIZE_3X) || (config.windowFlags & WINSIZE_4X))
-	{
-		config.windowFlags &= ~(WINSIZE_1X + WINSIZE_2X + WINSIZE_3X + WINSIZE_4X);
-		config.windowFlags |= WINSIZE_AUTO;
-	}
-#endif
-
 	uint8_t oldUpscaleFactor = video.upscaleFactor;
 	if (config.windowFlags & WINSIZE_AUTO)
 	{
@@ -833,8 +832,8 @@ void setWindowSizeFromConfig(bool updateRenderer)
 		{
 			for (i = MAX_UPSCALE_FACTOR; i >= 1; i--)
 			{
-				// slightly bigger than 632x400 because of window title, window borders and taskbar/menu
-				if (dm.w >= 640*i && dm.h >= 450*i)
+				// height test is slightly taller because of window title, window borders and taskbar/menu/dock
+				if (dm.w >= SCREEN_W*i && dm.h >= (SCREEN_H+64)*i)
 				{
 					video.upscaleFactor = i;
 					break;
@@ -843,12 +842,6 @@ void setWindowSizeFromConfig(bool updateRenderer)
 
 			if (i == 0)
 				video.upscaleFactor = 1; // 1x is not going to fit, but use 1x anyways...
-
-			// kludge (read comment above)
-#ifdef __arm__
-			if (video.upscaleFactor > 2)
-				video.upscaleFactor = 2;
-#endif
 		}
 		else
 		{

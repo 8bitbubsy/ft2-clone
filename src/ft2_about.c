@@ -8,6 +8,7 @@
 #include "ft2_structs.h"
 
 #define NUM_STARS 2048
+#define ALPHA_FADE_MILLISECS 2100 /* amount of milliseconds until content is fully faded in */
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
 #define ABOUT_LOGO_W 449
@@ -27,13 +28,9 @@ typedef struct
 
 static char *customText1 = "Clone by Olav \"8bitbubsy\" S\025rensen";
 static char *customText2 = "https://16-bits.org";
-static char customText3[64];
-
-static int16_t customText1Y, customText2Y, customText3Y;
-static int16_t customText1X, customText2X, customText3X;
-static int32_t lastStarScreenPos[NUM_STARS], fadeValue;
-static uint32_t randSeed, frameCounter;
-static float f2pi;
+static char customText3[256];
+static int16_t customText1Y, customText2Y, customText3Y, customText1X, customText2X, customText3X;
+static uint32_t alphaValue, randSeed, frameCounter;
 static vector_t starPoints[NUM_STARS], rotation;
 static matrix_t matrix;
 
@@ -51,15 +48,17 @@ static int32_t random32(void)
 
 static void rotateMatrix(void)
 {
-	const float xx = rotation.x * f2pi;
+#define MY_PI_FLOAT 3.141592653589793f
+
+	const float xx = rotation.x * MY_PI_FLOAT;
 	const float sa = sinf(xx);
 	const float ca = cosf(xx);
 
-	const float yy = rotation.y * f2pi;
+	const float yy = rotation.y * MY_PI_FLOAT;
 	const float sb = sinf(yy);
 	const float cb = cosf(yy);
 
-	const float zz = rotation.z * f2pi;
+	const float zz = rotation.z * MY_PI_FLOAT;
 	const float sc = sinf(zz);
 	const float cc = cosf(zz);
 
@@ -75,14 +74,12 @@ static void rotateMatrix(void)
 
 	// z
 	matrix.x.z = cb * sc;
-	matrix.y.z = 0.0f - sb;
+	matrix.y.z = -sb;
 	matrix.z.z = cb * cc;
 }
 
 static void aboutInit(void)
 {
-	f2pi = (float)(2.0 * 4.0 * atan(1.0)); // M_PI can not be trusted
-	
 	vector_t *s = starPoints;
 	for (int32_t i = 0; i < NUM_STARS; i++, s++)
 	{
@@ -92,8 +89,8 @@ static void aboutInit(void)
 	}
 
 	rotation.x = rotation.y = rotation.z = 0.0f;
-	for (int32_t i = 0; i < NUM_STARS; i++)
-		lastStarScreenPos[i] = -1;
+	alphaValue = 0;
+	frameCounter = 0;
 }
 
 static void starfield(void)
@@ -101,88 +98,73 @@ static void starfield(void)
 	vector_t *star = starPoints;
 	for (int16_t i = 0; i < NUM_STARS; i++, star++)
 	{
-		// erase last star pixel
-		int32_t screenBufferPos = lastStarScreenPos[i];
-		if (screenBufferPos >= 0)
-		{
-			if (!(video.frameBuffer[screenBufferPos] & 0xFF000000))
-				video.frameBuffer[screenBufferPos] = video.palette[PAL_BCKGRND];
-
-			lastStarScreenPos[i] = -1;
-		}
-
 		star->z += 0.00015f;
-		if (star->z >= 0.5f) star->z -= 1.0f;
+		if (star->z >= 0.5f)
+			star->z -= 1.0f;
 
 		const float z = (matrix.x.z * star->x) + (matrix.y.z * star->y) + (matrix.z.z * star->z) + 0.5f;
 		if (z <= 0.0f)
 			continue;
 
-		float y = (((matrix.x.y * star->x) + (matrix.y.y * star->y) + (matrix.z.y * star->z)) / z) * 400.0f;
-		y += 2.0f + (ABOUT_SCREEN_H/2.0f);
-
-		const int32_t outY = (int32_t)(y + 0.5f); // rounded
-		if ((uint32_t)outY > 2+ABOUT_SCREEN_H)
+		float y = (ABOUT_SCREEN_H/2.0f) + ((((matrix.x.y * star->x) + (matrix.y.y * star->y) + (matrix.z.y * star->z)) / z) * 400.0f);
+		const int32_t outY = (int32_t)y;
+		if (outY < 3 || outY >= 3+ABOUT_SCREEN_H)
 			continue;
 
-		float x = (((matrix.x.x * star->x) + (matrix.y.x * star->y) + (matrix.z.x * star->z)) / z) * 400.0f;
-		x += 2.0f + (ABOUT_SCREEN_W/2.0f);
+		float x = (ABOUT_SCREEN_W/2.0f) + ((((matrix.x.x * star->x) + (matrix.y.x * star->y) + (matrix.z.x * star->z)) / z) * 400.0f);
 
-		const int32_t outX = (int32_t)(x + 0.5f); // rounded
-		if ((uint32_t)outX > 2+ABOUT_SCREEN_W)
+		const int32_t outX = (int32_t)x;
+		if (outX < 3 || outX >= 3+ABOUT_SCREEN_W)
 			continue;
 
-		// render star pixel if the pixel under it is the background key
-		screenBufferPos = ((uint32_t)outY * SCREEN_W) + (uint32_t)outX;
-		if ((video.frameBuffer[screenBufferPos] >> 24) == PAL_BCKGRND)
-		{
-			int32_t d = (int32_t)(z * 255.0f);
-			if (d > 255)
-				d = 255;
+		int32_t d = (int32_t)(z * 255.0f);
+		if (d > 255)
+			d = 255;
+		d ^= 255;
 
-			d ^= 255;
+		// add a tint of blue to the star pixel
 
-			int32_t r = d - 75;
-			if (r < 0)
-				r = 0;
+		int32_t r = d - 79;
+		if (r < 0)
+			r = 0;
 
-			int32_t g = d - 38;
-			if (g < 0)
-				g = 0;
+		int32_t g = d - 38;
+		if (g < 0)
+			g = 0;
 
-			int32_t b = d + 64;
-			if (b > 255)
-				b = 255;
+		int32_t b = d + 64;
+		if (b > 255)
+			b = 255;
 
-			video.frameBuffer[screenBufferPos] = RGB32(r, g, b);
-			lastStarScreenPos[i] = screenBufferPos;
-		}
+		video.frameBuffer[(outY * SCREEN_W) + outX] = RGB32(r, g, b);
 	}
 }
 
-void aboutFrame(void)
+void aboutFrame(void) // called every frame when the about screen is shown
 {
+	clearRect(3, 3, ABOUT_SCREEN_W, ABOUT_SCREEN_H);
+
+	// 3D starfield
 	rotateMatrix();
 	starfield();
-
 	rotation.x -= 0.00011f;
 	rotation.z += 0.00006f;
 
-	// fade in stuff after 1/3th of a second
-	if (fadeValue < 256 && ++frameCounter >= (int32_t)((VBLANK_HZ/3.0)+0.5))
-	{
-		blit32Fade(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H, fadeValue);
-		textOutFade(customText1X, customText1Y, PAL_FORGRND, customText1, fadeValue);
-		textOutFade(customText2X, customText2Y, PAL_FORGRND, customText2, fadeValue);
-		textOutFade(customText3X, customText3Y, PAL_FORGRND, customText3, fadeValue);
+	// logo + text
+	blit32Alpha(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H, alphaValue);
+	textOutAlpha(customText1X, customText1Y, PAL_FORGRND, customText1, alphaValue);
+	textOutAlpha(customText2X, customText2Y, PAL_FORGRND, customText2, alphaValue);
+	textOutAlpha(customText3X, customText3Y, PAL_FORGRND, customText3, alphaValue);
 
-		fadeValue += 3;
-		if (fadeValue > 256)
-			fadeValue = 256;
-	}
+	alphaValue += (uint32_t)((65536.0 / (ALPHA_FADE_MILLISECS / (1000.0 / VBLANK_HZ))) + 0.5);
+	if (alphaValue > 65536)
+		alphaValue = 65536;
+
+	// the exit button has to be redrawn since it gets overwritten :)
+	showPushButton(PB_EXIT_ABOUT);
 }
 
-void showAboutScreen(void) // called once when About screen is opened
+void showAboutScreen(void) // called once when about screen is opened
 {
 	if (ui.extended)
 		exitPatternEditorExtended();
@@ -195,16 +177,14 @@ void showAboutScreen(void) // called once when About screen is opened
 	showPushButton(PB_EXIT_ABOUT);
 
 	sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
-	customText1X = (SCREEN_W - textWidth(customText1)) >> 1;
+	customText1X = (SCREEN_W - textWidth(customText1)) / 2;
 	customText2X = (SCREEN_W-8) - textWidth(customText2);
 	customText3X = (SCREEN_W-8) - textWidth(customText3);
 	customText1Y = 157;
 	customText2Y = 157-12;
-	customText3Y = 157;	
+	customText3Y = 157;
 
 	aboutInit();
-	frameCounter = 0;
-	fadeValue = 0;
 	ui.aboutScreenShown = true;
 }
 
