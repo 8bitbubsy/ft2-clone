@@ -2264,7 +2264,7 @@ void showDiskOpScreen(void)
 				UNICHAR_CHDIR(home);
 				UNICHAR_STRCPY(FReq_ModCurPathU, home);
 
-				UNICHAR_STRCAT(FReq_ModCurPathU, "/Desktop");
+				//UNICHAR_STRCAT(FReq_ModCurPathU, "/Desktop");
 			}
 #endif
 			UNICHAR_CHDIR(FReq_ModCurPathU);
