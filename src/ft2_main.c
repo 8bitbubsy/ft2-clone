@@ -93,13 +93,12 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-#ifdef _WIN32
-
-	// ALT+F4 is used in FT2, but is "close program" in Windows...
+	// ALT+F4 is used in FT2, but is "close program" in some cases...
 #if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 4)
 	SDL_SetHint(SDL_HINT_WINDOWS_NO_CLOSE_ON_ALT_F4, "1");
 #endif
 
+#ifdef _WIN32
 #ifndef _MSC_VER
 	SetProcessDPIAware();
 #endif
