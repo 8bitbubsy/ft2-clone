@@ -2001,7 +2001,7 @@ static void writeEnvelope(int32_t envNum)
 
 static void drawVolEnvCoords(int16_t tick, int16_t val)
 {
-	char str[4];
+	char str[8];
 
 	tick = CLAMP(tick, 0, 324);
 	sprintf(str, "%03d", tick);
@@ -2014,12 +2014,13 @@ static void drawVolEnvCoords(int16_t tick, int16_t val)
 
 static void drawPanEnvCoords(int16_t tick, int16_t val)
 {
-	bool negative = false;
-	char str[4];
+	char str[8];
 
 	tick = CLAMP(tick, 0, 324);
 	sprintf(str, "%03d", tick);
 	textOutTinyOutline(326, 277, str);
+	
+	bool negative = false;
 	
 	val -= 32;
 	val = CLAMP(val, -32, 31);
