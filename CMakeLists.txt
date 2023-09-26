@@ -27,13 +27,30 @@ if("${SDL2_LIBRARIES}" STREQUAL "")
     set(SDL2_LIBRARIES "SDL2::SDL2")
 endif()
 
+find_package(Threads REQUIRED)
+
 target_link_libraries(ft2-clone
-    PRIVATE m asound pthread ${SDL2_LIBRARIES})
+    PRIVATE m Threads::Threads ${SDL2_LIBRARIES})
 
 target_compile_definitions(ft2-clone
     PRIVATE HAS_MIDI
-    PRIVATE __LINUX_ALSA__
     PRIVATE HAS_LIBFLAC)
+
+if(UNIX)
+    if(APPLE)
+        find_library(COREAUDIO CoreAudio REQUIRED)
+        find_library(COREMIDI CoreMIDI REQUIRED)
+        target_link_libraries(ft2-clone
+            PRIVATE ${COREAUDIO} ${COREMIDI})
+        target_compile_definitions(ft2-clone
+            PRIVATE __MACOSX_CORE__)
+    else()
+        target_link_libraries(ft2-clone
+            PRIVATE asound)
+        target_compile_definitions(ft2-clone
+            PRIVATE __LINUX_ALSA__)
+    endif()
+endif()
 
 if(EXTERNAL_LIBFLAC)
     find_package(PkgConfig REQUIRED)
