@@ -745,7 +745,7 @@ void writePattern(int32_t currRow, int32_t currPattern)
 		drawChannelNumbering(pattCoord->upperRowsTextY);
 }
 
-// ========== OPTIMIZED CHARACTER DRAWING ROUTINES FOR PATTERN EDITOR ==========
+// ========== CHARACTER DRAWING ROUTINES FOR PATTERN EDITOR ==========
 
 void pattTwoHexOut(uint32_t xPos, uint32_t yPos, uint8_t val, uint32_t color)
 {
@@ -757,19 +757,8 @@ void pattTwoHexOut(uint32_t xPos, uint32_t yPos, uint8_t val, uint32_t color)
 	{
 		for (int32_t x = 0; x < FONT4_CHAR_W; x++)
 		{
-#ifdef __arm__
 			if (ch1Ptr[x] != 0) dstPtr[x] = color;
 			if (ch2Ptr[x] != 0) dstPtr[FONT4_CHAR_W+x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (ch1Ptr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-
-			tmp = dstPtr[FONT4_CHAR_W+x];
-			if (ch2Ptr[x] != 0) tmp = color;
-			dstPtr[FONT4_CHAR_W+x] = tmp;
-#endif
 		}
 
 		ch1Ptr += FONT4_WIDTH;
@@ -782,9 +771,6 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 {
 	const uint8_t *srcPtr;
 	int32_t x, y;
-#ifndef __arm__
-	uint32_t tmp;
-#endif
 
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
@@ -795,15 +781,8 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 		{
 			for (x = 0; x < FONT3_CHAR_W; x++)
 			{
-#ifdef __arm__
 				if (srcPtr[x] != 0)
 					dstPtr[x] = color;
-#else
-				// carefully written like this to generate conditional move instructions (font data is hard to predict)
-				tmp = dstPtr[x];
-				if (srcPtr[x] != 0) tmp = color;
-				dstPtr[x] = tmp;
-#endif
 			}
 
 			srcPtr += FONT3_WIDTH;
@@ -817,15 +796,8 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 		{
 			for (x = 0; x < FONT4_CHAR_W; x++)
 			{
-#ifdef __arm__
 				if (srcPtr[x] != 0)
 					dstPtr[x] = color;
-#else
-				// carefully written like this to generate conditional move instructions (font data is hard to predict)
-				tmp = dstPtr[x];
-				if (srcPtr[x] != 0) tmp = color;
-				dstPtr[x] = tmp;
-#endif
 			}
 
 			srcPtr += FONT4_WIDTH;
@@ -839,15 +811,8 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 		{
 			for (x = 0; x < FONT5_CHAR_W; x++)
 			{
-#ifdef __arm__
 				if (srcPtr[x] != 0)
 					dstPtr[x] = color;
-#else
-				// carefully written like this to generate conditional move instructions (font data is hard to predict)
-				tmp = dstPtr[x];
-				if (srcPtr[x] != 0) tmp = color;
-				dstPtr[x] = tmp;
-#endif
 			}
 
 			srcPtr += FONT5_WIDTH;
@@ -861,15 +826,8 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 		{
 			for (x = 0; x < FONT7_CHAR_W; x++)
 			{
-#ifdef __arm__
 				if (srcPtr[x] != 0)
 					dstPtr[x] = color;
-#else
-				// carefully written like this to generate conditional move instructions (font data is hard to predict)
-				tmp = dstPtr[x];
-				if (srcPtr[x] != 0) tmp = color;
-				dstPtr[x] = tmp;
-#endif
 			}
 
 			srcPtr += FONT7_WIDTH;
@@ -887,15 +845,8 @@ static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (int32_t x = 0; x < FONT7_CHAR_W*3; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT7_WIDTH;
@@ -912,15 +863,8 @@ static void drawKeyOffSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (int32_t x = 0; x < FONT7_CHAR_W*2; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT7_WIDTH;
@@ -957,24 +901,9 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_
 	{
 		for (int32_t x = 0; x < FONT7_CHAR_W; x++)
 		{
-#ifdef __arm__
 			if (ch1Ptr[x] != 0) dstPtr[x] = color;
 			if (ch2Ptr[x] != 0) dstPtr[FONT7_CHAR_W+x] = color;
 			if (ch3Ptr[x] != 0) dstPtr[((FONT7_CHAR_W*2)-2)+x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (ch1Ptr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-
-			tmp = dstPtr[FONT7_CHAR_W+x];
-			if (ch2Ptr[x] != 0) tmp = color;
-			dstPtr[FONT7_CHAR_W+x] = tmp;
-
-			tmp = dstPtr[((FONT7_CHAR_W*2)-2)+x]; // -2 to get correct alignment for ending glyph
-			if (ch3Ptr[x] != 0) tmp = color;
-			dstPtr[((FONT7_CHAR_W*2)-2)+x] = tmp;
-#endif
 		}
 
 		ch1Ptr += FONT7_WIDTH;
@@ -993,15 +922,8 @@ static void drawEmptyNoteMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (int32_t x = 0; x < FONT4_CHAR_W*3; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT4_WIDTH;
@@ -1018,15 +940,8 @@ static void drawKeyOffMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (int32_t x = 0; x < FONT4_CHAR_W*3; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT4_WIDTH;
@@ -1063,24 +978,9 @@ static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32
 	{
 		for (int32_t x = 0; x < FONT4_CHAR_W; x++)
 		{
-#ifdef __arm__
 			if (ch1Ptr[x] != 0) dstPtr[x] = color;
 			if (ch2Ptr[x] != 0) dstPtr[FONT4_CHAR_W+x] = color;
 			if (ch3Ptr[x] != 0) dstPtr[(FONT4_CHAR_W*2)+x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (ch1Ptr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-
-			tmp = dstPtr[FONT4_CHAR_W+x];
-			if (ch2Ptr[x] != 0) tmp = color;
-			dstPtr[FONT4_CHAR_W+x] = tmp;
-
-			tmp = dstPtr[(FONT4_CHAR_W*2)+x];
-			if (ch3Ptr[x] != 0) tmp = color;
-			dstPtr[(FONT4_CHAR_W*2)+x] = tmp;
-#endif
 		}
 
 		ch1Ptr += FONT4_WIDTH;
@@ -1099,15 +999,8 @@ static void drawEmptyNoteBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (int32_t x = 0; x < FONT4_CHAR_W*6; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT4_WIDTH;
@@ -1124,15 +1017,8 @@ static void drawKeyOffBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 	{
 		for (int32_t x = 0; x < FONT4_CHAR_W*6; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT4_WIDTH;
@@ -1169,24 +1055,9 @@ static void drawNoteBig(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_t 
 	{
 		for (int32_t x = 0; x < FONT5_CHAR_W; x++)
 		{
-#ifdef __arm__
 			if (ch1Ptr[x] != 0) dstPtr[x] = color;
 			if (ch2Ptr[x] != 0) dstPtr[FONT5_CHAR_W+x] = color;
 			if (ch3Ptr[x] != 0) dstPtr[(FONT5_CHAR_W*2)+x] = color;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (ch1Ptr[x] != 0) tmp = color;
-			dstPtr[x] = tmp;
-
-			tmp = dstPtr[FONT5_CHAR_W+x];
-			if (ch2Ptr[x] != 0) tmp = color;
-			dstPtr[FONT5_CHAR_W+x] = tmp;
-
-			tmp = dstPtr[(FONT5_CHAR_W*2)+x];
-			if (ch3Ptr[x] != 0) tmp = color;
-			dstPtr[(FONT5_CHAR_W*2)+x] = tmp;
-#endif
 		}
 
 		ch1Ptr += FONT5_WIDTH;

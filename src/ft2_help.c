@@ -109,7 +109,7 @@ static void readHelp(void) // this is a bit messy...
 	helpRec *tempText = (helpRec *)malloc(HELP_SIZE * MAX_HELP_LINES);
 	if (tempText == NULL)
 	{
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return;
 	}
 	
@@ -251,7 +251,7 @@ static void readHelp(void) // this is a bit messy...
 		subjPtrArr[subj] = (helpRec *)malloc(HELP_SIZE * textLine);
 		if (subjPtrArr[subj] == NULL)
 		{
-			okBox(0, "System message", "Not enough memory!");
+			okBox(0, "System message", "Not enough memory!", NULL);
 			break;
 		}
 

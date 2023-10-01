@@ -271,7 +271,7 @@ double dAmigaPeriod2Hz(int32_t period)
 	if (period == 0)
 		return 0.0; // in FT2, a period of 0 results in 0Hz
 
-	return (double)(8363 * 1712) / period;
+	return (8363.0 * 1712.0) / period;
 }
 
 double dPeriod2Hz(int32_t period)
@@ -2236,7 +2236,7 @@ void tickReplayer(void) // periodically called from audio callback
 	int32_t i;
 	channel_t *ch;
 
-	if (musicPaused || !songPlaying)
+	if (!songPlaying)
 	{
 		ch = channel;
 		for (i = 0; i < song.numChannels; i++, ch++)
@@ -2799,7 +2799,7 @@ bool setupReplayer(void)
 
 	calcPanningTable();
 
-	setPos(0, 0, true);
+	setPos(0, 0, true); // important!
 
 	if (!allocateInstr(0))
 	{
@@ -3113,7 +3113,6 @@ void stopVoices(void)
 	editor.curPlaySmp = 255;
 
 	stopAllScopes();
-	resetAudioDither();
 	resetCachedMixerVars();
 
 	// wait for scope thread to finish, so that we know pointers aren't deprecated

@@ -178,7 +178,7 @@ static void pbDoResampling(void)
 	thread = SDL_CreateThread(resampleThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -345,7 +345,7 @@ void pbSampleResample(void)
 	windowClose(false);
 
 	if (outOfMemory)
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 }
 
 static void cbEchoAddMemory(void)
@@ -559,7 +559,7 @@ static void pbCreateEcho(void)
 	thread = SDL_CreateThread(createEchoThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -803,7 +803,7 @@ void pbSampleEcho(void)
 	windowClose(echo_AddMemory ? false : true);
 
 	if (outOfMemory)
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 }
 
 static int32_t SDLCALL mixThread(void *ptr)
@@ -946,7 +946,7 @@ static void pbMix(void)
 	thread = SDL_CreateThread(mixThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -1101,7 +1101,7 @@ void pbSampleMix(void)
 	windowClose(false);
 
 	if (outOfMemory)
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 }
 
 static void sbSetStartVolPos(uint32_t pos)
@@ -1285,7 +1285,7 @@ static void pbApplyVolume(void)
 	thread = SDL_CreateThread(applyVolumeThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -1391,7 +1391,7 @@ static void pbGetMaxScale(void)
 	thread = SDL_CreateThread(getMaxScaleThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 

@@ -467,18 +467,18 @@ static void openDrive(char *str) // Windows only
 {
 	if (mouse.mode == MOUSE_MODE_DELETE)
 	{
-		okBox(8, "System complaint", "Very funny.");
+		okBox(0, "System message", "Drive deletion is not implemented!", NULL);
 		return;
 	}
 
 	if (str == NULL || *str == '\0')
 	{
-		okBox(0, "System message", "Couldn't open drive!");
+		okBox(0, "System message", "Couldn't open drive!", NULL);
 		return;
 	}
 
 	if (chdir(str) != 0)
-		okBox(0, "System message", "Couldn't open drive! Please make sure there's a disk in it.");
+		okBox(0, "System message", "Couldn't open drive! Please make sure there's a disk in it.", NULL);
 	else
 		editor.diskOpReadDir = true;
 }
@@ -575,12 +575,12 @@ static void openDirectory(UNICHAR *strU)
 {
 	if (strU == NULL || UNICHAR_STRLEN(strU) == 0)
 	{
-		okBox(0, "System message", "Couldn't open directory! No permission or in use?");
+		okBox(0, "System message", "Couldn't open directory! No permission or in use?", NULL);
 		return;
 	}
 
 	if (UNICHAR_CHDIR(strU) != 0)
-		okBox(0, "System message", "Couldn't open directory! No permission or in use?");
+		okBox(0, "System message", "Couldn't open directory! No permission or in use?", NULL);
 	else
 		editor.diskOpReadDir = true;
 }
@@ -710,7 +710,7 @@ static void openFile(UNICHAR *filenameU, bool songModifiedCheck)
 	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
 	if (f == NULL)
 	{
-		okBox(0, "System message", "Couldn't open file/directory! No permission or in use?");
+		okBox(0, "System message", "Couldn't open file/directory! No permission or in use?", NULL);
 		return;
 	}
 	fclose(f);
@@ -718,13 +718,13 @@ static void openFile(UNICHAR *filenameU, bool songModifiedCheck)
 	const int32_t filesize = getFileSize(filenameU);
 	if (filesize == -1) // >2GB
 	{
-		okBox(0, "System message", "The file is too big and can't be loaded (over 2GB).");
+		okBox(0, "System message", "The file is too big and can't be loaded (over 2GB).", NULL);
 		return;
 	}
 
 	if (filesize >= 128L*1024*1024) // 128MB
 	{
-		if (okBox(2, "System request", "Are you sure you want to load such a big file?") != 1)
+		if (okBox(2, "System request", "Are you sure you want to load such a big file?", NULL) != 1)
 			return;
 	}
 
@@ -740,7 +740,7 @@ static void openFile(UNICHAR *filenameU, bool songModifiedCheck)
 				FReq_EntrySelected = -1;
 				diskOp_DrawFilelist();
 
-				if (okBox(2, "System request", "You have unsaved changes in your song. Load new song and lose all changes?") != 1)
+				if (okBox(2, "System request", "You have unsaved changes in your song. Load new song and lose all changes?", NULL) != 1)
 					return;
 			}
 
@@ -871,21 +871,21 @@ static void diskOpSave(bool checkOverwrite)
 
 	if (FReq_FileName[0] == '\0')
 	{
-		okBox(0, "System message", "Filename can't be empty!");
+		okBox(0, "System message", "Filename can't be empty!", NULL);
 		return;
 	}
 
 	// test if the very first character has a dot...
 	if (FReq_FileName[0] == '.')
 	{
-		okBox(0, "System message", "The very first character in the filename can't be '.' (dot)!");
+		okBox(0, "System message", "The very first character in the filename can't be '.' (dot)!", NULL);
 		return;
 	}
 
 	// test for illegal file name
 	if (FReq_FileName[0] == '\0' || strpbrk(FReq_FileName, "\\/:*?\"<>|") != NULL)
 	{
-		okBox(0, "System message", "The filename can't contain the following characters: \\ / : * ? \" < > |");
+		okBox(0, "System message", "The filename can't contain the following characters: \\ / : * ? \" < > |", NULL);
 		return;
 	}
 
@@ -912,14 +912,14 @@ static void diskOpSave(bool checkOverwrite)
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
 				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
-				if (okBox(2, "System request", FReq_SysReqText) != 1)
+				if (okBox(2, "System request", FReq_SysReqText, NULL) != 1)
 					return;
 			}
 
 			fileNameU = cp437ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
-				okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 				return;
 			}
 
@@ -936,14 +936,14 @@ static void diskOpSave(bool checkOverwrite)
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
 				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
-				if (okBox(2, "System request", FReq_SysReqText) != 1)
+				if (okBox(2, "System request", FReq_SysReqText, NULL) != 1)
 					return;
 			}
 
 			fileNameU = cp437ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
-				okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 				return;
 			}
 
@@ -965,14 +965,14 @@ static void diskOpSave(bool checkOverwrite)
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
 				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
-				if (okBox(2, "System request", FReq_SysReqText) != 1)
+				if (okBox(2, "System request", FReq_SysReqText, NULL) != 1)
 					return;
 			}
 
 			fileNameU = cp437ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
-				okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 				return;
 			}
 
@@ -989,14 +989,14 @@ static void diskOpSave(bool checkOverwrite)
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
 				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
-				if (okBox(2, "System request", FReq_SysReqText) != 1)
+				if (okBox(2, "System request", FReq_SysReqText, NULL) != 1)
 					return;
 			}
 
 			fileNameU = cp437ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
-				okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 				return;
 			}
 
@@ -1012,14 +1012,14 @@ static void diskOpSave(bool checkOverwrite)
 			if (checkOverwrite && fileExistsAnsi(FReq_FileName))
 			{
 				createFileOverwriteText(FReq_FileName, FReq_SysReqText);
-				if (okBox(2, "System request", FReq_SysReqText) != 1)
+				if (okBox(2, "System request", FReq_SysReqText, NULL) != 1)
 					return;
 			}
 
 			fileNameU = cp437ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
-				okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 				return;
 			}
 
@@ -1086,13 +1086,13 @@ static void fileListPressed(int32_t index)
 
 				free(nameTmp);
 
-				if (okBox(2, "System request", FReq_SysReqText) == 1)
+				if (okBox(2, "System request", FReq_SysReqText, NULL) == 1)
 				{
 					if (dirEntry->isDir)
 					{
 						result = deleteDirRecursive(dirEntry->nameU);
 						if (!result)
-							okBox(0, "System message", "Couldn't delete folder: Access denied!");
+							okBox(0, "System message", "Couldn't delete folder: Access denied!", NULL);
 						else
 							editor.diskOpReadDir = true;
 					}
@@ -1100,7 +1100,7 @@ static void fileListPressed(int32_t index)
 					{
 						result = (UNICHAR_REMOVE(dirEntry->nameU) == 0);
 						if (!result)
-							okBox(0, "System message", "Couldn't delete file: Access denied!");
+							okBox(0, "System message", "Couldn't delete file: Access denied!", NULL);
 						else
 							editor.diskOpReadDir = true;
 					}
@@ -1129,16 +1129,16 @@ static void fileListPressed(int32_t index)
 				{
 					if (FReq_NameTemp == NULL || FReq_NameTemp[0] == '\0')
 					{
-						okBox(0, "System message", "New name can't be empty!");
+						okBox(0, "System message", "New name can't be empty!", NULL);
 						break;
 					}
 
 					if (!renameAnsi(dirEntry->nameU, FReq_NameTemp))
 					{
 						if (dirEntry->isDir)
-							okBox(0, "System message", "Couldn't rename directory: Access denied, or dir already exists!");
+							okBox(0, "System message", "Couldn't rename directory: Access denied, or dir already exists!", NULL);
 						else
-							okBox(0, "System message", "Couldn't rename file: Access denied, or file already exists!");
+							okBox(0, "System message", "Couldn't rename file: Access denied, or file already exists!", NULL);
 					}
 					else
 					{
@@ -1657,7 +1657,7 @@ static void sortDirectory(void)
 				{
 					if (p1 != NULL) free(p1);
 					if (p2 != NULL) free(p2);
-					okBox(0, "System message", "Not enough memory!");
+					okBox(0, "System message", "Not enough memory!", NULL);
 					return;
 				}
 
@@ -1753,7 +1753,7 @@ static void displayCurrPath(void)
 	char *asciiPath = unicharToCp437(FReq_CurPathU, true);
 	if (asciiPath == NULL)
 	{
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return;
 	}
 
@@ -1916,13 +1916,13 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 		{
 			findClose();
 
-			okBoxThreadSafe(0, "System message", "Not enough memory!");
+			okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 
 			FReq_Buffer = bufferCreateEmptyDir();
 			if (FReq_Buffer != NULL)
 				FReq_FileCount = 1;
 			else
-				okBoxThreadSafe(0, "System message", "Not enough memory!");
+				okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 
 			setMouseBusy(false);
 			return false;
@@ -1942,7 +1942,7 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 			if (newPtr == NULL)
 			{
 				freeDirRecBuffer();
-				okBoxThreadSafe(0, "System message", "Not enough memory!");
+				okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 				break;
 			}
 
@@ -1966,7 +1966,7 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 		if (FReq_Buffer != NULL)
 			FReq_FileCount = 1;
 		else
-			okBoxThreadSafe(0, "System message", "Not enough memory!");
+			okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 	}
 
 	editor.diskOpReadDone = true;
@@ -1986,7 +1986,7 @@ void diskOp_StartDirReadThread(void)
 	if (thread == NULL)
 	{
 		editor.diskOpReadDone = true;
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -2408,14 +2408,14 @@ void pbDiskOpMakeDir(void)
 	{
 		if (FReq_NameTemp[0] == '\0')
 		{
-			okBox(0, "System message", "Name can't be empty!");
+			okBox(0, "System message", "Name can't be empty!", NULL);
 			return;
 		}
 
 		if (makeDirAnsi(FReq_NameTemp))
 			editor.diskOpReadDir = true;
 		else
-			okBox(0, "System message", "Couldn't create directory: Access denied, or a dir with the same name already exists!");
+			okBox(0, "System message", "Couldn't create directory: Access denied, or a dir with the same name already exists!", NULL);
 	}
 }
 
@@ -2434,14 +2434,14 @@ void pbDiskOpSetPath(void)
 	{
 		if (FReq_NameTemp[0] == '\0')
 		{
-			okBox(0, "System message", "Name can't be empty!");
+			okBox(0, "System message", "Name can't be empty!", NULL);
 			return;
 		}
 
 		if (chdir(FReq_NameTemp) == 0)
 			editor.diskOpReadDir = true;
 		else
-			okBox(0, "System message", "Couldn't set directory path!");
+			okBox(0, "System message", "Couldn't set directory path!", NULL);
 	}
 }
 

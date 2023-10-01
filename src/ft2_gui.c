@@ -43,12 +43,11 @@ static void releaseMouseStates(void)
 
 void unstuckLastUsedGUIElement(void)
 {
+	/* If last object ID is OBJECT_ID_NONE, check if we moved
+	** the sample data loop pins, and unstuck them if so.
+	*/
 	if (mouse.lastUsedObjectID == OBJECT_ID_NONE)
 	{
-		/* If last object ID is OBJECT_ID_NONE, check if we moved the
-		** sample data loop pins, and unstuck them if so
-		*/
-
 		if (ui.leftLoopPinMoving)
 		{
 			setLeftLoopPinState(false);
@@ -321,15 +320,8 @@ void textOutTiny(int32_t xPos, int32_t yPos, char *str, uint32_t color) // A..Z/
 		{
 			for (int32_t x = 0; x < FONT3_CHAR_W; x++)
 			{
-#ifdef __arm__
 				if (srcPtr[x] != 0)
 					dstPtr[x] = color;
-#else
-				// carefully written like this to generate conditional move instructions (font data is hard to predict)
-				uint32_t tmp = dstPtr[x];
-				if (srcPtr[x] != 0) tmp = color;
-				dstPtr[x] = tmp;
-#endif
 			}
 
 			srcPtr += FONT3_WIDTH;
@@ -369,15 +361,8 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	{
 		for (uint32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = pixVal;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = pixVal;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -448,7 +433,7 @@ void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalett
 	for (int32_t y = 0; y < FONT1_CHAR_H; y++)
 	{
 		for (int32_t x = 0; x < FONT1_CHAR_W-1; x++)
-			dstPtr[x] = srcPtr[x] ? fg : bg; // compiles nicely into conditional move instructions
+			dstPtr[x] = srcPtr[x] ? fg : bg;
 
 		srcPtr += FONT1_WIDTH;
 		dstPtr += SCREEN_W;
@@ -483,22 +468,11 @@ void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t s
 	{
 		for (int32_t x = 0; x < FONT1_CHAR_W; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 			{
 				dstPtr2[x] = pixVal2;
 				dstPtr1[x] = pixVal1;
 			}
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr2[x];
-			if (srcPtr[x] != 0) tmp = pixVal2;
-			dstPtr2[x] = tmp;
-
-			tmp = dstPtr1[x];
-			if (srcPtr[x] != 0) tmp = pixVal1;
-			dstPtr1[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -530,15 +504,8 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 	{
 		for (int32_t x = 0; x < width; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = pixVal;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = pixVal;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT1_WIDTH;
@@ -562,15 +529,8 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 	{
 		for (int32_t x = 0; x < FONT2_CHAR_W; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 				dstPtr[x] = pixVal;
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr[x];
-			if (srcPtr[x] != 0) tmp = pixVal;
-			dstPtr[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT2_WIDTH;
@@ -596,22 +556,11 @@ static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex,
 	{
 		for (int32_t x = 0; x < FONT2_CHAR_W; x++)
 		{
-#ifdef __arm__
 			if (srcPtr[x] != 0)
 			{
 				dstPtr2[x] = pixVal2;
 				dstPtr1[x] = pixVal1;
 			}
-#else
-			// carefully written like this to generate conditional move instructions (font data is hard to predict)
-			uint32_t tmp = dstPtr2[x];
-			if (srcPtr[x] != 0) tmp = pixVal2;
-			dstPtr2[x] = tmp;
-
-			tmp = dstPtr1[x];
-			if (srcPtr[x] != 0) tmp = pixVal1;
-			dstPtr1[x] = tmp;
-#endif
 		}
 
 		srcPtr += FONT2_WIDTH;
@@ -771,15 +720,8 @@ void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, ui
 		{
 			for (int32_t x = 0; x < FONT6_CHAR_W; x++)
 			{
-#ifdef __arm__
 				if (srcPtr[x] != 0)
 					dstPtr[x] = pixVal;
-#else
-				// carefully written like this to generate conditional move instructions (font data is hard to predict)
-				uint32_t tmp = dstPtr[x];
-				if (srcPtr[x] != 0) tmp = pixVal;
-				dstPtr[x] = tmp;
-#endif
 			}
 
 			srcPtr += FONT6_WIDTH;
@@ -807,7 +749,7 @@ void hexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette
 		for (int32_t y = 0; y < FONT6_CHAR_H; y++)
 		{
 			for (int32_t x = 0; x < FONT6_CHAR_W; x++)
-				dstPtr[x] = srcPtr[x] ? fg : bg; // compiles nicely into conditional move instructions
+				dstPtr[x] = srcPtr[x] ? fg : bg;
 
 			srcPtr += FONT6_WIDTH;
 			dstPtr += SCREEN_W;

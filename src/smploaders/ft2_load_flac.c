@@ -208,7 +208,7 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__St
 
 		stereoSampleLoadMode = -1;
 		if (numChannels == 2)
-			stereoSampleLoadMode = loaderSysReq(5, "System request", "This is a stereo sample...");
+			stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample...", NULL);
 	}
 
 	// check for RIFF chunks (loop/vol/pan information)
@@ -338,7 +338,7 @@ static FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *
 	{
 		if (!allocateSmpData(s, sampleLength, sample16Bit))
 		{
-			loaderMsgBox("Error loading sample: Out of memory!");
+			loaderMsgBox("Error loading sample: Not enough memory!");
 			return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
 		}
 

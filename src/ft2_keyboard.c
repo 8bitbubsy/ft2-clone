@@ -296,7 +296,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 					if (editor.curInstr == 0 || instr[editor.curInstr] == NULL)
 						return;
 
-					if (okBox(1, "System request", "Clear instrument?") == 1)
+					if (okBox(1, "System request", "Clear instrument?", NULL) == 1)
 					{
 						freeInstr(editor.curInstr);
 						memset(song.instrName[editor.curInstr], 0, sizeof(song.instrName[editor.curInstr]));
@@ -615,9 +615,8 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (audioWasntLocked)
 				lockAudio();
 
-			if (song.row >= 16)
-				song.row -= 16;
-			else
+			song.row -= 16;
+			if (song.row < 0)
 				song.row = 0;
 
 			if (!songPlaying)
@@ -637,9 +636,8 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (audioWasntLocked)
 				lockAudio();
 
-			if (song.row < song.currNumRows-16)
-				song.row += 16;
-			else
+			song.row += 16;
+			if (song.row >= song.currNumRows)
 				song.row = song.currNumRows-1;
 
 			if (!songPlaying)
@@ -677,7 +675,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 			if (audioWasntLocked)
 				lockAudio();
 
-			song.row = patternNumRows[song.pattNum] - 1;
+			song.row = song.currNumRows - 1;
 			if (!songPlaying)
 			{
 				editor.row = (uint8_t)song.row;

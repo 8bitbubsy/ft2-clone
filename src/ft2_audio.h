@@ -149,7 +149,6 @@ void closeAudio(void);
 void pauseAudio(void);
 void resumeAudio(void);
 bool setNewAudioSettings(void);
-void resetAudioDither(void);
 void lockAudio(void);
 void unlockAudio(void);
 void lockMixerCallback(void);

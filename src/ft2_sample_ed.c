@@ -728,7 +728,7 @@ static int32_t SDLCALL copySampleThread(void *ptr)
 
 error:
 	resumeAudio();
-	okBoxThreadSafe(0, "System message", "Not enough memory!");
+	okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 	return true;
 
 	(void)ptr;
@@ -743,7 +743,7 @@ void copySmp(void) // copy sample from srcInstr->srcSmp to curInstr->curSmp
 	thread = SDL_CreateThread(copySampleThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -1644,7 +1644,7 @@ void showRange(void)
 	}
 	else
 	{
-		okBox(0, "System message", "Cannot show empty range!");
+		okBox(0, "System message", "Cannot show empty range!", NULL);
 	}
 }
 
@@ -1829,7 +1829,7 @@ void saveRange(void)
 
 	if (smpEd_Rx1 == smpEd_Rx2)
 	{
-		okBox(0, "System message", "No range specified!");
+		okBox(0, "System message", "No range specified!", NULL);
 		return;
 	}
 
@@ -1839,19 +1839,19 @@ void saveRange(void)
 
 	if (smpEd_SysReqText[0] == '\0')
 	{
-		okBox(0, "System message", "Filename can't be empty!");
+		okBox(0, "System message", "Filename can't be empty!", NULL);
 		return;
 	}
 
 	if (smpEd_SysReqText[0] == '.')
 	{
-		okBox(0, "System message", "The very first character in the filename can't be '.' (dot)!");
+		okBox(0, "System message", "The very first character in the filename can't be '.' (dot)!", NULL);
 		return;
 	}
 
 	if (strpbrk(smpEd_SysReqText, "\\/:*?\"<>|") != NULL)
 	{
-		okBox(0, "System message", "The filename can't contain the following characters: \\ / : * ? \" < > |");
+		okBox(0, "System message", "The filename can't contain the following characters: \\ / : * ? \" < > |", NULL);
 		return;
 	}
 
@@ -1865,7 +1865,7 @@ void saveRange(void)
 	UNICHAR *filenameU = cp437ToUnichar(smpEd_SysReqText);
 	if (filenameU == NULL)
 	{
-		okBox(0, "System message", "Out of memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return;
 	}
 
@@ -1873,7 +1873,7 @@ void saveRange(void)
 	{
 		char buf[256];
 		createFileOverwriteText(smpEd_SysReqText, buf);
-		if (okBox(2, "System request", buf) != 1)
+		if (okBox(2, "System request", buf, NULL) != 1)
 			return;
 	}
 
@@ -1904,7 +1904,7 @@ static bool cutRange(bool cropMode, int32_t r1, int32_t r2)
 				fixSample(s);
 				resumeAudio();
 
-				okBoxThreadSafe(0, "System message", "Not enough memory!");
+				okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 				return false;
 			}
 
@@ -1926,7 +1926,7 @@ static bool cutRange(bool cropMode, int32_t r1, int32_t r2)
 			if (!cropMode)
 				resumeAudio();
 
-			okBoxThreadSafe(0, "System message", "Not enough memory!");
+			okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 			return false;
 		}
 
@@ -1986,7 +1986,7 @@ static bool cutRange(bool cropMode, int32_t r1, int32_t r2)
 static int32_t SDLCALL sampCutThread(void *ptr)
 {
 	if (!cutRange(false, smpEd_Rx1, smpEd_Rx2))
-		okBoxThreadSafe(0, "System message", "Not enough memory! (Disable \"cut to buffer\")");
+		okBoxThreadSafe(0, "System message", "Not enough memory! (Disable \"cut to buffer\")", NULL);
 	else
 		writeSampleFlag = true;
 
@@ -2005,7 +2005,7 @@ void sampCut(void)
 	thread = SDL_CreateThread(sampCutThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -2020,7 +2020,7 @@ static int32_t SDLCALL sampCopyThread(void *ptr)
 
 	if (!getCopyBuffer(smpEd_Rx2- smpEd_Rx1, sample16Bit))
 	{
-		okBoxThreadSafe(0, "System message", "Not enough memory!");
+		okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 		return true;
 	}
 
@@ -2053,7 +2053,7 @@ void sampCopy(void)
 	thread = SDL_CreateThread(sampCopyThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -2066,7 +2066,7 @@ static void pasteOverwrite(sample_t *s)
 
 	if (!reallocateSmpData(s, smpCopySize, sample16Bit))
 	{
-		okBoxThreadSafe(0, "System message", "Not enough memory!");
+		okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 		return;
 	}
 
@@ -2152,7 +2152,7 @@ static int32_t SDLCALL sampPasteThread(void *ptr)
 
 	if (instr[editor.curInstr] == NULL && !allocateInstr(editor.curInstr))
 	{
-		okBoxThreadSafe(0, "System message", "Not enough memory!");
+		okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 		return true;
 	}
 
@@ -2167,7 +2167,7 @@ static int32_t SDLCALL sampPasteThread(void *ptr)
 
 	if (s->length+smpCopySize > MAX_SAMPLE_LEN)
 	{
-		okBoxThreadSafe(0, "System message", "Not enough room in sample!");
+		okBoxThreadSafe(0, "System message", "Not enough room in sample!", NULL);
 		return true;
 	}
 
@@ -2177,13 +2177,13 @@ static int32_t SDLCALL sampPasteThread(void *ptr)
 
 	if (newLength > MAX_SAMPLE_LEN)
 	{
-		okBoxThreadSafe(0, "System message", "Not enough room in sample!");
+		okBoxThreadSafe(0, "System message", "Not enough room in sample!", NULL);
 		return true;
 	}
 
 	if (!allocateSmpDataPtr(&sp, newLength, sample16Bit))
 	{
-		okBoxThreadSafe(0, "System message", "Not enough memory!");
+		okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 		return true;
 	}
 
@@ -2255,7 +2255,7 @@ void sampPaste(void)
 		sample_t *s = getCurSample();
 		if (s != NULL && s->dataPtr != NULL && s->length > 0)
 		{
-			if (okBox(2, "System request", "The current sample is not empty. Do you really want to overwrite it?") != 1)
+			if (okBox(2, "System request", "The current sample is not empty. Do you really want to overwrite it?", NULL) != 1)
 				return;
 		}
 	}
@@ -2264,7 +2264,7 @@ void sampPaste(void)
 	thread = SDL_CreateThread(sampPasteThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -2319,7 +2319,7 @@ void sampCrop(void)
 	thread = SDL_CreateThread(sampCropThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -2337,21 +2337,21 @@ void sampXFade(void)
 	// check if the sample has the loop flag enabled
 	if (GET_LOOPTYPE(s->flags) == LOOP_OFF)
 	{
-		okBox(0, "System message", "X-Fade can only be used on a loop-enabled sample!");
+		okBox(0, "System message", "X-Fade can only be used on a loop-enabled sample!", NULL);
 		return;
 	}
 
 	// check if we selected a range
 	if (smpEd_Rx2 == 0)
 	{
-		okBox(0, "System message", "No range selected! Make a small range that includes loop start or loop end.");
+		okBox(0, "System message", "No range selected! Make a small range that includes loop start or loop end.", NULL);
 		return;
 	}
 
 	// check if we selected a valid range length
 	if (smpEd_Rx2-smpEd_Rx1 <= 2)
 	{
-		okBox(0, "System message", "Invalid range!");
+		okBox(0, "System message", "Invalid range!", NULL);
 		return;
 	}
 
@@ -2367,7 +2367,7 @@ void sampXFade(void)
 		{
 			if (x2 <= y1 || x2 >= s->loopStart+s->loopLength)
 			{
-				okBox(0, "System message", "Error: No loop point found inside marked data.");
+				okBox(0, "System message", "Error: No loop point found inside marked data.", NULL);
 				return;
 			}
 
@@ -2380,13 +2380,13 @@ void sampXFade(void)
 
 			if (d1 < 1 || d2 < 1 || d3 < 1)
 			{
-				okBox(0, "System message", "Invalid range! Try to mark more data.");
+				okBox(0, "System message", "Invalid range! Try to mark more data.", NULL);
 				return;
 			}
 
 			if (y1-d1 < 0 || y1+d1 >= s->length)
 			{
-				okBox(0, "System message", "Not enough sample data outside loop!");
+				okBox(0, "System message", "Not enough sample data outside loop!", NULL);
 				return;
 			}
 
@@ -2430,7 +2430,7 @@ void sampXFade(void)
 			y1 += s->loopLength;
 			if (x1 >= y1 || x2 <= y1 || x2 >= s->length)
 			{
-				okBox(0, "System message", "Error: No loop point found inside marked data.");
+				okBox(0, "System message", "Error: No loop point found inside marked data.", NULL);
 				return;
 			}
 
@@ -2443,13 +2443,13 @@ void sampXFade(void)
 
 			if (d1 < 1 || d2 < 1 || d3 < 1)
 			{
-				okBox(0, "System message", "Invalid range! Try to mark more data.");
+				okBox(0, "System message", "Invalid range! Try to mark more data.", NULL);
 				return;
 			}
 
 			if (y1-d1 < 0 || y1+d1 >= s->length)
 			{
-				okBox(0, "System message", "Not enough sample data outside loop!");
+				okBox(0, "System message", "Not enough sample data outside loop!", NULL);
 				return;
 			}
 
@@ -2499,7 +2499,7 @@ void sampXFade(void)
 
 		if (x1 < 0 || x2 <= x1 || x2 >= s->length)
 		{
-			okBox(0, "System message", "Invalid range!");
+			okBox(0, "System message", "Invalid range!", NULL);
 			return;
 		}
 
@@ -2511,7 +2511,7 @@ void sampXFade(void)
 
 		if (y1 < 0 || y2+length >= s->length)
 		{
-			okBox(0, "System message", "Not enough sample data outside loop!");
+			okBox(0, "System message", "Not enough sample data outside loop!", NULL);
 			return;
 		}
 
@@ -2521,7 +2521,7 @@ void sampXFade(void)
 
 		if (y1+length <= s->loopStart || d1 == 0 || d3 == 0 || d1 > s->loopLength)
 		{
-			okBox(0, "System message", "Invalid range!");
+			okBox(0, "System message", "Invalid range!", NULL);
 			return;
 		}
 
@@ -2680,13 +2680,13 @@ void rbSample8bit(void)
 	if (s == NULL || s->dataPtr == NULL || s->length <= 0)
 		return;
 
-	if (okBox(2, "System request", "Convert sampledata?") == 1)
+	if (okBox(2, "System request", "Pre-convert sample data?", NULL) == 1)
 	{
 		mouseAnimOn();
 		thread = SDL_CreateThread(convSmp8Bit, NULL, NULL);
 		if (thread == NULL)
 		{
-			okBox(0, "System message", "Couldn't create thread!");
+			okBox(0, "System message", "Couldn't create thread!", NULL);
 			return;
 		}
 
@@ -2720,7 +2720,7 @@ static int32_t SDLCALL convSmp16Bit(void *ptr)
 
 	if (!reallocateSmpData(s, s->length, true))
 	{
-		okBoxThreadSafe(0, "System message", "Not enough memory!");
+		okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 		return true;
 	}
 
@@ -2748,13 +2748,13 @@ void rbSample16bit(void)
 	if (s == NULL || s->dataPtr == NULL || s->length <= 0)
 		return;
 
-	if (okBox(2, "System request", "Convert sampledata?") == 1)
+	if (okBox(2, "System request", "Pre-convert sample data?", NULL) == 1)
 	{
 		mouseAnimOn();
 		thread = SDL_CreateThread(convSmp16Bit, NULL, NULL);
 		if (thread == NULL)
 		{
-			okBox(0, "System message", "Couldn't create thread!");
+			okBox(0, "System message", "Couldn't create thread!", NULL);
 			return;
 		}
 
@@ -2785,7 +2785,7 @@ void clearSample(void)
 	if (s == NULL || s->dataPtr == NULL || s->length <= 0)
 		return;
 
-	if (okBox(1, "System request", "Clear sample?") != 1)
+	if (okBox(1, "System request", "Clear sample?", NULL) != 1)
 		return;
 
 	freeSample(editor.curInstr, editor.curSmp);
@@ -2802,17 +2802,17 @@ void sampMinimize(void)
 	const bool hasLoop = GET_LOOPTYPE(s->flags) != LOOP_OFF;
 	if (!hasLoop)
 	{
-		okBox(0, "System message", "Only a looped sample can be minimized!");
+		okBox(0, "System message", "Only a looped sample can be minimized!", NULL);
 		return;
 	}
 
 	if (s->loopStart+s->loopLength >= s->length)
 	{
-		okBox(0, "System message", "The sample can't be minimized any further.");
+		okBox(0, "System message", "This sample is already minimized.", NULL);
 		return;
 	}
 
-	if (okBox(1, "System request", "Minimize sample?") != 1)
+	if (okBox(1, "System request", "Minimize sample?", NULL) != 1)
 		return;
 	
 	lockMixerCallback();
@@ -3613,7 +3613,7 @@ void sampleBackwards(void)
 	thread = SDL_CreateThread(sampleBackwardsThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -3662,7 +3662,7 @@ void sampleChangeSign(void)
 	thread = SDL_CreateThread(sampleChangeSignThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -3708,7 +3708,7 @@ void sampleByteSwap(void)
 
 	if (!(s->flags & SAMPLE_16BIT))
 	{
-		if (okBox(2, "System request", "Byte swapping only makes sense on a 16-bit sample. Continue?") != 1)
+		if (okBox(2, "System request", "Byte swapping rarely makes sense on an 8-bit sample. Continue?", NULL) != 1)
 			return;
 	}
 
@@ -3716,7 +3716,7 @@ void sampleByteSwap(void)
 	thread = SDL_CreateThread(sampleByteSwapThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
@@ -3828,7 +3828,7 @@ void fixDC(void)
 	thread = SDL_CreateThread(fixDCThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 

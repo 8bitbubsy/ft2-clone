@@ -297,13 +297,14 @@ static bool dump_EndOfTune(int16_t endSongPos)
 void dump_TickReplayer(void)
 {
 	replayerBusy = true;
+	if (!musicPaused)
+	{
+		if (audio.volumeRampingFlag)
+			resetRampVolumes();
 
-	if (audio.volumeRampingFlag)
-		resetRampVolumes();
-
-	tickReplayer();
-	updateVoices();
-
+		tickReplayer();
+		updateVoices();
+	}
 	replayerBusy = false;
 }
 
@@ -337,7 +338,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	if (!dump_Init(WDFrequency, WDAmp, WDStartPos))
 	{
 		resumeAudio();
-		okBoxThreadSafe(0, "System message", "Not enough memory!");
+		okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 		return true;
 	}
 
@@ -425,7 +426,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	resumeAudio();
 
 	if (overflow)
-		okBoxThreadSafe(0, "System message", "Rendering stopped, file exceeded 2GB!");
+		okBoxThreadSafe(0, "System message", "Rendering stopped, file exceeded 2GB!", NULL);
 
 	editor.diskOpReadOnOpen = true;
 	return true;
@@ -445,14 +446,14 @@ static void wavRender(bool checkOverwrite)
 	{
 		char buf[256];
 		createFileOverwriteText(filename, buf);
-		if (okBox(2, "System request", buf) != 1)
+		if (okBox(2, "System request", buf, NULL) != 1)
 			return;
 	}
 
 	editor.wavRendererFileHandle = fopen(filename, "wb");
 	if (editor.wavRendererFileHandle == NULL)
 	{
-		okBox(0, "System message", "General I/O error while writing to WAV (is the file in use)?");
+		okBox(0, "System message", "General I/O error while writing to WAV (is the file in use)?", NULL);
 		return;
 	}
 
@@ -461,7 +462,7 @@ static void wavRender(bool checkOverwrite)
 	if (thread == NULL)
 	{
 		fclose((FILE *)editor.wavRendererFileHandle);
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 

@@ -69,12 +69,12 @@ void setPal16(pal16 *p, bool redrawScreen)
 
 static void showColorErrorMsg(void)
 {
-	okBox(0, "System message", "Default colors cannot be modified.");
+	okBox(0, "System message", "Default colors cannot be modified.", NULL);
 }
 
 static void showMouseColorErrorMsg(void)
 {
-	okBox(0, "System message", "Mouse color can only be changed when \"Software mouse\" is enabled.");
+	okBox(0, "System message", "Mouse color can only be changed when \"Software mouse\" is enabled.", NULL);
 }
 
 static double palPow(double dX, double dY)

@@ -43,7 +43,7 @@ static int32_t last_TimeH, last_TimeM, last_TimeS;
 
 static note_t tmpPattern[MAX_CHANNELS * MAX_PATT_LEN];
 
-pattMark_t pattMark; // globalized
+volatile pattMark_t pattMark; // globalized
 
 bool allocatePattern(uint16_t pattNum) // for tracker use only, not in loader!
 {
@@ -721,7 +721,7 @@ void togglePatternEditorExtended(void)
 
 void clearPattMark(void)
 {
-	memset(&pattMark, 0, sizeof (pattMark));
+	memset((void *)&pattMark, 0, sizeof (pattMark));
 
 	lastMarkX1 = -1;
 	lastMarkX2 = -1;
@@ -731,17 +731,27 @@ void clearPattMark(void)
 
 void checkMarkLimits(void)
 {
-	const uint16_t limitY = patternNumRows[editor.editPattern];
-	pattMark.markY1 = CLAMP(pattMark.markY1, 0, limitY);
-	pattMark.markY2 = CLAMP(pattMark.markY2, 0, limitY);
+	volatile int16_t markX1 = pattMark.markX1;
+	volatile int16_t markX2 = pattMark.markX2;
+	volatile int16_t markY1 = pattMark.markY1;
+	volatile int16_t markY2 = pattMark.markY2;
 
-	const uint16_t limitX = (uint16_t)(song.numChannels - 1);
-	pattMark.markX1 = CLAMP(pattMark.markX1, 0, limitX);
-	pattMark.markX2 = CLAMP(pattMark.markX2, 0, limitX);
+	const int16_t limitY = patternNumRows[editor.editPattern];
+	markY1 = CLAMP(markY1, 0, limitY);
+	markY2 = CLAMP(markY2, 0, limitY);
+
+	const int16_t limitX = (int16_t)(song.numChannels - 1);
+	markX1 = CLAMP(markX1, 0, limitX);
+	markX2 = CLAMP(markX2, 0, limitX);
 
 	// XXX: will probably never happen? FT2 has this in CheckMarkLimits() though...
-	if (pattMark.markX1 > pattMark.markX2)
-		pattMark.markX1 = pattMark.markX2;
+	if (markX1 > markX2)
+		markX1 = markX2;
+
+	pattMark.markX1 = markX1;
+	pattMark.markX2 = markX2;
+	pattMark.markY1 = markY1;
+	pattMark.markY2 = markY2;
 }
 
 static int8_t mouseXToCh(void) // used to get channel num from mouse x (for pattern marking)
@@ -951,11 +961,15 @@ void rowOneUpWrap(void)
 	if (audioWasntLocked)
 		lockAudio();
 
-	song.row = (song.row - 1 + song.currNumRows) % song.currNumRows;
-	if (!songPlaying)
+	if (song.currNumRows > 0)
 	{
-		editor.row = (uint8_t)song.row;
-		ui.updatePatternEditor = true;
+		song.row = (song.row - 1 + song.currNumRows) % song.currNumRows;
+
+		if (!songPlaying)
+		{
+			editor.row = (uint8_t)song.row;
+			ui.updatePatternEditor = true;
+		}
 	}
 
 	if (audioWasntLocked)
@@ -972,7 +986,7 @@ void rowOneDownWrap(void)
 	{
 		song.tick = 2;
 	}
-	else
+	else if (song.currNumRows > 0)
 	{
 		song.row = (song.row + 1 + song.currNumRows) % song.currNumRows;
 		editor.row = (uint8_t)song.row;
@@ -1160,19 +1174,19 @@ bool loadTrack(UNICHAR *filenameU)
 	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
 	if (f == NULL)
 	{
-		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
+		okBox(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
 		return false;
 	}
 
 	if (fread(&h, 1, sizeof (h), f) != sizeof (h))
 	{
-		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
+		okBox(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
 		goto trackLoadError;
 	}
 
 	if (h.version != 1)
 	{
-		okBox(0, "System message", "Incompatible format version!");
+		okBox(0, "System message", "Incompatible format version!", NULL);
 		goto trackLoadError;
 	}
 
@@ -1185,13 +1199,13 @@ bool loadTrack(UNICHAR *filenameU)
 
 	if (fread(loadBuff, numRows * sizeof (note_t), 1, f) != 1)
 	{
-		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
+		okBox(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
 		goto trackLoadError;
 	}
 
 	if (!allocatePattern(editor.editPattern))
 	{
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		goto trackLoadError;
 	}
 
@@ -1241,14 +1255,14 @@ bool saveTrack(UNICHAR *filenameU)
 	note_t *p = pattern[editor.editPattern];
 	if (p == NULL)
 	{
-		okBox(0, "System message", "The current pattern is empty!");
+		okBox(0, "System message", "The current pattern is empty!", NULL);
 		return false;
 	}
 
 	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
-		okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
@@ -1261,14 +1275,14 @@ bool saveTrack(UNICHAR *filenameU)
 	if (fwrite(&h, sizeof (h), 1, f) !=  1)
 	{
 		fclose(f);
-		okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
 	if (fwrite(saveBuff, h.numRows * sizeof (note_t), 1, f) != 1)
 	{
 		fclose(f);
-		okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
@@ -1283,25 +1297,25 @@ bool loadPattern(UNICHAR *filenameU)
 	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
 	if (f == NULL)
 	{
-		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
+		okBox(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
 		return false;
 	}
 
 	if (!allocatePattern(editor.editPattern))
 	{
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		goto loadPattError;
 	}
 
 	if (fread(&h, 1, sizeof (h), f) != sizeof (h))
 	{
-		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
+		okBox(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
 		goto loadPattError;
 	}
 
 	if (h.version != 1)
 	{
-		okBox(0, "System message", "Incompatible format version!");
+		okBox(0, "System message", "Incompatible format version!", NULL);
 		goto loadPattError;
 	}
 
@@ -1314,7 +1328,7 @@ bool loadPattern(UNICHAR *filenameU)
 	if (fread(p, h.numRows * TRACK_WIDTH, 1, f) != 1)
 	{
 		unlockMixerCallback();
-		okBox(0, "System message", "General I/O error during loading! Is the file in use?");
+		okBox(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
 		goto loadPattError;
 	}
 
@@ -1373,14 +1387,14 @@ bool savePattern(UNICHAR *filenameU)
 	note_t *p = pattern[editor.editPattern];
 	if (p == NULL)
 	{
-		okBox(0, "System message", "The current pattern is empty!");
+		okBox(0, "System message", "The current pattern is empty!", NULL);
 		return false;
 	}
 
 	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
-		okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
@@ -1390,14 +1404,14 @@ bool savePattern(UNICHAR *filenameU)
 	if (fwrite(&h, 1, sizeof (h), f) != sizeof (h))
 	{
 		fclose(f);
-		okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
 	if (fwrite(p, h.numRows * TRACK_WIDTH, 1, f) != 1)
 	{
 		fclose(f);
-		okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
@@ -2635,7 +2649,7 @@ static void zapInstrs(void)
 
 void pbZap(void)
 {
-	const int16_t choice = okBox(4, "System request", "Total devastation of the...");
+	const int16_t choice = okBox(3, "System request", "Total devastation of the...", NULL);
 
 	if (choice == 1) // zap all
 	{
@@ -2695,16 +2709,23 @@ void resetChannelOffset(void)
 
 void shrinkPattern(void)
 {
-	if (okBox(2, "System request", "Shrink pattern?") != 1)
-		return;
-
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
 	int16_t numRows = patternNumRows[editor.editPattern];
+	resumeMusic();
+
 	if (numRows <= 1)
+	{
+		okBox(0, "System message", "Pattern is too short to be shrunk!", NULL);
+		return;
+	}
+
+	if (okBox(2, "System request", "Shrink pattern?", NULL) != 1)
 		return;
 
 	lockMixerCallback();
 
-	note_t *p = pattern[editor.editPattern];
+	note_t *p = pattern[curPattern];
 	if (p != NULL)
 	{
 		for (int32_t i = 0; i < numRows / 2; i++)
@@ -2714,10 +2735,10 @@ void shrinkPattern(void)
 		}
 	}
 
-	patternNumRows[editor.editPattern] /= 2;
-	numRows = patternNumRows[editor.editPattern];
+	patternNumRows[curPattern] /= 2;
+	numRows = patternNumRows[curPattern];
 
-	if (song.pattNum == editor.editPattern)
+	if (song.pattNum == curPattern)
 		song.currNumRows = numRows;
 
 	song.row /= 2;
@@ -2735,45 +2756,48 @@ void shrinkPattern(void)
 
 void expandPattern(void)
 {
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
 	int16_t numRows = patternNumRows[editor.editPattern];
+	resumeMusic();
+
 	if (numRows > MAX_PATT_LEN/2)
 	{
-		okBox(0, "System message", "Pattern is too long to be expanded.");
+		okBox(0, "System message", "Pattern is too long to be expanded!", NULL);
+		return;
 	}
-	else
+
+	lockMixerCallback();
+
+	note_t *p = pattern[curPattern];
+	if (p != NULL)
 	{
-		lockMixerCallback();
+		memcpy(tmpPattern, p, numRows * TRACK_WIDTH);
 
-		if (pattern[editor.editPattern] != NULL)
+		for (int32_t i = 0; i < numRows; i++)
 		{
-			note_t *p = pattern[editor.editPattern];
-			memcpy(tmpPattern, p, numRows * TRACK_WIDTH);
-			
-			for (int32_t i = 0; i < numRows; i++)
-			{
-				for (int32_t j = 0; j < MAX_CHANNELS; j++)
-					p[((i * 2) * MAX_CHANNELS) + j] = tmpPattern[(i * MAX_CHANNELS) + j];
+			for (int32_t j = 0; j < MAX_CHANNELS; j++)
+				p[((i * 2) * MAX_CHANNELS) + j] = tmpPattern[(i * MAX_CHANNELS) + j];
 
-				memset(&p[((i * 2) + 1) * MAX_CHANNELS], 0, TRACK_WIDTH);
-			}
+			memset(&p[((i * 2) + 1) * MAX_CHANNELS], 0, TRACK_WIDTH);
 		}
-
-		patternNumRows[editor.editPattern] *= 2;
-		numRows = patternNumRows[editor.editPattern];
-
-		if (song.pattNum == editor.editPattern)
-			song.currNumRows = numRows;
-
-		song.row *= 2;
-		if (song.row >= numRows)
-			song.row = numRows-1;
-
-		editor.row = song.row;
-
-		ui.updatePatternEditor = true;
-		ui.updatePosSections = true;
-
-		unlockMixerCallback();
-		setSongModifiedFlag();
 	}
+	
+	patternNumRows[curPattern] *= 2;
+	numRows = patternNumRows[curPattern];
+
+	if (song.pattNum == curPattern)
+		song.currNumRows = numRows;
+
+	song.row *= 2;
+	if (song.row >= numRows)
+		song.row = numRows-1;
+
+	editor.row = song.row;
+
+	ui.updatePatternEditor = true;
+	ui.updatePosSections = true;
+
+	unlockMixerCallback();
+	setSongModifiedFlag();
 }

@@ -15,40 +15,38 @@
 #define SYSTEM_REQUEST_Y 249
 #define SYSTEM_REQUEST_Y_EXT 91
 
-#define NUM_SYSREQ_TYPES 10
-
 // globalized
 okBoxData_t okBoxData;
 void (*loaderMsgBox)(const char *, ...);
-int16_t (*loaderSysReq)(int16_t, const char *, const char *);
+int16_t (*loaderSysReq)(int16_t, const char *, const char *, void (*)(void));
 // ----------------
+
+#define NUM_SYSREQ_TYPES 6
 
 static char *buttonText[NUM_SYSREQ_TYPES][5] =
 {
+	// generic dialogs
 	{ "OK", "","","","" },
 	{ "OK", "Cancel", "","","" },
 	{ "Yes", "No", "","","" },
-	{ "","","","","" }, // removed (TODO: Re-arrange and fix all sysreq call offsets...)
-	{ "All", "Song", "Instruments", "Cancel", "" },
-	{ "Read left", "Read right", "Convert", "", "" },
-	{ "OK", "","","","" },
-	{ "OK", "","","","" },
-	{ "Sorry...", "","","","" },
-	{ "Mono", "Stereo", "Cancel", "","" }
+
+	// custom dialogs
+	{ "All", "Song", "Instruments", "Cancel", "" },   // "song clear" dialog
+	{ "Read left", "Read right", "Convert", "", "" }, // "stereo sample loader" dialog
+	{ "Mono", "Stereo", "Cancel", "","" }             // "audio sampling" dialog
 };
 
 static SDL_Keycode shortCut[NUM_SYSREQ_TYPES][5] =
 {
+	// generic dialogs
 	{ SDLK_o, 0,      0,      0,      0 },
 	{ SDLK_o, SDLK_c, 0,      0,      0 },
 	{ SDLK_y, SDLK_n, 0,      0,      0 },
-	{ 0, 0, 0, 0, 0 }, // deprecated
-	{ SDLK_a, SDLK_s, SDLK_i, SDLK_c, 0 },
-	{ SDLK_l, SDLK_r, SDLK_c, 0,      0 },
-	{ SDLK_o, 0,      0,      0,      0 },
-	{ SDLK_o, 0,      0,      0,      0 },
-	{ SDLK_s, 0,      0,      0,      0 },
-	{ SDLK_m, SDLK_s, SDLK_c, 0,      0 },
+
+	// custom dialogs
+	{ SDLK_a, SDLK_s, SDLK_i, SDLK_c, 0 }, // "song clear" dialog
+	{ SDLK_l, SDLK_r, SDLK_c, 0,      0 }, // "stereo sample loader" dialog 
+	{ SDLK_m, SDLK_s, SDLK_c, 0,      0 }, // "audio sampling" dialog
 };
 
 typedef struct quitType_t
@@ -61,7 +59,7 @@ typedef struct quitType_t
 
 static quitType_t quitMessage[QUIT_MESSAGES] =
 {
-	// removed unsuitable/offensive ones...
+	// edited (and removed) some of the original quit texts...
 
 	{ "Do you really want to quit?", 2 },
 	{ "Tired already?", 2 },
@@ -72,7 +70,7 @@ static quitType_t quitMessage[QUIT_MESSAGES] =
 	{ "Did you really press the right key?", 2 },
 	{ "Hope ya did some good. Press >OK< to quit.", 1 },
 	{ "Quit? Only for a good reason you are allowed to press >OK<.", 1 },
-	{ "Are we at the end of a Fasttracker round?", 2 },
+	{ "Are we at the end of a Fasttracker II round?", 2 },
 	{ "Hope you're doing the compulsory \"Exit ceremony\" before pressing >OK<.", 1 },
 };
 
@@ -86,7 +84,7 @@ void myLoaderMsgBoxThreadSafe(const char *fmt, ...)
 	vsnprintf(strBuf, sizeof (strBuf), fmt, args);
 	va_end(args);
 
-	okBoxThreadSafe(0, "System message", fmt);
+	okBoxThreadSafe(0, "System message", fmt, NULL);
 }
 
 void myLoaderMsgBox(const char *fmt, ...)
@@ -99,13 +97,13 @@ void myLoaderMsgBox(const char *fmt, ...)
 	vsnprintf(strBuf, sizeof (strBuf), fmt, args);
 	va_end(args);
 
-	okBox(0, "System message", fmt);
+	okBox(0, "System message", fmt, NULL);
 }
 
 static void drawWindow(uint16_t w)
 {
 	const uint16_t h = SYSTEM_REQUEST_H;
-	const uint16_t x = (SCREEN_W - w) >> 1;
+	const uint16_t x = (SCREEN_W - w) / 2;
 	const uint16_t y = ui.extended ? 91 : SYSTEM_REQUEST_Y;
 
 	// main fill
@@ -181,13 +179,12 @@ static bool mouseButtonUpLogic(uint8_t mouseButton)
 }
 
 // WARNING: This routine must ONLY be called from the main input/video thread!
-int16_t okBox(int16_t type, const char *headline, const char *text)
+// If the checkBoxCallback argument is set, then you get a "Do not show again" checkbox.
+int16_t okBox(int16_t type, const char *headline, const char *text, void (*checkBoxCallback)(void))
 {
 #define PUSHBUTTON_W 80
 
-	uint16_t i;
 	SDL_Event inputEvent;
-	pushButton_t *p;
 
 	if (editor.editTextFlag)
 		exitTextEditing();
@@ -227,19 +224,19 @@ int16_t okBox(int16_t type, const char *headline, const char *text)
 	if (wlen > 600)
 		wlen = 600;
 
-	uint16_t headlineX = (SCREEN_W - hlen) >> 1;
-	uint16_t textX = (SCREEN_W - tlen) >> 1;
-	uint16_t x = (SCREEN_W - wlen) >> 1;
+	const uint16_t headlineX = (SCREEN_W - hlen) / 2;
+	const uint16_t textX = (SCREEN_W - tlen) / 2;
+	const uint16_t x = (SCREEN_W - wlen) / 2;
 
-	// the box y position differs in extended pattern editor mode
-	uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
+	// the dialog's y position differs in extended pattern editor mode
+	const uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set up buttons
-	for (i = 0; i < numButtons; i++)
+	for (uint16_t i = 0; i < numButtons; i++)
 	{
-		p = &pushButtons[i];
+		pushButton_t *p = &pushButtons[i];
 
-		p->x = ((SCREEN_W - tx) >> 1) + (i * 100);
+		p->x = ((SCREEN_W - tx) / 2) + (i * 100);
 		p->y = y + 42;
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
@@ -247,8 +244,9 @@ int16_t okBox(int16_t type, const char *headline, const char *text)
 		p->visible = true;
 	}
 
-	// set up checkbox (special okBox types only!)
-	if (type >= 6 && type <= 7)
+	// set up "don't show again" checkbox (if callback present)
+	bool hasCheckbox = (checkBoxCallback != NULL);
+	if (hasCheckbox)
 	{
 		checkBox_t *c = &checkBoxes[0];
 		c->x = x + 5;
@@ -256,18 +254,7 @@ int16_t okBox(int16_t type, const char *headline, const char *text)
 		c->clickAreaWidth = 116;
 		c->clickAreaHeight = 12;
 		c->checked = false;
-
-		if (type == 6)
-		{
-			// S3M load warning
-			c->callbackFunc = configToggleImportWarning;
-		}
-		else if (type == 7)
-		{
-			// "setting not yet applied"
-			c->callbackFunc = configToggleNotYetAppliedWarning;
-		}
-
+		c->callbackFunc = checkBoxCallback;
 		c->visible = true;
 	}
 
@@ -313,7 +300,7 @@ int16_t okBox(int16_t type, const char *headline, const char *text)
 					keyb.ignoreCurrKeyUp = true; // don't handle key up event for any keys that were pressed
 				}
 
-				for (i = 0; i < numButtons; i++)
+				for (uint16_t i = 0; i < numButtons; i++)
 				{
 					if (shortCut[type][i] == inputEvent.key.keysym.sym)
 					{
@@ -328,7 +315,7 @@ int16_t okBox(int16_t type, const char *headline, const char *text)
 			{
 				if (mouseButtonUpLogic(inputEvent.button.button))
 				{
-					if (type >= 6 && type <= 7)
+					if (hasCheckbox)
 						testCheckBoxMouseRelease();
 
 					returnVal = testPushButtonMouseRelease(false) + 1;
@@ -361,8 +348,8 @@ int16_t okBox(int16_t type, const char *headline, const char *text)
 		drawWindow(wlen);
 		textOutShadow(headlineX, y +  4, PAL_FORGRND, PAL_BUTTON2, headline);
 		textOutShadow(textX,     y + 24, PAL_FORGRND, PAL_BUTTON2, text);
-		for (i = 0; i < numButtons; i++) drawPushButton(i);
-		if (type >= 6 && type <= 7)
+		for (uint16_t i = 0; i < numButtons; i++) drawPushButton(i);
+		if (hasCheckbox)
 		{
 			drawCheckBox(0);
 			textOutShadow(x + 21, y + 52, PAL_FORGRND, PAL_BUTTON2, "Don't show again");
@@ -372,10 +359,10 @@ int16_t okBox(int16_t type, const char *headline, const char *text)
 		endFPSCounter();
 	}
 
-	for (i = 0; i < numButtons; i++)
+	for (uint16_t i = 0; i < numButtons; i++)
 		hidePushButton(i);
 
-	if (type >= 6 && type <= 7)
+	if (hasCheckbox)
 		hideCheckBox(0);
 
 	mouse.lastUsedObjectID = oldLastUsedObjectID;
@@ -390,14 +377,13 @@ int16_t okBox(int16_t type, const char *headline, const char *text)
 
 /* WARNING:
 ** - This routine must ONLY be called from the main input/video thread!!
-** - edText must be null-terminated
+** - edText must be NUL-terminated
 */
 int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxStrLen)
 {
 #define PUSHBUTTON_W 80
 #define TEXTBOX_W 250
 
-	uint16_t wlen, i;
 	SDL_Event inputEvent;
 
 	if (editor.editTextFlag)
@@ -426,12 +412,12 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 	t->changeMouseCursor = true;
 	t->renderBufW = (9 + 1) * t->maxChars; // 9 = max character/glyph width possible
 	t->renderBufH = 10; // 10 = max character height possible
-	t->renderW = t->w - (t->tx << 1);
+	t->renderW = t->w - (t->tx * 2);
 
 	t->renderBuf = (uint8_t *)malloc(t->renderBufW * t->renderBufH * sizeof (int8_t));
 	if (t->renderBuf == NULL)
 	{
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return 0;
 	}
 
@@ -440,8 +426,8 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 	ui.sysReqShown = true;
 	mouseAnimOff();
 
-	wlen = textWidth(headline);
-	uint16_t headlineX = (SCREEN_W - wlen) >> 1;
+	uint16_t wlen = textWidth(headline);
+	const uint16_t headlineX = (SCREEN_W - wlen) / 2;
 
 	// count number of buttons
 	uint16_t numButtons = 0;
@@ -461,21 +447,21 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 		wlen = 600;
 
 	// the box y position differs in extended pattern editor mode
-	uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
+	const uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set further text box settings
-	t->x = (SCREEN_W - TEXTBOX_W) >> 1;
+	t->x = (SCREEN_W - TEXTBOX_W) / 2;
 	t->y = y + 24;
 	t->visible = true;
 
 	// setup buttons
 
 	pushButton_t *p = pushButtons;
-	for (i = 0; i < numButtons; i++, p++)
+	for (uint16_t i = 0; i < numButtons; i++, p++)
 	{
 		p->w = PUSHBUTTON_W;
 		p->h = 16;
-		p->x = ((SCREEN_W - tx) >> 1) + (i * 100);
+		p->x = ((SCREEN_W - tx) / 2) + (i * 100);
 		p->y = y + 42;
 		p->caption = buttonText[type][i];
 		p->visible = true;
@@ -554,7 +540,7 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 				}
 				else
 				{
-					for (i = 0; i < numButtons; i++)
+					for (uint16_t i = 0; i < numButtons; i++)
 					{
 						if (shortCut[1][i] == inputEvent.key.keysym.sym)
 						{
@@ -605,7 +591,7 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 		hLine(t->x,        t->y + t->h, t->w + 1, PAL_BUTTON1);
 		vLine(t->x + t->w, t->y,        t->h,     PAL_BUTTON1);
 		drawTextBox(0);
-		for (i = 0; i < numButtons; i++) drawPushButton(i);
+		for (uint16_t i = 0; i < numButtons; i++) drawPushButton(i);
 
 		flipFrame();
 		endFPSCounter();
@@ -614,7 +600,7 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 	editor.editTextFlag = false;
 	SDL_StopTextInput();
 
-	for (i = 0; i < numButtons; i++)
+	for (uint16_t i = 0; i < numButtons; i++)
 		hidePushButton(i);
 	hideTextBox(0);
 
@@ -631,31 +617,36 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 }
 
 // WARNING: This routine must NOT be called from the main input/video thread!
-int16_t okBoxThreadSafe(int16_t type, const char *headline, const char *text)
+// If the checkBoxCallback argument is set, then you get a "Do not show again" checkbox.
+int16_t okBoxThreadSafe(int16_t type, const char *headline, const char *text, void (*checkBoxCallback)(void))
 {
 	if (!editor.mainLoopOngoing)
 		return 0; // main loop was not even started yet, bail out.
 
-	// block multiple calls before they are completed (for safety)
-	while (okBoxData.active)
-		SDL_Delay(1000 / VBLANK_HZ); // accuracy is not important here
+	// the amount of time to wait is not important, but close to one video frame makes sense
+	const uint32_t waitTime = (uint32_t)((1000.0 / VBLANK_HZ) + 0.5);
 
+	// block multiple calls before they are completed (just in case, for safety)
+	while (okBoxData.active)
+		SDL_Delay(waitTime);
+
+	okBoxData.checkBoxCallback = checkBoxCallback;
 	okBoxData.type = type;
 	okBoxData.headline = headline;
 	okBoxData.text = text;
 	okBoxData.active = true;
 
 	while (okBoxData.active)
-		SDL_Delay(1000 / VBLANK_HZ); // accuracy is not important here
+		SDL_Delay(waitTime);
 
 	return okBoxData.returnData;
 }
 
 static bool askQuit_RandomMsg(void)
 {
-	uint8_t msg = rand() % QUIT_MESSAGES;
-	int16_t button = okBox(quitMessage[msg].type, "System request", quitMessage[msg].text);
+	quitType_t *q = &quitMessage[rand() % QUIT_MESSAGES];
 
+	int16_t button = okBox(q->type, "System request", q->text, NULL);
 	return (button == 1) ? true : false;
 }
 
@@ -666,12 +657,12 @@ bool askUnsavedChanges(uint8_t type)
 	if (type == ASK_TYPE_QUIT)
 	{
 		button = okBox(2, "System request",
-			"You have unsaved changes in your song. Do you still want to quit and lose ALL changes?");
+			"You have unsaved changes in your song. Do you still want to quit and lose ALL changes?", NULL);
 	}
 	else
 	{
 		button = okBox(2, "System request",
-			"You have unsaved changes in your song. Load new song and lose ALL changes?");
+			"You have unsaved changes in your song. Load new song and lose ALL changes?", NULL);
 	}
 
 	return (button == 1) ? true : false;

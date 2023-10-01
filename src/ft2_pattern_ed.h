@@ -9,13 +9,13 @@ enum
 	VOLUME_COLUMN_HIDDEN = 0,
 	VOLUME_COLUMN_SHOWN = 1,
 
-	TRANSP_ALL_INST = 0,
-	TRANSP_CUR_INST = 1,
-
 	TRANSP_TRACK = 0,
 	TRANSP_PATT = 1,
 	TRANSP_SONG = 2,
-	TRANSP_BLOCK = 3
+	TRANSP_BLOCK = 3,
+
+	TRANSP_CUR_INSTRUMENT = false,
+	TRANSP_ALL_INSTRUMENTS = true,
 };
 
 typedef struct xtHdr_t
@@ -57,7 +57,7 @@ typedef struct pattMark_t
 	int16_t markX1, markX2, markY1, markY2;
 } pattMark_t;
 
-extern pattMark_t pattMark; // ft2_pattern_ed.c
+extern volatile pattMark_t pattMark; // ft2_pattern_ed.c
 
 void resetPlaybackTime(void);
 

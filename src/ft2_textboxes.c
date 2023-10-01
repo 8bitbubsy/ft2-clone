@@ -145,7 +145,7 @@ static void deleteMarkedText(textBox_t *t)
 	for (int32_t i = start; i < end; i++)
 		deleteTextWidth += charWidth(t->textPtr[i]);
 
-	// copy markEnd part to markStart, and add null termination
+	// copy markEnd part to markStart, and add NUL-termination
 	const int32_t length = (int32_t)strlen(&t->textPtr[end]);
 	if (length > 0)
 		memcpy(&t->textPtr[start], &t->textPtr[end], length);
@@ -298,7 +298,7 @@ static void pasteText(textBox_t *t)
 		if (endPart == NULL)
 		{
 			free(copiedText);
-			okBox(0, "System message", "Not enough memory!");
+			okBox(0, "System message", "Not enough memory!", NULL);
 			return;
 		}
 	}

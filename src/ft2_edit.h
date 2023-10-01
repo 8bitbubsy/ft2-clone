@@ -63,7 +63,6 @@ void blockTranspAllInsUp(void);
 void blockTranspAllInsDn(void);
 void blockTranspAllIns12Up(void);
 void blockTranspAllIns12Dn(void);
-void doTranspose(void); // called from buttons above or specific sys req.
 void cutTrack(void);
 void copyTrack(void);
 void pasteTrack(void);

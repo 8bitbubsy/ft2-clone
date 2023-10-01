@@ -298,7 +298,7 @@ void handleSamplingUpdates(void)
 	{
 		outOfMemoryFlag = false;
 		stopSampling();
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return;
 	}
 
@@ -306,7 +306,7 @@ void handleSamplingUpdates(void)
 	{
 		noMoreRoomFlag = false;
 		stopSampling();
-		okBox(0, "System message", "Not more room in sample!");
+		okBox(0, "System message", "Not more room in sample!", NULL);
 		return;
 	}
 
@@ -326,7 +326,7 @@ void handleSamplingUpdates(void)
 void startSampling(void)
 {
 #if SDL_MAJOR_VERSION == 2 && SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL < 5
-	okBox(0, "System message", "This program needs to be compiled with SDL 2.0.5 or later to support audio sampling.");
+	okBox(0, "System message", "This program needs to be compiled with SDL 2.0.5 or later to support audio sampling.", NULL);
 	return;
 #else
 	SDL_AudioSpec want, have;
@@ -334,7 +334,7 @@ void startSampling(void)
 	if (editor.samplingAudioFlag || editor.curInstr == 0)
 		return;
 
-	int16_t result = okBox(9, "System request", "Stereo sampling will use the next sample slot. While ongoing, press any key to stop.");
+	int16_t result = okBox(5, "System request", "Stereo sampling will use the next sample slot. While ongoing, press any key to stop.", NULL);
 	if (result == 0 || result == 3)
 		return;
 
@@ -358,7 +358,7 @@ void startSampling(void)
 	recordDev = SDL_OpenAudioDevice(audio.currInputDevice, true, &want, &have, 0);
 	if (recordDev == 0)
 	{
-		okBox(0, "System message", "Couldn't open the input device! Try adjusting the input rate at the config screen.");
+		okBox(0, "System message", "Couldn't open the input device! Try adjusting the input rate at the config screen.", NULL);
 		return;
 	}
 
@@ -370,14 +370,14 @@ void startSampling(void)
 	if (instr[editor.curInstr] == NULL && !allocateInstr(editor.curInstr))
 	{
 		stopSampling();
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return;
 	}
 
 	if (sampleInStereo && editor.curSmp+1 >= MAX_SMP_PER_INST)
 	{
 		stopSampling();
-		okBox(0, "System message", "Error: No free sample slot for the right channel!");
+		okBox(0, "System message", "Error: No free sample slot for the right channel!", NULL);
 		return;
 	}
 

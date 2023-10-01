@@ -42,7 +42,7 @@ bool saveXM(UNICHAR *filenameU)
 	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
-		okBoxThreadSafe(0, "System message", "Error opening file for saving, is it in use?");
+		okBoxThreadSafe(0, "System message", "Error opening file for saving, is it in use?", NULL);
 		return false;
 	}
 
@@ -100,7 +100,7 @@ bool saveXM(UNICHAR *filenameU)
 	if (fwrite(&h, sizeof (h), 1, f) != 1)
 	{
 		fclose(f);
-		okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+		okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 		return false;
 	}
 
@@ -127,7 +127,7 @@ bool saveXM(UNICHAR *filenameU)
 			if (fwrite(&ph, ph.headerSize, 1, f) != 1)
 			{
 				fclose(f);
-				okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+				okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 				return false;
 			}
 		}
@@ -141,7 +141,7 @@ bool saveXM(UNICHAR *filenameU)
 			if (result != 2) // write was not OK
 			{
 				fclose(f);
-				okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+				okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 				return false;
 			}
 		}
@@ -245,7 +245,7 @@ bool saveXM(UNICHAR *filenameU)
 		if (fwrite(&ih, ih.instrSize + (a * sizeof (xmSmpHdr_t)), 1, f) != 1)
 		{
 			fclose(f);
-			okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+			okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 			return false;
 		}
 
@@ -265,7 +265,7 @@ bool saveXM(UNICHAR *filenameU)
 				if (result != (size_t)SAMPLE_LENGTH_BYTES(s)) // write not OK
 				{
 					fclose(f);
-					okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+					okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 					return false;
 				}
 			}
@@ -300,7 +300,7 @@ static bool saveMOD(UNICHAR *filenameU)
 	if (songLength > 128)
 	{
 		songLength = 128;
-		okBoxThreadSafe(0, "System message", "Warning: Song length is above 128!");
+		okBoxThreadSafe(0, "System message", "Warning: Song length is above 128!", NULL);
 	}
 	
 	// calculate number of patterns referenced (max 128 orders)
@@ -315,7 +315,7 @@ static bool saveMOD(UNICHAR *filenameU)
 	if (numPatterns > 100)
 	{
 		numPatterns = 100;
-		okBoxThreadSafe(0, "System message", "Warning: Song has more than 100 patterns!");
+		okBoxThreadSafe(0, "System message", "Warning: Song has more than 100 patterns!", NULL);
 	}
 
 	// check if song has more than 31 instruments
@@ -323,7 +323,7 @@ static bool saveMOD(UNICHAR *filenameU)
 	{
 		if (getRealUsedSamples(i) > 0)
 		{
-			okBoxThreadSafe(0, "System message", "Warning: Song has more than 31 instruments!");
+			okBoxThreadSafe(0, "System message", "Warning: Song has more than 31 instruments!", NULL);
 			break;
 		}
 	}
@@ -344,8 +344,8 @@ static bool saveMOD(UNICHAR *filenameU)
 		else if (smp->length > 65534)
 			test2 = true;
 	}
-	if (test) okBoxThreadSafe(0, "System message", "Warning: Song has sample lengths that are too long for the MOD format!");
-	else if (test2) okBoxThreadSafe(0, "System message", "Warning: Song has sample lengths above 65534! Not all MOD players support this.");
+	if (test) okBoxThreadSafe(0, "System message", "Warning: Song has sample lengths that are too long for the MOD format!", NULL);
+	else if (test2) okBoxThreadSafe(0, "System message", "Warning: Song has sample lengths above 65534! Not all MOD players support this.", NULL);
 
 	// check if XM instrument features are being used
 	test = false;
@@ -374,7 +374,7 @@ static bool saveMOD(UNICHAR *filenameU)
 			}
 		}
 	}
-	if (test) okBoxThreadSafe(0, "System message", "Warning: Song is using XM instrument features!");
+	if (test) okBoxThreadSafe(0, "System message", "Warning: Song is using XM instrument features!", NULL);
 
 	bool tooLongPatterns = false;
 	bool tooManyInstr = false;
@@ -388,7 +388,7 @@ static bool saveMOD(UNICHAR *filenameU)
 
 		if (patternNumRows[i] < 64)
 		{
-			okBoxThreadSafe(0, "System message", "Error: Pattern lengths can't be below 64! Module wasn't saved.");
+			okBoxThreadSafe(0, "System message", "Error: Pattern lengths can't be below 64! Module wasn't saved.", NULL);
 			return false;
 		}
 
@@ -414,10 +414,10 @@ static bool saveMOD(UNICHAR *filenameU)
 		}
 	}
 
-	if (tooLongPatterns) okBoxThreadSafe(0, "System message", "Warning: Song has pattern lengths above 64!");
-	if (tooManyInstr) okBoxThreadSafe(0, "System message", "Warning: Patterns have instrument numbers above 31!");
-	if (incompatEfx) okBoxThreadSafe(0, "System message", "Warning: Patterns have incompatible effects!");
-	if (noteUnderflow) okBoxThreadSafe(0, "System message", "Warning: Patterns have notes below A-0!");
+	if (tooLongPatterns) okBoxThreadSafe(0, "System message", "Warning: Song has pattern lengths above 64!", NULL);
+	if (tooManyInstr) okBoxThreadSafe(0, "System message", "Warning: Patterns have instrument numbers above 31!", NULL);
+	if (incompatEfx) okBoxThreadSafe(0, "System message", "Warning: Patterns have incompatible effects!", NULL);
+	if (noteUnderflow) okBoxThreadSafe(0, "System message", "Warning: Patterns have notes below A-0!", NULL);
 
 	// save module now
 
@@ -499,14 +499,14 @@ static bool saveMOD(UNICHAR *filenameU)
 	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
-		okBoxThreadSafe(0, "System message", "Error opening file for saving, is it in use?");
+		okBoxThreadSafe(0, "System message", "Error opening file for saving, is it in use?", NULL);
 		return false;
 	}
 
 	// write header
 	if (fwrite(&hdr, 1, sizeof (hdr), f) != sizeof (hdr))
 	{
-		okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+		okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 		goto modSaveError;
 	}
 
@@ -572,7 +572,7 @@ static bool saveMOD(UNICHAR *filenameU)
 
 		if (fwrite(modPattData, 1, patternBytes, f) != (size_t)patternBytes)
 		{
-			okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+			okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 			goto modSaveError;
 		}
 	}
@@ -612,7 +612,7 @@ static bool saveMOD(UNICHAR *filenameU)
 				if (fwrite(dstPtr, 1, samplesToWrite, f) != (size_t)samplesToWrite)
 				{
 					fixSample(smp);
-					okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+					okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 					goto modSaveError;
 				}
 
@@ -624,7 +624,7 @@ static bool saveMOD(UNICHAR *filenameU)
 			if (fwrite(smp->dataPtr, 1, sampleBytes, f) != (size_t)sampleBytes)
 			{
 				fixSample(smp);
-				okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!");
+				okBoxThreadSafe(0, "System message", "Error saving module: general I/O error!", NULL);
 				goto modSaveError;
 			}
 		}
@@ -672,7 +672,7 @@ void saveMusic(UNICHAR *filenameU)
 	thread = SDL_CreateThread(saveMusicThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBoxThreadSafe(0, "System message", "Couldn't create thread!");
+		okBoxThreadSafe(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 

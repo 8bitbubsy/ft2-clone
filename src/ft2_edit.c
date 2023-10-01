@@ -26,19 +26,13 @@ static double dVolScaleFK1 = 1.0, dVolScaleFK2 = 1.0;
 
 // for block cut/copy/paste
 static bool blockCopied;
-static int16_t markXSize, markYSize;
 static uint16_t ptnBufLen, trkBufLen;
-
-// for transposing - these are set and tested accordingly
-static int8_t lastTranspVal;
-static uint8_t lastInsMode, lastTranspMode;
-static uint32_t transpDelNotes; // count of under-/overflowing notes for warning message
-static note_t clearNote;
-
+static int32_t markXSize, markYSize;
 static note_t blkCopyBuff[MAX_PATT_LEN * MAX_CHANNELS];
 static note_t ptnCopyBuff[MAX_PATT_LEN * MAX_CHANNELS];
 static note_t trackCopyBuff[MAX_PATT_LEN];
 
+// for recordNote()
 static const int8_t tickArr[16] = { 16, 8, 0, 4, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1 };
 
 void recordNote(uint8_t note, int8_t vol);
@@ -52,14 +46,19 @@ static bool testNoteKeys(SDL_Scancode scancode)
 		// inserts "note off" if editing song
 		if (playMode == PLAYMODE_EDIT || playMode == PLAYMODE_RECPATT || playMode == PLAYMODE_RECSONG)
 		{
-			if (!allocatePattern(editor.editPattern))
+			pauseMusic();
+			const volatile uint16_t curPattern = editor.editPattern;
+			int16_t row = editor.row;
+			resumeMusic();
+
+			if (!allocatePattern(curPattern))
 				return true; // key pressed
 
-			pattern[editor.editPattern][(editor.row * MAX_CHANNELS) + cursor.ch].note = NOTE_OFF;
+			pattern[curPattern][(row * MAX_CHANNELS) + cursor.ch].note = NOTE_OFF;
 
-			const uint16_t numRows = patternNumRows[editor.editPattern];
+			const uint16_t numRows = patternNumRows[curPattern];
 			if (playMode == PLAYMODE_EDIT && numRows >= 1)
-				setPos(-1, (editor.row + editor.editRowSkip) % numRows, true);
+				setPos(-1, (row + editor.editRowSkip) % numRows, true);
 
 			ui.updatePatternEditor = true;
 			setSongModifiedFlag();
@@ -155,12 +154,17 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 			i = -1; // invalid key for slot
 	}
 
-	if (i == -1 || !allocatePattern(editor.editPattern))
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	int16_t row = editor.row;
+	resumeMusic();
+
+	if (i == -1 || !allocatePattern(curPattern))
 		return false; // no edit to be done
 
 	// insert slot data
 
-	note_t *p = &pattern[editor.editPattern][(editor.row * MAX_CHANNELS) + cursor.ch];
+	note_t *p = &pattern[curPattern][(row * MAX_CHANNELS) + cursor.ch];
 	switch (cursor.object)
 	{
 		case CURSOR_INST1:
@@ -251,12 +255,12 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 
 	// increase row (only in edit mode)
 
-	const int16_t numRows = patternNumRows[editor.editPattern];
+	const int16_t numRows = patternNumRows[curPattern];
 	if (playMode == PLAYMODE_EDIT && numRows >= 1)
-		setPos(-1, (editor.row + editor.editRowSkip) % numRows, true);
+		setPos(-1, (row + editor.editRowSkip) % numRows, true);
 
-	if (i == 0) // if we inserted a zero, check if pattern is empty, for killing
-		killPatternIfUnused(editor.editPattern);
+	if (i == 0) // if we inserted a zero, check if pattern is empty
+		killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	return true;
@@ -269,7 +273,7 @@ static void evaluateTimeStamp(int16_t *songPos, int16_t *pattNum, int16_t *row, 
 	int16_t outRow = editor.row;
 	int16_t outTick = editor.speed - editor.tick;
 
-	outTick = CLAMP(outTick, 0, editor.speed - 1);
+	outTick = CLAMP(outTick, 0, editor.speed-1);
 
 	// this is needed, but also breaks quantization on speed>15
 	if (outTick > 15)
@@ -359,7 +363,7 @@ void recordNote(uint8_t noteNum, int8_t vol) // directly ported from the origina
 
 		if ((config.multiEdit && editmode) || (config.multiRec && recmode))
 		{
-			time = 0x7FFFFFFF;
+			time = INT32_MAX;
 			for (i = 0; i < song.numChannels; i++)
 			{
 				if (editor.chnMode[i] && config.multiRecChn[i] && editor.keyOffTime[i] < time && editor.keyOnTab[i] == 0)
@@ -385,7 +389,7 @@ void recordNote(uint8_t noteNum, int8_t vol) // directly ported from the origina
 		// find out what channel is the most suitable in idle/play mode (jamming)
 		if (config.multiKeyJazz)
 		{
-			time = 0x7FFFFFFF;
+			time = INT32_MAX;
 			c = 0;
 
 			if (songPlaying)
@@ -400,7 +404,7 @@ void recordNote(uint8_t noteNum, int8_t vol) // directly ported from the origina
 				}
 			}
 
-			if (time == 0x7FFFFFFF)
+			if (time == INT32_MAX)
 			{
 				for (i = 0; i < song.numChannels; i++)
 				{
@@ -563,10 +567,15 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 		if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
 			return false; // we're not editing, test other keys
 
-		if (pattern[editor.editPattern] == NULL)
+		pauseMusic();
+		const volatile uint16_t curPattern = editor.editPattern;
+		int16_t row = editor.row;
+		resumeMusic();
+
+		if (pattern[curPattern] == NULL)
 			return true;
 
-		note_t *p = &pattern[editor.editPattern][(editor.row * MAX_CHANNELS) + cursor.ch];
+		note_t *p = &pattern[curPattern][(row * MAX_CHANNELS) + cursor.ch];
 
 		if (keyb.leftShiftPressed)
 		{
@@ -601,12 +610,12 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 			}
 		}
 
-		killPatternIfUnused(editor.editPattern);
+		killPatternIfUnused(curPattern);
 
 		// increase row (only in edit mode)
-		const int16_t numRows = patternNumRows[editor.editPattern];
+		const int16_t numRows = patternNumRows[curPattern];
 		if (playMode == PLAYMODE_EDIT && numRows >= 1)
-			setPos(-1, (editor.row + editor.editRowSkip) % numRows, true);
+			setPos(-1, (row + editor.editRowSkip) % numRows, true);
 
 		ui.updatePatternEditor = true;
 		setSongModifiedFlag();
@@ -626,12 +635,17 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 
 void writeToMacroSlot(uint8_t slot)
 {
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	int16_t row = editor.row;
+	resumeMusic();
+
 	uint16_t writeVol = 0;
 	uint16_t writeEfx = 0;
 
-	if (pattern[editor.editPattern] != NULL)
+	if (pattern[curPattern] != NULL)
 	{
-		note_t *p = &pattern[editor.editPattern][(editor.row * MAX_CHANNELS) + cursor.ch];
+		note_t *p = &pattern[curPattern][(row * MAX_CHANNELS) + cursor.ch];
 		writeVol = p->vol;
 		writeEfx = (p->efx << 8) | p->efxData;
 	}
@@ -644,13 +658,18 @@ void writeToMacroSlot(uint8_t slot)
 
 void writeFromMacroSlot(uint8_t slot)
 {
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	int16_t row = editor.row;
+	resumeMusic();
+
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
 		return;
 
-	if (!allocatePattern(editor.editPattern))
+	if (!allocatePattern(curPattern))
 		return;
 	
-	note_t *p = &pattern[editor.editPattern][(editor.row * MAX_CHANNELS) + cursor.ch];
+	note_t *p = &pattern[curPattern][(row * MAX_CHANNELS) + cursor.ch];
 	if (cursor.object == CURSOR_VOL1 || cursor.object == CURSOR_VOL2)
 	{
 		p->vol = (uint8_t)config.volMacro[slot];
@@ -671,11 +690,11 @@ void writeFromMacroSlot(uint8_t slot)
 		}
 	}
 
-	const int16_t numRows = patternNumRows[editor.editPattern];
+	const int16_t numRows = patternNumRows[curPattern];
 	if (playMode == PLAYMODE_EDIT && numRows >= 1)
-		setPos(-1, (editor.row + editor.editRowSkip) % numRows, true);
+		setPos(-1, (row + editor.editRowSkip) % numRows, true);
 
-	killPatternIfUnused(editor.editPattern);
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
@@ -683,15 +702,19 @@ void writeFromMacroSlot(uint8_t slot)
 
 void insertPatternNote(void)
 {
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	int16_t row = editor.row;
+	resumeMusic();
+
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
-	note_t *p = pattern[editor.editPattern];
+	note_t *p = pattern[curPattern];
 	if (p == NULL)
 		return;
 
-	const int16_t row = editor.row;
-	const int16_t numRows = patternNumRows[editor.editPattern];
+	const int16_t numRows = patternNumRows[curPattern];
 
 	if (numRows > 1)
 	{
@@ -701,7 +724,7 @@ void insertPatternNote(void)
 
 	memset(&p[(row * MAX_CHANNELS) + cursor.ch], 0, sizeof (note_t));
 
-	killPatternIfUnused(editor.editPattern);
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
@@ -709,16 +732,20 @@ void insertPatternNote(void)
 
 void insertPatternLine(void)
 {
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	int16_t row = editor.row;
+	resumeMusic();
+
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
-	setPatternLen(editor.editPattern, patternNumRows[editor.editPattern] + config.recTrueInsert); // config.recTrueInsert is 0 or 1
+	setPatternLen(curPattern, patternNumRows[curPattern] + config.recTrueInsert); // config.recTrueInsert is 0 or 1
 
-	note_t *p = pattern[editor.editPattern];
+	note_t *p = pattern[curPattern];
 	if (p != NULL)
 	{
-		const int16_t row = editor.row;
-		const int16_t numRows = patternNumRows[editor.editPattern];
+		const int16_t numRows = patternNumRows[curPattern];
 
 		if (numRows > 1)
 		{
@@ -731,7 +758,7 @@ void insertPatternLine(void)
 
 		memset(&p[row * MAX_CHANNELS], 0, TRACK_WIDTH);
 
-		killPatternIfUnused(editor.editPattern);
+		killPatternIfUnused(curPattern);
 	}
 
 	ui.updatePatternEditor = true;
@@ -740,13 +767,17 @@ void insertPatternLine(void)
 
 void deletePatternNote(void)
 {
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	int16_t row = editor.row;
+	resumeMusic();
+
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
-	int16_t row = editor.row;
-	const int16_t numRows = patternNumRows[editor.editPattern];
+	const int16_t numRows = patternNumRows[curPattern];
 
-	note_t *p = pattern[editor.editPattern];
+	note_t *p = pattern[curPattern];
 	if (p != NULL)
 	{
 		if (row > 0)
@@ -769,7 +800,7 @@ void deletePatternNote(void)
 		}
 	}
 
-	killPatternIfUnused(editor.editPattern);
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
@@ -777,13 +808,16 @@ void deletePatternNote(void)
 
 void deletePatternLine(void)
 {
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	int16_t row = editor.row;
+	resumeMusic();
+
 	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
-	int16_t row = editor.row;
-	const int16_t numRows = patternNumRows[editor.editPattern];
-
-	note_t *p = pattern[editor.editPattern];
+	const int16_t numRows = patternNumRows[curPattern];
+	note_t *p = pattern[curPattern];
 	if (p != NULL)
 	{
 		if (row > 0)
@@ -810,9 +844,9 @@ void deletePatternLine(void)
 	}
 
 	if (config.recTrueInsert && numRows > 1)
-		setPatternLen(editor.editPattern, numRows-1);
+		setPatternLen(curPattern, numRows-1);
 
-	killPatternIfUnused(editor.editPattern);
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
@@ -820,26 +854,28 @@ void deletePatternLine(void)
 
 // ----- TRANSPOSE FUNCTIONS -----
 
-static void countOverflowingNotes(uint8_t currInsOnly, uint8_t transpMode, int8_t addVal)
+static uint32_t countOverflowingNotes(uint8_t mode, int8_t addValue, bool allInstrumentsFlag,
+	uint16_t curPattern, int32_t numRows, int32_t markX1, int32_t markX2, int32_t markY1, int32_t markY2)
 {
-	transpDelNotes = 0;
-	switch (transpMode)
+	uint32_t notesToDelete = 0;
+
+	// "addValue" is never <-12 or >12, so unsigned 8-bit testing for >96 is safe
+	switch (mode)
 	{
 		case TRANSP_TRACK:
 		{
-			note_t *p = pattern[editor.editPattern];
+			note_t *p = pattern[curPattern];
 			if (p == NULL)
-				return; // empty pattern
+				return 0; // empty pattern
 
 			p += cursor.ch;
 
-			const int32_t numRows = patternNumRows[editor.editPattern];
 			for (int32_t row = 0; row < numRows; row++, p += MAX_CHANNELS)
 			{
-				if ((p->note >= 1 && p->note <= 96) && (!currInsOnly || p->instr == editor.curInstr))
+				if ((p->note >= 1 && p->note <= 96) && (allInstrumentsFlag || p->instr == editor.curInstr))
 				{
-					if ((int8_t)p->note+addVal > 96 || (int8_t)p->note+addVal <= 0)
-						transpDelNotes++;
+					if ((int8_t)p->note+addValue > 96 || (int8_t)p->note+addValue <= 0)
+						notesToDelete++;
 				}
 			}
 		}
@@ -847,21 +883,19 @@ static void countOverflowingNotes(uint8_t currInsOnly, uint8_t transpMode, int8_
 
 		case TRANSP_PATT:
 		{
-			note_t *p = pattern[editor.editPattern];
+			note_t *p = pattern[curPattern];
 			if (p == NULL)
-				return; // empty pattern
+				return 0; // empty pattern
 
-			const int32_t numRows = patternNumRows[editor.editPattern];
 			const int32_t pitch = MAX_CHANNELS-song.numChannels;
-
 			for (int32_t row = 0; row < numRows; row++, p += pitch)
 			{
 				for (int32_t ch = 0; ch < song.numChannels; ch++, p++)
 				{
-					if ((p->note >= 1 && p->note <= 96) && (!currInsOnly || p->instr == editor.curInstr))
+					if ((p->note >= 1 && p->note <= 96) && (allInstrumentsFlag || p->instr == editor.curInstr))
 					{
-						if ((int8_t)p->note+addVal > 96 || (int8_t)p->note+addVal <= 0)
-							transpDelNotes++;
+						if ((int8_t)p->note+addValue > 96 || (int8_t)p->note+addValue <= 0)
+							notesToDelete++;
 					}
 				}
 			}
@@ -870,22 +904,21 @@ static void countOverflowingNotes(uint8_t currInsOnly, uint8_t transpMode, int8_
 
 		case TRANSP_SONG:
 		{
-			const int32_t pitch = MAX_CHANNELS-song.numChannels;
+			const int32_t pitch = MAX_CHANNELS - song.numChannels;
 			for (int32_t i = 0; i < MAX_PATTERNS; i++)
 			{
 				note_t *p = pattern[i];
 				if (p == NULL)
-					continue; // empty pattern
+					return 0; // empty pattern
 
-				const int32_t numRows = patternNumRows[i];
-				for (int32_t row = 0; row < numRows; row++, p += pitch)
+				for (int32_t row = 0; row < patternNumRows[i]; row++, p += pitch)
 				{
 					for (int32_t ch = 0; ch < song.numChannels; ch++, p++)
 					{
-						if ((p->note >= 1 && p->note <= 96) && (!currInsOnly || p->instr == editor.curInstr))
+						if ((p->note >= 1 && p->note <= 96) && (allInstrumentsFlag || p->instr == editor.curInstr))
 						{
-							if ((int8_t)p->note+addVal > 96 || (int8_t)p->note+addVal <= 0)
-								transpDelNotes++;
+							if ((int8_t)p->note+addValue > 96 || (int8_t)p->note+addValue <= 0)
+								notesToDelete++;
 						}
 					}
 				}
@@ -895,24 +928,36 @@ static void countOverflowingNotes(uint8_t currInsOnly, uint8_t transpMode, int8_
 
 		case TRANSP_BLOCK:
 		{
-			if (pattMark.markY1 == pattMark.markY2)
-				return; // no pattern marking
+			if (markY1 == markY2 || markY1 > markY2)
+				return 0;
 
-			note_t *p = pattern[editor.editPattern];
-			if (p == NULL)
-				return; // empty pattern
+			if (markX1 >= song.numChannels-1)
+				markX1 = song.numChannels-2;
 
-			p += (pattMark.markY1 * MAX_CHANNELS) + pattMark.markX1;
+			if (markX2 >= song.numChannels)
+				markX2 = (song.numChannels-1)-markX1;
 
-			const int32_t pitch = MAX_CHANNELS - ((pattMark.markX2 + 1) - pattMark.markX1);
-			for (int32_t row = pattMark.markY1; row < pattMark.markY2; row++, p += pitch)
+			if (markY1 >= numRows)
+				markY1 = numRows-1;
+
+			if (markY2 > numRows)
+				markY2 = numRows-markY1;
+
+			note_t *p = pattern[curPattern];
+			if (p == NULL || markX1 < 0 || markY1 < 0 || markX2 < 0 || markY2 < 0)
+				return 0;
+
+			p += (markY1 * MAX_CHANNELS) + markX1;
+
+			const int32_t pitch = MAX_CHANNELS - ((markX2 + 1) - markX1);
+			for (int32_t row = markY1; row < markY2; row++, p += pitch)
 			{
-				for (int32_t ch = pattMark.markX1; ch <= pattMark.markX2; ch++, p++)
+				for (int32_t ch = markX1; ch <= markX2; ch++, p++)
 				{
-					if ((p->note >= 1 && p->note <= 96) && (!currInsOnly || p->instr == editor.curInstr))
+					if ((p->note >= 1 && p->note <= 96) && (allInstrumentsFlag || p->instr == editor.curInstr))
 					{
-						if ((int8_t)p->note+addVal > 96 || (int8_t)p->note+addVal <= 0)
-							transpDelNotes++;
+						if ((int8_t)p->note+addValue > 96 || (int8_t)p->note+addValue <= 0)
+							notesToDelete++;
 					}
 				}
 			}
@@ -921,38 +966,48 @@ static void countOverflowingNotes(uint8_t currInsOnly, uint8_t transpMode, int8_
 
 		default: break;
 	}
+
+	return notesToDelete;
 }
 
-void doTranspose(void)
+static void doTranspose(uint8_t mode, int8_t addValue, bool allInstrumentsFlag)
 {
-	char text[48];
-
-	countOverflowingNotes(lastInsMode, lastTranspMode, lastTranspVal);
-	if (transpDelNotes > 0)
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	const int32_t numRows = patternNumRows[curPattern];
+	volatile int32_t markX1 = pattMark.markX1;
+	volatile int32_t markX2 = pattMark.markX2;
+	volatile int32_t markY1 = pattMark.markY1;
+	volatile int32_t markY2 = pattMark.markY2;
+	resumeMusic();
+	
+	uint32_t overflowingNotes = countOverflowingNotes(mode, addValue, allInstrumentsFlag,
+		curPattern, numRows, markX1, markX2, markY1, markY2);
+	if (overflowingNotes > 0)
 	{
-		sprintf(text, "%d note(s) will be erased! Proceed?", (int32_t)transpDelNotes);
-		if (okBox(2, "System request", text) != 1)
+		char text[48];
+		sprintf(text, "%u note(s) will be erased! Proceed?", overflowingNotes);
+		if (okBox(2, "System request", text, NULL) != 1)
 			return;
 	}
 
-	// lastTranspVal is never <-12 or >12, so unsigned testing for >96 is safe
-	switch (lastTranspMode)
+	// "addValue" is never <-12 or >12, so unsigned 8-bit testing for >96 is safe
+	switch (mode)
 	{
 		case TRANSP_TRACK:
 		{
-			note_t *p = pattern[editor.editPattern];
+			note_t *p = pattern[curPattern];
 			if (p == NULL)
-				return; // empty pattern
+				return;
 
 			p += cursor.ch;
 
-			const int32_t numRows = patternNumRows[editor.editPattern];
 			for (int32_t row = 0; row < numRows; row++, p += MAX_CHANNELS)
 			{
-				uint8_t note = p->note;
-				if ((note >= 1 && note <= 96) && (!lastInsMode || p->instr == editor.curInstr))
+				volatile uint8_t note = p->note;
+				if ((note >= 1 && note <= 96) && (allInstrumentsFlag || p->instr == editor.curInstr))
 				{
-					note += lastTranspVal;
+					note += addValue;
 					if (note > 96)
 						note = 0; // also handles underflow
 
@@ -964,21 +1019,19 @@ void doTranspose(void)
 
 		case TRANSP_PATT:
 		{
-			note_t *p = pattern[editor.editPattern];
+			note_t *p = pattern[curPattern];
 			if (p == NULL)
-				return; // empty pattern
+				return;
 
-			const int32_t numRows = patternNumRows[editor.editPattern];
 			const int32_t pitch = MAX_CHANNELS - song.numChannels;
-
 			for (int32_t row = 0; row < numRows; row++, p += pitch)
 			{
 				for (int32_t ch = 0; ch < song.numChannels; ch++, p++)
 				{
-					uint8_t note = p->note;
-					if ((note >= 1 && note <= 96) && (!lastInsMode || p->instr == editor.curInstr))
+					volatile uint8_t note = p->note;
+					if ((note >= 1 && note <= 96) && (allInstrumentsFlag || p->instr == editor.curInstr))
 					{
-						note += lastTranspVal;
+						note += addValue;
 						if (note > 96)
 							note = 0; // also handles underflow
 
@@ -998,15 +1051,14 @@ void doTranspose(void)
 				if (p == NULL)
 					continue; // empty pattern
 
-				const int32_t numRows = patternNumRows[i];
-				for (int32_t row = 0; row < numRows; row++, p += pitch)
+				for (int32_t row = 0; row < patternNumRows[i]; row++, p += pitch)
 				{
 					for (int32_t ch = 0; ch < song.numChannels; ch++, p++)
 					{
-						uint8_t note = p->note;
-						if ((note >= 1 && note <= 96) && (!lastInsMode || p->instr == editor.curInstr))
+						volatile uint8_t note = p->note;
+						if ((note >= 1 && note <= 96) && (allInstrumentsFlag || p->instr == editor.curInstr))
 						{
-							note += lastTranspVal;
+							note += addValue;
 							if (note > 96)
 								note = 0; // also handles underflow
 
@@ -1020,24 +1072,36 @@ void doTranspose(void)
 
 		case TRANSP_BLOCK:
 		{
-			if (pattMark.markY1 == pattMark.markY2)
-				return; // no pattern marking
+			if (markY1 == markY2 || markY1 > markY2)
+				return;
 
-			note_t *p = pattern[editor.editPattern];
-			if (p == NULL)
-				return; // empty pattern
+			if (markX1 >= song.numChannels-1)
+				markX1 = song.numChannels-2;
 
-			p += (pattMark.markY1 * MAX_CHANNELS) + pattMark.markX1;
+			if (markX2 >= song.numChannels)
+				markX2 = (song.numChannels-1)-markX1;
 
-			const int32_t pitch = MAX_CHANNELS - ((pattMark.markX2 + 1) - pattMark.markX1);
-			for (int32_t row = pattMark.markY1; row < pattMark.markY2; row++, p += pitch)
+			if (markY1 >= numRows)
+				markY1 = numRows-1;
+
+			if (markY2 > numRows)
+				markY2 = numRows-markY1;
+
+			note_t *p = pattern[curPattern];
+			if (p == NULL || markX1 < 0 || markY1 < 0 || markX2 < 0 || markY2 < 0)
+				return;
+
+			p += (markY1 * MAX_CHANNELS) + markX1;
+
+			const int32_t pitch = MAX_CHANNELS - ((markX2 + 1) - markX1);
+			for (int32_t row = markY1; row < markY2; row++, p += pitch)
 			{
-				for (int32_t ch = pattMark.markX1; ch <= pattMark.markX2; ch++, p++)
+				for (int32_t ch = markX1; ch <= markX2; ch++, p++)
 				{
-					uint8_t note = p->note;
-					if ((note >= 1 && note <= 96) && (!lastInsMode || p->instr == editor.curInstr))
+					volatile uint8_t note = p->note;
+					if ((note >= 1 && note <= 96) && (allInstrumentsFlag || p->instr == editor.curInstr))
 					{
-						note += lastTranspVal;
+						note += addValue;
 						if (note > 96)
 							note = 0; // also handles underflow
 
@@ -1057,269 +1121,182 @@ void doTranspose(void)
 
 void trackTranspCurInsUp(void)
 {
-	lastTranspMode = TRANSP_TRACK;
-	lastTranspVal = 1;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_TRACK, 1, TRANSP_CUR_INSTRUMENT);
 }
 
 void trackTranspCurInsDn(void)
 {
-	lastTranspMode = TRANSP_TRACK;
-	lastTranspVal = -1;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_TRACK, -1, TRANSP_CUR_INSTRUMENT);
 }
 
 void trackTranspCurIns12Up(void)
 {
-	lastTranspMode = TRANSP_TRACK;
-	lastTranspVal = 12;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_TRACK, 12, TRANSP_CUR_INSTRUMENT);
 }
 
 void trackTranspCurIns12Dn(void)
 {
-	lastTranspMode = TRANSP_TRACK;
-	lastTranspVal = -12;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_TRACK, -12, TRANSP_CUR_INSTRUMENT);
 }
 
 void trackTranspAllInsUp(void)
 {
-	lastTranspMode = TRANSP_TRACK;
-	lastTranspVal = 1;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_TRACK, 1, TRANSP_ALL_INSTRUMENTS);
 }
 
 void trackTranspAllInsDn(void)
 {
-	lastTranspMode = TRANSP_TRACK;
-	lastTranspVal = -1;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_TRACK, -1, TRANSP_ALL_INSTRUMENTS);
 }
 
 void trackTranspAllIns12Up(void)
 {
-	lastTranspMode = TRANSP_TRACK;
-	lastTranspVal = 12;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_TRACK, 12, TRANSP_ALL_INSTRUMENTS);
 }
 
 void trackTranspAllIns12Dn(void)
 {
-	lastTranspMode = TRANSP_TRACK;
-	lastTranspVal = -12;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_TRACK, -12, TRANSP_ALL_INSTRUMENTS);
 }
 
 void pattTranspCurInsUp(void)
 {
-	lastTranspMode = TRANSP_PATT;
-	lastTranspVal = 1;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_PATT, 1, TRANSP_CUR_INSTRUMENT);
 }
 
 void pattTranspCurInsDn(void)
 {
-	lastTranspMode = TRANSP_PATT;
-	lastTranspVal = -1;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_PATT, -1, TRANSP_CUR_INSTRUMENT);
 }
 
 void pattTranspCurIns12Up(void)
 {
-	lastTranspMode = TRANSP_PATT;
-	lastTranspVal = 12;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_PATT, 12, TRANSP_CUR_INSTRUMENT);
 }
 
 void pattTranspCurIns12Dn(void)
 {
-	lastTranspMode = TRANSP_PATT;
-	lastTranspVal = -12;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_PATT, -12, TRANSP_CUR_INSTRUMENT);
 }
 
 void pattTranspAllInsUp(void)
 {
-	lastTranspMode = TRANSP_PATT;
-	lastTranspVal = 1;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_PATT, 1, TRANSP_ALL_INSTRUMENTS);
 }
 
 void pattTranspAllInsDn(void)
 {
-	lastTranspMode = TRANSP_PATT;
-	lastTranspVal = -1;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_PATT, -1, TRANSP_ALL_INSTRUMENTS);
 }
 
 void pattTranspAllIns12Up(void)
 {
-	lastTranspMode = TRANSP_PATT;
-	lastTranspVal = 12;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_PATT, 12, TRANSP_ALL_INSTRUMENTS);
 }
 
 void pattTranspAllIns12Dn(void)
 {
-	lastTranspMode = TRANSP_PATT;
-	lastTranspVal = -12;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_PATT, -12, TRANSP_ALL_INSTRUMENTS);
 }
 
 void songTranspCurInsUp(void)
 {
-	lastTranspMode = TRANSP_SONG;
-	lastTranspVal = 1;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_SONG, 1, TRANSP_CUR_INSTRUMENT);
 }
 
 void songTranspCurInsDn(void)
 {
-	lastTranspMode = TRANSP_SONG;
-	lastTranspVal = -1;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_SONG, -1, TRANSP_CUR_INSTRUMENT);
 }
 
 void songTranspCurIns12Up(void)
 {
-	lastTranspMode = TRANSP_SONG;
-	lastTranspVal = 12;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_SONG, 12, TRANSP_CUR_INSTRUMENT);
 }
 
 void songTranspCurIns12Dn(void)
 {
-	lastTranspMode = TRANSP_SONG;
-	lastTranspVal = -12;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_SONG, -12, TRANSP_CUR_INSTRUMENT);
 }
 
 void songTranspAllInsUp(void)
 {
-	lastTranspMode = TRANSP_SONG;
-	lastTranspVal = 1;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_SONG, 1, TRANSP_ALL_INSTRUMENTS);
 }
 
 void songTranspAllInsDn(void)
 {
-	lastTranspMode = TRANSP_SONG;
-	lastTranspVal = -1;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_SONG, -1, TRANSP_ALL_INSTRUMENTS);
 }
 
 void songTranspAllIns12Up(void)
 {
-	lastTranspMode = TRANSP_SONG;
-	lastTranspVal = 12;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_SONG, 12, TRANSP_ALL_INSTRUMENTS);
 }
 
 void songTranspAllIns12Dn(void)
 {
-	lastTranspMode = TRANSP_SONG;
-	lastTranspVal = -12;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_SONG, -12, TRANSP_ALL_INSTRUMENTS);
 }
 
 void blockTranspCurInsUp(void)
 {
-	lastTranspMode = TRANSP_BLOCK;
-	lastTranspVal = 1;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_BLOCK, 1, TRANSP_CUR_INSTRUMENT);
 }
 
 void blockTranspCurInsDn(void)
 {
-	lastTranspMode = TRANSP_BLOCK;
-	lastTranspVal = -1;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_BLOCK, -1, TRANSP_CUR_INSTRUMENT);
 }
 
 void blockTranspCurIns12Up(void)
 {
-	lastTranspMode = TRANSP_BLOCK;
-	lastTranspVal = 12;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_BLOCK, 12, TRANSP_CUR_INSTRUMENT);
 }
 
 void blockTranspCurIns12Dn(void)
 {
-	lastTranspMode = TRANSP_BLOCK;
-	lastTranspVal = -12;
-	lastInsMode = TRANSP_CUR_INST;
-	doTranspose();
+	doTranspose(TRANSP_BLOCK, -12, TRANSP_CUR_INSTRUMENT);
 }
 
 void blockTranspAllInsUp(void)
 {
-	lastTranspMode = TRANSP_BLOCK;
-	lastTranspVal = 1;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_BLOCK, 1, TRANSP_ALL_INSTRUMENTS);
 }
 
 void blockTranspAllInsDn(void)
 {
-	lastTranspMode = TRANSP_BLOCK;
-	lastTranspVal = -1;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_BLOCK, -1, TRANSP_ALL_INSTRUMENTS);
 }
 
 void blockTranspAllIns12Up(void)
 {
-	lastTranspMode = TRANSP_BLOCK;
-	lastTranspVal = 12;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_BLOCK, 12, TRANSP_ALL_INSTRUMENTS);
 }
 
 void blockTranspAllIns12Dn(void)
 {
-	lastTranspMode = TRANSP_BLOCK;
-	lastTranspVal = -12;
-	lastInsMode = TRANSP_ALL_INST;
-	doTranspose();
+	doTranspose(TRANSP_BLOCK, -12, TRANSP_ALL_INSTRUMENTS);
 }
 
-void copyNote(note_t *src, note_t *dst)
+static void copyNote(note_t *src, note_t *dst)
 {
 	if (editor.copyMaskEnable)
 	{
-		if (editor.copyMask[0]) dst->note = src->note;
-		if (editor.copyMask[1]) dst->instr = src->instr;
-		if (editor.copyMask[2]) dst->vol = src->vol;
-		if (editor.copyMask[3]) dst->efx = src->efx;
-		if (editor.copyMask[4]) dst->efxData = src->efxData;
+		if (editor.copyMask[0])
+			dst->note = src->note;
+
+		if (editor.copyMask[1])
+			dst->instr = src->instr;
+
+		if (editor.copyMask[2])
+			dst->vol = src->vol;
+
+		if (editor.copyMask[3])
+			dst->efx = src->efx;
+
+		if (editor.copyMask[4])
+			dst->efxData = src->efxData;
 	}
 	else
 	{
@@ -1327,15 +1304,24 @@ void copyNote(note_t *src, note_t *dst)
 	}
 }
 
-void pasteNote(note_t *src, note_t *dst)
+static void pasteNote(note_t *src, note_t *dst)
 {
 	if (editor.copyMaskEnable)
 	{
-		if (editor.copyMask[0] && (src->note    != 0 || !editor.transpMask[0])) dst->note = src->note;
-		if (editor.copyMask[1] && (src->instr   != 0 || !editor.transpMask[1])) dst->instr = src->instr;
-		if (editor.copyMask[2] && (src->vol     != 0 || !editor.transpMask[2])) dst->vol = src->vol;
-		if (editor.copyMask[3] && (src->efx     != 0 || !editor.transpMask[3])) dst->efx = src->efx;
-		if (editor.copyMask[4] && (src->efxData != 0 || !editor.transpMask[4])) dst->efxData = src->efxData;
+		if (editor.copyMask[0] && (src->note != 0 || !editor.transpMask[0]))
+			dst->note = src->note;
+
+		if (editor.copyMask[1] && (src->instr != 0 || !editor.transpMask[1]))
+			dst->instr = src->instr;
+
+		if (editor.copyMask[2] && (src->vol != 0 || !editor.transpMask[2]))
+			dst->vol = src->vol;
+
+		if (editor.copyMask[3] && (src->efx != 0 || !editor.transpMask[3]))
+			dst->efx = src->efx;
+
+		if (editor.copyMask[4] && (src->efxData != 0 || !editor.transpMask[4]))
+			dst->efxData = src->efxData;
 	}
 	else
 	{
@@ -1345,15 +1331,18 @@ void pasteNote(note_t *src, note_t *dst)
 
 void cutTrack(void)
 {
-	note_t *p = pattern[editor.editPattern];
+	const volatile uint16_t curPattern = editor.editPattern;
+
+	note_t *p = pattern[curPattern];
 	if (p == NULL)
 		return;
 
-	const int16_t numRows = patternNumRows[editor.editPattern];
+	const int16_t numRows = patternNumRows[curPattern];
 
 	if (config.ptnCutToBuffer)
 	{
-		memset(trackCopyBuff, 0, MAX_PATT_LEN * sizeof (note_t));
+		memset(trackCopyBuff, 0, sizeof (trackCopyBuff));
+
 		for (int16_t i = 0; i < numRows; i++)
 			copyNote(&p[(i * MAX_CHANNELS) + cursor.ch], &trackCopyBuff[i]);
 
@@ -1362,10 +1351,10 @@ void cutTrack(void)
 
 	pauseMusic();
 	for (int16_t i = 0; i < numRows; i++)
-		pasteNote(&clearNote, &p[(i * MAX_CHANNELS) + cursor.ch]);
+		memset(&p[(i * MAX_CHANNELS) + cursor.ch], 0, sizeof (note_t));
 	resumeMusic();
 
-	killPatternIfUnused(editor.editPattern);
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
@@ -1373,33 +1362,37 @@ void cutTrack(void)
 
 void copyTrack(void)
 {
-	note_t *p = pattern[editor.editPattern];
-	if (p == NULL)
-		return;
+	const volatile uint16_t curPattern = editor.editPattern;
 
-	const int16_t numRows = patternNumRows[editor.editPattern];
+	note_t *p = pattern[curPattern];
+	if (p != NULL)
+	{
+		memset(trackCopyBuff, 0, sizeof (trackCopyBuff));
 
-	memset(trackCopyBuff, 0, MAX_PATT_LEN * sizeof (note_t));
-	for (int16_t i = 0; i < numRows; i++)
-		copyNote(&p[(i * MAX_CHANNELS) + cursor.ch], &trackCopyBuff[i]);
+		const int16_t numRows = patternNumRows[curPattern];
+		for (int16_t i = 0; i < numRows; i++)
+			copyNote(&p[(i * MAX_CHANNELS) + cursor.ch], &trackCopyBuff[i]);
 
-	trkBufLen = numRows;
+		trkBufLen = numRows;
+	}
 }
 
 void pasteTrack(void)
 {
-	if (trkBufLen == 0 || !allocatePattern(editor.editPattern))
+	const volatile uint16_t curPattern = editor.editPattern;
+
+	if (trkBufLen == 0 || !allocatePattern(curPattern))
 		return;
 
-	note_t *p = pattern[editor.editPattern];
-	const int16_t numRows = patternNumRows[editor.editPattern];
+	note_t *p = pattern[curPattern];
+	const int16_t numRows = patternNumRows[curPattern];
 
 	pauseMusic();
 	for (int16_t i = 0; i < numRows; i++)
 		pasteNote(&trackCopyBuff[i], &p[(i * MAX_CHANNELS) + cursor.ch]);
 	resumeMusic();
 
-	killPatternIfUnused(editor.editPattern);
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
@@ -1407,15 +1400,18 @@ void pasteTrack(void)
 
 void cutPattern(void)
 {
-	note_t *p = pattern[editor.editPattern];
+	const volatile uint16_t curPattern = editor.editPattern;
+
+	note_t *p = pattern[curPattern];
 	if (p == NULL)
 		return;
 
-	const int16_t numRows = patternNumRows[editor.editPattern];
+	const int16_t numRows = patternNumRows[curPattern];
 
 	if (config.ptnCutToBuffer)
 	{
 		memset(ptnCopyBuff, 0, (MAX_PATT_LEN * MAX_CHANNELS) * sizeof (note_t));
+
 		for (int16_t x = 0; x < song.numChannels; x++)
 		{
 			for (int16_t i = 0; i < numRows; i++)
@@ -1429,11 +1425,11 @@ void cutPattern(void)
 	for (int16_t x = 0; x < song.numChannels; x++)
 	{
 		for (int16_t i = 0; i < numRows; i++)
-			pasteNote(&clearNote, &p[(i * MAX_CHANNELS) + x]);
+			memset(&p[(i * MAX_CHANNELS) + x], 0, sizeof (note_t));
 	}
 	resumeMusic();
 
-	killPatternIfUnused(editor.editPattern);
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
@@ -1441,41 +1437,43 @@ void cutPattern(void)
 
 void copyPattern(void)
 {
-	note_t *p = pattern[editor.editPattern];
-	if (p == NULL)
-		return;
+	const volatile uint16_t curPattern = editor.editPattern;
 
-	const int16_t numRows = patternNumRows[editor.editPattern];
-
-	memset(ptnCopyBuff, 0, (MAX_PATT_LEN * MAX_CHANNELS) * sizeof (note_t));
-	for (int16_t x = 0; x < song.numChannels; x++)
+	note_t *p = pattern[curPattern];
+	if (p != NULL)
 	{
-		for (int16_t i = 0; i < numRows; i++)
-			copyNote(&p[(i * MAX_CHANNELS) + x], &ptnCopyBuff[(i * MAX_CHANNELS) + x]);
+		memset(ptnCopyBuff, 0, (MAX_PATT_LEN * MAX_CHANNELS) * sizeof (note_t));
+
+		const int16_t numRows = patternNumRows[curPattern];
+		for (int16_t x = 0; x < song.numChannels; x++)
+		{
+			for (int16_t i = 0; i < numRows; i++)
+				copyNote(&p[(i * MAX_CHANNELS) + x], &ptnCopyBuff[(i * MAX_CHANNELS) + x]);
+		}
+
+		ptnBufLen = numRows;
 	}
-
-	ptnBufLen = numRows;
-
-	ui.updatePatternEditor = true;
 }
 
 void pastePattern(void)
 {
+	const volatile uint16_t curPattern = editor.editPattern;
+
 	if (ptnBufLen == 0)
 		return;
 
-	if (patternNumRows[editor.editPattern] != ptnBufLen)
+	if (patternNumRows[curPattern] != ptnBufLen)
 	{
-		if (okBox(1, "System request", "Change pattern length to copybuffer's length?") == 1)
-			setPatternLen(editor.editPattern, ptnBufLen);
+		if (okBox(2, "System request", "Adjust pattern length to match copied pattern length?", NULL) == 1)
+			setPatternLen(curPattern, ptnBufLen);
 	}
 
-	if (!allocatePattern(editor.editPattern))
+	if (!allocatePattern(curPattern))
 		return;
 
-	note_t *p = pattern[editor.editPattern];
-	const int16_t numRows = patternNumRows[editor.editPattern];
-
+	note_t *p = pattern[curPattern];
+	const int16_t numRows = patternNumRows[curPattern];
+	
 	pauseMusic();
 	for (int16_t x = 0; x < song.numChannels; x++)
 	{
@@ -1484,7 +1482,7 @@ void pastePattern(void)
 	}
 	resumeMusic();
 
-	killPatternIfUnused(editor.editPattern);
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
@@ -1492,117 +1490,177 @@ void pastePattern(void)
 
 void cutBlock(void)
 {
-	if (pattMark.markY1 == pattMark.markY2 || pattMark.markY1 > pattMark.markY2)
-		return;
-
-	note_t *p = pattern[editor.editPattern];
-	if (p == NULL)
-		return;
-
-	if (config.ptnCutToBuffer)
-	{
-		for (int16_t x = pattMark.markX1; x <= pattMark.markX2; x++)
-		{
-			for (int16_t y = pattMark.markY1; y < pattMark.markY2; y++)
-			{
-				assert(x < song.numChannels && y < patternNumRows[editor.editPattern]);
-				copyNote(&p[(y * MAX_CHANNELS) + x], &blkCopyBuff[((y - pattMark.markY1) * MAX_CHANNELS) + (x - pattMark.markX1)]);
-			}
-		}
-	}
-
 	pauseMusic();
-	for (int16_t x = pattMark.markX1; x <= pattMark.markX2; x++)
-	{
-		for (int16_t y = pattMark.markY1; y < pattMark.markY2; y++)
-			pasteNote(&clearNote, &p[(y * MAX_CHANNELS) + x]);
-	}
+	const volatile uint16_t curPattern = editor.editPattern;
+	volatile int32_t markX1 = pattMark.markX1;
+	volatile int32_t markX2 = pattMark.markX2;
+	volatile int32_t markY1 = pattMark.markY1;
+	volatile int32_t markY2 = pattMark.markY2;
 	resumeMusic();
 
-	markXSize = pattMark.markX2 - pattMark.markX1;
-	markYSize = pattMark.markY2 - pattMark.markY1;
-	blockCopied = true;
+	const int16_t numRows = patternNumRows[curPattern];
 
-	killPatternIfUnused(editor.editPattern);
+	if (markY1 == markY2 || markY1 > markY2)
+		return;
 
-	ui.updatePatternEditor = true;
-	setSongModifiedFlag();
+	if (markX1 >= song.numChannels-1)
+		markX1 = song.numChannels-2;
+
+	if (markX2 >= song.numChannels)
+		markX2 = (song.numChannels-1)-markX1;
+
+	if (markY1 >= numRows)
+		markY1 = numRows-1;
+
+	if (markY2 > numRows)
+		markY2 = numRows-markY1;
+
+	note_t *p = pattern[curPattern];
+	if (p != NULL && markY1 >= 0 && markX1 >= 0 && markX2 >= 0 && markY2 >= 0)
+	{
+		pauseMusic();
+		for (int32_t x = markX1; x < markX2; x++)
+		{
+			for (int32_t y = markY1; y < markY2; y++)
+			{
+				note_t *n = &p[(y * MAX_CHANNELS) + x];
+
+				if (config.ptnCutToBuffer)
+					copyNote(n, &blkCopyBuff[((y - markY1) * MAX_CHANNELS) + (x - markX1)]);
+
+				memset(n, 0, sizeof (note_t));
+			}
+		}
+		resumeMusic();
+
+		killPatternIfUnused(curPattern);
+
+		if (config.ptnCutToBuffer)
+		{
+			markXSize = markX2 - markX1;
+			markYSize = markY2 - markY1;
+			blockCopied = true;
+		}
+
+		ui.updatePatternEditor = true;
+		setSongModifiedFlag();
+	}
 }
 
 void copyBlock(void)
 {
-	if (pattMark.markY1 == pattMark.markY2 || pattMark.markY1 > pattMark.markY2)
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	volatile int32_t markX1 = pattMark.markX1;
+	volatile int32_t markX2 = pattMark.markX2;
+	volatile int32_t markY1 = pattMark.markY1;
+	volatile int32_t markY2 = pattMark.markY2;
+	resumeMusic();
+
+	const int16_t numRows = patternNumRows[curPattern];
+
+	if (markY1 == markY2 || markY1 > markY2)
 		return;
 
-	note_t *p = pattern[editor.editPattern];
-	if (p == NULL)
-		return;
+	if (markX1 >= song.numChannels-1)
+		markX1 = song.numChannels-2;
 
-	for (int16_t x = pattMark.markX1; x <= pattMark.markX2; x++)
+	if (markX2 >= song.numChannels)
+		markX2 = (song.numChannels-1)-markX1;
+
+	if (markY1 >= numRows)
+		markY1 = numRows-1;
+
+	if (markY2 > numRows)
+		markY2 = numRows-markY1;
+
+	note_t *p = pattern[curPattern];
+	if (p != NULL && markY1 >= 0 && markX1 >= 0 && markX2 >= 0 && markY2 >= 0)
 	{
-		for (int16_t y = pattMark.markY1; y < pattMark.markY2; y++)
+		for (int32_t x = markX1; x < markX2; x++)
 		{
-			assert(x < song.numChannels && y < patternNumRows[editor.editPattern]);
-			copyNote(&p[(y * MAX_CHANNELS) + x], &blkCopyBuff[((y - pattMark.markY1) * MAX_CHANNELS) + (x - pattMark.markX1)]);
+			for (int32_t y = markY1; y < markY2; y++)
+				copyNote(&p[(y * MAX_CHANNELS) + x], &blkCopyBuff[((y - markY1) * MAX_CHANNELS) + (x - markX1)]);
 		}
-	}
 
-	markXSize = pattMark.markX2 - pattMark.markX1;
-	markYSize = pattMark.markY2 - pattMark.markY1;
-	blockCopied = true;
+		markXSize = markX2 - markX1;
+		markYSize = markY2 - markY1;
+		blockCopied = true;
+	}
 }
 
 void pasteBlock(void)
 {
-	if (!blockCopied || !allocatePattern(editor.editPattern))
-		return;
-
-	const int16_t numRows = patternNumRows[editor.editPattern];
-
-	const int32_t xpos = cursor.ch;
-	const int32_t ypos = editor.row;
-
-	int32_t j = markXSize;
-	if (j+xpos >= song.numChannels)
-		j = song.numChannels - xpos - 1;
-
-	int32_t k = markYSize;
-	if (k+ypos >= numRows)
-		k = numRows-ypos;
-
-	note_t *p = pattern[editor.editPattern];
-
 	pauseMusic();
-	for (int32_t x = xpos; x <= xpos+j; x++)
-	{
-		for (int32_t y = ypos; y < ypos+k; y++)
-		{
-			assert(x < song.numChannels && y < numRows);
-			pasteNote(&blkCopyBuff[((y - ypos) * MAX_CHANNELS) + (x - xpos)], &p[(y * MAX_CHANNELS) + x]);
-		}
-	}
+	const volatile uint16_t curPattern = editor.editPattern;
+	const volatile uint16_t curRow = editor.row;
 	resumeMusic();
 
-	killPatternIfUnused(editor.editPattern);
+	if (!blockCopied || !allocatePattern(curPattern))
+		return;
+
+	int32_t chStart = cursor.ch;
+	int32_t rowStart = curRow;
+	const int16_t numRows = patternNumRows[curPattern];
+
+	if (chStart >= song.numChannels)
+		chStart = song.numChannels-1;
+
+	if (rowStart >= numRows)
+		rowStart = numRows-1;
+
+	int32_t markedChannels = markXSize + 1;
+	if (chStart+markedChannels > song.numChannels)
+		markedChannels = song.numChannels - chStart;
+
+	int32_t markedRows = markYSize;
+	if (rowStart+markedRows > numRows)
+		markedRows = numRows - rowStart;
+
+	if (markedChannels > 0 && markedRows > 0)
+	{
+		note_t *p = pattern[curPattern];
+
+		pauseMusic();
+		for (int32_t x = chStart; x < chStart+markedChannels; x++)
+		{
+			for (int32_t y = rowStart; y < rowStart+markedRows; y++)
+				pasteNote(&blkCopyBuff[((y - rowStart) * MAX_CHANNELS) + (x - chStart)], &p[(y * MAX_CHANNELS) + x]);
+		}
+		resumeMusic();
+	}
+
+	killPatternIfUnused(curPattern);
 
 	ui.updatePatternEditor = true;
 	setSongModifiedFlag();
 }
 
-static void remapInstrXY(uint16_t pattNum, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t src, uint8_t dst)
+static void remapInstrXY(int32_t pattNum, int32_t x1, int32_t y1, int32_t x2, int32_t y2, uint8_t src, uint8_t dst)
 {
-	// this routine is only used sanely, so no need to check input
-
 	note_t *pattPtr = pattern[pattNum];
 	if (pattPtr == NULL)
 		return;
 
-	note_t *p = &pattPtr[(y1 * MAX_CHANNELS) + x1];
+	if (x1 >= song.numChannels-1)
+		x1 = song.numChannels-2;
 
+	if (x2 >= song.numChannels)
+		x2 = (song.numChannels-1)-x1;
+
+	const int16_t numRows = patternNumRows[pattNum];
+	if (y1 >= numRows)
+		y1 = numRows-1;
+
+	if (y2 > numRows)
+		y2 = numRows-y1;
+
+	note_t *p = &pattPtr[(y1 * MAX_CHANNELS) + x1];
 	const int32_t pitch = MAX_CHANNELS - ((x2 + 1) - x1);
-	for (uint16_t y = y1; y <= y2; y++, p += pitch)
+
+	for (int32_t y = y1; y <= y2; y++, p += pitch)
 	{
-		for (uint16_t x = x1; x <= x2; x++, p++)
+		for (int32_t x = x1; x <= x2; x++, p++)
 		{
 			if (p->instr == src)
 				p->instr = dst;
@@ -1612,13 +1670,20 @@ static void remapInstrXY(uint16_t pattNum, uint16_t x1, uint16_t y1, uint16_t x2
 
 void remapBlock(void)
 {
-	if (editor.srcInstr == editor.curInstr || pattMark.markY1 == pattMark.markY2 || pattMark.markY1 > pattMark.markY2)
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	volatile int32_t markX1 = pattMark.markX1;
+	volatile int32_t markX2 = pattMark.markX2;
+	volatile int32_t markY1 = pattMark.markY1;
+	volatile int32_t markY2 = pattMark.markY2;
+	resumeMusic();
+
+	if (editor.srcInstr == editor.curInstr || markY1 == markY2 || markY1 > markY2)
 		return;
 
-	pauseMusic();
-	remapInstrXY(editor.editPattern,
-	             pattMark.markX1, pattMark.markY1,
-	             pattMark.markX2, pattMark.markY2 - 1,
+	remapInstrXY(curPattern,
+	             markX1, markY1,
+	             markX2, markY2 - 1,
 	             editor.srcInstr, editor.curInstr);
 	resumeMusic();
 
@@ -1628,13 +1693,15 @@ void remapBlock(void)
 
 void remapTrack(void)
 {
+	const volatile uint16_t curPattern = editor.editPattern;
+
 	if (editor.srcInstr == editor.curInstr)
 		return;
 
 	pauseMusic();
-	remapInstrXY(editor.editPattern,
+	remapInstrXY(curPattern,
 	             cursor.ch, 0,
-	             cursor.ch, patternNumRows[editor.editPattern] - 1,
+	             cursor.ch, patternNumRows[curPattern]-1,
 	             editor.srcInstr, editor.curInstr);
 	resumeMusic();
 
@@ -1644,13 +1711,15 @@ void remapTrack(void)
 
 void remapPattern(void)
 {
+	const volatile uint16_t curPattern = editor.editPattern;
+
 	if (editor.srcInstr == editor.curInstr)
 		return;
 
 	pauseMusic();
-	remapInstrXY(editor.editPattern,
+	remapInstrXY(curPattern,
 	             0, 0,
-	             (uint16_t)(song.numChannels - 1), patternNumRows[editor.editPattern] - 1,
+	             song.numChannels-1, patternNumRows[curPattern]-1,
 	             editor.srcInstr, editor.curInstr);
 	resumeMusic();
 
@@ -1666,11 +1735,10 @@ void remapSong(void)
 	pauseMusic();
 	for (int32_t i = 0; i < MAX_PATTERNS; i++)
 	{
-		const uint8_t pattNum = (uint8_t)i;
-
-		remapInstrXY(pattNum,
+		// remapInstrXY() also checks if pattern is not allocated!
+		remapInstrXY(i,
 		             0, 0,
-		             (uint16_t)(song.numChannels - 1), patternNumRows[pattNum] - 1,
+		             song.numChannels-1, patternNumRows[i]-1,
 		             editor.srcInstr, editor.curInstr);
 	}
 	resumeMusic();
@@ -1713,6 +1781,9 @@ static void setNoteVolume(note_t *p, int8_t newVol)
 	if (newVol < 0)
 		return;
 
+	if (newVol > 64)
+		newVol = 64;
+
 	const int8_t oldv = getNoteVolume(p);
 	if (p->vol == oldv)
 		return; // volume is the same
@@ -1723,12 +1794,12 @@ static void setNoteVolume(note_t *p, int8_t newVol)
 		p->vol = 0x10 + newVol; // volume column
 }
 
-static void scaleNote(uint16_t pattNum, int8_t ch, int16_t row, double dScale)
+static void scaleNote(int32_t pattNum, int32_t ch, int32_t row, double dScale)
 {
 	if (pattern[pattNum] == NULL)
 		return;
 
-	const int16_t numRows = patternNumRows[pattNum];
+	const int32_t numRows = patternNumRows[pattNum];
 	if (row < 0 || row >= numRows || ch < 0 || ch >= song.numChannels)
 		return;
 
@@ -1748,22 +1819,22 @@ static bool askForScaleFade(char *msg)
 	char volstr[32+1];
 
 	sprintf(volstr, "%0.2f,%0.2f", dVolScaleFK1, dVolScaleFK2);
-	if (inputBox(1, msg, volstr, sizeof (volstr) - 1) != 1)
+	if (inputBox(1, msg, volstr, sizeof (volstr)-1) != 1)
 		return false;
 
-	bool err = false;
+	bool error = false;
 
 	char *val1 = volstr;
 	if (strlen(val1) < 3)
-		err = true;
+		error = true;
 
 	char *val2 = strchr(volstr, ',');
 	if (val2 == NULL || strlen(val2) < 3)
-		err = true;
+		error = true;
 
-	if (err)
+	if (error)
 	{
-		okBox(0, "System message", "Invalid constant expressions.");
+		okBox(0, "System message", "Invalid constant expressions.", NULL);
 		return false;
 	}
 
@@ -1778,10 +1849,12 @@ void scaleFadeVolumeTrack(void)
 	if (!askForScaleFade("Volume scale-fade track (start-, end scale)"))
 		return;
 
-	if (pattern[editor.editPattern] == NULL)
+	const volatile uint16_t curPattern = editor.editPattern;
+
+	if (pattern[curPattern] == NULL)
 		return;
 
-	const int32_t numRows = patternNumRows[editor.editPattern];
+	const int32_t numRows = patternNumRows[curPattern];
 
 	double dVolDelta = 0.0;
 	if (numRows > 0)
@@ -1790,9 +1863,9 @@ void scaleFadeVolumeTrack(void)
 	double dVol = dVolScaleFK1;
 
 	pauseMusic();
-	for (int16_t row = 0; row < numRows; row++)
+	for (int32_t row = 0; row < numRows; row++)
 	{
-		scaleNote(editor.editPattern, cursor.ch, row, dVol);
+		scaleNote(curPattern, cursor.ch, row, dVol);
 		dVol += dVolDelta;
 	}
 	resumeMusic();
@@ -1803,10 +1876,12 @@ void scaleFadeVolumePattern(void)
 	if (!askForScaleFade("Volume scale-fade pattern (start-, end scale)"))
 		return;
 
-	if (pattern[editor.editPattern] == NULL)
+	const volatile uint16_t curPattern = editor.editPattern;
+
+	if (pattern[curPattern] == NULL)
 		return;
 
-	const int32_t numRows = patternNumRows[editor.editPattern];
+	const int32_t numRows = patternNumRows[curPattern];
 
 	double dVolDelta = 0.0;
 	if (numRows > 0)
@@ -1815,10 +1890,10 @@ void scaleFadeVolumePattern(void)
 	double dVol = dVolScaleFK1;
 
 	pauseMusic();
-	for (int16_t row = 0; row < numRows; row++)
+	for (int32_t row = 0; row < numRows; row++)
 	{
-		for (int8_t ch = 0; ch < song.numChannels; ch++)
-			scaleNote(editor.editPattern, ch, row, dVol);
+		for (int32_t ch = 0; ch < song.numChannels; ch++)
+			scaleNote(curPattern, ch, row, dVol);
 
 		dVol += dVolDelta;
 	}
@@ -1830,10 +1905,18 @@ void scaleFadeVolumeBlock(void)
 	if (!askForScaleFade("Volume scale-fade block (start-, end scale)"))
 		return;
 
-	if (pattern[editor.editPattern] == NULL || pattMark.markY1 == pattMark.markY2 || pattMark.markY1 > pattMark.markY2)
+	pauseMusic();
+	const volatile uint16_t curPattern = editor.editPattern;
+	volatile int32_t markX1 = pattMark.markX1;
+	volatile int32_t markX2 = pattMark.markX2;
+	volatile int32_t markY1 = pattMark.markY1;
+	volatile int32_t markY2 = pattMark.markY2;
+	resumeMusic();
+
+	if (pattern[curPattern] == NULL || markY1 == markY2 || markY1 > markY2)
 		return;
 
-	const int32_t numRows = pattMark.markY2 - pattMark.markY1;
+	const int32_t numRows = markY2 - markY1;
 
 	double dVolDelta = 0.0;
 	if (numRows > 0)
@@ -1842,10 +1925,10 @@ void scaleFadeVolumeBlock(void)
 	double dVol = dVolScaleFK1;
 
 	pauseMusic();
-	for (int16_t row = pattMark.markY1; row < pattMark.markY2; row++)
+	for (int32_t row = markY1; row < markY2; row++)
 	{
-		for (int16_t ch = pattMark.markX1; ch <= pattMark.markX2; ch++)
-			scaleNote(editor.editPattern, (uint8_t)ch, row, dVol);
+		for (int32_t ch = markX1; ch <= markX2; ch++)
+			scaleNote(curPattern, ch, row, dVol);
 
 		dVol += dVolDelta;
 	}

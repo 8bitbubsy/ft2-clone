@@ -623,7 +623,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 		loaderMsgBox("Warning: The module contains unsupported AdLib instruments!");
 
 	if (!(config.dontShowAgainFlags & DONT_SHOW_IMPORT_WARNING_FLAG))
-		loaderSysReq(6, "System message", "Loading of this format is not fully supported and can have issues.");
+		loaderSysReq(0, "System message", "Loading of this format is not fully supported and can have issues.", configToggleImportWarning);
 
 	return true;
 }

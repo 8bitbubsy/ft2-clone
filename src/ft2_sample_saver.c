@@ -122,7 +122,7 @@ static bool saveRawSample(UNICHAR *filenameU, bool saveRangedData)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || ins->smp[editor.curSmp].dataPtr == NULL || ins->smp[editor.curSmp].length == 0)
 	{
-		okBoxThreadSafe(0, "System message", "The sample is empty!");
+		okBoxThreadSafe(0, "System message", "The sample is empty!", NULL);
 		return false;
 	}
 
@@ -143,14 +143,14 @@ static bool saveRawSample(UNICHAR *filenameU, bool saveRangedData)
 	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
-		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
 	if (fwrite(samplePtr, sampleLen, 1, f) != 1)
 	{
 		fclose(f);
-		okBoxThreadSafe(0, "System message", "Error saving sample: General I/O error!");
+		okBoxThreadSafe(0, "System message", "Error saving sample: General I/O error!", NULL);
 		return false;
 	}
 
@@ -206,7 +206,7 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || ins->smp[editor.curSmp].dataPtr == NULL || ins->smp[editor.curSmp].length == 0)
 	{
-		okBoxThreadSafe(0, "System message", "The sample is empty!");
+		okBoxThreadSafe(0, "System message", "The sample is empty!", NULL);
 		return false;
 	}
 
@@ -215,7 +215,7 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
-		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
@@ -331,7 +331,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || ins->smp[editor.curSmp].dataPtr == NULL || ins->smp[editor.curSmp].length == 0)
 	{
-		okBoxThreadSafe(0, "System message", "The sample is empty!");
+		okBoxThreadSafe(0, "System message", "The sample is empty!", NULL);
 		return false;
 	}
 
@@ -340,7 +340,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 	FILE *f = UNICHAR_FOPEN(filenameU, "wb");
 	if (f == NULL)
 	{
-		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
@@ -503,7 +503,7 @@ static int32_t SDLCALL saveSampleThread(void *ptr)
 {
 	if (editor.tmpFilenameU == NULL)
 	{
-		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?");
+		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 		return false;
 	}
 
@@ -538,7 +538,7 @@ void saveSample(UNICHAR *filenameU, bool saveAsRange)
 	thread = SDL_CreateThread(saveSampleThread, NULL, NULL);
 	if (thread == NULL)
 	{
-		okBoxThreadSafe(0, "System message", "Couldn't create thread!");
+		okBoxThreadSafe(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 

@@ -247,7 +247,7 @@ static void updateImageStretchAndPixelFilter(uint8_t oldWindowFlags, uint8_t old
 
 void resetConfig(void)
 {
-	if (okBox(2, "System request", "Are you sure you want to reset your FT2 configuration?") != 1)
+	if (okBox(2, "System request", "Are you sure you want to reset your FT2 configuration?", NULL) != 1)
 		return;
 
 	const uint8_t oldWindowFlags = config.windowFlags;
@@ -305,7 +305,7 @@ bool loadConfig(bool showErrorFlag)
 	if (editor.configFileLocationU == NULL)
 	{
 		if (showErrorFlag)
-			okBox(0, "System message", "Error opening config file for reading!");
+			okBox(0, "System message", "Error opening config file for reading!", NULL);
 
 		return false;
 	}
@@ -314,7 +314,7 @@ bool loadConfig(bool showErrorFlag)
 	if (f == NULL)
 	{
 		if (showErrorFlag)
-			okBox(0, "System message", "Error opening config file for reading!");
+			okBox(0, "System message", "Error opening config file for reading!", NULL);
 
 		return false;
 	}
@@ -328,7 +328,7 @@ bool loadConfig(bool showErrorFlag)
 	{
 		fclose(f);
 		if (showErrorFlag)
-			okBox(0, "System message", "Error loading config: the config file is not valid!");
+			okBox(0, "System message", "Error loading config: the config file is not valid!", NULL);
 
 		return false;
 	}
@@ -341,7 +341,7 @@ bool loadConfig(bool showErrorFlag)
 	{
 		fclose(f);
 		if (showErrorFlag)
-			okBox(0, "System message", "Error opening config file for reading!");
+			okBox(0, "System message", "Error opening config file for reading!", NULL);
 
 		return false;
 	}
@@ -353,7 +353,7 @@ bool loadConfig(bool showErrorFlag)
 	if (memcmp(&configBuffer[0], CFG_ID_STR, 35) != 0)
 	{
 		if (showErrorFlag)
-			okBox(0, "System message", "Error loading config: the config file is not valid!");
+			okBox(0, "System message", "Error loading config: the config file is not valid!", NULL);
 
 		return false;
 	}
@@ -387,7 +387,7 @@ bool saveConfig(bool showErrorFlag)
 	if (editor.configFileLocationU == NULL)
 	{
 		if (showErrorFlag)
-			okBox(0, "System message", "General I/O error during saving! Is the file in use?");
+			okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
 
 		return false;
 	}
@@ -401,7 +401,7 @@ bool saveConfig(bool showErrorFlag)
 	if (f == NULL)
 	{
 		if (showErrorFlag)
-			okBox(0, "System message", "General I/O error during config saving! Is the file in use?");
+			okBox(0, "System message", "General I/O error during config saving! Is the file in use?", NULL);
 
 		return false;
 	}
@@ -427,7 +427,7 @@ bool saveConfig(bool showErrorFlag)
 		fclose(f);
 
 		if (showErrorFlag)
-			okBox(0, "System message", "General I/O error during config saving! Is the file in use?");
+			okBox(0, "System message", "General I/O error during config saving! Is the file in use?", NULL);
 
 		return false;
 	}
@@ -1789,7 +1789,7 @@ void cbSoftwareMouse(void)
 {
 	config.specialFlags2 ^= HARDWARE_MOUSE;
 	if (!createMouseCursors())
-		okBox(0, "System message", "Error: Couldn't create/show mouse cursor!");
+		okBox(0, "System message", "Error: Couldn't create/show mouse cursor!", NULL);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 	{
@@ -1948,7 +1948,7 @@ void rbWinSizeAuto(void)
 {
 	if (video.fullscreen)
 	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!");
+		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
 		return;
 	}
 
@@ -1962,7 +1962,7 @@ void rbWinSize1x(void)
 {
 	if (video.fullscreen)
 	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!");
+		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
 		return;
 	}
 
@@ -1976,7 +1976,7 @@ void rbWinSize2x(void)
 {
 	if (video.fullscreen)
 	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!");
+		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
 		return;
 	}
 
@@ -1990,36 +1990,28 @@ void rbWinSize3x(void)
 {
 	if (video.fullscreen)
 	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!");
+		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
 		return;
 	}
 
-#ifdef __arm__
-	okBox(0, "System message", "3x video upscaling is not supported on ARM devices for performance reasons.");
-#else
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_1X + WINSIZE_2X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_3X;
 	setWindowSizeFromConfig(true);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_3X);
-#endif
 }
 
 void rbWinSize4x(void)
 {
 	if (video.fullscreen)
 	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!");
+		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
 		return;
 	}
 
-#ifdef __arm__
-	okBox(0, "System message", "4x video upscaling is not supported on ARM devices for performance reasons.");
-#else
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_1X + WINSIZE_2X + WINSIZE_3X);
 	config.windowFlags |= WINSIZE_4X;
 	setWindowSizeFromConfig(true);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_4X);
-#endif
 }
 
 void cbSampCutToBuff(void)
@@ -2085,7 +2077,7 @@ void cbMIDIEnable(void)
 	checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
 	drawCheckBox(CB_CONF_MIDI_ENABLE);
 
-	okBox(0, "System message", "This program was not compiled with MIDI functionality!");
+	okBox(0, "System message", "This program was not compiled with MIDI functionality!", NULL);
 #endif
 }
 
@@ -2114,7 +2106,7 @@ void cbVsyncOff(void)
 	config.windowFlags ^= FORCE_VSYNC_OFF;
 
 	if (!(config.dontShowAgainFlags & DONT_SHOW_NOT_YET_APPLIED_WARNING_FLAG))
-		okBox(7, "System message", "This setting is not applied until you close and reopen the program.");
+		okBox(0, "System message", "This setting is not applied until you close and reopen the program.", configToggleNotYetAppliedWarning);
 }
 
 void cbFullScreen(void)
@@ -2122,7 +2114,7 @@ void cbFullScreen(void)
 	config.windowFlags ^= START_IN_FULLSCR;
 
 	if (!(config.dontShowAgainFlags & DONT_SHOW_NOT_YET_APPLIED_WARNING_FLAG))
-		okBox(7, "System message", "This setting is not applied until you close and reopen the program.");
+		okBox(0, "System message", "This setting is not applied until you close and reopen the program.", configToggleNotYetAppliedWarning);
 }
 
 void cbPixelFilter(void)

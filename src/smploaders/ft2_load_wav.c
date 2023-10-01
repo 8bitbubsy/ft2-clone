@@ -180,7 +180,7 @@ bool loadWAV(FILE *f, uint32_t filesize)
 
 	int16_t stereoSampleLoadMode = -1;
 	if (wavIsStereo(f))
-		stereoSampleLoadMode = loaderSysReq(5, "System request", "This is a stereo sample...");
+		stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample...", NULL);
 
 	if (bitsPerSample == 8) // 8-BIT INTEGER SAMPLE
 	{

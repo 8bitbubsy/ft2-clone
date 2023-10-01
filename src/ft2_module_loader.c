@@ -246,7 +246,7 @@ void loadMusic(UNICHAR *filenameU)
 	if (thread == NULL)
 	{
 		editor.loadMusicEvent = EVENT_NONE;
-		okBox(0, "System message", "Couldn't create thread!");
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		musicIsLoading = false;
 		return;
 	}
@@ -537,7 +537,7 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 	UNICHAR *tmpPathU = (UNICHAR *)malloc((PATH_MAX + 1) * sizeof (UNICHAR));
 	if (tmpPathU == NULL)
 	{
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return false;
 	}
 
@@ -545,7 +545,7 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 	if (filenameU == NULL)
 	{
 		free(tmpPathU);
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return false;
 	}
 
@@ -571,7 +571,7 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 		UNICHAR_CHDIR(tmpPathU); // set old path back
 		free(tmpPathU);
 
-		okBox(0, "System message", "Error: The module is too big to be loaded!");
+		okBox(0, "System message", "Error: The module is too big to be loaded!", NULL);
 		return false;
 	}
 
@@ -654,7 +654,7 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 	UNICHAR *fullPathU = (UNICHAR *)malloc((fullPathLen + 1) * sizeof (UNICHAR));
 	if (fullPathU == NULL)
 	{
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return;
 	}
 
@@ -670,14 +670,14 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 
 	if (filesize == -1) // >2GB
 	{
-		okBox(0, "System message", "The file is too big and can't be loaded (over 2GB).");
+		okBox(0, "System message", "The file is too big and can't be loaded (over 2GB).", NULL);
 		free(fullPathU);
 		return;
 	}
 
 	if (filesize >= 128L*1024*1024) // 128MB
 	{
-		if (okBox(2, "System request", "Are you sure you want to load such a big file?") != 1)
+		if (okBox(2, "System request", "Are you sure you want to load such a big file?", NULL) != 1)
 		{
 			free(fullPathU);
 			return;

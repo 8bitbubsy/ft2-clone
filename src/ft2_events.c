@@ -64,7 +64,7 @@ void handleThreadEvents(void)
 {
 	if (okBoxData.active)
 	{
-		okBoxData.returnData = okBox(okBoxData.type, okBoxData.headline, okBoxData.text);
+		okBoxData.returnData = okBox(okBoxData.type, okBoxData.headline, okBoxData.text, okBoxData.checkBoxCallback);
 		okBoxData.active = false;
 	}
 }

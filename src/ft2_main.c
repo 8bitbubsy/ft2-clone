@@ -273,7 +273,7 @@ static void initializeVars(void)
 	memset(&keyb, 0, sizeof (keyb));
 	memset(&mouse, 0, sizeof (mouse));
 	memset(&editor, 0, sizeof (editor));
-	memset(&pattMark, 0, sizeof (pattMark));
+	memset((void *)&pattMark, 0, sizeof (pattMark));
 	memset(&pattSync, 0, sizeof (pattSync));
 	memset(&chSync, 0, sizeof (chSync));
 	memset(&song, 0, sizeof (song));
@@ -319,11 +319,11 @@ static void initializeVars(void)
 #endif
 
 	editor.diskOpReadOnOpen = true;
-	editor.programRunning = true;
 
 	audio.linearPeriodsFlag = true;
-
 	calcReplayerLogTab();
+
+	editor.programRunning = true;
 }
 
 static void cleanUpAndExit(void) // never call this inside the main loop!

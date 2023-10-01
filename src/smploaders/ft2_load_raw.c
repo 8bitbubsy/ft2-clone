@@ -23,7 +23,7 @@ bool loadRAW(FILE *f, uint32_t filesize)
 
 	if (fread(s->dataPtr, filesize, 1, f) != 1)
 	{
-		okBoxThreadSafe(0, "System message", "General I/O error during loading! Is the file in use?");
+		okBoxThreadSafe(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
 		return false;
 	}
 

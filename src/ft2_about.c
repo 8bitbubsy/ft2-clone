@@ -7,8 +7,8 @@
 #include "ft2_video.h"
 #include "ft2_structs.h"
 
-#define NUM_STARS 2048
-#define ALPHA_FADE_MILLISECS 2100 /* amount of milliseconds until content is fully faded in */
+#define NUM_STARS 3000
+#define ALPHA_FADE_MILLISECS 2000 /* amount of milliseconds until content is fully faded in */
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
 #define ABOUT_LOGO_W 449
@@ -30,7 +30,7 @@ static char *customText1 = "Clone by Olav \"8bitbubsy\" S\025rensen";
 static char *customText2 = "https://16-bits.org";
 static char customText3[256];
 static int16_t customText1Y, customText2Y, customText3Y, customText1X, customText2X, customText3X;
-static uint32_t alphaValue, randSeed, frameCounter;
+static uint32_t logoTimer, alphaValue, randSeed, frameCounter;
 static vector_t starPoints[NUM_STARS], rotation;
 static matrix_t matrix;
 
@@ -91,6 +91,24 @@ static void aboutInit(void)
 	rotation.x = rotation.y = rotation.z = 0.0f;
 	alphaValue = 0;
 	frameCounter = 0;
+	logoTimer = 0;
+}
+
+static void blendPixel(int32_t x, int32_t y, int32_t r, int32_t g, int32_t b, int32_t alpha)
+{
+	uint32_t *p = &video.frameBuffer[(y * SCREEN_W) + x];
+
+	const uint32_t srcPixel = *p;
+
+	const int32_t srcR = RGB32_R(srcPixel);
+	const int32_t srcG = RGB32_G(srcPixel);
+	const int32_t srcB = RGB32_B(srcPixel);
+
+	r = ((srcR * (65536-alpha)) + (r * alpha)) >> 16;
+	g = ((srcG * (65536-alpha)) + (g * alpha)) >> 16;
+	b = ((srcB * (65536-alpha)) + (b * alpha)) >> 16;
+
+	*p = RGB32(r, g, b);
 }
 
 static void starfield(void)
@@ -136,7 +154,24 @@ static void starfield(void)
 		if (b > 255)
 			b = 255;
 
-		video.frameBuffer[(outY * SCREEN_W) + outX] = RGB32(r, g, b);
+		// blend sides of star
+
+		const int32_t sidesAlpha = 13000;
+
+		if (outX-1 >= 3)
+			blendPixel(outX-1, outY, r, g, b, sidesAlpha);
+
+		if (outX+1 < 3+ABOUT_SCREEN_W)
+			blendPixel(outX+1, outY, r, g, b, sidesAlpha);
+
+		if (outY-1 >= 3)
+			blendPixel(outX, outY-1, r, g, b, sidesAlpha);
+
+		if (outY+1 < 3+ABOUT_SCREEN_H)
+			blendPixel(outX, outY+1, r, g, b, sidesAlpha);
+
+		// plot main star pixel
+		blendPixel(outX, outY, r, g, b, 60000);
 	}
 }
 
@@ -156,9 +191,16 @@ void aboutFrame(void) // called every frame when the about screen is shown
 	textOutAlpha(customText2X, customText2Y, PAL_FORGRND, customText2, alphaValue);
 	textOutAlpha(customText3X, customText3Y, PAL_FORGRND, customText3, alphaValue);
 
-	alphaValue += (uint32_t)((65536.0 / (ALPHA_FADE_MILLISECS / (1000.0 / VBLANK_HZ))) + 0.5);
-	if (alphaValue > 65536)
-		alphaValue = 65536;
+	if (logoTimer > (int32_t)(VBLANK_HZ/4.0))
+	{
+		alphaValue += (uint32_t)((65536.0 / (ALPHA_FADE_MILLISECS / (1000.0 / VBLANK_HZ))) + 0.5);
+		if (alphaValue > 65536)
+			alphaValue = 65536;
+	}
+	else
+	{
+		logoTimer++;
+	}
 
 	// the exit button has to be redrawn since it gets overwritten :)
 	showPushButton(PB_EXIT_ABOUT);

@@ -23,12 +23,10 @@
 #pragma warning(disable: 4996)
 #endif
 
-#define INITIAL_DITHER_SEED 0x12345000
-
 static int32_t smpShiftValue;
-static uint32_t oldAudioFreq, tickTimeLenInt, randSeed = INITIAL_DITHER_SEED;
+static uint32_t oldAudioFreq, tickTimeLenInt;
 static uint64_t tickTimeLenFrac;
-static double dAudioNormalizeMul, dSqrtPanningTable[256+1], dPrngStateL, dPrngStateR;
+static double dAudioNormalizeMul, dSqrtPanningTable[256+1];
 static voice_t voice[MAX_CHANNELS * 2];
 
 // globalized
@@ -94,7 +92,7 @@ bool setNewAudioSettings(void) // only call this from the main input/video threa
 
 		// if it didn't work to use the old settings again, then something is seriously wrong...
 		if (!setupAudio(CONFIG_HIDE_ERRORS))
-			okBox(0, "System message", "Couldn't find a working audio mode... You'll get no sound / replayer timer!");
+			okBox(0, "System message", "Couldn't find a working audio mode... You'll get no sound / replayer timer!", NULL);
 
 		resumeAudio();
 		return false;
@@ -420,47 +418,18 @@ void updateVoices(void)
 	}
 }
 
-void resetAudioDither(void)
+static void sendSamples16BitStereo(uint8_t *stream, uint32_t sampleBlockLength)
 {
-	randSeed = INITIAL_DITHER_SEED;
-	dPrngStateL = 0.0;
-	dPrngStateR = 0.0;
-}
-
-static inline int32_t random32(void)
-{
-	// LCG 32-bit random
-	randSeed *= 134775813;
-	randSeed++;
-
-	return (int32_t)randSeed;
-}
-
-static void sendSamples16BitDitherStereo(uint8_t *stream, uint32_t sampleBlockLength)
-{
-	int32_t out32;
-	double dOut, dPrng;
-
 	int16_t *streamPointer16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
-		// left channel - 1-bit triangular dithering
-		dPrng = random32() * (0.5 / INT32_MAX); // -0.5 .. 0.5
-		dOut = (double)audio.fMixBufferL[i] * dAudioNormalizeMul;
-		dOut = (dOut + dPrng) - dPrngStateL;
-		dPrngStateL = dPrng;
-		out32 = (int32_t)dOut;
-		CLAMP16(out32);
-		*streamPointer16++ = (int16_t)out32;
+		int32_t L = (int32_t)((double)audio.fMixBufferL[i] * dAudioNormalizeMul);
+		CLAMP16(L);
+		*streamPointer16++ = (int16_t)L;
 
-		// right channel - 1-bit triangular dithering
-		dPrng = random32() * (0.5 / INT32_MAX); // -0.5 .. 0.5
-		dOut = (double)audio.fMixBufferR[i] * dAudioNormalizeMul;
-		dOut = (dOut + dPrng) - dPrngStateR;
-		dPrngStateR = dPrng;
-		out32 = (int32_t)dOut;
-		CLAMP16(out32);
-		*streamPointer16++ = (int16_t)out32;
+		int32_t R = (int32_t)((double)audio.fMixBufferR[i] * dAudioNormalizeMul);
+		CLAMP16(R);
+		*streamPointer16++ = (int16_t)R;
 
 		// clear what we read from the mixing buffer
 		audio.fMixBufferL[i] = 0.0f;
@@ -468,21 +437,18 @@ static void sendSamples16BitDitherStereo(uint8_t *stream, uint32_t sampleBlockLe
 	}
 }
 
-static void sendSamples32BitStereo(uint8_t *stream, uint32_t sampleBlockLength)
+static void sendSamples32BitFloatStereo(uint8_t *stream, uint32_t sampleBlockLength)
 {
-	double dOut;
 	float *fStreamPointer32 = (float *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
-		// left channel
-		dOut = (double)audio.fMixBufferL[i] * dAudioNormalizeMul;
-		dOut = CLAMP(dOut, -1.0, 1.0);
-		*fStreamPointer32++ = (float)dOut;
+		double dL = (double)audio.fMixBufferL[i] * dAudioNormalizeMul;
+		dL = CLAMP(dL, -1.0, 1.0);
+		*fStreamPointer32++ = (float)dL;
 
-		// right channel
-		dOut = (double)audio.fMixBufferR[i] * dAudioNormalizeMul;
-		dOut = CLAMP(dOut, -1.0, 1.0);
-		*fStreamPointer32++ = (float)dOut;
+		double dR = (double)audio.fMixBufferR[i] * dAudioNormalizeMul;
+		dR = CLAMP(dR, -1.0, 1.0);
+		*fStreamPointer32++ = (float)dR;
 
 		// clear what we read from the mixing buffer
 		audio.fMixBufferL[i] = 0.0f;
@@ -535,9 +501,9 @@ void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bit
 
 	// normalize mix buffer and send to audio stream
 	if (bitDepth == 16)
-		sendSamples16BitDitherStereo(stream, samplesToMix);
+		sendSamples16BitStereo(stream, samplesToMix);
 	else
-		sendSamples32BitStereo(stream, samplesToMix);
+		sendSamples32BitFloatStereo(stream, samplesToMix);
 }
 
 int32_t pattQueueReadSize(void)
@@ -878,13 +844,16 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 		if (audio.tickSampleCounter == 0) // new replayer tick
 		{
 			replayerBusy = true;
+			if (!musicPaused) // important, don't remove this check! (also used for safety)
+			{
+				if (audio.volumeRampingFlag)
+					resetRampVolumes();
 
-			if (audio.volumeRampingFlag)
-				resetRampVolumes();
-
-			tickReplayer();
-			updateVoices();
-			fillVisualsSyncBuffer();
+				tickReplayer();
+				updateVoices();
+				fillVisualsSyncBuffer();
+			}
+			replayerBusy = false;
 
 			audio.tickSampleCounter = audio.samplesPerTickInt;
 
@@ -894,8 +863,6 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 				audio.tickSampleCounterFrac &= BPM_FRAC_MASK;
 				audio.tickSampleCounter++;
 			}
-
-			replayerBusy = false;
 		}
 
 		uint32_t samplesToMix = samplesLeft;
@@ -910,9 +877,9 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 	}
 
 	if (config.specialFlags & BITDEPTH_16)
-		sendSamples16BitDitherStereo(stream, len);
+		sendSamples16BitStereo(stream, len);
 	else
-		sendSamples32BitStereo(stream, len);
+		sendSamples32BitFloatStereo(stream, len);
 
 	(void)userdata;
 }

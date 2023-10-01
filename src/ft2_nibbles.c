@@ -299,7 +299,7 @@ void nibblesHighScore(void)
 {
 	if (editor.NI_Play)
 	{
-		okBox(0, "Nibbles message", "The highscore table is not available during play.");
+		okBox(0, "Nibbles message", "The highscore table is not available during play.", NULL);
 		return;
 	}
 
@@ -430,20 +430,20 @@ static void nibblesDecLives(int16_t l1, int16_t l2)
 
 	if (l1+l2 == 2)
 	{
-		okBox(0, "Nibbles message", "Both players died!");
+		okBox(0, "Nibbles message", "Both players died!", NULL);
 	}
 	else
 	{
 		if (l2 == 0)
-			okBox(0, "Nibbles message", "Player 1 died!");
+			okBox(0, "Nibbles message", "Player 1 died!", NULL);
 		else
-			okBox(0, "Nibbles message", "Player 2 died!");
+			okBox(0, "Nibbles message", "Player 2 died!", NULL);
 	}
 
 	if (NI_P1Lives == 0 || NI_P2Lives == 0)
 	{
 		editor.NI_Play = false;
-		okBox(0, "Nibbles message", "GAME OVER");
+		okBox(0, "Nibbles message", "GAME OVER", NULL);
 
 		// prevent highscore table from showing overflowing level graphics
 		if (NI_Level >= NI_MAXLEVEL)
@@ -462,7 +462,7 @@ static void nibblesDecLives(int16_t l1, int16_t l2)
 				memcpy(&config.NI_HighScore[k+1], &config.NI_HighScore[k], sizeof (highScoreType));
 
 			if (i == 0)
-				okBox(0, "Nibbles message", "You've probably cheated!");
+				okBox(0, "Nibbles message", "You've probably cheated!", NULL);
 
 			h = &config.NI_HighScore[i];
 
@@ -488,7 +488,7 @@ static void nibblesDecLives(int16_t l1, int16_t l2)
 				memcpy(&config.NI_HighScore[k+1], &config.NI_HighScore[k], sizeof (highScoreType));
 
 			if (i == 0)
-				okBox(0, "Nibbles message", "You've probably cheated!");
+				okBox(0, "Nibbles message", "You've probably cheated!", NULL);
 
 			h = &config.NI_HighScore[i];
 			k = (int16_t)strlen(name);
@@ -521,7 +521,7 @@ static void nibblesNewLevel(void)
 	char text[24];
 
 	sprintf(text, "Level %d finished!", NI_Level+1);
-	okBox(0, "Nibbles message", text);
+	okBox(0, "Nibbles message", text, NULL);
 
 	// cast to int16_t to simulate a bug in FT2
 	NI_P1Score += 0x10000 + (int16_t)((12 - NI_CurSpeed) * 0x2000);
@@ -814,18 +814,18 @@ void nibblesPlay(void)
 {
 	if (editor.NI_Play)
 	{
-		if (okBox(2, "Nibbles request", "Restart current game of Nibbles?") != 1)
+		if (okBox(2, "Nibbles request", "Restart current game of Nibbles?", NULL) != 1)
 			return;
 	}
 
 	if (config.NI_Surround && config.NI_NumPlayers == 0)
 	{
-		okBox(0, "Nibbles message", "Surround mode is not appropriate in one-player mode.");
+		okBox(0, "Nibbles message", "Surround mode is not appropriate in one-player mode.", NULL);
 		return;
 	}
 
 	if (wallColorsAreCloseToBlack())
-		okBox(0, "Nibbles warning", "The Desktop/Button colors are set to values that make the walls hard to see!");
+		okBox(0, "Nibbles warning", "The Desktop/Button colors are set to values that make the walls hard to see!", NULL);
 
 	assert(config.NI_Speed < 4);
 	NI_CurSpeed = NI_Speeds[config.NI_Speed];
@@ -848,7 +848,7 @@ void nibblesHelp(void)
 {
 	if (editor.NI_Play)
 	{
-		okBox(0, "System message", "Help is not available during play.");
+		okBox(0, "System message", "Help is not available during play.", NULL);
 		return;
 	}
 
@@ -863,7 +863,7 @@ void nibblesExit(void)
 {
 	if (editor.NI_Play)
 	{
-		if (okBox(2, "System request", "Quit current game of Nibbles?") == 1)
+		if (okBox(2, "System request", "Quit current game of Nibbles?", NULL) == 1)
 		{
 			editor.NI_Play = false;
 			exitNibblesScreen();
@@ -946,7 +946,7 @@ void nibblesKeyAdministrator(SDL_Scancode scancode)
 {
 	if (scancode == SDL_SCANCODE_ESCAPE)
 	{
-		if (okBox(2, "System request", "Quit current game of Nibbles?") == 1)
+		if (okBox(2, "System request", "Quit current game of Nibbles?", NULL) == 1)
 		{
 			editor.NI_Play = false;
 			exitNibblesScreen();
@@ -1013,9 +1013,9 @@ bool testNibblesCheatCodes(SDL_Keycode keycode) // not directly ported, but same
 			{
 				NI_EternalLives ^= 1;
 				if (NI_EternalLives)
-					okBox(0, "Triton productions declares:", "Eternal lives activated!");
+					okBox(0, "Triton productions declares:", "Eternal lives activated!", NULL);
 				else
-					okBox(0, "Triton productions declares:", "Eternal lives deactivated!");
+					okBox(0, "Triton productions declares:", "Eternal lives deactivated!", NULL);
 			}
 		}
 

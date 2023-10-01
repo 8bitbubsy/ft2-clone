@@ -711,7 +711,7 @@ static int64_t calculateTrimSize(void)
 
 	if (!setTmpInstruments())
 	{
-		okBox(0, "System message", "Not enough memory!");
+		okBox(0, "System message", "Not enough memory!", NULL);
 		return 0;
 	}
 
@@ -834,7 +834,7 @@ static int32_t SDLCALL trimThreadFunc(void *ptr)
 
 	if (!setTmpInstruments())
 	{
-		okBoxThreadSafe(0, "System message", "Not enough memory!");
+		okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
 		return true;
 	}
 
@@ -1184,7 +1184,7 @@ void pbTrimDoTrim(void)
 	if (!removePatt && !removeInst && !removeSamp && !removeChans && !removeSmpDataAfterLoop && !convSmpsTo8Bit)
 		return; // nothing to trim...
 
-	if (okBox(2, "System request", "Are you sure you want to trim the song? Making a backup of the song first is recommended.") != 1)
+	if (okBox(2, "System request", "Are you sure you want to trim the song? Making a backup of the song first is recommended.", NULL) != 1)
 		return;
 
 	mouseAnimOn();
