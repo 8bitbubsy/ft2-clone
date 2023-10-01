@@ -14,7 +14,7 @@
 		</data>
 		<key>Resources/Info.plist</key>
 		<data>
-		MP8SsWNX9fsyVRo11YwxKezmPug=
+		O0+yH6th+YqPy5qBlROGAOJkywk=
 		</data>
 		<key>Resources/License.txt</key>
 		<data>
@@ -46,22 +46,22 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			bOToHmbN+xx6t5JDrzQswLbnEZM=
+			S50t60okfb3/ykWKavFC3tnkGgE=
 			</data>
 			<key>hash2</key>
 			<data>
-			2yPzeIi/yrrj/kXEyXW4yRLtxPe1iXPO7joeTUBcZaM=
+			uPZQOi25pO/BZWjREOhxmXsoreSNJyZrNOnVJ/TyYzs=
 			</data>
 		</dict>
 		<key>Headers/SDL_atomic.h</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			FTCyRgMQ1IzdGYV2XbCDSQ7JNec=
+			yrv6uC/CjYpeCteZDUbBFr2nwiU=
 			</data>
 			<key>hash2</key>
 			<data>
-			4iFngSAorzMM520V+2V1sriu9mL12sLlPrhNfgT12Ck=
+			Mrfc980NeBAvQ5I040V8xusL6cHBcFfPaA9B2prA4dw=
 			</data>
 		</dict>
 		<key>Headers/SDL_audio.h</key>
@@ -255,11 +255,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			M/nqf8jyrXJ9IrgLrVffOZG4Jlo=
+			SWTHcoPzInj/HwBHNEFfQGmL6Dw=
 			</data>
 			<key>hash2</key>
 			<data>
-			nCUBVEvtWTQ2Ab/H1a9n4I68tT572DhjMnne+N52bwY=
+			BQwW6YWVYXbaOLc9Id+ZjuKHs2VIfcSjM/Oo9JBI6Yk=
 			</data>
 		</dict>
 		<key>Headers/SDL_joystick.h</key>
@@ -552,22 +552,22 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			sNcVNpmlpcvsqJmBOwyg6hjTWQ8=
+			5yyytzTD1eS/K13NSzW6faLAUlA=
 			</data>
 			<key>hash2</key>
 			<data>
-			1EY74HfczRb8zZ3CZfcoinmI8nVMwFaoIfcvG7kPBEE=
+			+ljWDPQHFdheD/Z6QxHzbpNQVg/XVlqx5+B3ovMbIF0=
 			</data>
 		</dict>
 		<key>Headers/SDL_revision.h</key>
 		<dict>
 			<key>hash</key>
 			<data>
-			sRLTPAglYSZ19Pdm+afA2j47taM=
+			ACsjWsXuUQwHVlG5aPLRf54/dIQ=
 			</data>
 			<key>hash2</key>
 			<data>
-			Fo7p72CdM/uZzX9nxLeCot/MrKYwSKmo0ESISIMTIOI=
+			FdzvRtvvNjmf4LikKB9CV7MkieGdfgsJbfoN4kxwtqs=
 			</data>
 		</dict>
 		<key>Headers/SDL_rwops.h</key>
@@ -706,11 +706,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			BrMh/0kZeBHu8Xr+/5hS8IHcMfU=
+			RxJkcIBwFx85nADiCWZgVRs8k7g=
 			</data>
 			<key>hash2</key>
 			<data>
-			tIqaCIDNMsT9rQ9arELIo8WVF04pSMBtxaavylyyrK4=
+			0lwD8QVtsPTM6vhZbDu05D8v6so3iTdjrj3mVjcfhWA=
 			</data>
 		</dict>
 		<key>Headers/SDL_video.h</key>
@@ -783,11 +783,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			MP8SsWNX9fsyVRo11YwxKezmPug=
+			O0+yH6th+YqPy5qBlROGAOJkywk=
 			</data>
 			<key>hash2</key>
 			<data>
-			JS+9bRfZuLgojqjIgCYRqSXUyJ5L/MJO+Cyss5R17Rs=
+			sIWVXC/W1heu51j6IrNeI7fFPvxyVxJPCvMlZ8YpVFA=
 			</data>
 		</dict>
 		<key>Resources/License.txt</key>
