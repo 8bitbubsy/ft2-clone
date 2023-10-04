@@ -774,30 +774,26 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 		case SDLK_a:
 		{
-#ifdef __APPLE__
-			if (keyb.leftAltPressed || keyb.leftCommandPressed)
-#else
-			if (keyb.leftAltPressed)
-#endif
+			if (ui.sampleEditorShown)
 			{
-				if (ui.sampleEditorShown)
-					rangeAll();
 #ifdef __APPLE__
-				else if (!keyb.leftCommandPressed) // yuck!
+				if (keyb.leftCtrlPressed || keyb.leftAltPressed || keyb.leftCommandPressed)
 #else
-				else
+				if (keyb.leftCtrlPressed || keyb.leftAltPressed)
 #endif
-					showAdvEdit();
-
+				{
+					rangeAll();
+					return true;
+				}
+			}
+			else if (keyb.leftCtrlPressed)
+			{
+				showAdvEdit();
 				return true;
 			}
 			else if (keyb.leftAltPressed)
 			{
-				if (ui.sampleEditorShown)
-					rangeAll();
-				else
-					jumpToChannel(8);
-
+				jumpToChannel(8);
 				return true;
 			}
 		}
