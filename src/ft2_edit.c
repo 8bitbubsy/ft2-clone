@@ -1577,7 +1577,7 @@ void copyBlock(void)
 	note_t *p = pattern[curPattern];
 	if (p != NULL && markY1 >= 0 && markX1 >= 0 && markX2 >= 0 && markY2 >= 0)
 	{
-		for (int32_t x = markX1; x < markX2; x++)
+		for (int32_t x = markX1; x <= markX2; x++)
 		{
 			for (int32_t y = markY1; y < markY2; y++)
 				copyNote(&p[(y * MAX_CHANNELS) + x], &blkCopyBuff[((y - markY1) * MAX_CHANNELS) + (x - markX1)]);
