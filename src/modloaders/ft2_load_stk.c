@@ -92,12 +92,15 @@ bool loadSTK(FILE *f, uint32_t filesize)
 
 	if (h.CIAVal != 120) // 120 is a special case and means 50Hz (125BPM)
 	{
+		if (h.CIAVal > 220)
+			h.CIAVal = 220;
+
 		// convert UST tempo to BPM
 		uint16_t ciaPeriod = (240 - h.CIAVal) * 122;
-		double dHz = 709379.0 / ciaPeriod;
-		int32_t BPM = (int32_t)((dHz * 2.5) + 0.5);
+		
+		double dHz = 709379.0 / (ciaPeriod+1); // +1, CIA triggers on underflow
 
-		songTmp.BPM = (uint16_t)BPM;
+		songTmp.BPM = (uint16_t)((dHz * (125.0 / 50.0)) + 0.5);
 	}
 
 	memcpy(songTmp.name, h.name, 20);
