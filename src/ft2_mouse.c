@@ -20,6 +20,7 @@
 #include "ft2_midi.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#include "ft2_keyboard.h"
 
 #define NUM_CURSORS 6
 
@@ -540,7 +541,12 @@ void mouseWheelHandler(bool directionUp)
 		if (ui.sampleEditorShown)
 		{
 			if (mouse.y >= 174 && mouse.y <= 328)
-				directionUp ? mouseZoomSampleDataIn() : mouseZoomSampleDataOut();
+			{
+				if (keyb.leftShiftPressed)
+					directionUp ? scrollSampleDataLeft() : scrollSampleDataRight();
+				else
+					directionUp ? mouseZoomSampleDataIn() : mouseZoomSampleDataOut();
+			}
 		}
 		else if (ui.patternEditorShown)
 		{

@@ -532,7 +532,7 @@ Alt/Ctrl+A @T160Range all.
 >Alt/Ctrl+C @T160Copy.
 >Alt/Ctrl+V @T160Paste.
 >Alt+R @T160Crop.
->Mouse wheel @T160Zoom sample data in/out.
+>Mouse wheel @T160Zoom sample data in/out (shift+wheel = scroll).
 
 END
 ;***************************************************************************
