@@ -694,14 +694,8 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 	}
 	else if (fileIsModule(fullPathU))
 	{
-		SDL_RestoreWindow(video.window);
-
 		if (songModifiedCheck && song.isModified)
 		{
-			// de-minimize window and set focus so that the user sees the message box
-			SDL_RestoreWindow(video.window);
-			SDL_RaiseWindow(video.window);
-
 			if (!askUnsavedChanges(ASK_TYPE_LOAD_SONG))
 			{
 				free(fullPathU);

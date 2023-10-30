@@ -220,9 +220,6 @@ bool handleSingleInstancing(int32_t argc, char **argv)
 
 static void handleSysMsg(SDL_Event inputEvent)
 {
-	if (inputEvent.type != SDL_SYSWMEVENT)
-		return;
-
 	SDL_SysWMmsg *wmMsg = inputEvent.syswm.msg;
 	if (wmMsg->subsystem == SDL_SYSWM_WINDOWS && wmMsg->msg.win.msg == SYSMSG_FILE_ARG)
 	{
@@ -233,16 +230,19 @@ static void handleSysMsg(SDL_Event inputEvent)
 			if (sharedMemBuf != NULL)
 			{
 				editor.autoPlayOnDrop = true;
+
+				if (video.window != NULL && !video.fullscreen)
+				{
+					if (SDL_GetWindowFlags(video.window) & SDL_WINDOW_MINIMIZED)
+						SDL_RestoreWindow(video.window);
+
+					SDL_RaiseWindow(video.window);
+				}
+
 				loadDroppedFile((char *)sharedMemBuf, true);
 
 				UnmapViewOfFile(sharedMemBuf);
 				sharedMemBuf = NULL;
-
-				if (video.window != NULL)
-				{
-					SDL_RestoreWindow(video.window);
-					SDL_RaiseWindow(video.window);
-				}
 			}
 
 			CloseHandle(hMapFile);
@@ -419,7 +419,8 @@ static void handleSDLEvents(void)
 		}
 
 #ifdef _WIN32
-		handleSysMsg(event);
+		if (event.type == SDL_SYSWMEVENT)
+			handleSysMsg(event);
 #endif
 		// text input when editing texts
 		if (event.type == SDL_TEXTINPUT)
@@ -452,11 +453,17 @@ static void handleSDLEvents(void)
 		else if (event.type == SDL_DROPFILE)
 		{
 			editor.autoPlayOnDrop = false;
+
+			if (!video.fullscreen)
+			{
+				if (SDL_GetWindowFlags(video.window) & SDL_WINDOW_MINIMIZED)
+					SDL_RestoreWindow(video.window);
+
+				SDL_RaiseWindow(video.window);
+			}
+
 			loadDroppedFile(event.drop.file, true);
 			SDL_free(event.drop.file);
-
-			SDL_RestoreWindow(video.window);
-			SDL_RaiseWindow(video.window);
 		}
 		else if (event.type == SDL_QUIT)
 		{
@@ -475,7 +482,9 @@ static void handleSDLEvents(void)
 				if (!video.fullscreen)
 				{
 					// de-minimize window and set focus so that the user sees the message box
-					SDL_RestoreWindow(video.window);
+					if (SDL_GetWindowFlags(video.window) & SDL_WINDOW_MINIMIZED)
+						SDL_RestoreWindow(video.window);
+
 					SDL_RaiseWindow(video.window);
 				}
 
