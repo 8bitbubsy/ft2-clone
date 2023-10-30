@@ -67,7 +67,7 @@ const uint8_t vibTab[32] = // for normal vibrato/tremolo
 	255,253,250,244,235,224,212,197,180,161,141,120, 97, 74, 49, 24
 };
 
-const uint16_t amigaPeriod[8 * 12] = // used for .MOD loading/saving
+const uint16_t modPeriods[8 * 12] = // used for .MOD loading/saving
 {
 	6848, 6464, 6096, 5760, 5424, 5120, 4832, 4560, 4304, 4064, 3840, 3624,
 	3424, 3232, 3048, 2880, 2712, 2560, 2416, 2280, 2152, 2032, 1920, 1812,

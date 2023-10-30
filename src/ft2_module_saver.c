@@ -549,8 +549,8 @@ static bool saveMOD(UNICHAR *filenameU)
 					}
 					else
 					{
-						modPattData[offs+0] = (inst & 0xF0) | ((amigaPeriod[note-1] >> 8) & 0x0F);
-						modPattData[offs+1] = amigaPeriod[note-1] & 0xFF;
+						modPattData[offs+0] = (inst & 0xF0) | ((modPeriods[note-1] >> 8) & 0x0F);
+						modPattData[offs+1] = modPeriods[note-1] & 0xFF;
 					}
 
 					// FT2 bugfix: if effect is overflowing (0xF in .MOD), set effect and param to 0

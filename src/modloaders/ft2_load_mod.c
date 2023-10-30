@@ -123,7 +123,7 @@ bool loadMOD(FILE *f, uint32_t filesize)
 					uint16_t period = ((bytes[0] & 0x0F) << 8) | bytes[1];
 					for (i = 0; i < 8*12; i++)
 					{
-						if (period >= amigaPeriod[i])
+						if (period >= modPeriods[i])
 						{
 							p->note = (uint8_t)i + 1;
 							break;
@@ -181,7 +181,7 @@ bool loadMOD(FILE *f, uint32_t filesize)
 					uint16_t period = ((bytes[0] & 0x0F) << 8) | bytes[1];
 					for (i = 0; i < 8*12; i++)
 					{
-						if (period >= amigaPeriod[i])
+						if (period >= modPeriods[i])
 						{
 							p->note = (uint8_t)i + 1;
 							break;
