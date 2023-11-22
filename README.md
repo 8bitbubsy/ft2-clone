@@ -1,7 +1,7 @@
 # ft2-clone
 Fasttracker II clone for Windows/macOS/Linux
 
-Aims to be a **highly accurate** clone of the classic Fasttracker II software for MS-DOS. \
+Aims to be a highly accurate clone of the classic Fasttracker II software for MS-DOS. \
 The XM player itself has been directly ported from the original source code, for maximum accuracy. \
 The code is partly my own, partly based on the original FT2 code.
 
@@ -37,6 +37,6 @@ Keep in mind that the program may fail to compile on Linux, depending on your di
 Please don't nag me about it, and try to use the Linux packages linked to from [16-bits.org](https://16-bits.org/ft2.php) instead.
 
 PS: The source code is quite hackish and hardcoded. \
-My first priority is to make an _accurate_ 1:1 clone, and not to make flexible and easily modifiable code.
+My first priority is to make an accurate clone, and not to make flexible and easily modifiable code.
 
 Big parts of the code (except GUI) are directly ported from the original FT2 source code, with permission to use a BSD 3-Clause license.
