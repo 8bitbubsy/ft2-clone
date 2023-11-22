@@ -14,8 +14,8 @@ Linux binaries can be found [here](https://repology.org/project/fasttracker2/ver
 If these don't work for you, you'll have to compile the code manually.
 
 # Improvements over original DOS version
-- The channel resampler/mixer uses floating-point arithmetics for less errors, and has a high-quality interpolation option (8-point windowed-sinc)
-- The sample loader supports AIFF samples and more WAV types. It will also attempt to tune the sample (finetune/rel. note) to its playback frequency on load.
+- The channel resampler/mixer uses floating-point arithmetics for less errors, and has a high-quality interpolation option (8-point and 16-point windowed-sinc)
+- The sample loader supports WAV/FLAC/AIFF samples. It will also attempt to tune the sample (finetune and rel. note) to its playback frequency on load.
 - It contains a new "Trim" feature, which will remove unused stuff to potentially make the module smaller
 - Drag n' drop of modules/samples
 - The waveform display in the sample editor shows peak based data when zoomed out
