@@ -15,7 +15,7 @@ If these don't work for you, you'll have to compile the code manually.
 
 # Improvements over original DOS version
 - The channel resampler/mixer uses floating-point arithmetics for less errors, and has a high-quality interpolation option (8-point and 16-point windowed-sinc)
-- The sample loader supports WAV/FLAC/AIFF samples. It will also attempt to tune the sample (finetune and rel. note) to its playback frequency on load.
+- The sample loader supports FLAC/AIFF samples and more WAV types than original FT2. It will also attempt to tune the sample (finetune and rel. note) to its playback frequency on load.
 - It contains a new "Trim" feature, which will remove unused stuff to potentially make the module smaller
 - Drag n' drop of modules/samples
 - The waveform display in the sample editor shows peak based data when zoomed out
