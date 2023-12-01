@@ -758,12 +758,12 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 {
 	bool envUpdate;
 	int8_t point;
-	int16_t tick;
+	int32_t tick;
 
 	instr_t *ins = ch->instrPtr;
 	assert(ins != NULL);
 
-	// (envelope precision has been updated from x.8fp to x.16fp)
+	// envelope precision has been upgraded from .8fp to single-precision float
 
 	// *** VOLUME ENVELOPE ***
 	if (ins->volEnvFlags & ENV_ENABLED)
@@ -784,23 +784,25 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 					point--;
 
 					tick -= ins->volEnvPoints[point][0];
-					if (tick == 0)
+					if (tick == 0) // FT2 doesn't test for <= 0 here
 					{
 						envUpdate = false;
 						break;
 					}
 
-					if (ins->volEnvPoints[point+1][0] <= ins->volEnvPoints[point][0])
+					const int32_t xDiff = ins->volEnvPoints[point+1][0] - ins->volEnvPoints[point+0][0];
+					if (xDiff <= 0)
 					{
 						envUpdate = true;
 						break;
 					}
 
-					int32_t delta = (int8_t)((ins->volEnvPoints[point+1][1] - ins->volEnvPoints[point][1]) & 0xFF) << 16;
-					delta /= (ins->volEnvPoints[point+1][0]-ins->volEnvPoints[point][0]);
+					const int32_t y0 = ins->volEnvPoints[point+0][1] & 0xFF;
+					const int32_t y1 = ins->volEnvPoints[point+1][1] & 0xFF;
+					const int32_t yDiff = y1 - y0;
 
-					ch->volEnvDelta = delta;
-					ch->volEnvValue = (ch->volEnvDelta * (tick-1)) + ((int8_t)(ins->volEnvPoints[point][1] & 0xFF) << 16);
+					ch->fVolEnvDelta = (float)yDiff / (float)xDiff;
+					ch->fVolEnvValue = (float)y0 + (ch->fVolEnvDelta * (tick-1));
 
 					point++;
 
@@ -817,8 +819,8 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 
 		if (envUpdate)
 		{
-			ch->volEnvDelta = 0;
-			ch->volEnvValue = (int8_t)(ins->volEnvPoints[point][1] & 0xFF) << 16;
+			ch->fVolEnvDelta = 0.0f;
+			ch->fVolEnvValue = (float)(int32_t)(ins->volEnvPoints[point][1] & 0xFF);
 		}
 
 		if (point >= ins->volEnvLength)
@@ -832,7 +834,7 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 	}
 
 	// *** PANNING ENVELOPE ***
-	if (ins->volEnvFlags & ENV_SUSTAIN) // FT2 PLAYER BUG: Should've been ins->panEnvFlags
+	if (ins->volEnvFlags & ENV_SUSTAIN) // FT2 REPLAYER BUG: Should've been ins->panEnvFlags
 	{
 		ch->panEnvTick = param-1;
 
@@ -850,23 +852,25 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 					point--;
 
 					tick -= ins->panEnvPoints[point][0];
-					if (tick == 0)
+					if (tick == 0) // FT2 doesn't test for <= 0 here
 					{
 						envUpdate = false;
 						break;
 					}
 
-					if (ins->panEnvPoints[point+1][0] <= ins->panEnvPoints[point][0])
+					const int32_t xDiff = ins->panEnvPoints[point+1][0] - ins->panEnvPoints[point+0][0];
+					if (xDiff <= 0)
 					{
 						envUpdate = true;
 						break;
 					}
 
-					int32_t delta = (int8_t)((ins->panEnvPoints[point+1][1] - ins->panEnvPoints[point][1]) & 0xFF) << 16;
-					delta /= (ins->panEnvPoints[point+1][0]-ins->panEnvPoints[point][0]);
+					const int32_t y0 = ins->panEnvPoints[point+0][1] & 0xFF;
+					const int32_t y1 = ins->panEnvPoints[point+1][1] & 0xFF;
+					const int32_t yDiff = y1 - y0;
 
-					ch->panEnvDelta = delta;
-					ch->panEnvValue = (ch->panEnvDelta * (tick-1)) + ((int8_t)(ins->panEnvPoints[point][1] & 0xFF) << 16);
+					ch->fPanEnvDelta = (float)yDiff / (float)xDiff;
+					ch->fPanEnvValue = (float)y0 + (ch->fPanEnvDelta * (tick-1));
 
 					point++;
 
@@ -883,8 +887,8 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 
 		if (envUpdate)
 		{
-			ch->panEnvDelta = 0;
-			ch->panEnvValue = (int8_t)(ins->panEnvPoints[point][1] & 0xFF) << 16;
+			ch->fPanEnvDelta = 0.0f;
+			ch->fPanEnvValue = (float)(int32_t)(ins->panEnvPoints[point][1] & 0xFF);
 		}
 
 		if (point >= ins->panEnvLength)
@@ -1375,8 +1379,7 @@ static void updateChannel(channel_t *ch)
 {
 	bool envInterpolateFlag, envDidInterpolate;
 	uint8_t envPos;
-	int32_t envVal;
-	double dVol;
+	float fEnvVal, fVol;
 
 	instr_t *ins = ch->instrPtr;
 	assert(ins != NULL);
@@ -1399,10 +1402,10 @@ static void updateChannel(channel_t *ch)
 
 	if (!ch->mute)
 	{
-		// (envelope precision has been updated from x.8fp to x.16fp)
+		// envelope precision has been upgraded from .8fp to single-precision float
 
 		// *** VOLUME ENVELOPE ***
-		envVal = 0;
+		fEnvVal = 0.0f;
 		if (ins->volEnvFlags & ENV_ENABLED)
 		{
 			envDidInterpolate = false;
@@ -1410,7 +1413,7 @@ static void updateChannel(channel_t *ch)
 
 			if (++ch->volEnvTick == ins->volEnvPoints[envPos][0])
 			{
-				ch->volEnvValue = (int8_t)(ins->volEnvPoints[envPos][1] & 0xFF) << 16;
+				ch->fVolEnvValue = (float)(int32_t)(ins->volEnvPoints[envPos][1] & 0xFF);
 
 				envPos++;
 				if (ins->volEnvFlags & ENV_LOOP)
@@ -1423,7 +1426,7 @@ static void updateChannel(channel_t *ch)
 						{
 							envPos = ins->volEnvLoopStart;
 							ch->volEnvTick = ins->volEnvPoints[envPos][0];
-							ch->volEnvValue = (int8_t)(ins->volEnvPoints[envPos][1] & 0xFF) << 16;
+							ch->fVolEnvValue = (float)(int32_t)(ins->volEnvPoints[envPos][1] & 0xFF);
 						}
 					}
 
@@ -1438,7 +1441,7 @@ static void updateChannel(channel_t *ch)
 						if (envPos-1 == ins->volEnvSustain)
 						{
 							envPos--;
-							ch->volEnvDelta = 0;
+							ch->fVolEnvDelta = 0.0f;
 							envInterpolateFlag = false;
 						}
 					}
@@ -1447,44 +1450,49 @@ static void updateChannel(channel_t *ch)
 					{
 						ch->volEnvPos = envPos;
 
-						ch->volEnvDelta = 0;
-						if (ins->volEnvPoints[envPos][0] > ins->volEnvPoints[envPos-1][0])
-						{
-							int32_t delta = (int8_t)((ins->volEnvPoints[envPos][1] - ins->volEnvPoints[envPos-1][1]) & 0xFF) << 16;
-							delta /= (ins->volEnvPoints[envPos][0]-ins->volEnvPoints[envPos-1][0]);
-							ch->volEnvDelta = delta;
+						const int32_t x0 = ins->volEnvPoints[envPos-1][0];
+						const int32_t x1 = ins->volEnvPoints[envPos-0][0];
 
-							envVal = ch->volEnvValue;
+						const int32_t xDiff = x1 - x0;
+						if (xDiff > 0)
+						{
+							const int32_t y0 = ins->volEnvPoints[envPos-1][1] & 0xFF;
+							const int32_t y1 = ins->volEnvPoints[envPos-0][1] & 0xFF;
+
+							const int32_t yDiff = y1 - y0;
+							ch->fVolEnvDelta = (float)yDiff / (float)xDiff;
+
+							fEnvVal = ch->fVolEnvValue;
 							envDidInterpolate = true;
+						}
+						else
+						{
+							ch->fVolEnvDelta = 0.0f;
 						}
 					}
 				}
 				else
 				{
-					ch->volEnvDelta = 0;
+					ch->fVolEnvDelta = 0.0f;
 				}
 			}
 
 			if (!envDidInterpolate)
 			{
-				ch->volEnvValue += ch->volEnvDelta;
+				ch->fVolEnvValue += ch->fVolEnvDelta;
 
-				envVal = ch->volEnvValue;
-				if (envVal > 64<<16)
+				fEnvVal = ch->fVolEnvValue;
+				if (fEnvVal < 0.0f || fEnvVal > 64.0f)
 				{
-					if (envVal > 128<<16)
-						envVal = 64<<16;
-					else
-						envVal = 0;
-
-					ch->volEnvDelta = 0;
+					fEnvVal = CLAMP(fEnvVal, 0.0f, 64.0f);
+					ch->fVolEnvDelta = 0.0f;
 				}
 			}
 
 			const int32_t vol = song.globalVolume * ch->outVol * ch->fadeoutVol;
 
-			dVol = vol * (1.0 / (64.0 * 64.0 * 32768.0));
-			dVol *= envVal * (1.0 / (64.0 * (1 << 16))); // volume envelope value
+			fVol = vol * (1.0f / (64.0f * 64.0f * 32768.0f));
+			fVol *= fEnvVal * (1.0f / 64.0f); // volume envelope value
 
 			ch->status |= IS_Vol; // update mixer vol every tick when vol envelope is enabled
 		}
@@ -1492,22 +1500,20 @@ static void updateChannel(channel_t *ch)
 		{
 			const int32_t vol = song.globalVolume * ch->outVol * ch->fadeoutVol;
 
-			dVol = vol * (1.0 / (64.0 * 64.0 * 32768.0));
+			fVol = vol * (1.0f / (64.0f * 64.0f * 32768.0f));
 		}
 
-		/* FT2 doesn't clamp here, but it's actually important if you
-		** move envelope points with the mouse while playing the instrument.
-		*/
-		ch->dFinalVol = CLAMP(dVol, 0.0, 1.0);
+		// FT2 doesn't clamp the volume, but let's do it anyway
+		ch->fFinalVol = CLAMP(fVol, 0.0f, 1.0f);
 	}
 	else
 	{
-		ch->dFinalVol = 0.0;
+		ch->fFinalVol = 0.0f;
 	}
 
 	// *** PANNING ENVELOPE ***
 
-	envVal = 0;
+	fEnvVal = 0.0f;
 	if (ins->panEnvFlags & ENV_ENABLED)
 	{
 		envDidInterpolate = false;
@@ -1515,7 +1521,7 @@ static void updateChannel(channel_t *ch)
 
 		if (++ch->panEnvTick == ins->panEnvPoints[envPos][0])
 		{
-			ch->panEnvValue = (int8_t)(ins->panEnvPoints[envPos][1] & 0xFF) << 16;
+			ch->fPanEnvValue = (float)(int32_t)(ins->panEnvPoints[envPos][1] & 0xFF);
 
 			envPos++;
 			if (ins->panEnvFlags & ENV_LOOP)
@@ -1529,7 +1535,7 @@ static void updateChannel(channel_t *ch)
 						envPos = ins->panEnvLoopStart;
 
 						ch->panEnvTick = ins->panEnvPoints[envPos][0];
-						ch->panEnvValue = (int8_t)(ins->panEnvPoints[envPos][1] & 0xFF) << 16;
+						ch->fPanEnvValue = (float)(int32_t)(ins->panEnvPoints[envPos][1] & 0xFF);
 					}
 				}
 
@@ -1544,7 +1550,7 @@ static void updateChannel(channel_t *ch)
 					if (envPos-1 == ins->panEnvSustain)
 					{
 						envPos--;
-						ch->panEnvDelta = 0;
+						ch->fPanEnvDelta = 0.0f;
 						envInterpolateFlag = false;
 					}
 				}
@@ -1553,45 +1559,52 @@ static void updateChannel(channel_t *ch)
 				{
 					ch->panEnvPos = envPos;
 
-					ch->panEnvDelta = 0;
-					if (ins->panEnvPoints[envPos][0] > ins->panEnvPoints[envPos-1][0])
-					{
-						int32_t delta = (int8_t)((ins->panEnvPoints[envPos][1] - ins->panEnvPoints[envPos-1][1]) & 0xFF) << 16;
-						delta /= (ins->panEnvPoints[envPos][0]-ins->panEnvPoints[envPos-1][0]);
-						ch->panEnvDelta = delta;
+					const int32_t x0 = ins->panEnvPoints[envPos-1][0];
+					const int32_t x1 = ins->panEnvPoints[envPos-0][0];
 
-						envVal = ch->panEnvValue;
+					const int32_t xDiff = x1 - x0;
+					if (xDiff > 0)
+					{
+						const int32_t y0 = ins->panEnvPoints[envPos-1][1] & 0xFF;
+						const int32_t y1 = ins->panEnvPoints[envPos-0][1] & 0xFF;
+
+						const int32_t yDiff = y1 - y0;
+						ch->fPanEnvDelta = (float)yDiff / (float)xDiff;
+
+						fEnvVal = ch->fPanEnvValue;
 						envDidInterpolate = true;
+					}
+					else
+					{
+						ch->fPanEnvDelta = 0.0f;
 					}
 				}
 			}
 			else
 			{
-				ch->panEnvDelta = 0;
+				ch->fPanEnvDelta = 0.0f;
 			}
 		}
 
 		if (!envDidInterpolate)
 		{
-			ch->panEnvValue += ch->panEnvDelta;
+			ch->fPanEnvValue += ch->fPanEnvDelta;
 
-			envVal = ch->panEnvValue;
-			if (envVal > 64<<16)
+			fEnvVal = ch->fPanEnvValue;
+			if (fEnvVal < 0.0f || fEnvVal > 64.0f)
 			{
-				if (envVal > 128<<16)
-					envVal = 64<<16;
-				else
-					envVal = 0;
-
-				ch->panEnvDelta = 0;
+				fEnvVal = CLAMP(fEnvVal, 0.0f, 64.0f);
+				ch->fPanEnvDelta = 0.0f;
 			}
 		}
 
-		envVal -= 32<<16; // center panning envelope value
+		fEnvVal -= 32.0f; // center panning envelope value (0..64 -> -32..32)
 
-		const int32_t pan = 128 - ABS(ch->outPan-128);
-		const int32_t panAdd = (pan * envVal) >> (16+5);
-		ch->finalPan = (uint8_t)(ch->outPan + panAdd);
+		const int32_t pan = 128 - ABS(ch->outPan - 128);
+		const float fPanAdd = (pan * fEnvVal) * (1.0f / 32.0f);
+		const int32_t newPan = (int32_t)(ch->outPan + fPanAdd); // truncate here, do not round
+
+		ch->finalPan = (uint8_t)CLAMP(newPan, 0, 255);
 
 		ch->status |= IS_Pan; // update pan every tick because pan envelope is enabled
 	}
@@ -3096,7 +3109,7 @@ void stopVoices(void)
 		ch->realVol = 0;
 		ch->outVol = 0;
 		ch->oldVol = 0;
-		ch->dFinalVol = 0.0;
+		ch->fFinalVol = 0.0f;
 		ch->oldPan = 128;
 		ch->outPan = 128;
 		ch->finalPan = 128;

@@ -256,10 +256,9 @@ typedef struct channel_t
 	uint16_t volEnvTick, panEnvTick, autoVibAmp, autoVibSweep;
 	uint16_t midiVibDepth;
 	int32_t fadeoutVol, fadeoutSpeed;
-	int32_t volEnvDelta, panEnvDelta, volEnvValue, panEnvValue;
 	int32_t oldFinalPeriod, smpStartPos;
 
-	double dFinalVol; // 0.0 .. 1.0
+	float fFinalVol, fVolEnvDelta, fPanEnvDelta, fVolEnvValue, fPanEnvValue;
 
 	sample_t *smpPtr;
 	instr_t *instrPtr;

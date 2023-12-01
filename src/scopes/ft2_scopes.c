@@ -78,7 +78,7 @@ static void setChannel(int32_t chNr, bool on)
 		ch->realVol = 0;
 		ch->outVol = 0;
 		ch->oldVol = 0;
-		ch->dFinalVol = 0.0;
+		ch->fFinalVol = 0.0f;
 		ch->outPan = 128;
 		ch->oldPan = 128;
 		ch->finalPan = 128;

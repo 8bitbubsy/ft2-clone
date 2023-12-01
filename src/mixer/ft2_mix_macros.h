@@ -383,8 +383,8 @@
 #define LIMIT_MIX_NUM_RAMP \
 	if (v->volumeRampLength == 0) \
 	{ \
-		fVolumeLDelta = 0.0; \
-		fVolumeRDelta = 0.0; \
+		fVolumeLDelta = 0.0f; \
+		fVolumeRDelta = 0.0f; \
 		\
 		if (v->isFadeOutVoice) \
 		{ \
@@ -403,7 +403,7 @@
 #define LIMIT_MIX_NUM_MONO_RAMP \
 	if (v->volumeRampLength == 0) \
 	{ \
-		fVolumeLDelta = 0.0; \
+		fVolumeLDelta = 0.0f; \
 		if (v->isFadeOutVoice) \
 		{ \
 			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \

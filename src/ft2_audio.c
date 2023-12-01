@@ -26,7 +26,7 @@
 static int32_t smpShiftValue;
 static uint32_t oldAudioFreq, tickTimeLenInt;
 static uint64_t tickTimeLenFrac;
-static double dAudioNormalizeMul, dSqrtPanningTable[256+1];
+static float fAudioNormalizeMul, fSqrtPanningTable[256+1];
 static voice_t voice[MAX_CHANNELS * 2];
 
 // globalized
@@ -115,7 +115,7 @@ void setAudioAmp(int16_t amp, int16_t masterVol, bool bitDepth32Flag)
 	if (!bitDepth32Flag)
 		dAmp *= 32768.0;
 
-	dAudioNormalizeMul = dAmp;
+	fAudioNormalizeMul = (float)dAmp;
 }
 
 void decreaseMasterVol(void)
@@ -196,7 +196,7 @@ void audioSetInterpolationType(uint8_t interpolationType)
 	lockMixerCallback();
 	audio.interpolationType = interpolationType;
 
-	// set sinc polyphase LUT pointers
+	// set sinc LUT pointers
 	if (config.interpolation == INTERPOLATION_SINC8)
 	{
 		fKaiserSinc = fKaiserSinc_8;
@@ -217,15 +217,15 @@ void calcPanningTable(void)
 {
 	// same formula as FT2's panning table (with 0.0 .. 1.0 scale)
 	for (int32_t i = 0; i <= 256; i++)
-		dSqrtPanningTable[i] = sqrt(i / 256.0);
+		fSqrtPanningTable[i] = (float)sqrt(i / 256.0);
 }
 
 static void voiceUpdateVolumes(int32_t i, uint8_t status)
 {
 	voice_t *v = &voice[i];
 
-	v->fTargetVolumeL = (float)(v->dVolume * dSqrtPanningTable[256-v->panning]);
-	v->fTargetVolumeR = (float)(v->dVolume * dSqrtPanningTable[    v->panning]);
+	v->fTargetVolumeL = v->fVolume * fSqrtPanningTable[256-v->panning];
+	v->fTargetVolumeR = v->fVolume * fSqrtPanningTable[    v->panning];
 
 	if (!audio.volumeRampingFlag)
 	{
@@ -250,7 +250,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 
 			voice_t *f = &voice[MAX_CHANNELS+i];
 
-			*f = *v; // store current voice in respective fadeout ramp voice
+			*f = *v; // copy current voice to new fadeout-ramp voice
 
 			const float fVolumeLDiff = 0.0f - f->fCurrVolumeL;
 			const float fVolumeRDiff = 0.0f - f->fCurrVolumeR;
@@ -365,10 +365,10 @@ void updateVoices(void)
 
 		if (status & IS_Vol)
 		{
-			v->dVolume = ch->dFinalVol;
+			v->fVolume = ch->fFinalVol;
 
 			// set scope volume
-			const int32_t scopeVolume = (int32_t)((SCOPE_HEIGHT * ch->dFinalVol) + 0.5); // rounded
+			const int32_t scopeVolume = (int32_t)((SCOPE_HEIGHT * ch->fFinalVol) + 0.5f); // rounded
 			v->scopeVolume = (uint8_t)scopeVolume;
 		}
 
@@ -387,16 +387,16 @@ void updateVoices(void)
 
 				if (ch->finalPeriod == 0) // in FT2, period 0 -> delta 0
 				{
-					v->scopeDelta = 0;
 					v->oldDelta = 0;
 					v->fSincLUT = fKaiserSinc;
+					v->scopeDelta = 0;
 				}
 				else
 				{
 					const double dHz = dPeriod2Hz(ch->finalPeriod);
 					const uintCPUWord_t delta = v->oldDelta = (intCPUWord_t)((dHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
 
-					// decide which polyphase sinc LUT to use according to resampling ratio
+					// decide which sinc LUT to use according to the resampling ratio
 					if (delta <= (uintCPUWord_t)(1.1875 * MIXER_FRAC_SCALE))
 						v->fSincLUT = fKaiserSinc;
 					else if (delta <= (uintCPUWord_t)(1.5 * MIXER_FRAC_SCALE))
@@ -418,18 +418,21 @@ void updateVoices(void)
 	}
 }
 
-static void sendSamples16BitStereo(uint8_t *stream, uint32_t sampleBlockLength)
+static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 {
-	int16_t *streamPointer16 = (int16_t *)stream;
+	int16_t *streamPtr16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
-		int32_t L = (int32_t)((double)audio.fMixBufferL[i] * dAudioNormalizeMul);
-		CLAMP16(L);
-		*streamPointer16++ = (int16_t)L;
+		// TODO: This could use dithering (a proper implementation, that is...)
 
-		int32_t R = (int32_t)((double)audio.fMixBufferR[i] * dAudioNormalizeMul);
+		int32_t L = (int32_t)(audio.fMixBufferL[i] * fAudioNormalizeMul);
+		int32_t R = (int32_t)(audio.fMixBufferR[i] * fAudioNormalizeMul);
+
+		CLAMP16(L);
 		CLAMP16(R);
-		*streamPointer16++ = (int16_t)R;
+
+		*streamPtr16++ = (int16_t)L;
+		*streamPtr16++ = (int16_t)R;
 
 		// clear what we read from the mixing buffer
 		audio.fMixBufferL[i] = 0.0f;
@@ -437,18 +440,16 @@ static void sendSamples16BitStereo(uint8_t *stream, uint32_t sampleBlockLength)
 	}
 }
 
-static void sendSamples32BitFloatStereo(uint8_t *stream, uint32_t sampleBlockLength)
+static void sendSamples32BitFloatStereo(void *stream, uint32_t sampleBlockLength)
 {
-	float *fStreamPointer32 = (float *)stream;
+	float *fStreamPtr32 = (float *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
-		double dL = (double)audio.fMixBufferL[i] * dAudioNormalizeMul;
-		dL = CLAMP(dL, -1.0, 1.0);
-		*fStreamPointer32++ = (float)dL;
+		const float fL = audio.fMixBufferL[i] * fAudioNormalizeMul;
+		const float fR = audio.fMixBufferR[i] * fAudioNormalizeMul;
 
-		double dR = (double)audio.fMixBufferR[i] * dAudioNormalizeMul;
-		dR = CLAMP(dR, -1.0, 1.0);
-		*fStreamPointer32++ = (float)dR;
+		*fStreamPtr32++ = CLAMP(fL, -1.0f, 1.0f);
+		*fStreamPtr32++ = CLAMP(fR, -1.0f, 1.0f);
 
 		// clear what we read from the mixing buffer
 		audio.fMixBufferL[i] = 0.0f;
@@ -495,7 +496,7 @@ static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 }
 
 // used for song-to-WAV renderer
-void mixReplayerTickToBuffer(uint32_t samplesToMix, uint8_t *stream, uint8_t bitDepth)
+void mixReplayerTickToBuffer(uint32_t samplesToMix, void *stream, uint8_t bitDepth)
 {
 	doChannelMixing(0, samplesToMix);
 
