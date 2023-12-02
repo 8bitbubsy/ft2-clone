@@ -240,19 +240,19 @@ typedef struct instr_t
 
 typedef struct channel_t
 {
-	bool keyOff, channelOff, mute;
+	bool keyOff, channelOff, mute, portaSemitoneSlides;
 	volatile uint8_t status, tmpStatus;
 	int8_t relativeNote, finetune;
-	uint8_t smpNum, instrNum, efxData, efx, smpOffset, tremorSave, tremorPos;
-	uint8_t globVolSlideSpeed, panningSlideSpeed, waveCtrl, portaDirection;
-	uint8_t glissFunk, vibPos, tremPos, vibSpeed, vibDepth, tremSpeed, tremDepth;
-	uint8_t jumpToRow, patLoopCounter, volSlideSpeed, fVolSlideUpSpeed, fVolSlideDownSpeed;
-	uint8_t fPortaUpSpeed, fPortaDownSpeed, ePortaUpSpeed, ePortaDownSpeed;
-	uint8_t portaUpSpeed, portaDownSpeed, retrigSpeed, retrigCnt, retrigVol;
+	uint8_t smpNum, instrNum, efxData, efx, sampleOffset, tremorParam, tremorPos;
+	uint8_t globVolSlideSpeed, panningSlideSpeed, vibTremCtrl, portamentoDirection;
+	uint8_t vibratoPos, tremoloPos, vibratoSpeed, vibratoDepth, tremoloSpeed, tremoloDepth;
+	uint8_t patternLoopStartRow, patternLoopCounter, volSlideSpeed, fVolSlideUpSpeed, fVolSlideDownSpeed;
+	uint8_t fPitchSlideUpSpeed, fPitchSlideDownSpeed, efPitchSlideUpSpeed, efPitchSlideDownSpeed;
+	uint8_t pitchSlideUpSpeed, pitchSlideDownSpeed, noteRetrigSpeed, noteRetrigCounter, noteRetrigVol;
 	uint8_t volColumnVol, noteNum, panEnvPos, autoVibPos, volEnvPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
 	int16_t midiPitch;
-	uint16_t outPeriod, realPeriod, finalPeriod, noteData, wantPeriod, portaSpeed;
+	uint16_t outPeriod, realPeriod, finalPeriod, copyOfInstrAndNote, portamentoTargetPeriod, portamentoSpeed;
 	uint16_t volEnvTick, panEnvTick, autoVibAmp, autoVibSweep;
 	uint16_t midiVibDepth;
 	int32_t fadeoutVol, fadeoutSpeed;
@@ -281,7 +281,6 @@ typedef struct song_t
 double getSampleC4Rate(sample_t *s);
 
 void setNewSongPos(int32_t pos);
-void resetReplayerState(void);
 
 void fixString(char *str, int32_t lastChrPos); // removes leading spaces and 0x1A chars
 void fixSongName(void);

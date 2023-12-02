@@ -17,7 +17,7 @@ const uint16_t ptPeriods[3 * 12] =
 	214,202,190,180,170,160,151,143,135,127,120,113
 };
 
-const uint8_t arpTab[256] =
+const uint8_t arpeggioTab[256] =
 {
 	0,1,2,0,1,2,0,1,2,0,1,2,0,1,2,0,
 	
@@ -61,7 +61,7 @@ const int8_t autoVibSineTab[256] =
 	 24,  23,  22,  20,  19,  17,  16,  14,  12,  11,   9,   8,   6,   5,   3,   2
 };
 
-const uint8_t vibTab[32] = // for normal vibrato/tremolo
+const uint8_t vibratoTab[32] = // for normal vibrato/tremolo
 {
 	  0, 24, 49, 74, 97,120,141,161,180,197,212,224,235,244,250,253,
 	255,253,250,244,235,224,212,197,180,161,141,120, 97, 74, 49, 24
@@ -325,9 +325,10 @@ const uint16_t amigaPeriods[1936] = // bit-exact to FT2 table
 	   36,    35,    35,    35,    35,    35,    35,    35,    35,    34,    34,    34,    34,    34,    34,    34,
 	   34,    33,    33,    33,    33,    33,    33,    33,    33,    32,    32,    32,    32,    32,    32,    32,
 	   32,    32,    32,    31,    31,    31,    31,    31,    31,    31,    31,    30,    30,    30,    30,    30,
-	   30,    30,    30,    30,    30,    29,    29,    29,    29,    29,    29,    29,    29,    29,    29,    22,
-	   16,     8,     0,    16,    32,    24,    16,     8,     0,    16,    32,    24,    16,     8,     0,     0
-	   // the last 17 values are off (but identical to FT2) because of a bug in how FT2 calculates this table
+	   30,    30,    30,    30,    30,    29,    29,    29,    29,    29,    29,    29,    29,    29,    29,
+
+	   // these last values are wrong (but identical to FT2) because of a bug in how FT2 calculates this table
+	   22, 16, 8, 0, 16, 32, 24, 16, 8, 0, 16, 32, 24, 16, 8, 0, 0
 };
 
 /* ----------------------------------------------------------------------- */

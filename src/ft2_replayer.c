@@ -70,6 +70,31 @@ void fixInstrAndSampleNames(int16_t insNum)
 	}
 }
 
+void resetReplayerState(void)
+{
+	song.pattDelTime = song.pattDelTime2 = 0;
+	song.posJumpFlag = false;
+	song.pBreakPos = 0;
+	song.pBreakFlag = false;
+
+	channel_t *ch = channel;
+	for (int32_t i = 0; i < song.numChannels; i++, ch++)
+	{
+		ch->patternLoopStartRow = 0;
+		ch->patternLoopCounter = 0;
+	}
+	
+	// reset global volume (if song was playing)
+	if (songPlaying)
+	{
+		song.globalVolume = 64;
+
+		ch = channel;
+		for (int32_t i = 0; i < song.numChannels; i++, ch++)
+			ch->status |= IS_Vol;
+	}
+}
+
 void resetChannels(void)
 {
 	const bool audioWasntLocked = !audio.locked;
@@ -287,7 +312,7 @@ double getSampleC4Rate(sample_t *s)
 		return -1; // shouldn't happen (just in case...)
 
 	if (note >= (10*12)-1)
-		return -1; // B-9 (after relativeTone add) = illegal! (won't play in replayer)
+		return -1; // B-9 (after relativeNote calculation) = illegal! (won't play in replayer)
 
 	const int32_t C4Period = (note << 4) + (((int8_t)s->finetune >> 3) + 16);
 
@@ -319,53 +344,60 @@ void setLinearPeriods(bool linearPeriodsFlag)
 		drawC4Rate();
 }
 
-static void retrigVolume(channel_t *ch)
+static void resetVolumes(channel_t *ch)
 {
 	ch->realVol = ch->oldVol;
 	ch->outVol = ch->oldVol;
 	ch->outPan = ch->oldPan;
+
 	ch->status |= IS_Vol + IS_Pan + IS_QuickVol;
 }
 
-static void retrigEnvelopeVibrato(channel_t *ch)
+static void triggerInstrument(channel_t *ch)
 {
-	if (!(ch->waveCtrl & 0x04)) ch->vibPos  = 0;
-	if (!(ch->waveCtrl & 0x40)) ch->tremPos = 0;
+	if (!(ch->vibTremCtrl & 0x04)) ch->vibratoPos = 0;
+	if (!(ch->vibTremCtrl & 0x40)) ch->tremoloPos = 0;
 
-	ch->retrigCnt = 0;
+	ch->noteRetrigCounter = 0;
 	ch->tremorPos = 0;
+	ch->keyOff = false;
 
 	instr_t *ins = ch->instrPtr;
-	assert(ins != NULL);
-
-	if (ins->volEnvFlags & ENV_ENABLED)
+	if (ins != NULL) // just in case
 	{
-		ch->volEnvTick = 65535;
-		ch->volEnvPos = 0;
-	}
-
-	if (ins->panEnvFlags & ENV_ENABLED)
-	{
-		ch->panEnvTick = 65535;
-		ch->panEnvPos = 0;
-	}
-
-	ch->keyOff = false;
-	ch->fadeoutSpeed = ins->fadeout; // FT2 doesn't check if fadeout is more than 4095!
-	ch->fadeoutVol = 32768;
-
-	if (ins->autoVibDepth > 0)
-	{
-		ch->autoVibPos = 0;
-		if (ins->autoVibSweep > 0)
+		// reset volume envelope
+		if (ins->volEnvFlags & ENV_ENABLED)
 		{
-			ch->autoVibAmp = 0;
-			ch->autoVibSweep = (ins->autoVibDepth << 8) / ins->autoVibSweep;
+			ch->volEnvTick = 65535; // will be increased to 0 on envelope handling
+			ch->volEnvPos = 0;
 		}
-		else
+
+		// reset panning envelope
+		if (ins->panEnvFlags & ENV_ENABLED)
 		{
-			ch->autoVibAmp = ins->autoVibDepth << 8;
-			ch->autoVibSweep = 0;
+			ch->panEnvTick = 65535; // will be increased to 0 on envelope handling
+			ch->panEnvPos = 0;
+		}
+
+		// reset fadeout
+		ch->fadeoutSpeed = ins->fadeout; // Warning: FT2 doesn't check if fadeout is more than 4095!
+		ch->fadeoutVol = 32768;
+
+		// reset auto-vibrato
+		if (ins->autoVibDepth > 0)
+		{
+			ch->autoVibPos = 0;
+
+			if (ins->autoVibSweep > 0)
+			{
+				ch->autoVibAmp = 0;
+				ch->autoVibSweep = (ins->autoVibDepth << 8) / ins->autoVibSweep;
+			}
+			else
+			{
+				ch->autoVibAmp = ins->autoVibDepth << 8;
+				ch->autoVibSweep = 0;
+			}
 		}
 	}
 }
@@ -389,7 +421,7 @@ void keyOff(channel_t *ch)
 		ch->status |= IS_Vol + IS_QuickVol;
 	}
 
-	if (!(ins->panEnvFlags & ENV_ENABLED)) // What..? Probably an FT2 bug.
+	if (!(ins->panEnvFlags & ENV_ENABLED)) // great, another FT2 logic bug
 	{
 		if (ch->panEnvTick >= (uint16_t)ins->panEnvPoints[ch->panEnvPos][0])
 			ch->panEnvTick = ins->panEnvPoints[ch->panEnvPos][0] - 1;
@@ -465,7 +497,7 @@ int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote)
 	return (loPeriod >> 4) - relativeNote;
 }
 
-static void startTone(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
+static void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 {
 	if (note == NOTE_OFF)
 	{
@@ -491,10 +523,10 @@ static void startTone(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 	ch->instrPtr = ins;
 	ch->mute = ins->mute;
 
-	if (note > 96) // non-FT2 security (should never happen because I clamp in the patt. loader now)
+	if (note > 96) // non-FT2 sanity check
 		note = 96;
 
-	ch->smpNum = ins->note2SampleLUT[note-1] & 0xF; // FT2 doesn't AND here, but let's do it for safety
+	ch->smpNum = ins->note2SampleLUT[note-1] & 0xF; // FT2 doesn't mask it, but let's do it anyway
 	sample_t *s = &ins->smp[ch->smpNum];
 
 	ch->smpPtr = s;
@@ -508,13 +540,13 @@ static void startTone(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 	ch->oldPan = s->panning;
 
 	if (efx == 0xE && (efxData & 0xF0) == 0x50)
-		ch->finetune = ((efxData & 0x0F) << 4) - 128;
+		ch->finetune = ((efxData & 0x0F) * 16) - 128;
 	else
 		ch->finetune = s->finetune;
 
 	if (note != 0)
 	{
-		const uint16_t noteIndex = ((note-1) << 4) + (((int8_t)ch->finetune >> 3) + 16); // 0..1920
+		const uint16_t noteIndex = ((note-1) * 16) + (((int8_t)ch->finetune >> 3) + 16); // 0..1920
 
 		assert(note2Period != NULL);
 		ch->outPeriod = ch->realPeriod = note2Period[noteIndex];
@@ -525,9 +557,9 @@ static void startTone(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 	if (efx == 9)
 	{
 		if (efxData > 0)
-			ch->smpOffset = ch->efxData;
+			ch->sampleOffset = ch->efxData;
 
-		ch->smpStartPos = ch->smpOffset << 8;
+		ch->smpStartPos = ch->sampleOffset << 8;
 	}
 	else
 	{
@@ -535,9 +567,9 @@ static void startTone(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 	}
 }
 
-static void volume(channel_t *ch, uint8_t param); // volume slide
-static void vibrato2(channel_t *ch);
-static void tonePorta(channel_t *ch, uint8_t param);
+static void volSlide(channel_t *ch, uint8_t param);
+static void doVibrato(channel_t *ch);
+static void portamento(channel_t *ch, uint8_t param);
 
 static void dummy(channel_t *ch, uint8_t param)
 {
@@ -546,14 +578,14 @@ static void dummy(channel_t *ch, uint8_t param)
 	return;
 }
 
-static void finePortaUp(channel_t *ch, uint8_t param)
+static void finePitchSlideUp(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
-		param = ch->fPortaUpSpeed;
+		param = ch->fPitchSlideUpSpeed;
 
-	ch->fPortaUpSpeed = param;
+	ch->fPitchSlideUpSpeed = param;
 
-	ch->realPeriod -= param << 2;
+	ch->realPeriod -= param * 4;
 	if ((int16_t)ch->realPeriod < 1)
 		ch->realPeriod = 1;
 
@@ -561,14 +593,14 @@ static void finePortaUp(channel_t *ch, uint8_t param)
 	ch->status |= IS_Period;
 }
 
-static void finePortaDown(channel_t *ch, uint8_t param)
+static void finePitchSlideDown(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
-		param = ch->fPortaDownSpeed;
+		param = ch->fPitchSlideDownSpeed;
 
-	ch->fPortaDownSpeed = param;
+	ch->fPitchSlideDownSpeed = param;
 
-	ch->realPeriod += param << 2;
+	ch->realPeriod += param * 4;
 	if ((int16_t)ch->realPeriod >= 32000) // FT2 bug, should've been unsigned comparison
 		ch->realPeriod = 32000-1;
 
@@ -576,42 +608,42 @@ static void finePortaDown(channel_t *ch, uint8_t param)
 	ch->status |= IS_Period;
 }
 
-static void setGlissCtrl(channel_t *ch, uint8_t param)
+static void setPortamentoCtrl(channel_t *ch, uint8_t param)
 {
-	ch->glissFunk = param;
+	ch->portaSemitoneSlides = (param != 0);
 }
 
 static void setVibratoCtrl(channel_t *ch, uint8_t param)
 {
-	ch->waveCtrl = (ch->waveCtrl & 0xF0) | param;
+	ch->vibTremCtrl = (ch->vibTremCtrl & 0xF0) | param;
 }
 
-static void jumpLoop(channel_t *ch, uint8_t param)
+static void patternLoop(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
 	{
-		ch->jumpToRow = song.row & 0xFF;
+		ch->patternLoopStartRow = song.row & 0xFF;
 	}
-	else if (ch->patLoopCounter == 0)
+	else if (ch->patternLoopCounter == 0)
 	{
-		ch->patLoopCounter = param;
+		ch->patternLoopCounter = param;
 
-		song.pBreakPos = ch->jumpToRow;
+		song.pBreakPos = ch->patternLoopStartRow;
 		song.pBreakFlag = true;
 	}
-	else if (--ch->patLoopCounter > 0)
+	else if (--ch->patternLoopCounter > 0)
 	{
-		song.pBreakPos = ch->jumpToRow;
+		song.pBreakPos = ch->patternLoopStartRow;
 		song.pBreakFlag = true;
 	}
 }
 
 static void setTremoloCtrl(channel_t *ch, uint8_t param)
 {
-	ch->waveCtrl = (param << 4) | (ch->waveCtrl & 0x0F);
+	ch->vibTremCtrl = (param << 4) | (ch->vibTremCtrl & 0x0F);
 }
 
-static void volFineUp(channel_t *ch, uint8_t param)
+static void fineVolSlideUp(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
 		param = ch->fVolSlideUpSpeed;
@@ -626,7 +658,7 @@ static void volFineUp(channel_t *ch, uint8_t param)
 	ch->status |= IS_Vol;
 }
 
-static void volFineDown(channel_t *ch, uint8_t param)
+static void fineVolFineDown(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
 		param = ch->fVolSlideDownSpeed;
@@ -651,7 +683,7 @@ static void noteCut0(channel_t *ch, uint8_t param)
 	}
 }
 
-static void pattDelay(channel_t *ch, uint8_t param)
+static void patternDelay(channel_t *ch, uint8_t param)
 {
 	if (song.pattDelTime2 == 0)
 		song.pattDelTime = param + 1;
@@ -662,20 +694,20 @@ static void pattDelay(channel_t *ch, uint8_t param)
 static const efxRoutine EJumpTab_TickZero[16] =
 {
 	dummy, // 0
-	finePortaUp, // 1
-	finePortaDown, // 2
-	setGlissCtrl, // 3
+	finePitchSlideUp, // 1
+	finePitchSlideDown, // 2
+	setPortamentoCtrl, // 3
 	setVibratoCtrl, // 4
 	dummy, // 5
-	jumpLoop, // 6
+	patternLoop, // 6
 	setTremoloCtrl, // 7
 	dummy, // 8
 	dummy, // 9
-	volFineUp, // A
-	volFineDown, // B
+	fineVolSlideUp, // A
+	fineVolFineDown, // B
 	noteCut0, // C
 	dummy, // D
-	pattDelay, // E
+	patternDelay, // E
 	dummy // F
 };
 
@@ -686,8 +718,8 @@ static void E_Effects_TickZero(channel_t *ch, uint8_t param)
 
 	if (ch->channelOff) // channel is muted, only handle some E effects
 	{
-		     if (efx == 0x6) jumpLoop(ch, param);
-		else if (efx == 0xE) pattDelay(ch, param);
+		     if (efx == 0x6) patternLoop(ch, param);
+		else if (efx == 0xE) patternDelay(ch, param);
 
 		return;
 	}
@@ -695,7 +727,7 @@ static void E_Effects_TickZero(channel_t *ch, uint8_t param)
 	EJumpTab_TickZero[efx](ch, param);
 }
 
-static void posJump(channel_t *ch, uint8_t param)
+static void positionJump(channel_t *ch, uint8_t param)
 {
 	if (playMode != PLAYMODE_PATT && playMode != PLAYMODE_RECPATT)
 	{
@@ -712,7 +744,7 @@ static void posJump(channel_t *ch, uint8_t param)
 	(void)ch;
 }
 
-static void pattBreak(channel_t *ch, uint8_t param)
+static void patternBreak(channel_t *ch, uint8_t param)
 {
 	param = ((param >> 4) * 10) + (param & 0x0F);
 	if (param <= 63)
@@ -915,9 +947,9 @@ static const efxRoutine JumpTab_TickZero[36] =
 	dummy, // 8
 	dummy, // 9
 	dummy, // A
-	posJump, // B
+	positionJump, // B
 	dummy, // C
-	pattBreak, // D
+	patternBreak, // D
 	E_Effects_TickZero, // E
 	setSpeed, // F
 	setGlobalVolume, // G
@@ -951,17 +983,17 @@ static void handleMoreEffects_TickZero(channel_t *ch) // called even if channel 
 }
 
 /* -- tick-zero volume column effects --
-** 2nd parameter is used for a volume column quirk with the Rxy command (multiretrig)
+** 2nd parameter is used for a volume column quirk with the Rxy command (multiNoteRetrig)
 */
 
 static void v_SetVibSpeed(channel_t *ch, uint8_t *volColumnData)
 {
-	*volColumnData = (ch->volColumnVol & 0x0F) << 2;
+	*volColumnData = (ch->volColumnVol & 0x0F) * 4;
 	if (*volColumnData != 0)
-		ch->vibSpeed = *volColumnData;
+		ch->vibratoSpeed = *volColumnData;
 }
 
-static void v_Volume(channel_t *ch, uint8_t *volColumnData)
+static void v_SetVolume(channel_t *ch, uint8_t *volColumnData)
 {
 	*volColumnData -= 16;
 	if (*volColumnData > 64) // no idea why FT2 has this check...
@@ -971,7 +1003,7 @@ static void v_Volume(channel_t *ch, uint8_t *volColumnData)
 	ch->status |= IS_Vol + IS_QuickVol;
 }
 
-static void v_FineSlideDown(channel_t *ch, uint8_t *volColumnData)
+static void v_FineVolSlideDown(channel_t *ch, uint8_t *volColumnData)
 {
 	*volColumnData = (uint8_t)(0 - (ch->volColumnVol & 0x0F)) + ch->realVol;
 	if ((int8_t)*volColumnData < 0)
@@ -981,7 +1013,7 @@ static void v_FineSlideDown(channel_t *ch, uint8_t *volColumnData)
 	ch->status |= IS_Vol;
 }
 
-static void v_FineSlideUp(channel_t *ch, uint8_t *volColumnData)
+static void v_FineVolSlideUp(channel_t *ch, uint8_t *volColumnData)
 {
 	*volColumnData = (ch->volColumnVol & 0x0F) + ch->realVol;
 	if (*volColumnData > 64)
@@ -1001,7 +1033,7 @@ static void v_SetPan(channel_t *ch, uint8_t *volColumnData)
 
 // -- non-tick-zero volume column effects --
 
-static void v_SlideDown(channel_t *ch)
+static void v_VolSlideDown(channel_t *ch)
 {
 	uint8_t newVol = (uint8_t)(0 - (ch->volColumnVol & 0x0F)) + ch->realVol;
 	if ((int8_t)newVol < 0)
@@ -1011,7 +1043,7 @@ static void v_SlideDown(channel_t *ch)
 	ch->status |= IS_Vol;
 }
 
-static void v_SlideUp(channel_t *ch)
+static void v_VolSlideUp(channel_t *ch)
 {
 	uint8_t newVol = (ch->volColumnVol & 0x0F) + ch->realVol;
 	if (newVol > 64)
@@ -1025,14 +1057,14 @@ static void v_Vibrato(channel_t *ch)
 {
 	const uint8_t param = ch->volColumnVol & 0xF;
 	if (param > 0)
-		ch->vibDepth = param;
+		ch->vibratoDepth = param;
 
-	vibrato2(ch);
+	doVibrato(ch);
 }
 
 static void v_PanSlideLeft(channel_t *ch)
 {
-	uint16_t tmp16 = (uint8_t)(0 - (ch->volColumnVol & 0x0F)) + ch->outPan;
+	uint16_t tmp16 = ch->outPan + (uint8_t)(0 - (ch->volColumnVol & 0x0F));
 	if (tmp16 < 256) // includes an FT2 bug: pan-slide-left of 0 = set pan to 0
 		tmp16 = 0;
 
@@ -1042,7 +1074,7 @@ static void v_PanSlideLeft(channel_t *ch)
 
 static void v_PanSlideRight(channel_t *ch)
 {
-	uint16_t tmp16 = (ch->volColumnVol & 0x0F) + ch->outPan;
+	uint16_t tmp16 = ch->outPan + (ch->volColumnVol & 0x0F);
 	if (tmp16 > 255)
 		tmp16 = 255;
 
@@ -1050,9 +1082,9 @@ static void v_PanSlideRight(channel_t *ch)
 	ch->status |= IS_Pan;
 }
 
-static void v_TonePorta(channel_t *ch)
+static void v_Portamento(channel_t *ch)
 {
-	tonePorta(ch, 0); // the last parameter is actually not used in tonePorta()
+	portamento(ch, 0); // the last parameter is actually not used in portamento()
 }
 
 static void v_dummy(channel_t *ch)
@@ -1070,18 +1102,18 @@ static void v_dummy2(channel_t *ch, uint8_t *volColumnData)
 
 static const volColumnEfxRoutine VJumpTab_TickNonZero[16] =
 {
-	v_dummy,        v_dummy,         v_dummy,  v_dummy,
-	v_dummy,        v_dummy,     v_SlideDown, v_SlideUp,
+	v_dummy,        v_dummy,         v_dummy, v_dummy,
+	v_dummy,        v_dummy,  v_VolSlideDown, v_VolSlideUp,
 	v_dummy,        v_dummy,         v_dummy, v_Vibrato,
-	v_dummy, v_PanSlideLeft, v_PanSlideRight, v_TonePorta
+	v_dummy, v_PanSlideLeft, v_PanSlideRight, v_Portamento
 };
 
 static const volColumnEfxRoutine2 VJumpTab_TickZero[16] =
 {
-	       v_dummy2,      v_Volume,      v_Volume, v_Volume,
-	       v_Volume,      v_Volume,      v_dummy2, v_dummy2,
-	v_FineSlideDown, v_FineSlideUp, v_SetVibSpeed, v_dummy2,
-	       v_SetPan,      v_dummy2,      v_dummy2, v_dummy2
+	          v_dummy2,      v_SetVolume,   v_SetVolume, v_SetVolume,
+	       v_SetVolume,      v_SetVolume,      v_dummy2, v_dummy2,
+	v_FineVolSlideDown, v_FineVolSlideUp, v_SetVibSpeed, v_dummy2,
+	          v_SetPan,         v_dummy2,      v_dummy2, v_dummy2
 };
 
 static void setPan(channel_t *ch, uint8_t param)
@@ -1099,17 +1131,17 @@ static void setVol(channel_t *ch, uint8_t param)
 	ch->status |= IS_Vol + IS_QuickVol;
 }
 
-static void xFinePorta(channel_t *ch, uint8_t param)
+static void extraFinePitchSlide(channel_t *ch, uint8_t param)
 {
-	const uint8_t type = param >> 4;
+	const uint8_t slideType = param >> 4;
 	param &= 0x0F;
 
-	if (type == 0x1) // extra fine porta up
+	if (slideType == 1) // slide up
 	{
 		if (param == 0)
-			param = ch->ePortaUpSpeed;
+			param = ch->efPitchSlideUpSpeed;
 
-		ch->ePortaUpSpeed = param;
+		ch->efPitchSlideUpSpeed = param;
 
 		uint16_t newPeriod = ch->realPeriod;
 
@@ -1120,12 +1152,12 @@ static void xFinePorta(channel_t *ch, uint8_t param)
 		ch->outPeriod = ch->realPeriod = newPeriod;
 		ch->status |= IS_Period;
 	}
-	else if (type == 0x2) // extra fine porta down
+	else if (slideType == 2) // slide down
 	{
 		if (param == 0)
-			param = ch->ePortaDownSpeed;
+			param = ch->efPitchSlideDownSpeed;
 
-		ch->ePortaDownSpeed = param;
+		ch->efPitchSlideDownSpeed = param;
 
 		uint16_t newPeriod = ch->realPeriod;
 
@@ -1138,19 +1170,20 @@ static void xFinePorta(channel_t *ch, uint8_t param)
 	}
 }
 
-static void doMultiRetrig(channel_t *ch, uint8_t param) // "param" is never used (needed for efx jumptable structure)
+// "param" is never used (needed for efx jumptable structure)
+static void doMultiNoteRetrig(channel_t *ch, uint8_t param)
 {
-	uint8_t cnt = ch->retrigCnt + 1;
-	if (cnt < ch->retrigSpeed)
+	uint8_t cnt = ch->noteRetrigCounter + 1;
+	if (cnt < ch->noteRetrigSpeed)
 	{
-		ch->retrigCnt = cnt;
+		ch->noteRetrigCounter = cnt;
 		return;
 	}
 
-	ch->retrigCnt = 0;
+	ch->noteRetrigCounter = 0;
 
 	int16_t vol = ch->realVol;
-	switch (ch->retrigVol)
+	switch (ch->noteRetrigVol)
 	{
 		case 0x1: vol -= 1; break;
 		case 0x2: vol -= 2; break;
@@ -1184,35 +1217,35 @@ static void doMultiRetrig(channel_t *ch, uint8_t param) // "param" is never used
 		ch->outPan = (ch->volColumnVol & 0x0F) << 4;
 	}
 
-	startTone(0, 0, 0, ch);
+	triggerNote(0, 0, 0, ch);
 
 	(void)param;
 }
 
-static void multiRetrig(channel_t *ch, uint8_t param, uint8_t volumeColumnData)
+static void multiNoteRetrig(channel_t *ch, uint8_t param, uint8_t volumeColumnData)
 {
 	uint8_t tmpParam;
 
 	tmpParam = param & 0x0F;
 	if (tmpParam == 0)
-		tmpParam = ch->retrigSpeed;
+		tmpParam = ch->noteRetrigSpeed;
 
-	ch->retrigSpeed = tmpParam;
+	ch->noteRetrigSpeed = tmpParam;
 
 	tmpParam = param >> 4;
 	if (tmpParam == 0)
-		tmpParam = ch->retrigVol;
+		tmpParam = ch->noteRetrigVol;
 
-	ch->retrigVol = tmpParam;
+	ch->noteRetrigVol = tmpParam;
 
 	if (volumeColumnData == 0)
-		doMultiRetrig(ch, 0); // the second parameter is never used (needed for efx jumptable structure)
+		doMultiNoteRetrig(ch, 0); // the second parameter is never used (needed for efx jumptable structure)
 }
 
 static void handleEffects_TickZero(channel_t *ch)
 {
 	// volume column effects
-	uint8_t newVolCol = ch->volColumnVol; // manipulated by vol. column effects, then used for multiretrig check (FT2 quirk)
+	uint8_t newVolCol = ch->volColumnVol; // manipulated by vol. column effects, then used for multiNoteRetrig check (FT2 quirk)
 	VJumpTab_TickZero[ch->volColumnVol >> 4](ch, &newVolCol);
 
 	// normal effects
@@ -1222,13 +1255,13 @@ static void handleEffects_TickZero(channel_t *ch)
 
 	     if (ch->efx ==  8) setPan(ch, param);
 	else if (ch->efx == 12) setVol(ch, param);
-	else if (ch->efx == 27) multiRetrig(ch, param, newVolCol);
-	else if (ch->efx == 33) xFinePorta(ch, param);
+	else if (ch->efx == 27) multiNoteRetrig(ch, param, newVolCol);
+	else if (ch->efx == 33) extraFinePitchSlide(ch, param);
 
 	handleMoreEffects_TickZero(ch);
 }
 
-static void fixTonePorta(channel_t *ch, const note_t *p, uint8_t inst)
+static void preparePortamento(channel_t *ch, const note_t *p, uint8_t inst)
 {
 	if (p->note > 0)
 	{
@@ -1238,27 +1271,27 @@ static void fixTonePorta(channel_t *ch, const note_t *p, uint8_t inst)
 		}
 		else
 		{
-			const uint16_t note = (((p->note-1) + ch->relativeNote) << 4) + (((int8_t)ch->finetune >> 3) + 16);
+			const uint16_t note = (((p->note-1) + ch->relativeNote) * 16) + (((int8_t)ch->finetune >> 3) + 16);
 			if (note < MAX_NOTES)
 			{
 				assert(note2Period != NULL);
-				ch->wantPeriod = note2Period[note];
+				ch->portamentoTargetPeriod = note2Period[note];
 
-				if (ch->wantPeriod == ch->realPeriod)
-					ch->portaDirection = 0;
-				else if (ch->wantPeriod > ch->realPeriod)
-					ch->portaDirection = 1;
+				if (ch->portamentoTargetPeriod == ch->realPeriod)
+					ch->portamentoDirection = 0;
+				else if (ch->portamentoTargetPeriod > ch->realPeriod)
+					ch->portamentoDirection = 1;
 				else
-					ch->portaDirection = 2;
+					ch->portamentoDirection = 2;
 			}
 		}
 	}
 
 	if (inst > 0)
 	{
-		retrigVolume(ch);
+		resetVolumes(ch);
 		if (p->note != NOTE_OFF)
-			retrigEnvelopeVibrato(ch);
+			triggerInstrument(ch);
 	}
 }
 
@@ -1286,7 +1319,7 @@ static void getNewNote(channel_t *ch, const note_t *p)
 
 	ch->efx = p->efx;
 	ch->efxData = p->efxData;
-	ch->noteData = (p->instr << 8) | p->note;
+	ch->copyOfInstrAndNote = (p->instr << 8) | p->note;
 
 	if (ch->channelOff) // channel is muted, only handle some effects
 	{
@@ -1304,24 +1337,19 @@ static void getNewNote(channel_t *ch, const note_t *p)
 			inst = 0;
 	}
 
-	bool checkEfx = true;
-	if (p->efx == 0x0E)
-	{
-		if (p->efxData >= 0xD1 && p->efxData <= 0xDF)
-			return; // we have a note delay (ED1..EDF)
-		else if (p->efxData == 0x90)
-			checkEfx = false;
-	}
+	if (p->efx == 0x0E && p->efxData >= 0xD1 && p->efxData <= 0xDF)
+		return; // we have a note delay (ED1..EDF)
 
-	if (checkEfx)
+	// only handly effects here when no E90 (retrigger note, parameter zero)
+	if (p->efx != 0x0E || p->efxData != 0x90)
 	{
 		if ((ch->volColumnVol & 0xF0) == 0xF0) // gxx
 		{
-			const uint8_t volColumnData = ch->volColumnVol & 0x0F;
-			if (volColumnData > 0)
-				ch->portaSpeed = volColumnData << 6;
+			const uint8_t param = ch->volColumnVol & 0x0F;
+			if (param > 0)
+				ch->portamentoSpeed = (param << 4) * 4;
 
-			fixTonePorta(ch, p, inst);
+			preparePortamento(ch, p, inst);
 			handleEffects_TickZero(ch);
 			return;
 		}
@@ -1329,9 +1357,9 @@ static void getNewNote(channel_t *ch, const note_t *p)
 		if (p->efx == 3 || p->efx == 5) // 3xx or 5xx
 		{
 			if (p->efx != 5 && p->efxData != 0)
-				ch->portaSpeed = p->efxData << 2;
+				ch->portamentoSpeed = p->efxData * 4;
 
-			fixTonePorta(ch, p, inst);
+			preparePortamento(ch, p, inst);
 			handleEffects_TickZero(ch);
 			return;
 		}
@@ -1341,7 +1369,7 @@ static void getNewNote(channel_t *ch, const note_t *p)
 			keyOff(ch);
 
 			if (inst)
-				retrigVolume(ch);
+				resetVolumes(ch);
 
 			handleEffects_TickZero(ch);
 			return;
@@ -1351,8 +1379,8 @@ static void getNewNote(channel_t *ch, const note_t *p)
 		{
 			if (inst > 0)
 			{
-				retrigVolume(ch);
-				retrigEnvelopeVibrato(ch);
+				resetVolumes(ch);
+				triggerInstrument(ch);
 			}
 
 			handleEffects_TickZero(ch);
@@ -1363,19 +1391,19 @@ static void getNewNote(channel_t *ch, const note_t *p)
 	if (p->note == NOTE_OFF)
 		keyOff(ch);
 	else
-		startTone(p->note, p->efx, p->efxData, ch);
+		triggerNote(p->note, p->efx, p->efxData, ch);
 
 	if (inst > 0)
 	{
-		retrigVolume(ch);
+		resetVolumes(ch);
 		if (p->note != NOTE_OFF)
-			retrigEnvelopeVibrato(ch);
+			triggerInstrument(ch);
 	}
 
 	handleEffects_TickZero(ch);
 }
 
-static void updateChannel(channel_t *ch)
+static void updateVolPanAutoVib(channel_t *ch)
 {
 	bool envInterpolateFlag, envDidInterpolate;
 	uint8_t envPos;
@@ -1384,11 +1412,9 @@ static void updateChannel(channel_t *ch)
 	instr_t *ins = ch->instrPtr;
 	assert(ins != NULL);
 
-	// *** FADEOUT ***
+	// *** FADEOUT ON KEY OFF ***
 	if (ch->keyOff)
 	{
-		ch->status |= IS_Vol; // always update volume, even if fadeout has reached 0
-
 		if (ch->fadeoutSpeed > 0) // 0..4095
 		{
 			ch->fadeoutVol -= ch->fadeoutSpeed;
@@ -1398,6 +1424,8 @@ static void updateChannel(channel_t *ch)
 				ch->fadeoutSpeed = 0;
 			}
 		}
+
+		ch->status |= IS_Vol; // always update volume, even if fadeout has reached 0
 	}
 
 	if (!ch->mute)
@@ -1411,7 +1439,9 @@ static void updateChannel(channel_t *ch)
 			envDidInterpolate = false;
 			envPos = ch->volEnvPos;
 
-			if (++ch->volEnvTick == ins->volEnvPoints[envPos][0])
+			ch->volEnvTick++;
+
+			if (ch->volEnvTick == ins->volEnvPoints[envPos][0])
 			{
 				ch->fVolEnvValue = (float)(int32_t)(ins->volEnvPoints[envPos][1] & 0xFF);
 
@@ -1519,7 +1549,9 @@ static void updateChannel(channel_t *ch)
 		envDidInterpolate = false;
 		envPos = ch->panEnvPos;
 
-		if (++ch->panEnvTick == ins->panEnvPoints[envPos][0])
+		ch->panEnvTick++;
+
+		if (ch->panEnvTick == ins->panEnvPoints[envPos][0])
 		{
 			ch->fPanEnvValue = (float)(int32_t)(ins->panEnvPoints[envPos][1] & 0xFF);
 
@@ -1604,7 +1636,7 @@ static void updateChannel(channel_t *ch)
 		const float fPanAdd = (pan * fEnvVal) * (1.0f / 32.0f);
 		const int32_t newPan = (int32_t)(ch->outPan + fPanAdd); // truncate here, do not round
 
-		ch->finalPan = (uint8_t)CLAMP(newPan, 0, 255);
+		ch->finalPan = (uint8_t)CLAMP(newPan, 0, 255); // FT2 doesn't clamp the pan, but let's do it anyway
 
 		ch->status |= IS_Pan; // update pan every tick because pan envelope is enabled
 	}
@@ -1686,7 +1718,7 @@ static void updateChannel(channel_t *ch)
 }
 
 // for arpeggio and portamento (semitone-slide mode)
-static uint16_t relocateTon(uint16_t period, uint8_t arpNote, channel_t *ch)
+static uint16_t adjustPeriodFromNote(uint16_t period, uint8_t arpNote, channel_t *ch)
 {
 	int32_t tmpPeriod;
 
@@ -1720,20 +1752,20 @@ static uint16_t relocateTon(uint16_t period, uint8_t arpNote, channel_t *ch)
 	return note2Period[tmpPeriod];
 }
 
-static void vibrato2(channel_t *ch)
+static void doVibrato(channel_t *ch)
 {
-	uint8_t tmpVib = (ch->vibPos >> 2) & 0x1F;
+	uint8_t tmpVib = (ch->vibratoPos >> 2) & 0x1F;
 
-	switch (ch->waveCtrl & 3)
+	switch (ch->vibTremCtrl & 3)
 	{
 		// 0: sine
-		case 0: tmpVib = vibTab[tmpVib]; break;
+		case 0: tmpVib = vibratoTab[tmpVib]; break;
 
 		// 1: ramp
 		case 1:
 		{
 			tmpVib <<= 3;
-			if ((int8_t)ch->vibPos < 0)
+			if ((int8_t)ch->vibratoPos < 0)
 				tmpVib = ~tmpVib;
 		}
 		break;
@@ -1742,22 +1774,22 @@ static void vibrato2(channel_t *ch)
 		default: tmpVib = 255; break;
 	}
 
-	tmpVib = (tmpVib * ch->vibDepth) >> 5; // logical shift (unsigned calc.), not arithmetic shift
+	tmpVib = (tmpVib * ch->vibratoDepth) >> 5; // logical shift (unsigned calc.), not arithmetic shift
 
-	if ((int8_t)ch->vibPos < 0)
+	if ((int8_t)ch->vibratoPos < 0)
 		ch->outPeriod = ch->realPeriod - tmpVib;
 	else
 		ch->outPeriod = ch->realPeriod + tmpVib;
 
 	ch->status |= IS_Period;
-	ch->vibPos += ch->vibSpeed;
+	ch->vibratoPos += ch->vibratoSpeed;
 }
 
-static void arp(channel_t *ch, uint8_t param)
+static void arpeggio(channel_t *ch, uint8_t param)
 {
 	uint8_t note;
 
-	const uint8_t tick = arpTab[song.tick & 0xFF]; // non-FT2 protection (we have 248 extra overflow bytes in LUT, but not more!)
+	const uint8_t tick = arpeggioTab[song.tick & 255];
 	if (tick == 0)
 	{
 		ch->outPeriod = ch->realPeriod;
@@ -1769,20 +1801,20 @@ static void arp(channel_t *ch, uint8_t param)
 		else
 			note = param & 0x0F; // tick 2
 
-		ch->outPeriod = relocateTon(ch->realPeriod, note, ch);
+		ch->outPeriod = adjustPeriodFromNote(ch->realPeriod, note, ch);
 	}
 
 	ch->status |= IS_Period;
 }
 
-static void portaUp(channel_t *ch, uint8_t param)
+static void pitchSlideUp(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
-		param = ch->portaUpSpeed;
+		param = ch->pitchSlideUpSpeed;
 
-	ch->portaUpSpeed = param;
+	ch->pitchSlideUpSpeed = param;
 
-	ch->realPeriod -= param << 2;
+	ch->realPeriod -= param * 4;
 	if ((int16_t)ch->realPeriod < 1)
 		ch->realPeriod = 1;
 
@@ -1790,14 +1822,14 @@ static void portaUp(channel_t *ch, uint8_t param)
 	ch->status |= IS_Period;
 }
 
-static void portaDown(channel_t *ch, uint8_t param)
+static void pitchSlideDown(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
-		param = ch->portaDownSpeed;
+		param = ch->pitchSlideDownSpeed;
 
-	ch->portaDownSpeed = param;
+	ch->pitchSlideDownSpeed = param;
 
-	ch->realPeriod += param << 2;
+	ch->realPeriod += param * 4;
 	if ((int16_t)ch->realPeriod >= 32000) // FT2 bug, should've been unsigned comparison
 		ch->realPeriod = 32000-1;
 
@@ -1805,32 +1837,32 @@ static void portaDown(channel_t *ch, uint8_t param)
 	ch->status |= IS_Period;
 }
 
-static void tonePorta(channel_t *ch, uint8_t param)
+static void portamento(channel_t *ch, uint8_t param)
 {
-	if (ch->portaDirection == 0)
+	if (ch->portamentoDirection == 0)
 		return;
 
-	if (ch->portaDirection > 1)
+	if (ch->portamentoDirection > 1)
 	{
-		ch->realPeriod -= ch->portaSpeed;
-		if ((int16_t)ch->realPeriod <= (int16_t)ch->wantPeriod)
+		ch->realPeriod -= ch->portamentoSpeed;
+		if ((int16_t)ch->realPeriod <= (int16_t)ch->portamentoTargetPeriod)
 		{
-			ch->portaDirection = 1;
-			ch->realPeriod = ch->wantPeriod;
+			ch->portamentoDirection = 1;
+			ch->realPeriod = ch->portamentoTargetPeriod;
 		}
 	}
 	else
 	{
-		ch->realPeriod += ch->portaSpeed;
-		if (ch->realPeriod >= ch->wantPeriod)
+		ch->realPeriod += ch->portamentoSpeed;
+		if (ch->realPeriod >= ch->portamentoTargetPeriod)
 		{
-			ch->portaDirection = 1;
-			ch->realPeriod = ch->wantPeriod;
+			ch->portamentoDirection = 1;
+			ch->realPeriod = ch->portamentoTargetPeriod;
 		}
 	}
 
-	if (ch->glissFunk) // semitone-slide flag
-		ch->outPeriod = relocateTon(ch->realPeriod, 0, ch);
+	if (ch->portaSemitoneSlides)
+		ch->outPeriod = adjustPeriodFromNote(ch->realPeriod, 0, ch);
 	else
 		ch->outPeriod = ch->realPeriod;
 
@@ -1841,66 +1873,62 @@ static void tonePorta(channel_t *ch, uint8_t param)
 
 static void vibrato(channel_t *ch, uint8_t param)
 {
-	uint8_t tmp8;
-
 	if (param > 0)
 	{
-		tmp8 = param & 0x0F;
-		if (tmp8 > 0)
-			ch->vibDepth = tmp8;
+		const uint8_t vibratoDepth = param & 0x0F;
+		if (vibratoDepth > 0)
+			ch->vibratoDepth = vibratoDepth;
 
-		tmp8 = (param & 0xF0) >> 2;
-		if (tmp8 > 0)
-			ch->vibSpeed = tmp8;
+		const uint8_t vibratoSpeed = (param & 0xF0) >> 2;
+		if (vibratoSpeed > 0)
+			ch->vibratoSpeed = vibratoSpeed;
 	}
 
-	vibrato2(ch);
+	doVibrato(ch);
 }
 
-static void tonePlusVol(channel_t *ch, uint8_t param)
+static void portamentoPlusVolSlide(channel_t *ch, uint8_t param)
 {
-	tonePorta(ch, 0); // the last parameter is actually not used in tonePorta()
-	volume(ch, param);
+	portamento(ch, 0); // the last parameter is actually not used in portamento()
+	volSlide(ch, param);
 
 	(void)param;
 }
 
-static void vibratoPlusVol(channel_t *ch, uint8_t param)
+static void vibratoPlusVolSlide(channel_t *ch, uint8_t param)
 {
-	vibrato2(ch);
-	volume(ch, param);
+	doVibrato(ch);
+	volSlide(ch, param);
 
 	(void)param;
 }
 
 static void tremolo(channel_t *ch, uint8_t param)
 {
-	uint8_t tmp8;
 	int16_t tremVol;
 
-	const uint8_t tmpEff = param;
-	if (tmpEff > 0)
+	if (param > 0)
 	{
-		tmp8 = tmpEff & 0x0F;
-		if (tmp8 > 0)
-			ch->tremDepth = tmp8;
+		uint8_t tremoloDepth = param & 0x0F;
+		if (tremoloDepth > 0)
+			ch->tremoloDepth = tremoloDepth;
 
-		tmp8 = (tmpEff & 0xF0) >> 2;
-		if (tmp8 > 0)
-			ch->tremSpeed = tmp8;
+		uint8_t tremoloSpeed = (param & 0xF0) >> 2;
+		if (tremoloSpeed > 0)
+			ch->tremoloSpeed = tremoloSpeed;
 	}
 
-	uint8_t tmpTrem = (ch->tremPos >> 2) & 0x1F;
-	switch ((ch->waveCtrl >> 4) & 3)
+	uint8_t tmpTrem = (ch->tremoloPos >> 2) & 0x1F;
+	switch ((ch->vibTremCtrl >> 4) & 3)
 	{
 		// 0: sine
-		case 0: tmpTrem = vibTab[tmpTrem]; break;
+		case 0: tmpTrem = vibratoTab[tmpTrem]; break;
 
 		// 1: ramp
 		case 1:
 		{
 			tmpTrem <<= 3;
-			if ((int8_t)ch->vibPos < 0) // FT2 bug, should've been ch->tremPos
+			if ((int8_t)ch->vibratoPos < 0) // FT2 bug, should've been ch->tremoloPos
 				tmpTrem = ~tmpTrem;
 		}
 		break;
@@ -1908,9 +1936,9 @@ static void tremolo(channel_t *ch, uint8_t param)
 		// 2/3: square
 		default: tmpTrem = 255; break;
 	}
-	tmpTrem = (tmpTrem * ch->tremDepth) >> 6; // logical shift (unsigned calc.), not arithmetic shift
+	tmpTrem = (tmpTrem * ch->tremoloDepth) >> 6; // logical shift (unsigned calc.), not arithmetic shift
 
-	if ((int8_t)ch->tremPos < 0)
+	if ((int8_t)ch->tremoloPos < 0)
 	{
 		tremVol = ch->realVol - tmpTrem;
 		if (tremVol < 0)
@@ -1925,10 +1953,11 @@ static void tremolo(channel_t *ch, uint8_t param)
 
 	ch->outVol = (uint8_t)tremVol;
 	ch->status |= IS_Vol;
-	ch->tremPos += ch->tremSpeed;
+
+	ch->tremoloPos += ch->tremoloSpeed;
 }
 
-static void volume(channel_t *ch, uint8_t param) // volume slide
+static void volSlide(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
 		param = ch->volSlideSpeed;
@@ -2021,9 +2050,9 @@ static void panningSlide(channel_t *ch, uint8_t param)
 static void tremor(channel_t *ch, uint8_t param)
 {
 	if (param == 0)
-		param = ch->tremorSave;
+		param = ch->tremorParam;
 
-	ch->tremorSave = param;
+	ch->tremorParam = param;
 
 	uint8_t tremorSign = ch->tremorPos & 0x80;
 	uint8_t tremorData = ch->tremorPos & 0x7F;
@@ -2055,8 +2084,8 @@ static void retrigNote(channel_t *ch, uint8_t param)
 
 	if ((song.speed-song.tick) % param == 0)
 	{
-		startTone(0, 0, 0, ch);
-		retrigEnvelopeVibrato(ch);
+		triggerNote(0, 0, 0, ch);
+		triggerInstrument(ch);
 	}
 }
 
@@ -2073,12 +2102,14 @@ static void noteDelay(channel_t *ch, uint8_t param)
 {
 	if ((uint8_t)(song.speed-song.tick) == param)
 	{
-		startTone(ch->noteData & 0xFF, 0, 0, ch);
+		const uint8_t note = ch->copyOfInstrAndNote & 0x00FF;
+		triggerNote(note, 0, 0, ch);
 
-		if ((ch->noteData & 0xFF00) > 0)
-			retrigVolume(ch);
+		const uint8_t instrument = ch->copyOfInstrAndNote >> 8;
+		if (instrument > 0)
+			resetVolumes(ch);
 
-		retrigEnvelopeVibrato(ch);
+		triggerInstrument(ch);
 
 		if (ch->volColumnVol >= 0x10 && ch->volColumnVol <= 0x50)
 		{
@@ -2119,17 +2150,17 @@ static void E_Effects_TickNonZero(channel_t *ch, uint8_t param)
 
 static const efxRoutine JumpTab_TickNonZero[36] =
 {
-	arp, // 0
-	portaUp, // 1
-	portaDown, // 2
-	tonePorta, // 3
+	arpeggio, // 0
+	pitchSlideUp, // 1
+	pitchSlideDown, // 2
+	portamento, // 3
 	vibrato, // 4
-	tonePlusVol, // 5
-	vibratoPlusVol, // 6
+	portamentoPlusVolSlide, // 5
+	vibratoPlusVolSlide, // 6
 	tremolo, // 7
 	dummy, // 8
 	dummy, // 9
-	volume, // A
+	volSlide, // A
 	dummy, // B
 	dummy, // C
 	dummy, // D
@@ -2146,7 +2177,7 @@ static const efxRoutine JumpTab_TickNonZero[36] =
 	dummy, // O
 	panningSlide, // P
 	dummy, // Q
-	doMultiRetrig, // R
+	doMultiNoteRetrig, // R
 	dummy, // S
 	tremor, // T
 	dummy, // U
@@ -2253,7 +2284,7 @@ void tickReplayer(void) // periodically called from audio callback
 	{
 		ch = channel;
 		for (i = 0; i < song.numChannels; i++, ch++)
-			updateChannel(ch);
+			updateVolPanAutoVib(ch);
 
 		return;
 	}
@@ -2295,7 +2326,7 @@ void tickReplayer(void) // periodically called from audio callback
 		for (i = 0; i < song.numChannels; i++, ch++, p++)
 		{
 			getNewNote(ch, p);
-			updateChannel(ch);
+			updateVolPanAutoVib(ch);
 		}
 	}
 	else
@@ -2304,7 +2335,7 @@ void tickReplayer(void) // periodically called from audio callback
 		for (i = 0; i < song.numChannels; i++, ch++)
 		{
 			handleEffects_TickNonZero(ch);
-			updateChannel(ch);
+			updateVolPanAutoVib(ch);
 		}
 	}
 
@@ -2416,6 +2447,7 @@ void delta2Samp(int8_t *p, int32_t length, uint8_t smpFlags)
 		{
 			int8_t *p8L = (int8_t *)p;
 			int8_t *p8R = (int8_t *)p + length;
+
 			int8_t olds8L = 0;
 			int8_t olds8R = 0;
 
@@ -2500,10 +2532,11 @@ bool allocateInstr(int16_t insNum)
 		return false;
 
 	memset(p, 0, sizeof (instr_t));
-	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++)
+	sample_t *s = p->smp;
+	for (int32_t i = 0; i < MAX_SMP_PER_INST; i++, s++)
 	{
-		p->smp[i].panning = 128;
-		p->smp[i].volume = 64;
+		s->panning = 128;
+		s->volume = 64;
 	}
 
 	setStdEnvelope(p, 0, 3);
@@ -2942,20 +2975,20 @@ void playTone(uint8_t chNum, uint8_t insNum, uint8_t note, int8_t vol, uint16_t 
 
 	if (insNum != 0 && note != NOTE_OFF)
 	{
-		ch->noteData = (insNum << 8) | (ch->noteData & 0xFF);
+		ch->copyOfInstrAndNote = (insNum << 8) | (ch->copyOfInstrAndNote & 0xFF);
 		ch->instrNum = insNum;
 	}
 
-	ch->noteData = (ch->noteData & 0xFF00) | note;
+	ch->copyOfInstrAndNote = (ch->copyOfInstrAndNote & 0xFF00) | note;
 	ch->efx = 0;
 	ch->efxData = 0;
 
-	startTone(note, 0, 0, ch);
+	triggerNote(note, 0, 0, ch);
 
 	if (note != NOTE_OFF)
 	{
-		retrigVolume(ch);
-		retrigEnvelopeVibrato(ch);
+		resetVolumes(ch);
+		triggerInstrument(ch);
 
 		if (vol != -1) // if jamming note keys, vol -1 = use sample's volume
 		{
@@ -2968,7 +3001,7 @@ void playTone(uint8_t chNum, uint8_t insNum, uint8_t note, int8_t vol, uint16_t 
 	ch->midiVibDepth = midiVibDepth;
 	ch->midiPitch = midiPitch;
 
-	updateChannel(ch);
+	updateVolPanAutoVib(ch);
 
 	unlockAudio();
 }
@@ -2995,15 +3028,15 @@ void playSample(uint8_t chNum, uint8_t insNum, uint8_t smpNum, uint8_t note, uin
 	lockAudio();
 
 	ch->instrNum = 130;
-	ch->noteData = (ch->instrNum << 8) | note;
+	ch->copyOfInstrAndNote = (ch->instrNum << 8) | note;
 	ch->efx = 0;
 
-	startTone(note, 0, 0, ch);
+	triggerNote(note, 0, 0, ch);
 
 	if (note != NOTE_OFF)
 	{
-		retrigVolume(ch);
-		retrigEnvelopeVibrato(ch);
+		resetVolumes(ch);
+		triggerInstrument(ch);
 
 		ch->realVol = vol;
 		ch->outVol = vol;
@@ -3013,7 +3046,7 @@ void playSample(uint8_t chNum, uint8_t insNum, uint8_t smpNum, uint8_t note, uin
 	ch->midiVibDepth = midiVibDepth;
 	ch->midiPitch = midiPitch;
 
-	updateChannel(ch);
+	updateVolPanAutoVib(ch);
 
 	unlockAudio();
 
@@ -3055,18 +3088,18 @@ void playRange(uint8_t chNum, uint8_t insNum, uint8_t smpNum, uint8_t note, uint
 	int32_t samplePlayOffset = smpOffset;
 
 	ch->instrNum = 130;
-	ch->noteData = (ch->instrNum << 8) | note;
+	ch->copyOfInstrAndNote = (ch->instrNum << 8) | note;
 	ch->efx = 0;
 	ch->efxData = 0;
 
-	startTone(note, 0, 0, ch);
+	triggerNote(note, 0, 0, ch);
 
 	ch->smpStartPos = samplePlayOffset;
 
 	if (note != NOTE_OFF)
 	{
-		retrigVolume(ch);
-		retrigEnvelopeVibrato(ch);
+		resetVolumes(ch);
+		triggerInstrument(ch);
 
 		ch->realVol = vol;
 		ch->outVol = vol;
@@ -3076,7 +3109,7 @@ void playRange(uint8_t chNum, uint8_t insNum, uint8_t smpNum, uint8_t note, uint
 	ch->midiVibDepth = midiVibDepth;
 	ch->midiPitch = midiPitch;
 
-	updateChannel(ch);
+	updateVolPanAutoVib(ch);
 
 	unlockAudio();
 
@@ -3099,7 +3132,7 @@ void stopVoices(void)
 		lastChInstr[i].smpNum = 255;
 		lastChInstr[i].instrNum = 255;
 
-		ch->noteData = 0;
+		ch->copyOfInstrAndNote = 0;
 		ch->relativeNote = 0;
 		ch->smpNum = 0;
 		ch->smpPtr = NULL;
@@ -3113,10 +3146,10 @@ void stopVoices(void)
 		ch->oldPan = 128;
 		ch->outPan = 128;
 		ch->finalPan = 128;
-		ch->vibDepth = 0;
+		ch->vibratoDepth = 0; // clear it because it can be set from the volumn column
 		ch->midiVibDepth = 0;
 		ch->midiPitch = 0;
-		ch->portaDirection = 0; // FT2 bugfix: weird 3xx behavior if not used with note
+		ch->portamentoDirection = 0; // FT2 bugfix: weird 3xx behavior if not used with note
 
 		stopVoice(i);
 	}
@@ -3133,32 +3166,6 @@ void stopVoices(void)
 
 	if (audioWasntLocked)
 		unlockAudio();
-}
-
-void resetReplayerState(void)
-{
-	song.pattDelTime = song.pattDelTime2 = 0;
-	song.posJumpFlag = false;
-	song.pBreakPos = 0;
-	song.pBreakFlag = false;
-
-	// reset pattern loops (E6x)
-	channel_t *ch = channel;
-	for (int32_t i = 0; i < song.numChannels; i++, ch++)
-	{
-		ch->jumpToRow = 0;
-		ch->patLoopCounter = 0;
-	}
-	
-	// reset global volume (if song was playing)
-	if (songPlaying)
-	{
-		song.globalVolume = 64;
-
-		ch = channel;
-		for (int32_t i = 0; i < song.numChannels; i++, ch++)
-			ch->status |= IS_Vol;
-	}
 }
 
 void setNewSongPos(int32_t pos)
