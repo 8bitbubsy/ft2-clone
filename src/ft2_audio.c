@@ -310,13 +310,13 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 	{
 		v->base16 = (const int16_t *)s->dataPtr;
 		v->revBase16 = &v->base16[loopStart + loopEnd]; // for pingpong loops
-		v->leftEdgeTaps16 = s->leftEdgeTapSamples16 + SINC_MAX_LEFT_TAPS;
+		v->leftEdgeTaps16 = s->leftEdgeTapSamples16 + MAX_LEFT_TAPS;
 	}
 	else
 	{
 		v->base8 = s->dataPtr;
 		v->revBase8 = &v->base8[loopStart + loopEnd]; // for pingpong loops
-		v->leftEdgeTaps8 = s->leftEdgeTapSamples8 + SINC_MAX_LEFT_TAPS;
+		v->leftEdgeTaps8 = s->leftEdgeTapSamples8 + MAX_LEFT_TAPS;
 	}
 
 	v->hasLooped = false; // for sinc interpolation special case
@@ -335,7 +335,7 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 		return;
 	}
 
-	v->mixFuncOffset = ((int32_t)sample16Bit * 12) + (audio.interpolationType * 3) + loopType;
+	v->mixFuncOffset = ((int32_t)sample16Bit * 15) + (audio.interpolationType * 3) + loopType;
 	v->active = true;
 }
 
@@ -385,17 +385,13 @@ void updateVoices(void)
 			{
 				ch->oldFinalPeriod = ch->finalPeriod;
 
-				if (ch->finalPeriod == 0) // in FT2, period 0 -> delta 0
-				{
-					v->oldDelta = 0;
-					v->fSincLUT = fKaiserSinc;
-					v->scopeDelta = 0;
-				}
-				else
-				{
-					const double dHz = dPeriod2Hz(ch->finalPeriod);
-					const uintCPUWord_t delta = v->oldDelta = (intCPUWord_t)((dHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
+				const double dHz = dPeriod2Hz(ch->finalPeriod);
 
+				// set voice delta
+				const uintCPUWord_t delta = v->oldDelta = (intCPUWord_t)((dHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
+
+				if (audio.interpolationType == INTERPOLATION_SINC8 || audio.interpolationType == INTERPOLATION_SINC16)
+				{
 					// decide which sinc LUT to use according to the resampling ratio
 					if (delta <= (uintCPUWord_t)(1.1875 * MIXER_FRAC_SCALE))
 						v->fSincLUT = fKaiserSinc;
@@ -403,11 +399,11 @@ void updateVoices(void)
 						v->fSincLUT = fDownSample1;
 					else
 						v->fSincLUT = fDownSample2;
-
-					// set scope delta
-					const double dHz2ScopeDeltaMul = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-					v->scopeDelta = (intCPUWord_t)((dHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
 				}
+
+				// set scope delta
+				const double dHz2ScopeDeltaMul = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
+				v->scopeDelta = (intCPUWord_t)((dHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
 			}
 
 			v->delta = v->oldDelta;
@@ -484,13 +480,13 @@ static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 				centerMixFlag = (v->fCurrVolumeL == v->fCurrVolumeR);
 			}
 
-			mixFuncTab[((int32_t)centerMixFlag * (3*4*2*2)) + ((int32_t)volRampFlag * (3*4*2)) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
+			mixFuncTab[((int32_t)centerMixFlag * (3*5*2*2)) + ((int32_t)volRampFlag * (3*5*2)) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
 		}
 
 		if (r->active) // volume ramp fadeout-voice
 		{
 			const bool centerMixFlag = (r->fTargetVolumeL == r->fTargetVolumeR) && (r->fVolumeLDelta == r->fVolumeRDelta);
-			mixFuncTab[((int32_t)centerMixFlag * (3*4*2*2)) + (3*4*2) + r->mixFuncOffset](r, bufferPosition, samplesToMix);
+			mixFuncTab[((int32_t)centerMixFlag * (3*5*2*2)) + (3*5*2) + r->mixFuncOffset](r, bufferPosition, samplesToMix);
 		}
 	}
 }

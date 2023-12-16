@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (!calcWindowedSincTables()) // must be called before config is loaded
+	if (!calcCubicSplineTable() || !calcWindowedSincTables()) // must be called before config is loaded
 	{
 		cleanUpAndExit();
 		return false;

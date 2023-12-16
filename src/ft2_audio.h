@@ -73,7 +73,7 @@ typedef struct
 
 	uintCPUWord_t positionFrac, delta, oldDelta, scopeDelta;
 
-	// if (loopEnabled && hasLooped && samplingPos <= loopStart+SINC_MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
+	// if (loopEnabled && hasLooped && samplingPos <= loopStart+MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;
 	const int16_t *leftEdgeTaps16;
 

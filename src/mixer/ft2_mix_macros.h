@@ -55,11 +55,11 @@
 
 #define PREPARE_TAP_FIX8 \
 	const int8_t *loopStartPtr = &v->base8[v->loopStart]; \
-	const int8_t *leftEdgePtr = loopStartPtr+SINC_MAX_LEFT_TAPS;
+	const int8_t *leftEdgePtr = loopStartPtr+MAX_LEFT_TAPS;
 
 #define PREPARE_TAP_FIX16 \
 	const int16_t *loopStartPtr = &v->base16[v->loopStart]; \
-	const int16_t *leftEdgePtr = loopStartPtr+SINC_MAX_LEFT_TAPS;
+	const int16_t *leftEdgePtr = loopStartPtr+MAX_LEFT_TAPS;
 
 #define SET_BASE8 \
 	base = v->base8; \
@@ -123,7 +123,9 @@
 	*fMixBufferL++ += fSample; \
 	*fMixBufferR++ += fSample;
 
-// 2-tap linear interpolation (like FT2)
+/* ----------------------------------------------------------------------- */
+/*                          LINEAR INTERPOLATION                           */
+/* ----------------------------------------------------------------------- */
 
 /* It may look like we are potentially going out of bounds while looking up the sample points,
 ** but the sample data has a fixed sample after the end (sampleEnd/loopEnd).
@@ -158,7 +160,98 @@
 	*fMixBufferL++ += fSample; \
 	*fMixBufferR++ += fSample;
 
-// windowed-sinc interpolation (better quality, through LUTs: mixer/ft2_windowed_sinc.c)
+/* ----------------------------------------------------------------------- */
+/*                       CUBIC SPLINE INTERPOLATION                        */
+/* ----------------------------------------------------------------------- */
+
+// through LUT: mixer/ft2_cubic_spline.c
+
+/* It may look like we are potentially going out of bounds while looking up the sample points,
+** but the sample data is actually padded on both the left (negative) and right side, where correct tap
+** samples are stored according to loop mode (or no loop).
+**
+** There is also a second special case for the left edge (negative taps) after the sample has looped once.
+**
+*/
+
+#if CUBIC_FSHIFT>=0
+#define CUBIC_SPLINE_INTERPOLATION(s, f, scale) \
+{ \
+	const float *t = fCubicSplineLUT + (((uint32_t)(f) >> CUBIC_SPLINE_FSHIFT) & CUBIC_SPLINE_FMASK); \
+	fSample = ((s[-1] * t[0]) + \
+	           ( s[0] * t[1]) + \
+	           ( s[1] * t[2]) + \
+	           ( s[2] * t[3])) * (1.0f / scale); \
+}
+#else
+#define CUBIC_SPLINE_INTERPOLATION(s, f, scale) \
+{ \
+	const float *t = fCubicSplineLUT + (((uint32_t)(f) << -CUBIC_SPLINE_FSHIFT) & CUBIC_SPLINE_FMASK); \
+	fSample = ((s[-1] * t[0]) + \
+	           ( s[0] * t[1]) + \
+	           ( s[1] * t[2]) + \
+	           ( s[2] * t[3])) * (1.0f / scale); \
+}
+#endif
+
+#define RENDER_8BIT_SMP_CINTRP \
+	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 128) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+#define RENDER_8BIT_SMP_MONO_CINTRP \
+	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 128) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
+
+#define RENDER_16BIT_SMP_CINTRP \
+	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 32768) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+#define RENDER_16BIT_SMP_MONO_CINTRP \
+	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 32768) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
+
+
+/* Special left-edge case mixers to get proper tap data after one loop cycle.
+** These are only used with cubic interpolation on looped samples.
+*/
+
+#define RENDER_8BIT_SMP_CINTRP_TAP_FIX  \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
+	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 128) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+#define RENDER_8BIT_SMP_MONO_CINTRP_TAP_FIX \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
+	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 128) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
+
+#define RENDER_16BIT_SMP_CINTRP_TAP_FIX \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
+	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+#define RENDER_16BIT_SMP_MONO_CINTRP_TAP_FIX \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
+	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
+	fSample *= fVolumeL; \
+	*fMixBufferL++ += fSample; \
+	*fMixBufferR++ += fSample;
+
+/* ----------------------------------------------------------------------- */
+/*                       WINDOWED-SINC INTERPOLATION                       */
+/* ----------------------------------------------------------------------- */
+
+// through LUTs: mixer/ft2_windowed_sinc.c
 
 /* It may look like we are potentially going out of bounds while looking up the sample points,
 ** but the sample data is actually padded on both the left (negative) and right side, where correct tap

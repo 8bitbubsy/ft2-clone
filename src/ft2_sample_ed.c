@@ -260,25 +260,25 @@ void fixSample(sample_t *s)
 	*/
 	if (sample16Bit)
 	{
-		for (int32_t i = 0; i < SINC_MAX_LEFT_TAPS; i++)
-			ptr16[i-SINC_MAX_LEFT_TAPS] = ptr16[0];
+		for (int32_t i = 0; i < MAX_LEFT_TAPS; i++)
+			ptr16[i-MAX_LEFT_TAPS] = ptr16[0];
 	}
 	else
 	{
-		for (int32_t i = 0; i < SINC_MAX_LEFT_TAPS; i++)
-			s->dataPtr[i-SINC_MAX_LEFT_TAPS] = s->dataPtr[0];
+		for (int32_t i = 0; i < MAX_LEFT_TAPS; i++)
+			s->dataPtr[i-MAX_LEFT_TAPS] = s->dataPtr[0];
 	}
 
 	if (loopType == LOOP_OFF) // no loop
 	{
 		if (sample16Bit)
 		{
-			for (int32_t i = 0; i < SINC_MAX_RIGHT_TAPS; i++)
+			for (int32_t i = 0; i < MAX_RIGHT_TAPS; i++)
 				ptr16[length+i] = ptr16[length-1];
 		}
 		else
 		{
-			for (int32_t i = 0; i < SINC_MAX_RIGHT_TAPS; i++)
+			for (int32_t i = 0; i < MAX_RIGHT_TAPS; i++)
 				s->dataPtr[length+i] = s->dataPtr[length-1];
 		}
 
@@ -294,16 +294,16 @@ void fixSample(sample_t *s)
 	{
 		if (sample16Bit)
 		{
-			// left edge (we need SINC_MAX_TAPS amount of taps starting from the center tap)
-			for (int32_t i = -SINC_MAX_LEFT_TAPS; i < SINC_MAX_TAPS; i++)
+			// left edge (we need MAX_TAPS amount of taps starting from the center tap)
+			for (int32_t i = -MAX_LEFT_TAPS; i < MAX_TAPS; i++)
 			{
 				pos = loopStart + myMod(i, loopLength);
-				s->leftEdgeTapSamples16[SINC_MAX_LEFT_TAPS+i] = ptr16[pos];
+				s->leftEdgeTapSamples16[MAX_LEFT_TAPS+i] = ptr16[pos];
 			}
 
 			// right edge (change actual sample data since data after loop is never used)
 			pos = loopStart;
-			for (int32_t i = 0; i < SINC_MAX_RIGHT_TAPS; i++)
+			for (int32_t i = 0; i < MAX_RIGHT_TAPS; i++)
 			{
 				s->fixedSmp[i] = ptr16[loopEnd+i];
 				ptr16[loopEnd+i] = ptr16[pos];
@@ -314,16 +314,16 @@ void fixSample(sample_t *s)
 		}
 		else // 8-bit
 		{
-			// left edge (we need SINC_MAX_TAPS amount of taps starting from the center tap)
-			for (int32_t i = -SINC_MAX_LEFT_TAPS; i < SINC_MAX_TAPS; i++)
+			// left edge (we need MAX_TAPS amount of taps starting from the center tap)
+			for (int32_t i = -MAX_LEFT_TAPS; i < MAX_TAPS; i++)
 			{
 				pos = loopStart + myMod(i, loopLength);
-				s->leftEdgeTapSamples8[SINC_MAX_LEFT_TAPS+i] = s->dataPtr[pos];
+				s->leftEdgeTapSamples8[MAX_LEFT_TAPS+i] = s->dataPtr[pos];
 			}
 
 			// right edge (change actual sample data since data after loop is never used)
 			pos = loopStart;
-			for (int32_t i = 0; i < SINC_MAX_RIGHT_TAPS; i++)
+			for (int32_t i = 0; i < MAX_RIGHT_TAPS; i++)
 			{
 				s->fixedSmp[i] = s->dataPtr[loopEnd+i];
 				s->dataPtr[loopEnd+i] = s->dataPtr[pos];
@@ -337,10 +337,10 @@ void fixSample(sample_t *s)
 	{
 		if (sample16Bit)
 		{
-			// left edge (positive taps, we need SINC_MAX_TAPS amount of taps starting from the center tap)
+			// left edge (positive taps, we need MAX_TAPS amount of taps starting from the center tap)
 			pos = loopStart;
 			backwards = false;
-			for (int32_t i = 0; i < SINC_MAX_TAPS; i++)
+			for (int32_t i = 0; i < MAX_TAPS; i++)
 			{
 				if (backwards)
 				{
@@ -356,7 +356,7 @@ void fixSample(sample_t *s)
 					backwards = true;
 				}
 
-				s->leftEdgeTapSamples16[SINC_MAX_LEFT_TAPS+i] = ptr16[pos];
+				s->leftEdgeTapSamples16[MAX_LEFT_TAPS+i] = ptr16[pos];
 
 				if (backwards)
 					pos--;
@@ -365,13 +365,13 @@ void fixSample(sample_t *s)
 			}
 
 			// left edge (negative taps)
-			for (int32_t i = 0; i < SINC_MAX_LEFT_TAPS; i++)
-				s->leftEdgeTapSamples16[(SINC_MAX_LEFT_TAPS-1)-i] = s->leftEdgeTapSamples16[SINC_MAX_LEFT_TAPS+1+i];
+			for (int32_t i = 0; i < MAX_LEFT_TAPS; i++)
+				s->leftEdgeTapSamples16[(MAX_LEFT_TAPS-1)-i] = s->leftEdgeTapSamples16[MAX_LEFT_TAPS+1+i];
 
 			// right edge (change actual sample data since data after loop is never used)
 			pos = loopEnd-1;
 			backwards = true;
-			for (int32_t i = 0; i < SINC_MAX_RIGHT_TAPS; i++)
+			for (int32_t i = 0; i < MAX_RIGHT_TAPS; i++)
 			{
 				if (backwards)
 				{
@@ -398,10 +398,10 @@ void fixSample(sample_t *s)
 		}
 		else // 8-bit
 		{
-			// left edge (positive taps, we need SINC_MAX_TAPS amount of taps starting from the center tap)
+			// left edge (positive taps, we need MAX_TAPS amount of taps starting from the center tap)
 			pos = loopStart;
 			backwards = false;
-			for (int32_t i = 0; i < SINC_MAX_TAPS; i++)
+			for (int32_t i = 0; i < MAX_TAPS; i++)
 			{
 				if (backwards)
 				{
@@ -417,7 +417,7 @@ void fixSample(sample_t *s)
 					backwards = true;
 				}
 
-				s->leftEdgeTapSamples8[SINC_MAX_LEFT_TAPS+i] = s->dataPtr[pos];
+				s->leftEdgeTapSamples8[MAX_LEFT_TAPS+i] = s->dataPtr[pos];
 
 				if (backwards)
 					pos--;
@@ -426,13 +426,13 @@ void fixSample(sample_t *s)
 			}
 
 			// left edge (negative taps)
-			for (int32_t i = 0; i < SINC_MAX_LEFT_TAPS; i++)
-				s->leftEdgeTapSamples8[(SINC_MAX_LEFT_TAPS-1)-i] = s->leftEdgeTapSamples8[SINC_MAX_LEFT_TAPS+1+i];
+			for (int32_t i = 0; i < MAX_LEFT_TAPS; i++)
+				s->leftEdgeTapSamples8[(MAX_LEFT_TAPS-1)-i] = s->leftEdgeTapSamples8[MAX_LEFT_TAPS+1+i];
 
 			// right edge (change actual sample data since data after loop is never used)
 			pos = loopEnd-1;
 			backwards = true;
-			for (int32_t i = 0; i < SINC_MAX_RIGHT_TAPS; i++)
+			for (int32_t i = 0; i < MAX_RIGHT_TAPS; i++)
 			{
 				if (backwards)
 				{
@@ -470,13 +470,13 @@ void unfixSample(sample_t *s)
 	if (s->flags & SAMPLE_16BIT)
 	{
 		int16_t *ptr16 = (int16_t *)s->dataPtr + s->fixedPos;
-		for (int32_t i = 0; i < SINC_MAX_RIGHT_TAPS; i++)
+		for (int32_t i = 0; i < MAX_RIGHT_TAPS; i++)
 			ptr16[i] = s->fixedSmp[i];
 	}
 	else // 8-bit
 	{
 		int8_t *ptr8 = s->dataPtr + s->fixedPos;
-		for (int32_t i = 0; i < SINC_MAX_RIGHT_TAPS; i++)
+		for (int32_t i = 0; i < MAX_RIGHT_TAPS; i++)
 			ptr8[i] = (int8_t)s->fixedSmp[i];
 	}
 
@@ -818,7 +818,7 @@ static int32_t getScaledSample(sample_t *s, int32_t index) // for sample data vi
 		int16_t *ptr16 = (int16_t *)s->dataPtr;
 
 		// don't read fixed mixer interpolation samples, read the prestine ones instead
-		if (index >= s->fixedPos && index < s->fixedPos+SINC_MAX_RIGHT_TAPS && s->length > loopEnd && s->isFixed)
+		if (index >= s->fixedPos && index < s->fixedPos+MAX_RIGHT_TAPS && s->length > loopEnd && s->isFixed)
 			tmp32 = s->fixedSmp[index-s->fixedPos];
 		else
 			tmp32 = ptr16[index];
@@ -827,7 +827,7 @@ static int32_t getScaledSample(sample_t *s, int32_t index) // for sample data vi
 	}
 	else // 8-bit
 	{
-		if (index >= s->fixedPos && index < s->fixedPos+SINC_MAX_RIGHT_TAPS && s->length > loopEnd && s->isFixed)
+		if (index >= s->fixedPos && index < s->fixedPos+MAX_RIGHT_TAPS && s->length > loopEnd && s->isFixed)
 			tmp32 = s->fixedSmp[index-s->fixedPos];
 		else
 			tmp32 = s->dataPtr[index];
@@ -1095,7 +1095,7 @@ static void getMinMax8(const void *p, uint32_t scanLen, int8_t *min8, int8_t *ma
 	}
 }
 
-// for scanning sample data peak where loopEnd+SINC_MAX_RIGHT_TAPS is within scan range (fixed interpolation tap samples)
+// for scanning sample data peak where loopEnd+MAX_RIGHT_TAPS is within scan range (fixed interpolation tap samples)
 static void getSpecialMinMax16(sample_t *s, int32_t index, int32_t scanEnd, int16_t *min16, int16_t *max16)
 {
 	int16_t minVal2, maxVal2;
@@ -1114,7 +1114,7 @@ static void getSpecialMinMax16(sample_t *s, int32_t index, int32_t scanEnd, int1
 
 	// read fixed samples (we are guaranteed to be within the fixed samples here)
 	const int32_t tapIndex = index-s->fixedPos;
-	const int32_t scanLength = SINC_MAX_RIGHT_TAPS-tapIndex;
+	const int32_t scanLength = MAX_RIGHT_TAPS-tapIndex;
 
 	int32_t tmpScanEnd = index+scanLength;
 	if (tmpScanEnd > scanEnd)
@@ -1140,7 +1140,7 @@ static void getSpecialMinMax16(sample_t *s, int32_t index, int32_t scanEnd, int1
 	*max16 = maxVal;
 }
 
-// for scanning sample data peak where loopEnd+SINC_MAX_RIGHT_TAPS is within scan range (fixed interpolation tap samples)
+// for scanning sample data peak where loopEnd+MAX_RIGHT_TAPS is within scan range (fixed interpolation tap samples)
 static void getSpecialMinMax8(sample_t *s, int32_t index, int32_t scanEnd, int8_t *min8, int8_t *max8)
 {
 	int8_t minVal2, maxVal2;
@@ -1159,7 +1159,7 @@ static void getSpecialMinMax8(sample_t *s, int32_t index, int32_t scanEnd, int8_
 
 	// read fixed samples (we are guaranteed to be within the fixed samples here)
 	const int32_t tapIndex = index-s->fixedPos;
-	const int32_t scanLength = SINC_MAX_RIGHT_TAPS-tapIndex;
+	const int32_t scanLength = MAX_RIGHT_TAPS-tapIndex;
 
 	int32_t tmpScanEnd = index+scanLength;
 	if (tmpScanEnd > scanEnd)
@@ -1204,7 +1204,7 @@ static void getSampleDataPeak(sample_t *s, int32_t index, int32_t length, int16_
 		/* If the scan area is including the fixed samples (for branchless mixer interpolation),
 		** do a special procedure to scan the original non-touched samples when needed.
 		*/
-		const bool insideRange = index >= s->fixedPos && index < s->fixedPos+SINC_MAX_RIGHT_TAPS;
+		const bool insideRange = index >= s->fixedPos && index < s->fixedPos+MAX_RIGHT_TAPS;
 		if (insideRange || (index < s->fixedPos && scanEnd >= s->fixedPos))
 		{
 			if (s->flags & SAMPLE_16BIT)

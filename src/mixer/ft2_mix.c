@@ -10,13 +10,13 @@
 **       (Note: Mixing macros can be found in ft2_mix_macros.h)
 **
 ** Specifications:
-** - Interpolation: None, 2-tap linear, 8-tap windowed-sinc, 16-tap windowed-sinc
+** - Interpolation: None, 2-tap linear, 4-tap cubic spline, 8-tap windowed-sinc, 16-tap windowed-sinc
 ** - FT2-styled linear volume ramping (can be turned off)
 ** - 32.32 (16.16 if 32-bit CPU) fixed-point precision for resampling delta/position
 ** - 32-bit floating-point precision for mixing and interpolation
 **
 ** This file has separate routines for EVERY possible sampling variation:
-** Interpolation none/sinc/linear, volumeramp on/off, 8-bit, 16-bit, no loop, loop, bidi.
+** Interpolation none/sinc/linear/cubic, volumeramp on/off, 8-bit, 16-bit, no loop, loop, bidi.
 ** (36 mixing routines in total + another 36 for center-mixing)
 **
 ** Every voice has a function pointer set to the according mixing routine on
@@ -632,6 +632,184 @@ static void mix8bBidiLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSa
 				RENDER_8BIT_SMP_S16INTRP
 				INC_POS_BIDI
 				RENDER_8BIT_SMP_S16INTRP
+				INC_POS_BIDI
+			}
+		}
+		END_BIDI
+
+		WRAP_BIDI_LOOP
+	}
+
+	SET_BACK_MIXER_POS
+}
+
+static void mix8bNoLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int8_t *base, *smpPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac;
+
+	GET_VOL
+	GET_MIXER_VARS
+	SET_BASE8
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		samplesLeft -= samplesToMix;
+
+		for (i = 0; i < (samplesToMix & 3); i++)
+		{
+			RENDER_8BIT_SMP_CINTRP
+			INC_POS
+		}
+		samplesToMix >>= 2;
+		for (i = 0; i < samplesToMix; i++)
+		{
+			RENDER_8BIT_SMP_CINTRP
+			INC_POS
+			RENDER_8BIT_SMP_CINTRP
+			INC_POS
+			RENDER_8BIT_SMP_CINTRP
+			INC_POS
+			RENDER_8BIT_SMP_CINTRP
+			INC_POS
+		}
+
+		HANDLE_SAMPLE_END
+	}
+
+	SET_BACK_MIXER_POS
+}
+
+static void mix8bLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int8_t *base, *smpPtr;
+	int8_t *smpTapPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac;
+
+	GET_VOL
+	GET_MIXER_VARS
+	SET_BASE8
+	PREPARE_TAP_FIX8
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		samplesLeft -= samplesToMix;
+
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+			}
+		}
+		else
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS
+			}
+		}
+
+		WRAP_LOOP
+	}
+
+	SET_BACK_MIXER_POS
+}
+
+static void mix8bBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int8_t *base, *revBase, *smpPtr;
+	int8_t *smpTapPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac, tmpDelta;
+
+	GET_VOL
+	GET_MIXER_VARS
+	SET_BASE8_BIDI
+	PREPARE_TAP_FIX8
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		samplesLeft -= samplesToMix;
+
+		START_BIDI
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+			}
+		}
+		else
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS_BIDI
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP
 				INC_POS_BIDI
 			}
 		}
@@ -1371,6 +1549,218 @@ static void mix8bRampBidiLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t n
 	SET_BACK_MIXER_POS
 }
 
+static void mix8bRampNoLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int8_t *base, *smpPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	float fVolumeLDelta, fVolumeRDelta, fVolumeL, fVolumeR;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac;
+
+	GET_VOL_RAMP
+	GET_MIXER_VARS_RAMP
+	SET_BASE8
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		LIMIT_MIX_NUM_RAMP
+		samplesLeft -= samplesToMix;
+
+		for (i = 0; i < (samplesToMix & 3); i++)
+		{
+			RENDER_8BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+		}
+		samplesToMix >>= 2;
+		for (i = 0; i < samplesToMix; i++)
+		{
+			RENDER_8BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+			RENDER_8BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+			RENDER_8BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+			RENDER_8BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+		}
+
+		HANDLE_SAMPLE_END
+	}
+
+	SET_VOL_BACK
+	SET_BACK_MIXER_POS
+}
+
+static void mix8bRampLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int8_t *base, *smpPtr;
+	int8_t *smpTapPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	float fVolumeLDelta, fVolumeRDelta, fVolumeL, fVolumeR;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac;
+
+	GET_VOL_RAMP
+	GET_MIXER_VARS_RAMP
+	SET_BASE8
+	PREPARE_TAP_FIX8
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		LIMIT_MIX_NUM_RAMP
+		samplesLeft -= samplesToMix;
+
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+			}
+		}
+		else
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+			}
+		}
+
+		WRAP_LOOP
+	}
+
+	SET_VOL_BACK
+	SET_BACK_MIXER_POS
+}
+
+static void mix8bRampBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int8_t *base, *revBase, *smpPtr;
+	int8_t *smpTapPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	float fVolumeLDelta, fVolumeRDelta, fVolumeL, fVolumeR;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac, tmpDelta;
+
+	GET_VOL_RAMP
+	GET_MIXER_VARS_RAMP
+	SET_BASE8_BIDI
+	PREPARE_TAP_FIX8
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		LIMIT_MIX_NUM_RAMP
+		samplesLeft -= samplesToMix;
+
+		START_BIDI
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+			}
+		}
+		else
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_8BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+			}
+		}
+		END_BIDI
+
+		WRAP_BIDI_LOOP
+	}
+	
+	SET_VOL_BACK
+	SET_BACK_MIXER_POS
+}
+
 /* ----------------------------------------------------------------------- */
 /*                          16-BIT MIXING ROUTINES                         */
 /* ----------------------------------------------------------------------- */
@@ -1976,6 +2366,184 @@ static void mix16bBidiLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numS
 				RENDER_16BIT_SMP_S16INTRP
 				INC_POS_BIDI
 				RENDER_16BIT_SMP_S16INTRP
+				INC_POS_BIDI
+			}
+		}
+		END_BIDI
+
+		WRAP_BIDI_LOOP
+	}
+
+	SET_BACK_MIXER_POS
+}
+
+static void mix16bNoLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int16_t *base, *smpPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac;
+
+	GET_VOL
+	GET_MIXER_VARS
+	SET_BASE16
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		samplesLeft -= samplesToMix;
+
+		for (i = 0; i < (samplesToMix & 3); i++)
+		{
+			RENDER_16BIT_SMP_CINTRP
+			INC_POS
+		}
+		samplesToMix >>= 2;
+		for (i = 0; i < samplesToMix; i++)
+		{
+			RENDER_16BIT_SMP_CINTRP
+			INC_POS
+			RENDER_16BIT_SMP_CINTRP
+			INC_POS
+			RENDER_16BIT_SMP_CINTRP
+			INC_POS
+			RENDER_16BIT_SMP_CINTRP
+			INC_POS
+		}
+
+		HANDLE_SAMPLE_END
+	}
+
+	SET_BACK_MIXER_POS
+}
+
+static void mix16bLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int16_t *base, *smpPtr;
+	int16_t *smpTapPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac;
+
+	GET_VOL
+	GET_MIXER_VARS
+	SET_BASE16
+	PREPARE_TAP_FIX16
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		samplesLeft -= samplesToMix;
+
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS
+			}
+		}
+		else
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS
+			}
+		}
+
+		WRAP_LOOP
+	}
+
+	SET_BACK_MIXER_POS
+}
+
+static void mix16bBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int16_t *base, *revBase, *smpPtr;
+	int16_t *smpTapPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac, tmpDelta;
+
+	GET_VOL
+	GET_MIXER_VARS
+	SET_BASE16_BIDI
+	PREPARE_TAP_FIX16
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		samplesLeft -= samplesToMix;
+
+		START_BIDI
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				INC_POS_BIDI
+			}
+		}
+		else
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS_BIDI
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP
 				INC_POS_BIDI
 			}
 		}
@@ -2715,6 +3283,218 @@ static void mix16bRampBidiLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t 
 	SET_BACK_MIXER_POS
 }
 
+static void mix16bRampNoLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int16_t *base, *smpPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	float fVolumeLDelta, fVolumeRDelta, fVolumeL, fVolumeR;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac;
+
+	GET_VOL_RAMP
+	GET_MIXER_VARS_RAMP
+	SET_BASE16
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		LIMIT_MIX_NUM_RAMP
+		samplesLeft -= samplesToMix;
+
+		for (i = 0; i < (samplesToMix & 3); i++)
+		{
+			RENDER_16BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+		}
+		samplesToMix >>= 2;
+		for (i = 0; i < samplesToMix; i++)
+		{
+			RENDER_16BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+			RENDER_16BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+			RENDER_16BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+			RENDER_16BIT_SMP_CINTRP
+			VOLUME_RAMPING
+			INC_POS
+		}
+
+		HANDLE_SAMPLE_END
+	}
+
+	SET_VOL_BACK
+	SET_BACK_MIXER_POS
+}
+
+static void mix16bRampLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int16_t *base, *smpPtr;
+	int16_t *smpTapPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	float fVolumeLDelta, fVolumeRDelta, fVolumeL, fVolumeR;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac;
+
+	GET_VOL_RAMP
+	GET_MIXER_VARS_RAMP
+	SET_BASE16
+	PREPARE_TAP_FIX16
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		LIMIT_MIX_NUM_RAMP
+		samplesLeft -= samplesToMix;
+
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS
+			}
+		}
+		else
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS
+			}
+		}
+
+		WRAP_LOOP
+	}
+
+	SET_VOL_BACK
+	SET_BACK_MIXER_POS
+}
+
+static void mix16bRampBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples)
+{
+	const int16_t *base, *revBase, *smpPtr;
+	int16_t *smpTapPtr;
+	float fSample, *fMixBufferL, *fMixBufferR;
+	int32_t position;
+	float fVolumeLDelta, fVolumeRDelta, fVolumeL, fVolumeR;
+	uint32_t i, samplesToMix, samplesLeft;
+	uintCPUWord_t positionFrac, tmpDelta;
+
+	GET_VOL_RAMP
+	GET_MIXER_VARS_RAMP
+	SET_BASE16_BIDI
+	PREPARE_TAP_FIX16
+
+	samplesLeft = numSamples;
+	while (samplesLeft > 0)
+	{
+		LIMIT_MIX_NUM
+		LIMIT_MIX_NUM_RAMP
+		samplesLeft -= samplesToMix;
+
+		START_BIDI
+		if (v->hasLooped) // the negative interpolation taps need a special case after the sample has looped once
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP_TAP_FIX
+				VOLUME_RAMPING
+				INC_POS_BIDI
+			}
+		}
+		else
+		{
+			for (i = 0; i < (samplesToMix & 3); i++)
+			{
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+			}
+			samplesToMix >>= 2;
+			for (i = 0; i < samplesToMix; i++)
+			{
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+				RENDER_16BIT_SMP_CINTRP
+				VOLUME_RAMPING
+				INC_POS_BIDI
+			}
+		}
+		END_BIDI
+
+		WRAP_BIDI_LOOP
+	}
+
+	SET_VOL_BACK
+	SET_BACK_MIXER_POS
+}
+
 // -----------------------------------------------------------------------
 
 const mixFunc mixFuncTab[] =
@@ -2740,6 +3520,9 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)mix8bNoLoopS16Intrp,
 	(mixFunc)mix8bLoopS16Intrp,
 	(mixFunc)mix8bBidiLoopS16Intrp,
+	(mixFunc)mix8bNoLoopCIntrp,
+	(mixFunc)mix8bLoopCIntrp,
+	(mixFunc)mix8bBidiLoopCIntrp,
 
 	// 16-bit
 	(mixFunc)mix16bNoLoop,
@@ -2754,6 +3537,9 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)mix16bNoLoopS16Intrp,
 	(mixFunc)mix16bLoopS16Intrp,
 	(mixFunc)mix16bBidiLoopS16Intrp,
+	(mixFunc)mix16bNoLoopCIntrp,
+	(mixFunc)mix16bLoopCIntrp,
+	(mixFunc)mix16bBidiLoopCIntrp,
 
 	// volume ramping
 
@@ -2770,6 +3556,9 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)mix8bRampNoLoopS16Intrp,
 	(mixFunc)mix8bRampLoopS16Intrp,
 	(mixFunc)mix8bRampBidiLoopS16Intrp,
+	(mixFunc)mix8bRampNoLoopCIntrp,
+	(mixFunc)mix8bRampLoopCIntrp,
+	(mixFunc)mix8bRampBidiLoopCIntrp,
 
 	// 16-bit
 	(mixFunc)mix16bRampNoLoop,
@@ -2784,6 +3573,9 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)mix16bRampNoLoopS16Intrp,
 	(mixFunc)mix16bRampLoopS16Intrp,
 	(mixFunc)mix16bRampBidiLoopS16Intrp,
+	(mixFunc)mix16bRampNoLoopCIntrp,
+	(mixFunc)mix16bRampLoopCIntrp,
+	(mixFunc)mix16bRampBidiLoopCIntrp,
 
 	/* 
 	** ---------------------------------
@@ -2806,6 +3598,9 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)centerMix8bNoLoopS16Intrp,
 	(mixFunc)centerMix8bLoopS16Intrp,
 	(mixFunc)centerMix8bBidiLoopS16Intrp,
+	(mixFunc)centerMix8bNoLoopCIntrp,
+	(mixFunc)centerMix8bLoopCIntrp,
+	(mixFunc)centerMix8bBidiLoopCIntrp,
 
 	// 16-bit
 	(mixFunc)centerMix16bNoLoop,
@@ -2820,6 +3615,9 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)centerMix16bNoLoopS16Intrp,
 	(mixFunc)centerMix16bLoopS16Intrp,
 	(mixFunc)centerMix16bBidiLoopS16Intrp,
+	(mixFunc)centerMix16bNoLoopCIntrp,
+	(mixFunc)centerMix16bLoopCIntrp,
+	(mixFunc)centerMix16bBidiLoopCIntrp,
 
 	// volume ramping
 
@@ -2836,6 +3634,9 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)centerMix8bRampNoLoopS16Intrp,
 	(mixFunc)centerMix8bRampLoopS16Intrp,
 	(mixFunc)centerMix8bRampBidiLoopS16Intrp,
+	(mixFunc)centerMix8bRampNoLoopCIntrp,
+	(mixFunc)centerMix8bRampLoopCIntrp,
+	(mixFunc)centerMix8bRampBidiLoopCIntrp,
 
 	// 16-bit
 	(mixFunc)centerMix16bRampNoLoop,
@@ -2849,5 +3650,8 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)centerMix16bRampBidiLoopLIntrp,
 	(mixFunc)centerMix16bRampNoLoopS16Intrp,
 	(mixFunc)centerMix16bRampLoopS16Intrp,
-	(mixFunc)centerMix16bRampBidiLoopS16Intrp
+	(mixFunc)centerMix16bRampBidiLoopS16Intrp,
+	(mixFunc)centerMix16bRampNoLoopCIntrp,
+	(mixFunc)centerMix16bRampLoopCIntrp,
+	(mixFunc)centerMix16bRampBidiLoopCIntrp
 };

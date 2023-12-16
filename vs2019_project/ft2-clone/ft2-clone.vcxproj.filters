@@ -164,6 +164,9 @@
       <Filter>scopes</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\ft2_hpc.c" />
+    <ClCompile Include="..\..\src\mixer\ft2_cubic_spline.c">
+      <Filter>mixer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\rtmidi\RtMidi.h">
@@ -324,6 +327,9 @@
     </ClInclude>
     <ClInclude Include="..\..\src\ft2_hpc.h">
       <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mixer\ft2_cubic_spline.h">
+      <Filter>mixer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

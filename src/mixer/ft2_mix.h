@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include "../ft2_cpu.h"
 
+#define MAX_TAPS 16
+#define MAX_LEFT_TAPS ((MAX_TAPS/2)-1)
+#define MAX_RIGHT_TAPS (MAX_TAPS/2)
+
 // the fractional bits are hardcoded, changing these will break things!
 #if CPU_64BIT
 #define MIXER_FRAC_BITS 32

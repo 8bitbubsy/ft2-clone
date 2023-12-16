@@ -140,7 +140,8 @@ static void loadConfigFromBuffer(bool defaults)
 	config.recMIDIVolSens = CLAMP(config.recMIDIVolSens, 0, 200);
 	config.recMIDIChn  = CLAMP(config.recMIDIChn, 1, 16);
 
-	config.interpolation &= 3; // one extra bit used in FT2 clone (off, sinc, linear)
+	if (config.interpolation > 4)
+		config.interpolation = INTERPOLATION_SINC8; // default (sinc, 8 point)
 
 	if (config.recTrueInsert > 1)
 		config.recTrueInsert = 1;
@@ -834,6 +835,8 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 		tmpID = RB_CONFIG_AUDIO_INTRP_LINEAR;
 	else if (config.interpolation == INTERPOLATION_SINC16)
 		tmpID = RB_CONFIG_AUDIO_INTRP_SINC16;
+	else if (config.interpolation == INTERPOLATION_CUBIC)
+		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC;
 	else
 		tmpID = RB_CONFIG_AUDIO_INTRP_SINC8; // default case
 
@@ -1168,11 +1171,11 @@ void showConfigScreen(void)
 			textOutShadow(406,  75, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
 			textOutShadow(406,  89, PAL_FORGRND, PAL_DSKTOP2, "32-bit (float)");
 
-			textOutShadow(390, 105, PAL_FORGRND, PAL_DSKTOP2, "Interpolation:");
-			textOutShadow(406, 118, PAL_FORGRND, PAL_DSKTOP2, "Disabled");
-			textOutShadow(406, 132, PAL_FORGRND, PAL_DSKTOP2, "Linear (2 point)");
-			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
-			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
+			textOutShadow(406, 105, PAL_FORGRND, PAL_DSKTOP2, "No interpolation");
+			textOutShadow(406, 119, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
+			textOutShadow(406, 133, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
+			textOutShadow(406, 147, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
+			textOutShadow(406, 161, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
 
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
@@ -1623,6 +1626,13 @@ void rbConfigAudioIntrpLinear(void)
 	config.interpolation = INTERPOLATION_LINEAR;
 	audioSetInterpolationType(config.interpolation);
 	checkRadioButton(RB_CONFIG_AUDIO_INTRP_LINEAR);
+}
+
+void rbConfigAudioIntrpCubic(void)
+{
+	config.interpolation = INTERPOLATION_CUBIC;
+	audioSetInterpolationType(config.interpolation);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_CUBIC);
 }
 
 void rbConfigAudioIntrp8PointSinc(void)

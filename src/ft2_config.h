@@ -24,6 +24,7 @@ enum
 	INTERPOLATION_SINC8 = 1,
 	INTERPOLATION_LINEAR = 2,
 	INTERPOLATION_SINC16 = 3,
+	INTERPOLATION_CUBIC = 4,
 	// ------
 
 	MOUSE_IDLE_SHAPE_NICE = 0,
@@ -219,6 +220,7 @@ void rbConfigAudio16Bit(void);
 void rbConfigAudio32BitFloat(void);
 void rbConfigAudioIntrpDisabled(void);
 void rbConfigAudioIntrpLinear(void);
+void rbConfigAudioIntrpCubic(void);
 void rbConfigAudioIntrp8PointSinc(void);
 void rbConfigAudioIntrp16PointSinc(void);
 void rbConfigAudio44kHz(void);

@@ -18,6 +18,9 @@ void centerMix8bBidiLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSampl
 void centerMix8bNoLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 void centerMix8bLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 void centerMix8bBidiLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix8bNoLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix8bLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix8bBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 
 // 16-bit
 void centerMix16bNoLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
@@ -32,6 +35,9 @@ void centerMix16bBidiLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamp
 void centerMix16bNoLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 void centerMix16bLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 void centerMix16bBidiLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix16bNoLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix16bLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix16bBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 
 // volume ramping
 
@@ -48,6 +54,9 @@ void centerMix8bRampBidiLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t numS
 void centerMix8bRampNoLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 void centerMix8bRampLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 void centerMix8bRampBidiLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix8bRampNoLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix8bRampLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix8bRampBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 
 // 16bit
 void centerMix16bRampNoLoop(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
@@ -62,3 +71,6 @@ void centerMix16bRampBidiLoopLIntrp(voice_t *v, uint32_t bufferPos, uint32_t num
 void centerMix16bRampNoLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 void centerMix16bRampLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
 void centerMix16bRampBidiLoopS16Intrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix16bRampNoLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix16bRampLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);
+void centerMix16bRampBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t numSamples);

@@ -803,11 +803,9 @@ you exit the program.
 >@X040@C001Interpolation:
 >@X060@C002
 Selects what type of resampling interpolation to use.
-"Disabled" uses no interpolation (nearest neighbor), which will result in
-aliasing (noise) in the sound. "Linear" is what real FT2 uses,
-which is a mediocre interpolation type. "Sinc" is the recommended
-setting for the best audio quality, although it may sometimes sound too filtered
-and timbre-changing on low-quality samples.
+If you want to have an authentic FT2 sound, select "linear".
+Sinc will give the best interpolation, but it may sound too filtered on lo-fi samples.
+Tip: Play around with the different options...
 
 >@X040@C001Volume ramping:
 >@X060@C002

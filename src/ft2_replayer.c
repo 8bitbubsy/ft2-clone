@@ -20,6 +20,7 @@
 #include "ft2_sample_loader.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
+#include "mixer/ft2_cubic_spline.h"
 #include "mixer/ft2_windowed_sinc.h"
 
 static double dLogTab[4*12*16], dExp2MulTab[32];
@@ -2818,6 +2819,7 @@ void closeReplayer(void)
 		instr[131] = NULL;
 	}
 
+	freeCubicSplineTable();
 	freeWindowedSincTables();
 }
 

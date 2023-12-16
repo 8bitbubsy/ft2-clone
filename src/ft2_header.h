@@ -37,8 +37,8 @@
 ** branchless in the inner channel mixer loop.
 ** Warning: Do not change this!
 */
-#define SMP_DAT_OFFSET ((SINC_MAX_LEFT_TAPS*2)+1)
-#define SAMPLE_PAD_LENGTH (SMP_DAT_OFFSET+(SINC_MAX_RIGHT_TAPS*2))
+#define SMP_DAT_OFFSET ((MAX_LEFT_TAPS*2)+1)
+#define SAMPLE_PAD_LENGTH (SMP_DAT_OFFSET+(MAX_RIGHT_TAPS*2))
 
 #ifndef _WIN32
 #define _stricmp strcasecmp
