@@ -10,12 +10,16 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
     Ubuntu/Debian and similar: build-essential libsdl2-dev
     Fedora: gcc gcc-c++ alsa-lib-devel SDL2-devel
     Others: www.google.com (you want gcc, g++ (or c++), alsa dev and SDL2 dev)
- 2. Compile the FT2 clone:     (folder: "ft2-clone")
-    chmod +x make-linux.sh     (only needed once)
+ 2. Compile the FT2 clone for command line:     (folder: "ft2-clone")
+    chmod +x make-linux.sh                      (only needed once)
     ./make-linux.sh
-    
+    Compile the FT2 clone as an AppImage:
+    chmod +x make-linux-appimage.sh
+    ./make-linux-appimage.sh
+
  Note: If you don't have libstdc++ and/or can't compile rtmidi, try running
-       make-linux-nomidi.sh instead.
+       make-linux-nomidi-noflac.sh or make-linux-appimage-nomidi-noflac.sh
+       instead.
        
  Known issues: Audio recording (sampling) can update VERY slowly or not work at
                all... I have no idea why, it works really well on Windows/maCOS.
