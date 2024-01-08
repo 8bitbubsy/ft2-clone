@@ -931,11 +931,14 @@ static uint32_t countOverflowingNotes(uint8_t mode, int8_t addValue, bool allIns
 			if (markY1 == markY2 || markY1 > markY2)
 				return 0;
 
-			if (markX1 >= song.numChannels-1)
-				markX1 = song.numChannels-2;
+			if (markX1 > song.numChannels-1)
+				markX1 = song.numChannels-1;
 
-			if (markX2 >= song.numChannels)
-				markX2 = (song.numChannels-1)-markX1;
+			if (markX2 > song.numChannels-1)
+				markX2 = song.numChannels-1;
+
+			if (markX2 < markX1)
+				markX2 = markX1;
 
 			if (markY1 >= numRows)
 				markY1 = numRows-1;
@@ -1075,11 +1078,14 @@ static void doTranspose(uint8_t mode, int8_t addValue, bool allInstrumentsFlag)
 			if (markY1 == markY2 || markY1 > markY2)
 				return;
 
-			if (markX1 >= song.numChannels-1)
-				markX1 = song.numChannels-2;
+			if (markX1 > song.numChannels-1)
+				markX1 = song.numChannels-1;
 
-			if (markX2 >= song.numChannels)
-				markX2 = (song.numChannels-1)-markX1;
+			if (markX2 > song.numChannels-1)
+				markX2 = song.numChannels-1;
+
+			if (markX2 < markX1)
+				markX2 = markX1;
 
 			if (markY1 >= numRows)
 				markY1 = numRows-1;
@@ -1503,11 +1509,14 @@ void cutBlock(void)
 	if (markY1 == markY2 || markY1 > markY2)
 		return;
 
-	if (markX1 >= song.numChannels-1)
-		markX1 = song.numChannels-2;
+	if (markX1 > song.numChannels-1)
+		markX1 = song.numChannels-1;
 
-	if (markX2 >= song.numChannels)
-		markX2 = (song.numChannels-1)-markX1;
+	if (markX2 > song.numChannels-1)
+		markX2 = song.numChannels-1;
+
+	if (markX2 < markX1)
+		markX2 = markX1;
 
 	if (markY1 >= numRows)
 		markY1 = numRows-1;
@@ -1562,11 +1571,14 @@ void copyBlock(void)
 	if (markY1 == markY2 || markY1 > markY2)
 		return;
 
-	if (markX1 >= song.numChannels-1)
-		markX1 = song.numChannels-2;
+	if (markX1 > song.numChannels-1)
+		markX1 = song.numChannels-1;
 
-	if (markX2 >= song.numChannels)
-		markX2 = (song.numChannels-1)-markX1;
+	if (markX2 > song.numChannels-1)
+		markX2 = song.numChannels-1;
+
+	if (markX2 < markX1)
+		markX2 = markX1;
 
 	if (markY1 >= numRows)
 		markY1 = numRows-1;
@@ -1642,11 +1654,14 @@ static void remapInstrXY(int32_t pattNum, int32_t x1, int32_t y1, int32_t x2, in
 	if (pattPtr == NULL)
 		return;
 
-	if (x1 >= song.numChannels-1)
-		x1 = song.numChannels-2;
+	if (x1 > song.numChannels-1)
+		x1 = song.numChannels-1;
 
-	if (x2 >= song.numChannels)
-		x2 = (song.numChannels-1)-x1;
+	if (x2 > song.numChannels-1)
+		x2 = song.numChannels-1;
+
+	if (x2 < x1)
+		x2 = x1;
 
 	const int16_t numRows = patternNumRows[pattNum];
 	if (y1 >= numRows)
