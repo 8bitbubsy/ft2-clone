@@ -267,7 +267,7 @@ bool testAudioDeviceListsMouseDown(void)
 				strcpy(audio.currOutputDevice, devString);
 
 			if (!setNewAudioSettings())
-				okBox(0, "System message", "Couldn't open audio input device!", NULL);
+				okBox(0, "System message", "Couldn't open audio output device!", NULL);
 			else
 				drawAudioOutputList();
 		}
