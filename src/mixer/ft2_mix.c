@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include "ft2_mix.h"
 #include "ft2_mix_macros.h"
-#include "ft2_center_mix.h"
 #include "../ft2_cpu.h"
 
 /*
@@ -17,7 +16,7 @@
 **
 ** This file has separate routines for EVERY possible sampling variation:
 ** Interpolation none/sinc/linear/cubic, volumeramp on/off, 8-bit, 16-bit, no loop, loop, bidi.
-** (36 mixing routines in total + another 36 for center-mixing)
+** (48 mixing routines in total)
 **
 ** Every voice has a function pointer set to the according mixing routine on
 ** sample trigger (from replayer, but set in audio thread), using a function
@@ -3499,12 +3498,6 @@ static void mix16bRampBidiLoopCIntrp(voice_t *v, uint32_t bufferPos, uint32_t nu
 
 const mixFunc mixFuncTab[] =
 {
-	/*
-	** ---------------------------------
-	** stereo mixing (this file)
-	** ---------------------------------
-	*/
-
 	// no volume ramping
 
 	// 8-bit
@@ -3575,83 +3568,5 @@ const mixFunc mixFuncTab[] =
 	(mixFunc)mix16bRampBidiLoopS16Intrp,
 	(mixFunc)mix16bRampNoLoopCIntrp,
 	(mixFunc)mix16bRampLoopCIntrp,
-	(mixFunc)mix16bRampBidiLoopCIntrp,
-
-	/* 
-	** ---------------------------------
-	** center mixing (ft2_center_mix.c)
-	** ---------------------------------
-	*/ 
-
-	// no volume ramping
-
-	// 8-bit
-	(mixFunc)centerMix8bNoLoop,
-	(mixFunc)centerMix8bLoop,
-	(mixFunc)centerMix8bBidiLoop,
-	(mixFunc)centerMix8bNoLoopS8Intrp,
-	(mixFunc)centerMix8bLoopS8Intrp,
-	(mixFunc)centerMix8bBidiLoopS8Intrp,
-	(mixFunc)centerMix8bNoLoopLIntrp,
-	(mixFunc)centerMix8bLoopLIntrp,
-	(mixFunc)centerMix8bBidiLoopLIntrp,
-	(mixFunc)centerMix8bNoLoopS16Intrp,
-	(mixFunc)centerMix8bLoopS16Intrp,
-	(mixFunc)centerMix8bBidiLoopS16Intrp,
-	(mixFunc)centerMix8bNoLoopCIntrp,
-	(mixFunc)centerMix8bLoopCIntrp,
-	(mixFunc)centerMix8bBidiLoopCIntrp,
-
-	// 16-bit
-	(mixFunc)centerMix16bNoLoop,
-	(mixFunc)centerMix16bLoop,
-	(mixFunc)centerMix16bBidiLoop,
-	(mixFunc)centerMix16bNoLoopS8Intrp,
-	(mixFunc)centerMix16bLoopS8Intrp,
-	(mixFunc)centerMix16bBidiLoopS8Intrp,
-	(mixFunc)centerMix16bNoLoopLIntrp,
-	(mixFunc)centerMix16bLoopLIntrp,
-	(mixFunc)centerMix16bBidiLoopLIntrp,
-	(mixFunc)centerMix16bNoLoopS16Intrp,
-	(mixFunc)centerMix16bLoopS16Intrp,
-	(mixFunc)centerMix16bBidiLoopS16Intrp,
-	(mixFunc)centerMix16bNoLoopCIntrp,
-	(mixFunc)centerMix16bLoopCIntrp,
-	(mixFunc)centerMix16bBidiLoopCIntrp,
-
-	// volume ramping
-
-	// 8-bit
-	(mixFunc)centerMix8bRampNoLoop,
-	(mixFunc)centerMix8bRampLoop,
-	(mixFunc)centerMix8bRampBidiLoop,
-	(mixFunc)centerMix8bRampNoLoopS8Intrp,
-	(mixFunc)centerMix8bRampLoopS8Intrp,
-	(mixFunc)centerMix8bRampBidiLoopS8Intrp,
-	(mixFunc)centerMix8bRampNoLoopLIntrp,
-	(mixFunc)centerMix8bRampLoopLIntrp,
-	(mixFunc)centerMix8bRampBidiLoopLIntrp,
-	(mixFunc)centerMix8bRampNoLoopS16Intrp,
-	(mixFunc)centerMix8bRampLoopS16Intrp,
-	(mixFunc)centerMix8bRampBidiLoopS16Intrp,
-	(mixFunc)centerMix8bRampNoLoopCIntrp,
-	(mixFunc)centerMix8bRampLoopCIntrp,
-	(mixFunc)centerMix8bRampBidiLoopCIntrp,
-
-	// 16-bit
-	(mixFunc)centerMix16bRampNoLoop,
-	(mixFunc)centerMix16bRampLoop,
-	(mixFunc)centerMix16bRampBidiLoop,
-	(mixFunc)centerMix16bRampNoLoopS8Intrp,
-	(mixFunc)centerMix16bRampLoopS8Intrp,
-	(mixFunc)centerMix16bRampBidiLoopS8Intrp,
-	(mixFunc)centerMix16bRampNoLoopLIntrp,
-	(mixFunc)centerMix16bRampLoopLIntrp,
-	(mixFunc)centerMix16bRampBidiLoopLIntrp,
-	(mixFunc)centerMix16bRampNoLoopS16Intrp,
-	(mixFunc)centerMix16bRampLoopS16Intrp,
-	(mixFunc)centerMix16bRampBidiLoopS16Intrp,
-	(mixFunc)centerMix16bRampNoLoopCIntrp,
-	(mixFunc)centerMix16bRampLoopCIntrp,
-	(mixFunc)centerMix16bRampBidiLoopCIntrp
+	(mixFunc)mix16bRampBidiLoopCIntrp
 };

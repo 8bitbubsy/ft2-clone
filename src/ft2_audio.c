@@ -15,7 +15,6 @@
 #include "ft2_tables.h"
 #include "ft2_structs.h"
 #include "mixer/ft2_mix.h"
-#include "mixer/ft2_center_mix.h"
 #include "mixer/ft2_silence_mix.h"
 
 // hide POSIX warnings
@@ -462,32 +461,15 @@ static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 	{
 		if (v->active)
 		{
-			bool centerMixFlag;
-
 			const bool volRampFlag = (v->volumeRampLength > 0);
-			if (volRampFlag)
-			{
-				centerMixFlag = (v->fTargetVolumeL == v->fTargetVolumeR) && (v->fVolumeLDelta == v->fVolumeRDelta);
-			}
-			else // no volume ramping active
-			{
-				if (v->fCurrVolumeL == 0.0f && v->fCurrVolumeR == 0.0f)
-				{
-					silenceMixRoutine(v, samplesToMix);
-					continue;
-				}
-
-				centerMixFlag = (v->fCurrVolumeL == v->fCurrVolumeR);
-			}
-
-			mixFuncTab[((int32_t)centerMixFlag * (3*5*2*2)) + ((int32_t)volRampFlag * (3*5*2)) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
+			if (!volRampFlag && v->fCurrVolumeL == 0.0f && v->fCurrVolumeR == 0.0f)
+				silenceMixRoutine(v, samplesToMix);
+			else
+				mixFuncTab[((int32_t)volRampFlag * (3*5*2)) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
 		}
 
 		if (r->active) // volume ramp fadeout-voice
-		{
-			const bool centerMixFlag = (r->fTargetVolumeL == r->fTargetVolumeR) && (r->fVolumeLDelta == r->fVolumeRDelta);
-			mixFuncTab[((int32_t)centerMixFlag * (3*5*2*2)) + (3*5*2) + r->mixFuncOffset](r, bufferPosition, samplesToMix);
-		}
+			mixFuncTab[(3*5*2) + r->mixFuncOffset](r, bufferPosition, samplesToMix);
 	}
 }
 

@@ -11,23 +11,13 @@
 	const float fVolumeL = v->fCurrVolumeL; \
 	const float fVolumeR = v->fCurrVolumeR;
 
-#define GET_VOL_MONO \
-	const float fVolumeL = v->fCurrVolumeL;
-
 #define GET_VOL_RAMP \
 	fVolumeL = v->fCurrVolumeL; \
 	fVolumeR = v->fCurrVolumeR;
 
-#define GET_VOL_MONO_RAMP \
-	fVolumeL = v->fCurrVolumeL;
-
 #define SET_VOL_BACK \
 	v->fCurrVolumeL = fVolumeL; \
 	v->fCurrVolumeR = fVolumeR;
-
-#define SET_VOL_BACK_MONO \
-	v->fCurrVolumeL = fVolumeL; \
-	v->fCurrVolumeR = fVolumeL;
 
 #define GET_MIXER_VARS \
 	const uintCPUWord_t delta = v->delta; \
@@ -42,14 +32,6 @@
 	fMixBufferR = audio.fMixBufferR + bufferPos; \
 	fVolumeLDelta = v->fVolumeLDelta; \
 	fVolumeRDelta = v->fVolumeRDelta; \
-	position = v->position; \
-	positionFrac = v->positionFrac;
-
-#define GET_MIXER_VARS_MONO_RAMP \
-	const uintCPUWord_t delta = v->delta; \
-	fMixBufferL = audio.fMixBufferL + bufferPos; \
-	fMixBufferR = audio.fMixBufferR + bufferPos; \
-	fVolumeLDelta = v->fVolumeLDelta; \
 	position = v->position; \
 	positionFrac = v->positionFrac;
 
@@ -92,36 +74,23 @@
 	v->positionFrac = positionFrac; \
 	v->position = position;
 
-/* ----------------------------------------------------------------------- */
-/*                          SAMPLE RENDERING MACROS                        */
-/* ----------------------------------------------------------------------- */
-
 #define VOLUME_RAMPING \
 	fVolumeL += fVolumeLDelta; \
 	fVolumeR += fVolumeRDelta;
 
-#define VOLUME_RAMPING_MONO \
-	fVolumeL += fVolumeLDelta;
+/* ----------------------------------------------------------------------- */
+/*                            NO INTERPOLATION                             */
+/* ----------------------------------------------------------------------- */
 
 #define RENDER_8BIT_SMP \
 	fSample = *smpPtr * (1.0f / 128.0f); \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_MONO \
-	fSample = (*smpPtr * (1.0f / 128.0f)) * fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 #define RENDER_16BIT_SMP \
 	fSample = *smpPtr * (1.0f / 32768.0f); \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
-
-#define RENDER_16BIT_SMP_MONO \
-	fSample = (*smpPtr * (1.0f / 32768.0f)) * fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
 
 /* ----------------------------------------------------------------------- */
 /*                          LINEAR INTERPOLATION                           */
@@ -143,22 +112,10 @@
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_MONO_LINTRP \
-	LINEAR_INTERPOLATION(smpPtr, positionFrac, 128) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 #define RENDER_16BIT_SMP_LINTRP \
 	LINEAR_INTERPOLATION(smpPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
-
-#define RENDER_16BIT_SMP_MONO_LINTRP \
-	LINEAR_INTERPOLATION(smpPtr, positionFrac, 32768) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
 
 /* ----------------------------------------------------------------------- */
 /*                       CUBIC SPLINE INTERPOLATION                        */
@@ -171,7 +128,6 @@
 ** samples are stored according to loop mode (or no loop).
 **
 ** There is also a second special case for the left edge (negative taps) after the sample has looped once.
-**
 */
 
 #if CUBIC_FSHIFT>=0
@@ -199,26 +155,14 @@
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_MONO_CINTRP \
-	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 128) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 #define RENDER_16BIT_SMP_CINTRP \
 	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_16BIT_SMP_MONO_CINTRP \
-	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 32768) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 
 /* Special left-edge case mixers to get proper tap data after one loop cycle.
-** These are only used with cubic interpolation on looped samples.
+** These are only used on looped samples.
 */
 
 #define RENDER_8BIT_SMP_CINTRP_TAP_FIX  \
@@ -227,25 +171,11 @@
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_MONO_CINTRP_TAP_FIX \
-	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 128) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 #define RENDER_16BIT_SMP_CINTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
 	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
-
-#define RENDER_16BIT_SMP_MONO_CINTRP_TAP_FIX \
-	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
 
 /* ----------------------------------------------------------------------- */
 /*                       WINDOWED-SINC INTERPOLATION                       */
@@ -258,7 +188,6 @@
 ** samples are stored according to loop mode (or no loop).
 **
 ** There is also a second special case for the left edge (negative taps) after the sample has looped once.
-**
 */
 
 #if SINC8_FSHIFT>=0
@@ -338,47 +267,23 @@
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_MONO_S8INTRP \
-	WINDOWED_SINC8_INTERPOLATION(smpPtr, positionFrac, 128) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 #define RENDER_16BIT_SMP_S8INTRP \
 	WINDOWED_SINC8_INTERPOLATION(smpPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
-
-#define RENDER_16BIT_SMP_MONO_S8INTRP \
-	WINDOWED_SINC8_INTERPOLATION(smpPtr, positionFrac, 32768) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
 
 #define RENDER_8BIT_SMP_S16INTRP \
 	WINDOWED_SINC16_INTERPOLATION(smpPtr, positionFrac, 128) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_MONO_S16INTRP \
-	WINDOWED_SINC16_INTERPOLATION(smpPtr, positionFrac, 128) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 #define RENDER_16BIT_SMP_S16INTRP \
 	WINDOWED_SINC16_INTERPOLATION(smpPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_16BIT_SMP_MONO_S16INTRP \
-	WINDOWED_SINC16_INTERPOLATION(smpPtr, positionFrac, 32768) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 /* Special left-edge case mixers to get proper tap data after one loop cycle.
-** These are only used with sinc interpolation on looped samples.
+** These are only used on looped samples.
 */
 
 #define RENDER_8BIT_SMP_S8INTRP_TAP_FIX  \
@@ -387,25 +292,11 @@
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_MONO_S8INTRP_TAP_FIX \
-	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC8_INTERPOLATION(smpTapPtr, positionFrac, 128) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 #define RENDER_16BIT_SMP_S8INTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
 	WINDOWED_SINC8_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
-
-#define RENDER_16BIT_SMP_MONO_S8INTRP_TAP_FIX \
-	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC8_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
 
 #define RENDER_8BIT_SMP_S16INTRP_TAP_FIX  \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
@@ -413,25 +304,11 @@
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_MONO_S16INTRP_TAP_FIX \
-	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC16_INTERPOLATION(smpTapPtr, positionFrac, 128) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
-
 #define RENDER_16BIT_SMP_S16INTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
 	WINDOWED_SINC16_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
-
-#define RENDER_16BIT_SMP_MONO_S16INTRP_TAP_FIX \
-	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC16_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
-	fSample *= fVolumeL; \
-	*fMixBufferL++ += fSample; \
-	*fMixBufferR++ += fSample;
 
 /* ----------------------------------------------------------------------- */
 /*                      SAMPLES-TO-MIX LIMITING MACROS                     */
@@ -479,24 +356,6 @@
 		fVolumeLDelta = 0.0f; \
 		fVolumeRDelta = 0.0f; \
 		\
-		if (v->isFadeOutVoice) \
-		{ \
-			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \
-			return; \
-		} \
-	} \
-	else \
-	{ \
-		if (samplesToMix > v->volumeRampLength) \
-			samplesToMix = v->volumeRampLength; \
-		\
-		v->volumeRampLength -= samplesToMix; \
-	}
-
-#define LIMIT_MIX_NUM_MONO_RAMP \
-	if (v->volumeRampLength == 0) \
-	{ \
-		fVolumeLDelta = 0.0f; \
 		if (v->isFadeOutVoice) \
 		{ \
 			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \
