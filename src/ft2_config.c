@@ -833,8 +833,8 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 		tmpID = RB_CONFIG_AUDIO_INTRP_DISABLED;
 	else if (config.interpolation == INTERPOLATION_LINEAR)
 		tmpID = RB_CONFIG_AUDIO_INTRP_LINEAR;
-	else if (config.interpolation == INTERPOLATION_SINC16)
-		tmpID = RB_CONFIG_AUDIO_INTRP_SINC16;
+	else if (config.interpolation == INTERPOLATION_SINC32)
+		tmpID = RB_CONFIG_AUDIO_INTRP_SINC32;
 	else if (config.interpolation == INTERPOLATION_CUBIC)
 		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC;
 	else
@@ -1175,7 +1175,7 @@ void showConfigScreen(void)
 			textOutShadow(406, 119, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
 			textOutShadow(406, 133, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
 			textOutShadow(406, 147, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
-			textOutShadow(406, 161, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
+			textOutShadow(406, 161, PAL_FORGRND, PAL_DSKTOP2, "Sinc (32 point)");
 
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
@@ -1642,11 +1642,11 @@ void rbConfigAudioIntrp8PointSinc(void)
 	checkRadioButton(RB_CONFIG_AUDIO_INTRP_SINC8);
 }
 
-void rbConfigAudioIntrp16PointSinc(void)
+void rbConfigAudioIntrp32PointSinc(void)
 {
-	config.interpolation = INTERPOLATION_SINC16;
+	config.interpolation = INTERPOLATION_SINC32;
 	audioSetInterpolationType(config.interpolation);
-	checkRadioButton(RB_CONFIG_AUDIO_INTRP_SINC16);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_SINC32);
 }
 
 void rbConfigAudio44kHz(void)

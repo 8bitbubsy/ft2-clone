@@ -218,9 +218,9 @@ typedef struct sample_t
 	int32_t length, loopStart, loopLength;
 
 	// fix for resampling interpolation taps
-	int8_t leftEdgeTapSamples8[32];
-	int16_t leftEdgeTapSamples16[32];
-	int16_t fixedSmp[32];
+	int8_t leftEdgeTapSamples8[MAX_TAPS*2];
+	int16_t leftEdgeTapSamples16[MAX_TAPS*2];
+	int16_t fixedSmp[MAX_TAPS*2];
 	int32_t fixedPos;
 } sample_t;
 

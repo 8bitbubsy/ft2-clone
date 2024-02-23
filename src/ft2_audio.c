@@ -195,18 +195,31 @@ void audioSetInterpolationType(uint8_t interpolationType)
 	lockMixerCallback();
 	audio.interpolationType = interpolationType;
 
+	audio.sincInterpolation = false;
+
 	// set sinc LUT pointers
 	if (config.interpolation == INTERPOLATION_SINC8)
 	{
 		fKaiserSinc = fKaiserSinc_8;
 		fDownSample1 = fDownSample1_8;
 		fDownSample2 = fDownSample2_8;
+
+		// modelled after OpenMPT
+		audio.sincRatio1 = (uintCPUWord_t)(1.1875 * MIXER_FRAC_SCALE);
+		audio.sincRatio2 = (uintCPUWord_t)(1.5    * MIXER_FRAC_SCALE);
+
+		audio.sincInterpolation = true;
 	}
-	else if (config.interpolation == INTERPOLATION_SINC16)
+	else if (config.interpolation == INTERPOLATION_SINC32)
 	{
-		fKaiserSinc = fKaiserSinc_16;
-		fDownSample1 = fDownSample1_16;
-		fDownSample2 = fDownSample2_16;
+		fKaiserSinc = fKaiserSinc_32;
+		fDownSample1 = fDownSample1_32;
+		fDownSample2 = fDownSample2_32;
+
+		audio.sincRatio1 = (uintCPUWord_t)(2.375 * MIXER_FRAC_SCALE);
+		audio.sincRatio2 = (uintCPUWord_t)(3.0   * MIXER_FRAC_SCALE);
+
+		audio.sincInterpolation = true;
 	}
 
 	unlockMixerCallback();
@@ -389,12 +402,13 @@ void updateVoices(void)
 				// set voice delta
 				const uintCPUWord_t delta = v->oldDelta = (intCPUWord_t)((dHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
 
-				if (audio.interpolationType == INTERPOLATION_SINC8 || audio.interpolationType == INTERPOLATION_SINC16)
+				//const double dRatio = delta / (double)MIXER_FRAC_SCALE;
+
+				if (audio.sincInterpolation) // decide which sinc LUT to use according to the resampling ratio
 				{
-					// decide which sinc LUT to use according to the resampling ratio
-					if (delta <= (uintCPUWord_t)(1.1875 * MIXER_FRAC_SCALE))
+					if (delta <= audio.sincRatio1)
 						v->fSincLUT = fKaiserSinc;
-					else if (delta <= (uintCPUWord_t)(1.5 * MIXER_FRAC_SCALE))
+					else if (delta <= audio.sincRatio2)
 						v->fSincLUT = fDownSample1;
 					else
 						v->fSincLUT = fDownSample2;

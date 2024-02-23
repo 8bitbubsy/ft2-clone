@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "../ft2_cpu.h"
 
-#define MAX_TAPS 16
+#define MAX_TAPS 32
 #define MAX_LEFT_TAPS ((MAX_TAPS/2)-1)
 #define MAX_RIGHT_TAPS (MAX_TAPS/2)
 

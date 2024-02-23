@@ -23,7 +23,7 @@ enum
 	INTERPOLATION_DISABLED = 0,
 	INTERPOLATION_SINC8 = 1,
 	INTERPOLATION_LINEAR = 2,
-	INTERPOLATION_SINC16 = 3,
+	INTERPOLATION_SINC32 = 3,
 	INTERPOLATION_CUBIC = 4,
 	// ------
 
@@ -222,7 +222,7 @@ void rbConfigAudioIntrpDisabled(void);
 void rbConfigAudioIntrpLinear(void);
 void rbConfigAudioIntrpCubic(void);
 void rbConfigAudioIntrp8PointSinc(void);
-void rbConfigAudioIntrp16PointSinc(void);
+void rbConfigAudioIntrp32PointSinc(void);
 void rbConfigAudio44kHz(void);
 void rbConfigAudio48kHz(void);
 #if CPU_64BIT
