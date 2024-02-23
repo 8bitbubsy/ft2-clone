@@ -2,7 +2,8 @@
 
 #include <stdint.h>
 
-void aboutFrame(void);
+void initAboutScreen(void);
+void renderAboutScreenFrame(void);
 void seedAboutScreenRandom(uint32_t newseed);
 void showAboutScreen(void);
 void hideAboutScreen(void);

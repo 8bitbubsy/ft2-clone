@@ -1055,7 +1055,7 @@ void handleRedrawing(void)
 	{
 		if (ui.aboutScreenShown)
 		{
-			aboutFrame();
+			renderAboutScreenFrame();
 		}
 		else if (ui.nibblesShown)
 		{

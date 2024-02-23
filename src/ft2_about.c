@@ -2,19 +2,18 @@
 #include <math.h>
 #include "ft2_header.h"
 #include "ft2_gui.h"
-#include "ft2_pattern_ed.h"
 #include "ft2_bmp.h"
 #include "ft2_video.h"
 #include "ft2_structs.h"
+#include "ft2_pattern_ed.h" // exitPatternEditorExtended()
 
-#define NUM_STARS 3000
-#define ALPHA_FADE_MILLISECS 2000 /* amount of milliseconds until content is fully faded in */
+#define NUM_STARS 2000
+#define ABOUT_SCREEN_X 3
+#define ABOUT_SCREEN_Y 3
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
 #define ABOUT_LOGO_W 449
 #define ABOUT_LOGO_H 110
-#define ABOUT_TEXT_W 349
-#define ABOUT_TEXT_H 29
 
 typedef struct
 {
@@ -30,7 +29,7 @@ static char *customText1 = "Clone by Olav \"8bitbubsy\" S\025rensen";
 static char *customText2 = "https://16-bits.org";
 static char customText3[256];
 static int16_t customText1Y, customText2Y, customText3Y, customText1X, customText2X, customText3X;
-static uint32_t logoTimer, alphaValue, randSeed, frameCounter;
+static uint32_t randSeed;
 static vector_t starPoints[NUM_STARS], rotation;
 static matrix_t matrix;
 
@@ -48,19 +47,19 @@ static int32_t random32(void)
 
 static void rotateMatrix(void)
 {
-#define MY_PI_FLOAT 3.141592653589793f
+#define MY_2PI_FLOAT 6.2831853071796f
 
-	const float xx = rotation.x * MY_PI_FLOAT;
-	const float sa = sinf(xx);
-	const float ca = cosf(xx);
+	const float x2pi = rotation.x * MY_2PI_FLOAT;
+	const float sa = sinf(x2pi);
+	const float ca = cosf(x2pi);
 
-	const float yy = rotation.y * MY_PI_FLOAT;
-	const float sb = sinf(yy);
-	const float cb = cosf(yy);
+	const float y2pi = rotation.y * MY_2PI_FLOAT;
+	const float sb = sinf(y2pi);
+	const float cb = cosf(y2pi);
 
-	const float zz = rotation.z * MY_PI_FLOAT;
-	const float sc = sinf(zz);
-	const float cc = cosf(zz);
+	const float z2pi = rotation.z * MY_2PI_FLOAT;
+	const float sc = sinf(z2pi);
+	const float cc = cosf(z2pi);
 
 	// x
 	matrix.x.x = (ca * cc) + (sc * sa * sb);
@@ -78,7 +77,7 @@ static void rotateMatrix(void)
 	matrix.z.z = cb * cc;
 }
 
-static void aboutInit(void)
+void initAboutScreen(void)
 {
 	vector_t *s = starPoints;
 	for (int32_t i = 0; i < NUM_STARS; i++, s++)
@@ -87,26 +86,21 @@ static void aboutInit(void)
 		s->y = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
 		s->z = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
 	}
-
-	rotation.x = rotation.y = rotation.z = 0.0f;
-	alphaValue = 0;
-	frameCounter = 0;
-	logoTimer = 0;
 }
 
-static void blendPixel(int32_t x, int32_t y, int32_t r, int32_t g, int32_t b, int32_t alpha)
+static void blendPixel(int32_t x, int32_t y, uint32_t r, uint32_t g, uint32_t b, uint16_t alpha)
 {
 	uint32_t *p = &video.frameBuffer[(y * SCREEN_W) + x];
 
 	const uint32_t srcPixel = *p;
 
-	const int32_t srcR = RGB32_R(srcPixel);
-	const int32_t srcG = RGB32_G(srcPixel);
-	const int32_t srcB = RGB32_B(srcPixel);
+	const uint32_t srcR = RGB32_R(srcPixel);
+	const uint32_t srcG = RGB32_G(srcPixel);
+	const uint32_t srcB = RGB32_B(srcPixel);
 
-	r = ((srcR * (65536-alpha)) + (r * alpha)) >> 16;
-	g = ((srcG * (65536-alpha)) + (g * alpha)) >> 16;
-	b = ((srcB * (65536-alpha)) + (b * alpha)) >> 16;
+	r = ((srcR * (alpha ^ 65535)) + (r * alpha)) >> 16;
+	g = ((srcG * (alpha ^ 65535)) + (g * alpha)) >> 16;
+	b = ((srcB * (alpha ^ 65535)) + (b * alpha)) >> 16;
 
 	*p = RGB32(r, g, b);
 }
@@ -116,7 +110,7 @@ static void starfield(void)
 	vector_t *star = starPoints;
 	for (int16_t i = 0; i < NUM_STARS; i++, star++)
 	{
-		star->z += 0.00015f;
+		star->z += 0.0001f;
 		if (star->z >= 0.5f)
 			star->z -= 1.0f;
 
@@ -124,18 +118,17 @@ static void starfield(void)
 		if (z <= 0.0f)
 			continue;
 
-		float y = (ABOUT_SCREEN_H/2.0f) + ((((matrix.x.y * star->x) + (matrix.y.y * star->y) + (matrix.z.y * star->z)) / z) * 400.0f);
-		const int32_t outY = (int32_t)y;
-		if (outY < 3 || outY >= 3+ABOUT_SCREEN_H)
+		float y = (((matrix.x.y * star->x) + (matrix.y.y * star->y) + (matrix.z.y * star->z)) / z) * 400.0f;
+		const int32_t outY = (ABOUT_SCREEN_Y+(ABOUT_SCREEN_H/2)) + (int32_t)y;
+		if (outY < ABOUT_SCREEN_Y || outY >= ABOUT_SCREEN_Y+ABOUT_SCREEN_H)
 			continue;
 
-		float x = (ABOUT_SCREEN_W/2.0f) + ((((matrix.x.x * star->x) + (matrix.y.x * star->y) + (matrix.z.x * star->z)) / z) * 400.0f);
-
-		const int32_t outX = (int32_t)x;
-		if (outX < 3 || outX >= 3+ABOUT_SCREEN_W)
+		float x = (((matrix.x.x * star->x) + (matrix.y.x * star->y) + (matrix.z.x * star->z)) / z) * 400.0f;
+		const int32_t outX = (ABOUT_SCREEN_X+(ABOUT_SCREEN_W/2)) + (int32_t)x;
+		if (outX < ABOUT_SCREEN_X || outX >= ABOUT_SCREEN_X+ABOUT_SCREEN_W)
 			continue;
 
-		int32_t d = (int32_t)(z * 255.0f);
+		int32_t d = (int32_t)(z * 256.0f);
 		if (d > 255)
 			d = 255;
 		d ^= 255;
@@ -156,18 +149,18 @@ static void starfield(void)
 
 		// blend sides of star
 
-		const int32_t sidesAlpha = 13000;
+		const uint16_t sidesAlpha = 13000;
 
-		if (outX-1 >= 3)
+		if (outX-1 >= ABOUT_SCREEN_X)
 			blendPixel(outX-1, outY, r, g, b, sidesAlpha);
 
-		if (outX+1 < 3+ABOUT_SCREEN_W)
+		if (outX+1 < ABOUT_SCREEN_X+ABOUT_SCREEN_W)
 			blendPixel(outX+1, outY, r, g, b, sidesAlpha);
 
-		if (outY-1 >= 3)
+		if (outY-1 >= ABOUT_SCREEN_Y)
 			blendPixel(outX, outY-1, r, g, b, sidesAlpha);
 
-		if (outY+1 < 3+ABOUT_SCREEN_H)
+		if (outY+1 < ABOUT_SCREEN_Y+ABOUT_SCREEN_H)
 			blendPixel(outX, outY+1, r, g, b, sidesAlpha);
 
 		// plot main star pixel
@@ -175,34 +168,23 @@ static void starfield(void)
 	}
 }
 
-void aboutFrame(void) // called every frame when the about screen is shown
+void renderAboutScreenFrame(void)
 {
-	clearRect(3, 3, ABOUT_SCREEN_W, ABOUT_SCREEN_H);
+	// remember the good old days when you couldn't do this per frame?
+	clearRect(ABOUT_SCREEN_X, ABOUT_SCREEN_Y, ABOUT_SCREEN_W, ABOUT_SCREEN_H);
 
 	// 3D starfield
 	rotateMatrix();
+	rotation.x -= 0.00006f;
+	rotation.z += 0.00003f;
 	starfield();
-	rotation.x -= 0.00011f;
-	rotation.z += 0.00006f;
 
 	// logo + text
-	blit32Alpha(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H, alphaValue);
-	textOutAlpha(customText1X, customText1Y, PAL_FORGRND, customText1, alphaValue);
-	textOutAlpha(customText2X, customText2Y, PAL_FORGRND, customText2, alphaValue);
-	textOutAlpha(customText3X, customText3Y, PAL_FORGRND, customText3, alphaValue);
+	blit32(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H);
+	textOut(customText1X, customText1Y, PAL_FORGRND, customText1);
+	textOut(customText2X, customText2Y, PAL_FORGRND, customText2);
+	textOut(customText3X, customText3Y, PAL_FORGRND, customText3);
 
-	if (logoTimer > (int32_t)(VBLANK_HZ/4.0))
-	{
-		alphaValue += (uint32_t)((65536.0 / (ALPHA_FADE_MILLISECS / (1000.0 / VBLANK_HZ))) + 0.5);
-		if (alphaValue > 65536)
-			alphaValue = 65536;
-	}
-	else
-	{
-		logoTimer++;
-	}
-
-	// the exit button has to be redrawn since it gets overwritten :)
 	showPushButton(PB_EXIT_ABOUT);
 }
 
@@ -226,7 +208,6 @@ void showAboutScreen(void) // called once when about screen is opened
 	customText2Y = 157-12;
 	customText3Y = 157;
 
-	aboutInit();
 	ui.aboutScreenShown = true;
 }
 
