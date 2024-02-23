@@ -26,6 +26,9 @@
 #include "ft2_structs.h"
 #include "ft2_sysreqs.h"
 
+bool detectBEM(FILE* f);
+bool loadBEM(FILE* f, uint32_t filesize);
+
 bool loadDIGI(FILE *f, uint32_t filesize);
 bool loadMOD(FILE *f, uint32_t filesize);
 bool loadS3M(FILE *f, uint32_t filesize);
@@ -41,14 +44,15 @@ enum
 	FORMAT_MOD = 3,
 	FORMAT_S3M = 4,
 	FORMAT_STM = 5,
-	FORMAT_DIGI = 6
+	FORMAT_DIGI = 6,
+	FORMAT_BEM = 7
 };
 
 // file extensions accepted by Disk Op. in module mode
 char *supportedModExtensions[] =
 {
 	"xm", "ft", "nst", "stk", "mod", "s3m", "stm", "fst",
-	"digi",
+	"digi", "bem",
 
 	// IMPORTANT: Remember comma after last entry above
 	"END_OF_LIST" // do NOT move, remove or edit this line!
@@ -83,6 +87,10 @@ static int8_t detectModule(FILE *f)
 	I[0] = I[1] = I[2] = I[3] = 0;
 	fread(I, 1, 4, f);
 	rewind(f);
+
+	// BEM ("UN05", from XM only, MikMod)
+	if (detectBEM(f))
+		return FORMAT_BEM;
 
 	// DIGI Booster (non-Pro)
 	if (!memcmp("DIGI Booster module", &D[0x00], 19+1) && D[0x19] >= 1 && D[0x19] <= 8)
@@ -193,6 +201,7 @@ static bool doLoadMusic(bool externalThreadFlag)
 		case FORMAT_MOD: moduleLoaded = loadMOD(f, filesize); break;
 		case FORMAT_POSSIBLY_STK: moduleLoaded = loadSTK(f, filesize); break;
 		case FORMAT_DIGI: moduleLoaded = loadDIGI(f, filesize); break;
+		case FORMAT_BEM: moduleLoaded = loadBEM(f, filesize); break;
 
 		default:
 			loaderMsgBox("This file is not a supported module!");
