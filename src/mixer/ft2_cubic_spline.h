@@ -5,7 +5,7 @@
 #include "ft2_mix.h" // MIXER_FRAC_BITS
 
 #define CUBIC_SPLINE_TAPS 4
-#define CUBIC_WIDTH_BITS 2
+#define CUBIC_WIDTH_BITS 2 // log2(CUBIC_SPLINE_TAPS)
 
 // 8192 is a good compromise
 #define CUBIC_SPLINE_PHASES 8192
