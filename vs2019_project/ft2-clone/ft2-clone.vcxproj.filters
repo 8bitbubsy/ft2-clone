@@ -319,9 +319,6 @@
     <ClInclude Include="..\..\src\scopes\ft2_scopes.h">
       <Filter>scopes</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\ft2_cpu.h">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\ft2_hpc.h">
       <Filter>headers</Filter>
     </ClInclude>

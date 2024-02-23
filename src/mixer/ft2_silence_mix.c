@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include "../ft2_audio.h"
-#include "../ft2_cpu.h"
 
 // used for the audio channel mixer when voice volume is zero
 
@@ -9,10 +8,10 @@ void silenceMixRoutine(voice_t *v, int32_t numSamples)
 	const uint64_t samplesToMix = (uint64_t)v->delta * (uint32_t)numSamples; // fixed-point
 
 	const uint32_t samples = (uint32_t)(samplesToMix >> MIXER_FRAC_BITS);
-	const uintCPUWord_t samplesFrac = (samplesToMix & MIXER_FRAC_MASK) + v->positionFrac;
+	const uint64_t samplesFrac = (samplesToMix & MIXER_FRAC_MASK) + v->positionFrac;
 
 	uint32_t position = v->position + samples + (uint32_t)(samplesFrac >> MIXER_FRAC_BITS);
-	uintCPUWord_t positionFrac = samplesFrac & MIXER_FRAC_MASK;
+	uint64_t positionFrac = samplesFrac & MIXER_FRAC_MASK;
 
 	if (position < (unsigned)v->sampleEnd) // we haven't reached the sample's end yet
 	{

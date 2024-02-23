@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include "ft2_replayer.h"
-#include "ft2_cpu.h"
 
 enum
 {
@@ -15,12 +14,7 @@ enum
 #define DEFAULT_AUDIO_FREQ 48000
 
 #define MIN_AUDIO_FREQ 44100
-
-#if CPU_64BIT
 #define MAX_AUDIO_FREQ 96000
-#else
-#define MAX_AUDIO_FREQ 48000
-#endif
 
 #define MAX_AUDIO_DEVICES 99
 
@@ -52,7 +46,7 @@ typedef struct audio_t
 
 	uint32_t audLatencyPerfValInt, tickTimeIntTab[(MAX_BPM-MIN_BPM)+1];
 	uint64_t audLatencyPerfValFrac, tickTimeFracTab[(MAX_BPM-MIN_BPM)+1];
-	uintCPUWord_t sincRatio1, sincRatio2;
+	uint64_t sincRatio1, sincRatio2;
 
 	uint64_t tickTime64, tickTime64Frac;
 
@@ -71,8 +65,7 @@ typedef struct
 	uint8_t mixFuncOffset, panning, loopType, scopeVolume;
 	int32_t position, sampleEnd, loopStart, loopLength, oldPeriod;
 	uint32_t volumeRampLength;
-
-	uintCPUWord_t positionFrac, delta, oldDelta, scopeDelta;
+	uint64_t positionFrac, delta, oldDelta, scopeDelta;
 
 	// if (loopEnabled && hasLooped && samplingPos <= loopStart+MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;

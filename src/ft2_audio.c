@@ -205,8 +205,8 @@ void audioSetInterpolationType(uint8_t interpolationType)
 		fDownSample2 = fDownSample2_8;
 
 		// modelled after OpenMPT
-		audio.sincRatio1 = (uintCPUWord_t)(1.1875 * MIXER_FRAC_SCALE);
-		audio.sincRatio2 = (uintCPUWord_t)(1.5    * MIXER_FRAC_SCALE);
+		audio.sincRatio1 = (uint64_t)(1.1875 * MIXER_FRAC_SCALE);
+		audio.sincRatio2 = (uint64_t)(1.5    * MIXER_FRAC_SCALE);
 
 		audio.sincInterpolation = true;
 	}
@@ -216,8 +216,8 @@ void audioSetInterpolationType(uint8_t interpolationType)
 		fDownSample1 = fDownSample1_32;
 		fDownSample2 = fDownSample2_32;
 
-		audio.sincRatio1 = (uintCPUWord_t)(2.375 * MIXER_FRAC_SCALE);
-		audio.sincRatio2 = (uintCPUWord_t)(3.0   * MIXER_FRAC_SCALE);
+		audio.sincRatio1 = (uint64_t)(2.375 * MIXER_FRAC_SCALE);
+		audio.sincRatio2 = (uint64_t)(3.0   * MIXER_FRAC_SCALE);
 
 		audio.sincInterpolation = true;
 	}
@@ -400,7 +400,7 @@ void updateVoices(void)
 				const double dHz = dPeriod2Hz(ch->finalPeriod);
 
 				// set voice delta
-				const uintCPUWord_t delta = v->oldDelta = (intCPUWord_t)((dHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
+				const uint64_t delta = v->oldDelta = (int64_t)((dHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
 
 				//const double dRatio = delta / (double)MIXER_FRAC_SCALE;
 
@@ -416,7 +416,7 @@ void updateVoices(void)
 
 				// set scope delta
 				const double dHz2ScopeDeltaMul = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-				v->scopeDelta = (intCPUWord_t)((dHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
+				v->scopeDelta = (int64_t)((dHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
 			}
 
 			v->delta = v->oldDelta;
@@ -993,11 +993,7 @@ bool setupAudio(bool showErrorMsg)
 		return false;
 	}
 
-#if CPU_64BIT
 	if (have.freq != 44100 && have.freq != 48000 && have.freq != 96000)
-#else // 32-bit CPUs only support .16fp resampling precision. Not sensible with high rates.
-	if (have.freq != 44100 && have.freq != 48000)
-#endif
 	{
 		if (showErrorMsg)
 			showErrorMsgBox("Couldn't open audio device:\nThis program doesn't support an audio output rate of %dHz. Sorry!", have.freq);

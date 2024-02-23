@@ -32,7 +32,6 @@
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
-#include "ft2_cpu.h"
 
 config_t config; // globalized
 
@@ -155,11 +154,7 @@ static void loadConfigFromBuffer(bool defaults)
 		config.recQuantRes = 16;
 	}
 
-#if CPU_64BIT
 	if (config.audioFreq != 44100 && config.audioFreq != 48000 && config.audioFreq != 96000)
-#else
-	if (config.audioFreq != 44100 && config.audioFreq != 48000)
-#endif
 		config.audioFreq = DEFAULT_AUDIO_FREQ;
 
 	if (config.audioInputFreq <= 1) // default value from FT2 (this was cdr_Sync) - set defaults
@@ -848,9 +843,7 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 	{
 		         case 44100:  tmpID = RB_CONFIG_AUDIO_44KHZ;  break;
 		default: case 48000:  tmpID = RB_CONFIG_AUDIO_48KHZ;  break;
-#if CPU_64BIT
 		         case 96000:  tmpID = RB_CONFIG_AUDIO_96KHZ;  break;
-#endif
 	}
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -1180,9 +1173,8 @@ void showConfigScreen(void)
 			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
 			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
 			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz");
-#if CPU_64BIT
 			textOutShadow(525,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
-#endif
+
 			textOutShadow(509,  61, PAL_FORGRND, PAL_DSKTOP2, "Frequency slides:");
 			textOutShadow(525,  75, PAL_FORGRND, PAL_DSKTOP2, "Amiga");
 			textOutShadow(525,  89, PAL_FORGRND, PAL_DSKTOP2, "Linear (default)");
@@ -1661,13 +1653,11 @@ void rbConfigAudio48kHz(void)
 	setNewAudioSettings();
 }
 
-#if CPU_64BIT
 void rbConfigAudio96kHz(void)
 {
 	config.audioFreq = 96000;
 	setNewAudioSettings();
 }
-#endif
 
 void rbConfigAudioInput44kHz(void)
 {

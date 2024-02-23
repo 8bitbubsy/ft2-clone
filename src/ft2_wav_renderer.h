@@ -2,15 +2,9 @@
 
 #include <stdint.h>
 #include "ft2_header.h"
-#include "ft2_cpu.h"
 
 #define MIN_WAV_RENDER_FREQ 44100
-
-#if CPU_64BIT
 #define MAX_WAV_RENDER_FREQ 384000
-#else
-#define MAX_WAV_RENDER_FREQ 48000
-#endif
 
 void cbToggleWavRenderBPMMode(void);
 void setWavRenderFrequency(int32_t freq);

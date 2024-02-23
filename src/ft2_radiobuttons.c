@@ -96,9 +96,7 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	//x,   y,  w,  group,                      funcOnUp
 	{ 509, 16, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
 	{ 509, 30, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
-#if CPU_64BIT
 	{ 509, 44, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio96kHz },
-#endif
 
 	// audio input frequency
 	//x,   y,   w,  group,                            funcOnUp

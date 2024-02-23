@@ -5,8 +5,6 @@
 #include "ft2_unicode.h"
 #include "mixer/ft2_cubic_spline.h"
 #include "mixer/ft2_windowed_sinc.h"
-#include "ft2_cpu.h"
-
 enum
 {
 	// voice flags
@@ -198,7 +196,7 @@ typedef struct syncedChannel_t // used for audio/video sync queue (pack to save 
 	uint8_t status, pianoNoteNum, smpNum, instrNum;
 	int32_t smpStartPos;
 	uint8_t scopeVolume;
-	uintCPUWord_t scopeDelta;
+	uint64_t scopeDelta;
 }
 #ifdef __GNUC__
 __attribute__ ((packed))

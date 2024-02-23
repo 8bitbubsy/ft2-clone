@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include "ft2_replayer.h"
 #include "ft2_palette.h"
-#include "ft2_cpu.h"
 
 #define CFG_ID_STR "FastTracker 2.0 configuration file\x1A"
 #define CONFIG_FILE_SIZE 1736
@@ -225,9 +224,7 @@ void rbConfigAudioIntrp8PointSinc(void);
 void rbConfigAudioIntrp32PointSinc(void);
 void rbConfigAudio44kHz(void);
 void rbConfigAudio48kHz(void);
-#if CPU_64BIT
 void rbConfigAudio96kHz(void);
-#endif
 void rbConfigAudioInput44kHz(void);
 void rbConfigAudioInput48kHz(void);
 void rbConfigAudioInput96kHz(void);

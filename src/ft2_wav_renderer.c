@@ -484,11 +484,10 @@ void pbWavFreqUp(void)
 	if (WDFrequency < MAX_WAV_RENDER_FREQ)
 	{
 		     if (WDFrequency ==  44100) WDFrequency = 48000;
-#if CPU_64BIT
 		else if (WDFrequency ==  48000) WDFrequency = 96000;
 		else if (WDFrequency ==  96000) WDFrequency = 192000;
 		else if (WDFrequency == 192000) WDFrequency = 384000;
-#endif
+
 		updateWavRenderer();
 	}
 }
@@ -497,14 +496,11 @@ void pbWavFreqDown(void)
 {
 	if (WDFrequency > MIN_WAV_RENDER_FREQ)
 	{
-#if CPU_64BIT
 		     if (WDFrequency == 384000) WDFrequency = 192000;
 		else if (WDFrequency == 192000) WDFrequency = 96000;
 		else if (WDFrequency ==  96000) WDFrequency = 48000;
 		else if (WDFrequency ==  48000) WDFrequency = 44100;
-#else
-		if (WDFrequency == 48000) WDFrequency = 44100;
-#endif
+
 		updateWavRenderer();
 	}
 }

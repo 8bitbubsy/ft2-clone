@@ -3,7 +3,6 @@
 #include "ft2_scopes.h"
 #include "ft2_scopedraw.h"
 #include "ft2_scope_macros.h"
-#include "../ft2_cpu.h"
 
 static void scopeLine(int32_t x1, int32_t y1, int32_t y2);
 

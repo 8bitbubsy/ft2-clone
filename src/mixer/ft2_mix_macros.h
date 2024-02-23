@@ -20,14 +20,14 @@
 	v->fCurrVolumeR = fVolumeR;
 
 #define GET_MIXER_VARS \
-	const uintCPUWord_t delta = v->delta; \
+	const uint64_t delta = v->delta; \
 	fMixBufferL = audio.fMixBufferL + bufferPos; \
 	fMixBufferR = audio.fMixBufferR + bufferPos; \
 	position = v->position; \
 	positionFrac = v->positionFrac;
 
 #define GET_MIXER_VARS_RAMP \
-	const uintCPUWord_t delta = v->delta; \
+	const uint64_t delta = v->delta; \
 	fMixBufferL = audio.fMixBufferL + bufferPos; \
 	fMixBufferR = audio.fMixBufferR + bufferPos; \
 	fVolumeLDelta = v->fVolumeLDelta; \
@@ -346,20 +346,13 @@
 /*                      SAMPLES-TO-MIX LIMITING MACROS                     */
 /* ----------------------------------------------------------------------- */
 
-#if CPU_64BIT
-#define LIMIT_NUM
-#else
-#define LIMIT_NUM if (i > (1<<(32-MIXER_FRAC_BITS))-1) i = (1<<(32-MIXER_FRAC_BITS))-1;
-#endif
-
 #define LIMIT_MIX_NUM \
 	samplesToMix = INT32_MAX; \
 	if (v->delta != 0) \
 	{ \
 		i = (v->sampleEnd - 1) - position; \
-		LIMIT_NUM \
-		const uintCPUWord_t dividend = ((uintCPUWord_t)i << MIXER_FRAC_BITS) | ((uint32_t)positionFrac ^ MIXER_FRAC_MASK); \
-		samplesToMix = (uint32_t)(dividend / (uintCPUWord_t)v->delta) + 1; \
+		const uint64_t dividend = ((uint64_t)i << MIXER_FRAC_BITS) | ((uint32_t)positionFrac ^ MIXER_FRAC_MASK); \
+		samplesToMix = (uint32_t)(dividend / (uint64_t)v->delta) + 1; \
 	} \
 	\
 	if (samplesToMix > samplesLeft) \
@@ -379,7 +372,7 @@
 		smpPtr = base + position; \
 	} \
 	\
-	const int32_t deltaHi = (intCPUWord_t)tmpDelta >> MIXER_FRAC_BITS; \
+	const int32_t deltaHi = (int64_t)tmpDelta >> MIXER_FRAC_BITS; \
 	const uint32_t deltaLo = tmpDelta & MIXER_FRAC_MASK;
 
 #define LIMIT_MIX_NUM_RAMP \
