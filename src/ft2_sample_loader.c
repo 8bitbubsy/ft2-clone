@@ -232,7 +232,7 @@ bool loadSample(UNICHAR *filenameU, uint8_t smpNr, bool instrFlag)
 
 	if (editor.curInstr == 0)
 	{
-		loaderMsgBox("The zero-instrument cannot hold intrument data.");
+		loaderMsgBox("The zero-instrument cannot hold instrument data!");
 		return false;
 	}
 
