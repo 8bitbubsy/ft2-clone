@@ -130,7 +130,6 @@
 ** There is also a second special case for the left edge (negative taps) after the sample has looped once.
 */
 
-#if CUBIC_FSHIFT>=0
 #define CUBIC_SPLINE_INTERPOLATION(s, f, scale) \
 { \
 	const float *t = fCubicSplineLUT + (((uint32_t)(f) >> CUBIC_SPLINE_FSHIFT) & CUBIC_SPLINE_FMASK); \
@@ -139,16 +138,6 @@
 	           ( s[1] * t[2]) + \
 	           ( s[2] * t[3])) * (1.0f / scale); \
 }
-#else
-#define CUBIC_SPLINE_INTERPOLATION(s, f, scale) \
-{ \
-	const float *t = fCubicSplineLUT + (((uint32_t)(f) << -CUBIC_SPLINE_FSHIFT) & CUBIC_SPLINE_FMASK); \
-	fSample = ((s[-1] * t[0]) + \
-	           ( s[0] * t[1]) + \
-	           ( s[1] * t[2]) + \
-	           ( s[2] * t[3])) * (1.0f / scale); \
-}
-#endif
 
 #define RENDER_8BIT_SMP_CINTRP \
 	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 128) \
@@ -190,7 +179,6 @@
 ** There is also a second special case for the left edge (negative taps) after the sample has looped once.
 */
 
-#if SINC8_FSHIFT>=0
 #define WINDOWED_SINC8_INTERPOLATION(s, f, scale) \
 { \
 	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC8_FSHIFT) & SINC8_FMASK); \
@@ -203,22 +191,7 @@
 	           ( s[3] * t[6]) + \
 	           ( s[4] * t[7])) * (1.0f / scale); \
 }
-#else
-#define WINDOWED_SINC8_INTERPOLATION(s, f, scale) \
-{ \
-	const float *t = v->fSincLUT + (((uint32_t)(f) << -SINC8_FSHIFT) & SINC8_FMASK); \
-	fSample = ((s[-3] * t[0]) + \
-	           (s[-2] * t[1]) + \
-	           (s[-1] * t[2]) + \
-	           ( s[0] * t[3]) + \
-	           ( s[1] * t[4]) + \
-	           ( s[2] * t[5]) + \
-	           ( s[3] * t[6]) + \
-	           ( s[4] * t[7])) * (1.0f / scale); \
-}
-#endif
 
-#if SINC32_FSHIFT>=0
 #define WINDOWED_SINC32_INTERPOLATION(s, f, scale) \
 { \
 	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC32_FSHIFT) & SINC32_FMASK); \
@@ -255,44 +228,6 @@
 	           ( s[15] * t[30]) + \
 	           ( s[16] * t[31])) * (1.0f / scale); \
 }
-#else
-#define WINDOWED_SINC32_INTERPOLATION(s, f, scale) \
-{ \
-	const float *t = v->fSincLUT + (((uint32_t)(f) << -SINC32_FSHIFT) & SINC32_FMASK); \
-	fSample = ((s[-15] * t[0]) + \
-	           (s[-14] * t[1]) + \
-	           (s[-13] * t[2]) + \
-	           (s[-12] * t[3]) + \
-	           (s[-11] * t[4]) + \
-	           (s[-10] * t[5]) + \
-	           ( s[-9] * t[6]) + \
-	           ( s[-8] * t[7]) + \
-	           ( s[-7] * t[8]) + \
-	           ( s[-6] * t[9]) + \
-	           ( s[-5] * t[10]) + \
-	           ( s[-4] * t[11]) + \
-	           ( s[-3] * t[12]) + \
-	           ( s[-2] * t[13]) + \
-	           ( s[-1] * t[14]) + \
-	           (  s[0] * t[15]) + \
-	           (  s[1] * t[16]) + \
-	           (  s[2] * t[17]) + \
-	           (  s[3] * t[18]) + \
-	           (  s[4] * t[19]) + \
-	           (  s[5] * t[20]) + \
-	           (  s[6] * t[21]) + \
-	           (  s[7] * t[22]) + \
-	           (  s[8] * t[23]) + \
-	           (  s[9] * t[24]) + \
-	           ( s[10] * t[25]) + \
-	           ( s[11] * t[26]) + \
-	           ( s[12] * t[27]) + \
-	           ( s[13] * t[28]) + \
-	           ( s[14] * t[29]) + \
-	           ( s[15] * t[30]) + \
-	           ( s[16] * t[31])) * (1.0f / scale); \
-}
-#endif
 
 #define RENDER_8BIT_SMP_S8INTRP \
 	WINDOWED_SINC8_INTERPOLATION(smpPtr, positionFrac, 128) \
