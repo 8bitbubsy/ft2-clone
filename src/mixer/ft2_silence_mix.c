@@ -13,7 +13,7 @@ void silenceMixRoutine(voice_t *v, int32_t numSamples)
 	uint32_t position = v->position + samples + (uint32_t)(samplesFrac >> MIXER_FRAC_BITS);
 	uint64_t positionFrac = samplesFrac & MIXER_FRAC_MASK;
 
-	if (position < (unsigned)v->sampleEnd) // we haven't reached the sample's end yet
+	if (position < (uint32_t)v->sampleEnd) // we haven't reached the sample's end yet
 	{
 		v->positionFrac = positionFrac;
 		v->position = position;
