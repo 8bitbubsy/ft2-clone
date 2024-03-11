@@ -31,6 +31,21 @@ static int16_t mouseShape;
 static int32_t mouseModeGfxOffs, mouseBusyGfxFrame;
 static SDL_Cursor *cursors[NUM_CURSORS];
 
+#if defined __APPLE__ && defined __aarch64__
+void armMacGhostMouseCursorFix(SDL_Event *event)
+{
+	/* M E G A K L U D G E:
+	** The mouse cursor can sometimes change back to OS stock
+	** (or show both stock and custom mouse) on Macs with a notch
+	** (ARM based) in fullscreen mode. Weird, right?!
+	**
+	** XXX: Can this cause stuttering or performance issues?
+	*/
+	if (video.fullscreen && event->type == SDL_MOUSEMOTION)
+		SDL_SetCursor(NULL); // forces redraw
+}
+#endif
+
 static bool setSystemCursor(SDL_Cursor *cur)
 {
 	if (config.specialFlags2 & USE_OS_MOUSE_POINTER)
@@ -838,7 +853,14 @@ void readMouseXY(void)
 		return;
 	}
 
-	if (video.useDesktopMouseCoords)
+	if (video.fullscreen)
+	{
+		mouse.buttonState = SDL_GetMouseState(&mx, &my);
+
+		mouse.absX = mx;
+		mouse.absY = my;
+	}
+	else
 	{
 		mouse.buttonState = SDL_GetGlobalMouseState(&mx, &my);
 
@@ -850,14 +872,6 @@ void readMouseXY(void)
 
 		mx -= windowX;
 		my -= windowY;
-	}
-	else
-	{
-		// special mode for KMSDRM (XXX: Confirm that this still works...)
-		mouse.buttonState = SDL_GetMouseState(&mx, &my);
-
-		mouse.absX = mx;
-		mouse.absY = my;
 	}
 
 	mouse.rawX = mx;

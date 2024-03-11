@@ -334,7 +334,9 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 					if (testCheckBoxMouseDown()) continue;
 				}
 			}
-
+#if defined __APPLE__ && defined __aarch64__
+			armMacGhostMouseCursorFix(&inputEvent);
+#endif
 			if (!ui.sysReqShown)
 				break;
 		}
@@ -572,7 +574,9 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 					if (testPushButtonMouseDown()) continue;
 				}
 			}
-
+#if defined __APPLE__ && defined __aarch64__
+			armMacGhostMouseCursorFix(&inputEvent);
+#endif
 			if (!ui.sysReqShown)
 				break;
 		}

@@ -266,33 +266,26 @@ void showErrorMsgBox(const char *fmt, ...)
 static void updateRenderSizeVars(void)
 {
 	float fXScale, fYScale;
+	SDL_DisplayMode dm;
 
-	if (video.useDesktopMouseCoords)
-	{
-		SDL_DisplayMode dm;
-		int32_t di = SDL_GetWindowDisplayIndex(video.window);
-		if (di < 0)
-			di = 0; // return display index 0 (default) on error
+	int32_t di = SDL_GetWindowDisplayIndex(video.window);
+	if (di < 0)
+		di = 0; // return display index 0 (default) on error
 
-		SDL_GetDesktopDisplayMode(di, &dm);
-		video.displayW = dm.w;
-		video.displayH = dm.h;
-	}
-	else
-	{
-		SDL_GetWindowSize(video.window, &video.displayW, &video.displayH);
-	}
+	SDL_GetDesktopDisplayMode(di, &dm);
+	video.displayW = dm.w;
+	video.displayH = dm.h;
 
 	SDL_GetWindowSize(video.window, &video.windowW, &video.windowH);
+	video.renderX = 0;
+	video.renderY = 0;
 
 	if (video.fullscreen)
 	{
 		if (config.specialFlags2 & STRETCH_IMAGE)
 		{
-			video.renderW = video.displayW;
-			video.renderH = video.displayH;
-			video.renderX = 0;
-			video.renderY = 0;
+			video.renderW = video.windowW;
+			video.renderH = video.windowH;
 		}
 		else
 		{
@@ -311,28 +304,25 @@ static void updateRenderSizeVars(void)
 			int32_t actualScreenW, actualScreenH;
 			SDL_GetRendererOutputSize(video.renderer, &actualScreenW, &actualScreenH);
 
-			const double dXUpscale = (const double)actualScreenW / video.displayW;
-			const double dYUpscale = (const double)actualScreenH / video.displayH;
+			const double dXUpscale = (const double)actualScreenW / video.windowW;
+			const double dYUpscale = (const double)actualScreenH / video.windowH;
 
 			// downscale back to correct sizes
 			if (dXUpscale != 0.0) video.renderW = (int32_t)(video.renderW / dXUpscale);
 			if (dYUpscale != 0.0) video.renderH = (int32_t)(video.renderH / dYUpscale);
 
-			video.renderX = (video.displayW - video.renderW) / 2;
-			video.renderY = (video.displayH - video.renderH) / 2;
+			video.renderX = (video.windowW - video.renderW) / 2;
+			video.renderY = (video.windowH - video.renderH) / 2;
 		}
 	}
 	else
 	{
 		SDL_GetWindowSize(video.window, &video.renderW, &video.renderH);
-
-		video.renderX = 0;
-		video.renderY = 0;
 	}
 
 	// for mouse cursor creation
-	video.xScale = (uint32_t)round(video.renderW / (double)SCREEN_W);
-	video.yScale = (uint32_t)round(video.renderH / (double)SCREEN_H);
+	video.xScale = (uint32_t)floor(video.renderW / (double)SCREEN_W);
+	video.yScale = (uint32_t)floor(video.renderH / (double)SCREEN_H);
 
 	createMouseCursors();
 }
@@ -340,6 +330,7 @@ static void updateRenderSizeVars(void)
 void enterFullscreen(void)
 {
 	SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	SDL_Delay(15); // fixes possible issues
 
 	if (config.specialFlags2 & STRETCH_IMAGE)
 	{
@@ -351,16 +342,22 @@ void enterFullscreen(void)
 
 		SDL_GetDesktopDisplayMode(di, &dm);
 
+		SDL_RenderSetIntegerScale(video.renderer, SDL_FALSE);
+#ifdef __APPLE__
+		SDL_RenderSetLogicalSize(video.renderer, 640, SCREEN_H); // 640=kludge :)
+#else
 		SDL_RenderSetLogicalSize(video.renderer, dm.w, dm.h);
+#endif
+		SDL_SetWindowSize(video.window, dm.w, dm.h);
 	}
 	else
 	{
+		SDL_RenderSetIntegerScale(video.renderer, SDL_TRUE);
 		SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
+		SDL_SetWindowSize(video.window, SCREEN_W, SCREEN_H);
 	}
 
-	SDL_SetWindowSize(video.window, SCREEN_W, SCREEN_H);
-
-#ifndef __unix__ // can be severely buggy on Linux... (at least when used like this)
+#ifndef __unix__ // Linux kludge...
 	SDL_SetWindowGrab(video.window, SDL_TRUE);
 #endif
 
@@ -372,13 +369,16 @@ void enterFullscreen(void)
 void leaveFullscreen(void)
 {
 	SDL_SetWindowFullscreen(video.window, 0);
+	SDL_Delay(15); // fixes possible issues
+
+	SDL_RenderSetIntegerScale(video.renderer, SDL_TRUE);
 	SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
 
-	setWindowSizeFromConfig(false);
+	setWindowSizeFromConfig(false); // false = do not change actual window size, only update variables
 
 	SDL_SetWindowSize(video.window, SCREEN_W * video.upscaleFactor, SCREEN_H * video.upscaleFactor);
 
-#ifndef __unix__
+#ifndef __unix__ // revert Linux kludge...
 	SDL_SetWindowGrab(video.window, SDL_FALSE);
 #endif
 
@@ -1015,12 +1015,6 @@ bool setupRenderer(void)
 
 	if (!setupSprites())
 		return false;
-
-	// Workaround: SDL_GetGlobalMouseState() doesn't work with KMSDRM/Wayland
-	video.useDesktopMouseCoords = true;
-	const char *videoDriver = SDL_GetCurrentVideoDriver();
-	if (videoDriver != NULL && (strcmp("KMSDRM", videoDriver) == 0 || strcmp("wayland", videoDriver) == 0))
-		video.useDesktopMouseCoords = false;
 
 	updateRenderSizeVars();
 	updateMouseScaling();

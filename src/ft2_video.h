@@ -19,7 +19,7 @@ enum
 
 typedef struct video_t
 {
-	bool fullscreen, showFPSCounter, useDesktopMouseCoords;
+	bool fullscreen, showFPSCounter;
 	uint32_t xScale, yScale;
 	uint32_t *frameBuffer, palette[PAL_NUM];
 #ifdef _WIN32

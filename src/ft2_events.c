@@ -508,6 +508,9 @@ static void handleSDLEvents(void)
 		{
 			mouseButtonDownHandler(event.button.button);
 		}
+#if defined __APPLE__ && defined __aarch64__
+		armMacGhostMouseCursorFix(&event);
+#endif
 
 		if (editor.throwExit)
 			editor.programRunning = false;
