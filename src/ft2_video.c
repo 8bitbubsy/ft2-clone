@@ -342,7 +342,10 @@ void enterFullscreen(void)
 
 		SDL_GetDesktopDisplayMode(di, &dm);
 
+#if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 5)
 		SDL_RenderSetIntegerScale(video.renderer, SDL_FALSE);
+#endif
+
 #ifdef __APPLE__
 		SDL_RenderSetLogicalSize(video.renderer, 640, SCREEN_H); // 640=kludge :)
 #else
@@ -352,7 +355,9 @@ void enterFullscreen(void)
 	}
 	else
 	{
+#if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 5)
 		SDL_RenderSetIntegerScale(video.renderer, SDL_TRUE);
+#endif
 		SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
 		SDL_SetWindowSize(video.window, SCREEN_W, SCREEN_H);
 	}
@@ -371,7 +376,9 @@ void leaveFullscreen(void)
 	SDL_SetWindowFullscreen(video.window, 0);
 	SDL_Delay(15); // fixes possible issues
 
+#if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 5)
 	SDL_RenderSetIntegerScale(video.renderer, SDL_TRUE);
+#endif
 	SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
 
 	setWindowSizeFromConfig(false); // false = do not change actual window size, only update variables
