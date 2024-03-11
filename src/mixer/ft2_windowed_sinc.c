@@ -13,9 +13,10 @@
 
 // globalized
 float *fKaiserSinc_8 = NULL, *fDownSample1_8 = NULL, *fDownSample2_8 = NULL;
-float *fKaiserSinc_32 = NULL, *fDownSample1_32 = NULL, *fDownSample2_32 = NULL;
+float *fKaiserSinc_16 = NULL, *fDownSample1_16 = NULL, *fDownSample2_16 = NULL;
+uint64_t sincDownsample1Ratio, sincDownsample2Ratio;
 
-// set based on selected sinc interpolator (8 point or 32 point)
+// set based on selected sinc interpolator (8 point or 16 point)
 float *fKaiserSinc = NULL, *fDownSample1 = NULL, *fDownSample2 = NULL;
 
 // zeroth-order modified Bessel function of the first kind (series approximation)
@@ -79,26 +80,34 @@ bool calcWindowedSincTables(void)
 	fDownSample1_8 = (float *)malloc(SINC1_TAPS*SINC_PHASES * sizeof (float));
 	fDownSample2_8 = (float *)malloc(SINC1_TAPS*SINC_PHASES * sizeof (float));
 
-	fKaiserSinc_32  = (float *)malloc(SINC2_TAPS*SINC_PHASES * sizeof (float));
-	fDownSample1_32 = (float *)malloc(SINC2_TAPS*SINC_PHASES * sizeof (float));
-	fDownSample2_32 = (float *)malloc(SINC2_TAPS*SINC_PHASES * sizeof (float));
+	fKaiserSinc_16  = (float *)malloc(SINC2_TAPS*SINC_PHASES * sizeof (float));
+	fDownSample1_16 = (float *)malloc(SINC2_TAPS*SINC_PHASES * sizeof (float));
+	fDownSample2_16 = (float *)malloc(SINC2_TAPS*SINC_PHASES * sizeof (float));
 
 	if (fKaiserSinc_8  == NULL || fDownSample1_8  == NULL || fDownSample2_8  == NULL ||
-		fKaiserSinc_32 == NULL || fDownSample1_32 == NULL || fDownSample2_32 == NULL)
+		fKaiserSinc_16 == NULL || fDownSample1_16 == NULL || fDownSample2_16 == NULL)
 	{
 		showErrorMsgBox("Not enough memory!");
 		return false;
 	}
 
-	// 8 point (modelled after OpenMPT)
-	getSinc(SINC1_TAPS, fKaiserSinc_8,  dBToKaiserBeta(96.15645), 1.000);
-	getSinc(SINC1_TAPS, fDownSample1_8, dBToKaiserBeta(85.83249), 0.500);
-	getSinc(SINC1_TAPS, fDownSample2_8, dBToKaiserBeta(72.22088), 0.425);
+	sincDownsample1Ratio = (uint64_t)(1.1875 * MIXER_FRAC_SCALE);
+	sincDownsample2Ratio = (uint64_t)(1.5    * MIXER_FRAC_SCALE);
 
-	// 32 point
-	getSinc(SINC2_TAPS, fKaiserSinc_32,  dBToKaiserBeta(96.0), 1.000);
-	getSinc(SINC2_TAPS, fDownSample1_32, dBToKaiserBeta(86.0), 0.500);
-	getSinc(SINC2_TAPS, fDownSample2_32, dBToKaiserBeta(74.0), 0.425);
+	// sidelobe attenuation (Kaiser beta)
+	const double b0 = dBToKaiserBeta(96.15645);
+	const double b1 = dBToKaiserBeta(85.83249);
+	const double b2 = dBToKaiserBeta(72.22088);
+
+	// 8 point
+	getSinc(SINC1_TAPS, fKaiserSinc_8,  b0, 0.97);
+	getSinc(SINC1_TAPS, fDownSample1_8, b1, 0.5);
+	getSinc(SINC1_TAPS, fDownSample2_8, b2, 0.425);
+
+	// 16 point
+	getSinc(SINC2_TAPS, fKaiserSinc_16,  b0, 1.0);
+	getSinc(SINC2_TAPS, fDownSample1_16, b1, 0.5);
+	getSinc(SINC2_TAPS, fDownSample2_16, b2, 0.425);
 
 	return true;
 }
@@ -123,21 +132,21 @@ void freeWindowedSincTables(void)
 		fDownSample2_8 = NULL;
 	}
 
-	if (fKaiserSinc_32 != NULL)
+	if (fKaiserSinc_16 != NULL)
 	{
-		free(fKaiserSinc_32);
-		fKaiserSinc_32 = NULL;
+		free(fKaiserSinc_16);
+		fKaiserSinc_16 = NULL;
 	}
 
-	if (fDownSample1_32 != NULL)
+	if (fDownSample1_16 != NULL)
 	{
-		free(fDownSample1_32);
-		fDownSample1_32 = NULL;
+		free(fDownSample1_16);
+		fDownSample1_16 = NULL;
 	}
 
-	if (fDownSample2_32 != NULL)
+	if (fDownSample2_16 != NULL)
 	{
-		free(fDownSample2_32);
-		fDownSample2_32 = NULL;
+		free(fDownSample2_16);
+		fDownSample2_16 = NULL;
 	}
 }

@@ -804,7 +804,11 @@ you exit the program.
 >@X060@C002
 Selects what type of resampling interpolation to use.
 If you want to have an authentic FT2 sound, select "linear".
-Sinc will give the best interpolation, but it may sound too filtered on lo-fi samples.
+If you want a good trade-off between quality and muddiness for more lo-fi samples,
+select "Cubic spline".
+However, if you mainly use hi-fi samples (or play XMs with hi-fi samples), then pick
+any of the two sinc options for the most clear sound. Keep in mind that these will
+make XMs with lo-fi samples sound very muddy, though! 
 Tip: Play around with the different options...
 
 >@X040@C001Volume ramping:

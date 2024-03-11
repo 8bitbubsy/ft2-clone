@@ -14,7 +14,7 @@ Linux binaries can be found [here](https://repology.org/project/fasttracker2/ver
 If these don't work for you, you'll have to compile the code manually.
 
 # Improvements over original DOS version
-- The channel resampler/mixer uses floating-point arithmetics for less errors, and has extra interpolation options (4-point cubic spline, 8-point/32-point windowed-sinc)
+- The channel resampler/mixer uses floating-point arithmetics for less errors, and has extra interpolation options (4-point cubic spline, 8-point/16-point windowed-sinc)
 - The sample loader supports FLAC/AIFF samples and more WAV types than original FT2. It will also attempt to tune the sample (finetune and rel. note) to its playback frequency on load.
 - It contains a new "Trim" feature, which will remove unused stuff to potentially make the module smaller
 - Drag n' drop of modules/samples

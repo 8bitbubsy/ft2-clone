@@ -192,41 +192,25 @@
 	           ( s[4] * t[7])) * (1.0f / scale); \
 }
 
-#define WINDOWED_SINC32_INTERPOLATION(s, f, scale) \
+#define WINDOWED_SINC16_INTERPOLATION(s, f, scale) \
 { \
-	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC32_FSHIFT) & SINC32_FMASK); \
-	fSample = ((s[-15] * t[0]) + \
-	           (s[-14] * t[1]) + \
-	           (s[-13] * t[2]) + \
-	           (s[-12] * t[3]) + \
-	           (s[-11] * t[4]) + \
-	           (s[-10] * t[5]) + \
-	           ( s[-9] * t[6]) + \
-	           ( s[-8] * t[7]) + \
-	           ( s[-7] * t[8]) + \
-	           ( s[-6] * t[9]) + \
-	           ( s[-5] * t[10]) + \
-	           ( s[-4] * t[11]) + \
-	           ( s[-3] * t[12]) + \
-	           ( s[-2] * t[13]) + \
-	           ( s[-1] * t[14]) + \
-	           (  s[0] * t[15]) + \
-	           (  s[1] * t[16]) + \
-	           (  s[2] * t[17]) + \
-	           (  s[3] * t[18]) + \
-	           (  s[4] * t[19]) + \
-	           (  s[5] * t[20]) + \
-	           (  s[6] * t[21]) + \
-	           (  s[7] * t[22]) + \
-	           (  s[8] * t[23]) + \
-	           (  s[9] * t[24]) + \
-	           ( s[10] * t[25]) + \
-	           ( s[11] * t[26]) + \
-	           ( s[12] * t[27]) + \
-	           ( s[13] * t[28]) + \
-	           ( s[14] * t[29]) + \
-	           ( s[15] * t[30]) + \
-	           ( s[16] * t[31])) * (1.0f / scale); \
+	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC16_FSHIFT) & SINC16_FMASK); \
+	fSample = (( s[-7] * t[0]) + \
+	           ( s[-6] * t[1]) + \
+	           ( s[-5] * t[2]) + \
+	           ( s[-4] * t[3]) + \
+	           ( s[-3] * t[4]) + \
+	           ( s[-2] * t[5]) + \
+	           ( s[-1] * t[6]) + \
+	           (  s[0] * t[7]) + \
+	           (  s[1] * t[8]) + \
+	           (  s[2] * t[9]) + \
+	           (  s[3] * t[10]) + \
+	           (  s[4] * t[11]) + \
+	           (  s[5] * t[12]) + \
+	           (  s[6] * t[13]) + \
+	           (  s[7] * t[14]) + \
+	           (  s[8] * t[15])) * (1.0f / scale); \
 }
 
 #define RENDER_8BIT_SMP_S8INTRP \
@@ -239,13 +223,13 @@
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_S32INTRP \
-	WINDOWED_SINC32_INTERPOLATION(smpPtr, positionFrac, 128) \
+#define RENDER_8BIT_SMP_S16INTRP \
+	WINDOWED_SINC16_INTERPOLATION(smpPtr, positionFrac, 128) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_16BIT_SMP_S32INTRP \
-	WINDOWED_SINC32_INTERPOLATION(smpPtr, positionFrac, 32768) \
+#define RENDER_16BIT_SMP_S16INTRP \
+	WINDOWED_SINC16_INTERPOLATION(smpPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
@@ -265,15 +249,15 @@
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_8BIT_SMP_S32INTRP_TAP_FIX  \
+#define RENDER_8BIT_SMP_S16INTRP_TAP_FIX  \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC32_INTERPOLATION(smpTapPtr, positionFrac, 128) \
+	WINDOWED_SINC16_INTERPOLATION(smpTapPtr, positionFrac, 128) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
-#define RENDER_16BIT_SMP_S32INTRP_TAP_FIX \
+#define RENDER_16BIT_SMP_S16INTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC32_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
+	WINDOWED_SINC16_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 

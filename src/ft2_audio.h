@@ -46,7 +46,6 @@ typedef struct audio_t
 
 	uint32_t audLatencyPerfValInt, tickTimeIntTab[(MAX_BPM-MIN_BPM)+1];
 	uint64_t audLatencyPerfValFrac, tickTimeFracTab[(MAX_BPM-MIN_BPM)+1];
-	uint64_t sincRatio1, sincRatio2;
 
 	uint64_t tickTime64, tickTime64Frac;
 
