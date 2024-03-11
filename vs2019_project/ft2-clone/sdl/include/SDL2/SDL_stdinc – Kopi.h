@@ -244,7 +244,7 @@ typedef uint64_t Uint64;
 #ifdef FLT_EPSILON
 #define SDL_FLT_EPSILON FLT_EPSILON
 #else
-#define SDL_FLT_EPSILON 0.00000011920928955078125f /* 8bitbubsy: had to modify this for MSVC... */
+#define SDL_FLT_EPSILON 0.0000001f /* 8bitbubsy: had to modify this for MSVC... */
 #endif
 
 /* @} *//* Floating-point constants */
