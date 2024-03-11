@@ -100,7 +100,7 @@ bool calcWindowedSincTables(void)
 	const double b2 = dBToKaiserBeta(72.22088);
 
 	// 8 point
-	getSinc(SINC1_TAPS, fKaiserSinc_8,  b0, 0.97);
+	getSinc(SINC1_TAPS, fKaiserSinc_8,  b0, 1.0);
 	getSinc(SINC1_TAPS, fDownSample1_8, b1, 0.5);
 	getSinc(SINC1_TAPS, fDownSample2_8, b2, 0.425);
 
