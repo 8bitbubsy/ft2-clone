@@ -263,6 +263,58 @@ void showErrorMsgBox(const char *fmt, ...)
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", strBuf, video.window);
 }
 
+static void setRenderCoordsFromLogicalSize(void)
+{
+#ifdef _WIN32 // comments in enterFullscreen() explain why you can do this on Windows
+	video.renderX = 0;
+	video.renderY = 0;
+	video.renderW = video.windowW;
+	video.renderH = video.windowH;
+#else
+	/* We use SDL_RenderGetLogicalSize() with a logical size (FT2's SCREEN_W and SCREEN_H).
+	** Find out the actual render X/Y start and width/height.
+	** I can't find a better way of doing this, let me know if you do!
+	**
+	** Code based on UpdateLogicalSize() in SDL_render.c (SDL2).
+	*/
+
+	int32_t logical_w, logical_h, w, h;
+
+	SDL_RenderGetLogicalSize(video.renderer, &logical_w, &logical_h);
+	SDL_GetWindowSize(video.window, &w, &h);
+
+	float want_aspect = (float)logical_w / logical_h;
+	float real_aspect = (float)w / h;
+
+	if (SDL_fabs(want_aspect - real_aspect) < 0.0001)
+	{
+		// the aspect ratios are the same, just scale appropriately
+		video.renderX = 0;
+		video.renderY = 0;
+		video.renderW = w;
+		video.renderH = h;
+	}
+	else if (want_aspect > real_aspect)
+	{
+		// we want a wider aspect ratio than is available - letterbox it
+		float scale = (float)w / logical_w;
+		video.renderX = 0;
+		video.renderW = w;
+		video.renderH = (int32_t)SDL_floor(logical_h * scale);
+		video.renderY = (h - video.renderH) / 2;
+	}
+	else
+	{
+		// We want a narrower aspect ratio than is available - use side-bars */
+		float scale = (float)h / logical_h;
+		video.renderY = 0;
+		video.renderH = h;
+		video.renderW = (int32_t)SDL_floor(logical_w * scale);
+		video.renderX = (w - video.renderW) / 2;
+	}
+#endif
+}
+
 static void updateRenderSizeVars(void)
 {
 	float fXScale, fYScale;
@@ -284,15 +336,14 @@ static void updateRenderSizeVars(void)
 	{
 		if (config.specialFlags2 & STRETCH_IMAGE)
 		{
-			video.renderW = video.windowW;
-			video.renderH = video.windowH;
+			setRenderCoordsFromLogicalSize();
 		}
 		else
 		{
 			SDL_RenderGetScale(video.renderer, &fXScale, &fYScale);
 
-			video.renderW = (int32_t)(SCREEN_W * fXScale);
-			video.renderH = (int32_t)(SCREEN_H * fYScale);
+			video.renderW = (int32_t)floor(SCREEN_W * fXScale);
+			video.renderH = (int32_t)floor(SCREEN_H * fYScale);
 
 			// high-DPI hackery:
 			//  On high-DPI systems, the display w/h are given in logical pixels,
@@ -308,8 +359,8 @@ static void updateRenderSizeVars(void)
 			const double dYUpscale = (const double)actualScreenH / video.windowH;
 
 			// downscale back to correct sizes
-			if (dXUpscale != 0.0) video.renderW = (int32_t)(video.renderW / dXUpscale);
-			if (dYUpscale != 0.0) video.renderH = (int32_t)(video.renderH / dYUpscale);
+			if (dXUpscale != 0.0) video.renderW = (int32_t)floor(video.renderW / dXUpscale);
+			if (dYUpscale != 0.0) video.renderH = (int32_t)floor(video.renderH / dYUpscale);
 
 			video.renderX = (video.windowW - video.renderW) / 2;
 			video.renderY = (video.windowH - video.renderH) / 2;
@@ -346,10 +397,13 @@ void enterFullscreen(void)
 		SDL_RenderSetIntegerScale(video.renderer, SDL_FALSE);
 #endif
 
-#ifdef __APPLE__
-		SDL_RenderSetLogicalSize(video.renderer, 640, SCREEN_H); // 640=kludge :)
-#else
+		/* Only on Windows can you use dm.w and dm.h to get an actual
+		** fullscreen-scretch with SDL_RenderSetLogicalSize(). Silly!
+		*/
+#ifdef _WIN32
 		SDL_RenderSetLogicalSize(video.renderer, dm.w, dm.h);
+#else
+		SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
 #endif
 		SDL_SetWindowSize(video.window, dm.w, dm.h);
 	}

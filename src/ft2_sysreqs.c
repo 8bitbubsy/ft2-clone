@@ -164,6 +164,10 @@ static bool mouseButtonDownLogic(uint8_t mouseButton)
 
 static bool mouseButtonUpLogic(uint8_t mouseButton)
 {
+#if defined __APPLE__ && defined __aarch64__
+	armMacGhostMouseCursorFix();
+#endif
+
 	if (mouseButton == SDL_BUTTON_LEFT)
 		mouse.leftButtonPressed = false;
 	else if (mouseButton == SDL_BUTTON_RIGHT)
@@ -335,7 +339,10 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 				}
 			}
 #if defined __APPLE__ && defined __aarch64__
-			armMacGhostMouseCursorFix(&inputEvent);
+			else if (inputEvent.type == SDL_MOUSEMOTION)
+			{
+				armMacGhostMouseCursorFix();
+			}
 #endif
 			if (!ui.sysReqShown)
 				break;
@@ -575,7 +582,10 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 				}
 			}
 #if defined __APPLE__ && defined __aarch64__
-			armMacGhostMouseCursorFix(&inputEvent);
+			else if (inputEvent.type == SDL_MOUSEMOTION)
+			{
+				armMacGhostMouseCursorFix();
+			}
 #endif
 			if (!ui.sysReqShown)
 				break;

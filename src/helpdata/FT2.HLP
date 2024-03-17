@@ -852,8 +852,8 @@ but also potential stuttering.
 
 >@X040@C001Stretched:
 >@X060@C002
-Makes fullscreen mode completely stretch out the image. This can result in
-aliasing (uneven pixel widths) if the aspect ratio of the screen is not 16:10.
+Attempts to make fullscreen mode completely stretch out the image (can be buggy).
+This can and will result in uneven pixel sizes, making the image look quite bad.
 The "Pixel filter" setting can help with this, but it makes the image look blurry.
  
 >@X040@C001Pixel filter:
@@ -941,8 +941,8 @@ END
 >
 >@X010@C001Video:
 >@C002
->@X010- Fullscreen mode can be unbearably slow on a Raspberry Pi (even on RPi 4)
+>@X010- "Stretced" mode will not actually stretch out the whole screen in some cases
+>@X010- Fullscreen mode can have issues with the mouse pixel mapping on some Linux systems
 >@X010- Fullscreen mode can have several problems on multi-monitor systems
->@X010- Fullscreen mode can have several problems on some Linux systems
 
 END

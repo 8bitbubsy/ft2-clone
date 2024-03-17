@@ -32,7 +32,7 @@ static int32_t mouseModeGfxOffs, mouseBusyGfxFrame;
 static SDL_Cursor *cursors[NUM_CURSORS];
 
 #if defined __APPLE__ && defined __aarch64__
-void armMacGhostMouseCursorFix(SDL_Event *event)
+void armMacGhostMouseCursorFix(void)
 {
 	/* M E G A K L U D G E:
 	** The mouse cursor can sometimes change back to OS stock
@@ -41,7 +41,7 @@ void armMacGhostMouseCursorFix(SDL_Event *event)
 	**
 	** XXX: Can this cause stuttering or performance issues?
 	*/
-	if (video.fullscreen && event->type == SDL_MOUSEMOTION)
+	if (video.fullscreen)
 		SDL_SetCursor(NULL); // forces redraw
 }
 #endif
@@ -836,8 +836,8 @@ void handleLastGUIObjectDown(void)
 
 void updateMouseScaling(void)
 {
-	if (video.renderW > 0.0) video.fMouseXMul = (float)SCREEN_W / video.renderW;
-	if (video.renderH > 0.0) video.fMouseYMul = (float)SCREEN_H / video.renderH;
+	if (video.renderW > 0) video.fMouseXMul = (float)SCREEN_W / video.renderW;
+	if (video.renderH > 0) video.fMouseYMul = (float)SCREEN_H / video.renderH;
 }
 
 void readMouseXY(void)
@@ -879,49 +879,45 @@ void readMouseXY(void)
 
 	if (video.fullscreen)
 	{
-		// centered fullscreen mode (not stretched) needs further coord translation
-		if (!(config.specialFlags2 & STRETCH_IMAGE))
+		// if software mouse is enabled, warp mouse inside render space
+		if (!(config.specialFlags2 & HARDWARE_MOUSE))
 		{
-			// if software mouse is enabled, warp mouse inside render space
-			if (!(config.specialFlags2 & HARDWARE_MOUSE))
+			bool warpMouse = false;
+
+			if (mx < video.renderX)
 			{
-				bool warpMouse = false;
-
-				if (mx < video.renderX)
-				{
-					mx = video.renderX;
-					warpMouse = true;
-				}
-				else if (mx >= video.renderX+video.renderW)
-				{
-					mx = (video.renderX + video.renderW) - 1;
-					warpMouse = true;
-				}
-
-				if (my < video.renderY)
-				{
-					my = video.renderY;
-					warpMouse = true;
-				}
-				else if (my >= video.renderY+video.renderH)
-				{
-					my = (video.renderY + video.renderH) - 1;
-					warpMouse = true;
-				}
-
-				if (warpMouse)
-					SDL_WarpMouseInWindow(video.window, mx, my);
+				mx = video.renderX;
+				warpMouse = true;
+			}
+			else if (mx >= video.renderX+video.renderW)
+			{
+				mx = (video.renderX + video.renderW) - 1;
+				warpMouse = true;
 			}
 
-			// convert fullscreen coords to window (centered image) coords
-			mx -= video.renderX;
-			my -= video.renderY;
+			if (my < video.renderY)
+			{
+				my = video.renderY;
+				warpMouse = true;
+			}
+			else if (my >= video.renderY+video.renderH)
+			{
+				my = (video.renderY + video.renderH) - 1;
+				warpMouse = true;
+			}
+
+			if (warpMouse)
+				SDL_WarpMouseInWindow(video.window, mx, my);
 		}
+
+		// convert fullscreen coords to window (centered image) coords
+		mx -= video.renderX;
+		my -= video.renderY;
 	}
 
-	// multiply coords by video upscaling factors (don't round)
-	mouse.x = (int32_t)(mx * video.fMouseXMul);
-	mouse.y = (int32_t)(my * video.fMouseYMul);
+	// multiply coords by video upscaling factors
+	mouse.x = (int32_t)floor(mx * video.fMouseXMul);
+	mouse.y = (int32_t)floor(my * video.fMouseYMul);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 	{

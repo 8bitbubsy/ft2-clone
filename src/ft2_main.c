@@ -136,10 +136,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// unfinished Linux kludge for fullscreen issues, can't test this right now, so uncommenting
-	// if (strcmp("xwayland", SDL_GetCurrentVideoDriver()) == 0)
-	//	SDL_VideoInit("wayland");
-
 	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
 	/* Text input is started by default in SDL2, turn it off to remove ~2ms spikes per key press.

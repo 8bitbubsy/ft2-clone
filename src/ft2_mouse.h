@@ -34,7 +34,7 @@ extern mouse_t mouse; // ft2_mouse.c
 #define MOUSE_CLOCK_ANI_FRAMES 5
 
 #if defined __APPLE__ && defined __aarch64__
-void armMacGhostMouseCursorFix(SDL_Event *event);
+void armMacGhostMouseCursorFix(void);
 #endif
 
 void freeMouseCursors(void);
