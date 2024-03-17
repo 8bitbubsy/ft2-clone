@@ -86,14 +86,14 @@ static int32_t SDLCALL loadSampleThread(void *ptr)
 	if (editor.tmpFilenameU == NULL)
 	{
 		loaderMsgBox("General I/O error during loading!");
-		return false;
+		goto loadError;
 	}
 
 	FILE *f = UNICHAR_FOPEN(editor.tmpFilenameU, "rb");
 	if (f == NULL)
 	{
 		loaderMsgBox("General I/O error during loading! Is the file in use?");
-		return false;
+		goto loadError;
 	}
 
 	int8_t format = detectSample(f);
@@ -104,7 +104,7 @@ static int32_t SDLCALL loadSampleThread(void *ptr)
 	{
 		fclose(f);
 		loaderMsgBox("Error loading sample: The file is empty!");
-		return false;
+		goto loadError;
 	}
 
 	bool sampleLoaded = false;

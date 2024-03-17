@@ -2912,25 +2912,26 @@ static int32_t SDLCALL saveInstrThread(void *ptr)
 {
 	xiHdr_t ih;
 	sample_t *s;
+	FILE *f = NULL;
 
 	if (editor.tmpFilenameU == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
-		return false;
+		goto saveError;
 	}
 
 	const int32_t numSamples = getUsedSamples(saveInstrNum);
 	if (numSamples == 0 || instr[saveInstrNum] == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "Instrument is empty!", NULL);
-		return false;
+		goto saveError;
 	}
 
-	FILE *f = UNICHAR_FOPEN(editor.tmpFilenameU, "wb");
+	f = UNICHAR_FOPEN(editor.tmpFilenameU, "wb");
 	if (f == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
-		return false;
+		goto saveError;
 	}
 
 	memset(&ih, 0, sizeof (ih)); // important, also clears reserved stuff
@@ -3025,9 +3026,8 @@ static int32_t SDLCALL saveInstrThread(void *ptr)
 	size_t result = fwrite(&ih, INSTR_XI_HEADER_SIZE + (ih.numSamples * sizeof (xmSmpHdr_t)), 1, f);
 	if (result != 1)
 	{
-		fclose(f);
 		okBoxThreadSafe(0, "System message", "Error saving instrument: general I/O error!", NULL);
-		return false;
+		goto saveError;
 	}
 
 	pauseAudio();
@@ -3047,9 +3047,8 @@ static int32_t SDLCALL saveInstrThread(void *ptr)
 			if (result != (size_t)SAMPLE_LENGTH_BYTES(s)) // write not OK
 			{
 				resumeAudio();
-				fclose(f);
 				okBoxThreadSafe(0, "System message", "Error saving instrument: general I/O error!", NULL);
-				return false;
+				goto saveError;
 			}
 		}
 	}
@@ -3061,6 +3060,15 @@ static int32_t SDLCALL saveInstrThread(void *ptr)
 	setMouseBusy(false);
 
 	return true;
+
+saveError:
+	if (f != NULL)
+		fclose(f);
+
+	editor.diskOpReadDir = true; // force diskop re-read
+	setMouseBusy(false);
+
+	return false;
 
 	(void)ptr;
 }
@@ -3102,21 +3110,22 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 	xmSmpHdr_t *src;
 	sample_t *s;
 	instr_t *ins;
-
+	FILE *f = NULL;
 	bool stereoWarning = false;
+
 	numLoadedSamples = 0;
 
 	if (editor.tmpInstrFilenameU == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
-		return false;
+		goto loadDone;
 	}
 
-	FILE *f = UNICHAR_FOPEN(editor.tmpInstrFilenameU, "rb");
+	f = UNICHAR_FOPEN(editor.tmpInstrFilenameU, "rb");
 	if (f == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "General I/O error during loading! Is the file in use?", NULL);
-		return false;
+		goto loadDone;
 	}
 
 	memset(&xi_h, 0, sizeof (xi_h));
@@ -3435,32 +3444,36 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 	}
 
 loadDone:
-	fclose(f);
+	if (f != NULL)
+		fclose(f);
 
-	numLoadedSamples = CLAMP(numLoadedSamples, 1, MAX_SMP_PER_INST);
-
-	ins = instr[editor.curInstr];
-	if (ins != NULL)
+	if (numLoadedSamples > 0)
 	{
-		sanitizeInstrument(ins);
-		for (i = 0; i < numLoadedSamples; i++)
+		numLoadedSamples = CLAMP(numLoadedSamples, 1, MAX_SMP_PER_INST);
+
+		ins = instr[editor.curInstr];
+		if (ins != NULL)
 		{
-			s = &ins->smp[i];
-			sanitizeSample(s);
+			sanitizeInstrument(ins);
+			for (i = 0; i < numLoadedSamples; i++)
+			{
+				s = &ins->smp[i];
+				sanitizeSample(s);
 
-			if (s->dataPtr != NULL)
-				fixSample(s);
+				if (s->dataPtr != NULL)
+					fixSample(s);
+			}
+
+			fixInstrAndSampleNames(editor.curInstr);
 		}
+		editor.updateCurInstr = true; // setMouseBusy(false) is called in the input/video thread when done
 
-		fixInstrAndSampleNames(editor.curInstr);
+		if (numLoadedSamples > MAX_SMP_PER_INST)
+			okBoxThreadSafe(0, "System message", "Warning: The instrument contained >16 samples. The extra samples were discarded!", NULL);
+
+		if (stereoWarning)
+			okBoxThreadSafe(0, "System message", "Warning: The instrument contained stereo sample(s). They were mixed to mono!", NULL);
 	}
-	editor.updateCurInstr = true; // setMouseBusy(false) is called in the input/video thread when done
-
-	if (numLoadedSamples > MAX_SMP_PER_INST)
-		okBoxThreadSafe(0, "System message", "Warning: The instrument contained >16 samples. The extra samples were discarded!", NULL);
-
-	if (stereoWarning)
-		okBoxThreadSafe(0, "System message", "Warning: The instrument contained stereo sample(s). They were mixed to mono!", NULL);
 
 	return true;
 	(void)ptr;
