@@ -82,7 +82,6 @@ static void fileRestoreFixedSampleData(UNICHAR *filenameU, uint32_t sampleDataOf
 
 		if (samplesToWrite < 0 || samplesToWrite > MAX_RIGHT_TAPS || sampleFixPos < 0 || sampleFixOffset < 0 || sampleFixOffset >= MAX_RIGHT_TAPS)
 			return;
-
 	}
 
 	FILE* f = UNICHAR_FOPEN(filenameU, "r+"); // open in read+update mode
