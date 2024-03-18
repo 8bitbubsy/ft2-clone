@@ -915,9 +915,9 @@ void readMouseXY(void)
 		my -= video.renderY;
 	}
 
-	// this can happen...
-	if (mx < 0) mx = 0;
-	if (my < 0) my = 0;
+	// kludge: this can happen and prevent buttons from pressing on the very first row of pixels
+	if (mx == -1) mx = 0;
+	if (my == -1) my = 0;
 
 	// multiply coords by video upscaling factors
 	mouse.x = (int32_t)floor(mx * video.dMouseXMul);
