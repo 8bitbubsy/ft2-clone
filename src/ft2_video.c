@@ -283,8 +283,6 @@ static void updateRenderSizeVars(void)
 	video.renderX = 0;
 	video.renderY = 0;
 
-	video.dHiDPIScaleX = 1.0;
-	video.dHiDPIScaleY = 1.0;
 	video.useCustomRenderRect = false;
 
 	if (video.fullscreen)
@@ -301,22 +299,21 @@ static void updateRenderSizeVars(void)
 			// centered windowed fullscreen, with pixel-perfect integer upscaling
 
 			const int32_t maxUpscaleFactor = MIN(video.windowW / SCREEN_W, video.windowH / SCREEN_H);
-
-			// get hi-DPI upscale factors (returns 1.0 if no hi-DPI upscaling)
-			int32_t w, h;
-			SDL_GL_GetDrawableSize(video.window, &w, &h);
-			video.dHiDPIScaleX = (double)w / video.windowW;
-			video.dHiDPIScaleY = (double)h / video.windowH;
-
 			video.renderW = SCREEN_W * maxUpscaleFactor;
 			video.renderH = SCREEN_H * maxUpscaleFactor;
 			video.renderX = (video.windowW - video.renderW) / 2;
 			video.renderY = (video.windowH - video.renderH) / 2;
 
-			video.renderRect.x = (int32_t)floor(video.renderX * video.dHiDPIScaleX);
-			video.renderRect.y = (int32_t)floor(video.renderY * video.dHiDPIScaleY);
-			video.renderRect.w = (int32_t)floor(video.renderW * video.dHiDPIScaleX);
-			video.renderRect.h = (int32_t)floor(video.renderH * video.dHiDPIScaleY);
+			// get hi-DPI upscale factors (returns 1.0 if no hi-DPI upscaling)
+			int32_t widthInPixels, heightInPixels;
+			SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
+			double dHiDPIScaleX = (double)widthInPixels / video.windowW;
+			double dHiDPIScaleY = (double)heightInPixels / video.windowH;
+
+			video.renderRect.x = (int32_t)floor(video.renderX * dHiDPIScaleX);
+			video.renderRect.y = (int32_t)floor(video.renderY * dHiDPIScaleY);
+			video.renderRect.w = (int32_t)floor(video.renderW * dHiDPIScaleX);
+			video.renderRect.h = (int32_t)floor(video.renderH * dHiDPIScaleY);
 			video.useCustomRenderRect = true; // use the destination coordinates above in SDL_RenderCopy()
 		}
 	}
