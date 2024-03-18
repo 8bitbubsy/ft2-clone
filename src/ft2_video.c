@@ -126,8 +126,8 @@ static void drawFPSCounter(void)
 	             "Audio latency: %.1fms (expected %.1fms)\n" \
 	             "Render size: %dx%d (offset %d,%d)\n" \
 	             "Disp. size: %dx%d (window: %dx%d)\n" \
-	             "Render scaling: x=%.2f, y=%.2f\n" \
-	             "Mouse to render space muls: x=%.2f, y=%.2f\n" \
+	             "Render scaling: x=%.4f, y=%.4f\n" \
+	             "Mouse pixel-space muls: x=%.4f, y=%.4f\n" \
 	             "Relative mouse coords: %d,%d\n" \
 	             "Absolute mouse coords: %d,%d\n" \
 	             "Press CTRL+SHIFT+F to close this box.\n",
@@ -141,8 +141,8 @@ static void drawFPSCounter(void)
 	             dAudLatency, ((audio.wantSamples * 1000.0) / audio.wantFreq),
 	             video.renderW, video.renderH, video.renderX, video.renderY,
 	             video.displayW, video.displayH, video.windowW, video.windowH,
-	             video.renderW / (float)SCREEN_W, video.renderH / (float)SCREEN_H,
-	             video.fMouseXMul, video.fMouseYMul,
+	             (double)video.renderW / SCREEN_W, (double)video.renderH / SCREEN_H,
+	             video.dMouseXMul, video.dMouseYMul,
 	             mouse.x, mouse.y,
 	             mouse.absX, mouse.absY);
 
@@ -206,7 +206,11 @@ void flipFrame(void)
 	if (!minimized)
 		SDL_RenderClear(video.renderer);
 
-	SDL_RenderCopy(video.renderer, video.texture, NULL, NULL);
+	if (video.useCustomRenderRect)
+		SDL_RenderCopy(video.renderer, video.texture, NULL, &video.renderRect);
+	else
+		SDL_RenderCopy(video.renderer, video.texture, NULL, NULL);
+
 	SDL_RenderPresent(video.renderer);
 
 	eraseSprites();
@@ -263,61 +267,8 @@ void showErrorMsgBox(const char *fmt, ...)
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", strBuf, video.window);
 }
 
-static void setRenderCoordsFromLogicalSize(void)
-{
-#ifdef _WIN32 // comments in enterFullscreen() explain why you can do this on Windows
-	video.renderX = 0;
-	video.renderY = 0;
-	video.renderW = video.windowW;
-	video.renderH = video.windowH;
-#else
-	/* We use SDL_RenderGetLogicalSize() with a logical size (FT2's SCREEN_W and SCREEN_H).
-	** Find out the actual render X/Y start and width/height.
-	** I can't find a better way of doing this, let me know if you do!
-	**
-	** Code based on UpdateLogicalSize() in SDL_render.c (SDL2).
-	*/
-
-	int32_t logical_w, logical_h, w, h;
-
-	SDL_RenderGetLogicalSize(video.renderer, &logical_w, &logical_h);
-	SDL_GetWindowSize(video.window, &w, &h);
-
-	float want_aspect = (float)logical_w / logical_h;
-	float real_aspect = (float)w / h;
-
-	if (SDL_fabs(want_aspect - real_aspect) < 0.0001)
-	{
-		// the aspect ratios are the same, just scale appropriately
-		video.renderX = 0;
-		video.renderY = 0;
-		video.renderW = w;
-		video.renderH = h;
-	}
-	else if (want_aspect > real_aspect)
-	{
-		// we want a wider aspect ratio than is available - letterbox it
-		float scale = (float)w / logical_w;
-		video.renderX = 0;
-		video.renderW = w;
-		video.renderH = (int32_t)SDL_floor(logical_h * scale);
-		video.renderY = (h - video.renderH) / 2;
-	}
-	else
-	{
-		// We want a narrower aspect ratio than is available - use side-bars */
-		float scale = (float)h / logical_h;
-		video.renderY = 0;
-		video.renderH = h;
-		video.renderW = (int32_t)SDL_floor(logical_w * scale);
-		video.renderX = (w - video.renderW) / 2;
-	}
-#endif
-}
-
 static void updateRenderSizeVars(void)
 {
-	float fXScale, fYScale;
 	SDL_DisplayMode dm;
 
 	int32_t di = SDL_GetWindowDisplayIndex(video.window);
@@ -332,49 +283,52 @@ static void updateRenderSizeVars(void)
 	video.renderX = 0;
 	video.renderY = 0;
 
+	video.dHiDPIScaleX = 1.0;
+	video.dHiDPIScaleY = 1.0;
+	video.useCustomRenderRect = false;
+
 	if (video.fullscreen)
 	{
 		if (config.specialFlags2 & STRETCH_IMAGE)
 		{
-			setRenderCoordsFromLogicalSize();
+			// "streched out" windowed fullscreen
+
+			video.renderW = video.windowW;
+			video.renderH = video.windowH;
 		}
 		else
 		{
-			SDL_RenderGetScale(video.renderer, &fXScale, &fYScale);
+			// centered windowed fullscreen, with pixel-perfect integer upscaling
 
-			video.renderW = (int32_t)floor(SCREEN_W * fXScale);
-			video.renderH = (int32_t)floor(SCREEN_H * fYScale);
+			const int32_t maxUpscaleFactor = MIN(video.windowW / SCREEN_W, video.windowH / SCREEN_H);
 
-			// high-DPI hackery:
-			//  On high-DPI systems, the display w/h are given in logical pixels,
-			//  but the renderer size is given in physical pixels. Since our internal
-			//  render{X,Y,W,H} variables need to be in logical coordinates, as that's
-			//  what mouse input uses, scale them by the screen's DPI scale factor,
-			//  which is the physical (renderer) size / the logical (window) size.
-			//  On non high-DPI systems, this is effectively a no-op.
-			int32_t actualScreenW, actualScreenH;
-			SDL_GetRendererOutputSize(video.renderer, &actualScreenW, &actualScreenH);
+			// get hi-DPI upscale factors (returns 1.0 if no hi-DPI upscaling)
+			int32_t w, h;
+			SDL_GL_GetDrawableSize(video.window, &w, &h);
+			video.dHiDPIScaleX = (double)w / video.windowW;
+			video.dHiDPIScaleY = (double)h / video.windowH;
 
-			const double dXUpscale = (const double)actualScreenW / video.windowW;
-			const double dYUpscale = (const double)actualScreenH / video.windowH;
-
-			// downscale back to correct sizes
-			if (dXUpscale != 0.0) video.renderW = (int32_t)floor(video.renderW / dXUpscale);
-			if (dYUpscale != 0.0) video.renderH = (int32_t)floor(video.renderH / dYUpscale);
-
+			video.renderW = SCREEN_W * maxUpscaleFactor;
+			video.renderH = SCREEN_H * maxUpscaleFactor;
 			video.renderX = (video.windowW - video.renderW) / 2;
 			video.renderY = (video.windowH - video.renderH) / 2;
+
+			video.renderRect.x = (int32_t)floor(video.renderX * video.dHiDPIScaleX);
+			video.renderRect.y = (int32_t)floor(video.renderY * video.dHiDPIScaleY);
+			video.renderRect.w = (int32_t)floor(video.renderW * video.dHiDPIScaleX);
+			video.renderRect.h = (int32_t)floor(video.renderH * video.dHiDPIScaleY);
+			video.useCustomRenderRect = true; // use the destination coordinates above in SDL_RenderCopy()
 		}
 	}
 	else
 	{
+		// windowed mode
+
 		SDL_GetWindowSize(video.window, &video.renderW, &video.renderH);
 	}
 
-	// for mouse cursor creation
-	video.xScale = (uint32_t)floor(video.renderW / (double)SCREEN_W);
-	video.yScale = (uint32_t)floor(video.renderH / (double)SCREEN_H);
-
+	// "hardware mouse" calculations
+	video.mouseCursorUpscaleFactor = MIN(video.renderW / SCREEN_W, video.renderH / SCREEN_H);
 	createMouseCursors();
 }
 
@@ -382,43 +336,6 @@ void enterFullscreen(void)
 {
 	SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	SDL_Delay(15); // fixes possible issues
-
-	if (config.specialFlags2 & STRETCH_IMAGE)
-	{
-		SDL_DisplayMode dm;
-
-		int32_t di = SDL_GetWindowDisplayIndex(video.window);
-		if (di < 0)
-			di = 0; // return display index 0 (default) on error
-
-		SDL_GetDesktopDisplayMode(di, &dm);
-
-#if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 5)
-		SDL_RenderSetIntegerScale(video.renderer, SDL_FALSE);
-#endif
-
-		/* Only on Windows can you use dm.w and dm.h to get an actual
-		** fullscreen-scretch with SDL_RenderSetLogicalSize(). Silly!
-		*/
-#ifdef _WIN32
-		SDL_RenderSetLogicalSize(video.renderer, dm.w, dm.h);
-#else
-		SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
-#endif
-		SDL_SetWindowSize(video.window, dm.w, dm.h);
-	}
-	else
-	{
-#if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 5)
-		SDL_RenderSetIntegerScale(video.renderer, SDL_TRUE);
-#endif
-		SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
-		SDL_SetWindowSize(video.window, SCREEN_W, SCREEN_H);
-	}
-
-#ifndef __unix__ // Linux kludge...
-	SDL_SetWindowGrab(video.window, SDL_TRUE);
-#endif
 
 	updateRenderSizeVars();
 	updateMouseScaling();
@@ -430,18 +347,8 @@ void leaveFullscreen(void)
 	SDL_SetWindowFullscreen(video.window, 0);
 	SDL_Delay(15); // fixes possible issues
 
-#if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 5)
-	SDL_RenderSetIntegerScale(video.renderer, SDL_TRUE);
-#endif
-	SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
-
 	setWindowSizeFromConfig(false); // false = do not change actual window size, only update variables
-
-	SDL_SetWindowSize(video.window, SCREEN_W * video.upscaleFactor, SCREEN_H * video.upscaleFactor);
-
-#ifndef __unix__ // revert Linux kludge...
-	SDL_SetWindowGrab(video.window, SDL_FALSE);
-#endif
+	SDL_SetWindowSize(video.window, SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
 
 	updateRenderSizeVars();
 	updateMouseScaling();
@@ -880,7 +787,7 @@ void setWindowSizeFromConfig(bool updateRenderer)
 	uint8_t i;
 	SDL_DisplayMode dm;
 
-	uint8_t oldUpscaleFactor = video.upscaleFactor;
+	uint8_t oldUpscaleFactor = video.windowModeUpscaleFactor;
 	if (config.windowFlags & WINSIZE_AUTO)
 	{
 		int32_t di = SDL_GetWindowDisplayIndex(video.window);
@@ -895,30 +802,30 @@ void setWindowSizeFromConfig(bool updateRenderer)
 				// height test is slightly taller because of window title, window borders and taskbar/menu/dock
 				if (dm.w >= SCREEN_W*i && dm.h >= (SCREEN_H+64)*i)
 				{
-					video.upscaleFactor = i;
+					video.windowModeUpscaleFactor = i;
 					break;
 				}
 			}
 
 			if (i == 0)
-				video.upscaleFactor = 1; // 1x is not going to fit, but use 1x anyways...
+				video.windowModeUpscaleFactor = 1; // 1x is not going to fit, but use 1x anyways...
 		}
 		else
 		{
 			// couldn't get screen resolution, set to 1x
-			video.upscaleFactor = 1;
+			video.windowModeUpscaleFactor = 1;
 		}
 	}
-	else if (config.windowFlags & WINSIZE_1X) video.upscaleFactor = 1;
-	else if (config.windowFlags & WINSIZE_2X) video.upscaleFactor = 2;
-	else if (config.windowFlags & WINSIZE_3X) video.upscaleFactor = 3;
-	else if (config.windowFlags & WINSIZE_4X) video.upscaleFactor = 4;
+	else if (config.windowFlags & WINSIZE_1X) video.windowModeUpscaleFactor = 1;
+	else if (config.windowFlags & WINSIZE_2X) video.windowModeUpscaleFactor = 2;
+	else if (config.windowFlags & WINSIZE_3X) video.windowModeUpscaleFactor = 3;
+	else if (config.windowFlags & WINSIZE_4X) video.windowModeUpscaleFactor = 4;
 
 	if (updateRenderer)
 	{
-		SDL_SetWindowSize(video.window, SCREEN_W * video.upscaleFactor, SCREEN_H * video.upscaleFactor);
+		SDL_SetWindowSize(video.window, SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
 
-		if (oldUpscaleFactor != video.upscaleFactor)
+		if (oldUpscaleFactor != video.windowModeUpscaleFactor)
 			SDL_SetWindowPosition(video.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 
 		updateRenderSizeVars();
@@ -1007,7 +914,7 @@ bool setupWindow(void)
 		video.vsync60HzPresent = false;
 
 	video.window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		SCREEN_W * video.upscaleFactor, SCREEN_H * video.upscaleFactor,
+		SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor,
 		windowFlags);
 
 	if (video.window == NULL)
@@ -1051,12 +958,6 @@ bool setupRenderer(void)
 		}
 	}
 
-	SDL_RenderSetLogicalSize(video.renderer, SCREEN_W, SCREEN_H);
-
-#if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 5)
-	SDL_RenderSetIntegerScale(video.renderer, SDL_TRUE);
-#endif
-
 	SDL_SetRenderDrawBlendMode(video.renderer, SDL_BLENDMODE_NONE);
 
 	if (!recreateTexture())
@@ -1067,7 +968,7 @@ bool setupRenderer(void)
 	}
 
 	// framebuffer used by SDL (for texture)
-	video.frameBuffer = (uint32_t *)malloc(SCREEN_W * SCREEN_H * sizeof (int32_t));
+	video.frameBuffer = (uint32_t *)malloc(SCREEN_W * SCREEN_H * sizeof (uint32_t));
 	if (video.frameBuffer == NULL)
 	{
 		showErrorMsgBox("Not enough memory!");

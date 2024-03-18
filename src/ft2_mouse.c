@@ -93,7 +93,7 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 
 	for (int32_t i = 0; i < NUM_CURSORS; i++)
 	{
-		int32_t scaleFactor = video.yScale;
+		int32_t scaleFactor = video.mouseCursorUpscaleFactor;
 		if (scaleFactor > 8) // just in case
 			scaleFactor = 8;
 
@@ -173,8 +173,8 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 
 		if (i == 3) // text edit cursor bias
 		{
-			hotX = 2 * video.xScale;
-			hotY = 6 * video.yScale;
+			hotX = 2 * video.mouseCursorUpscaleFactor;
+			hotY = 6 * video.mouseCursorUpscaleFactor;
 		}
 
 		cursors[i] = SDL_CreateColorCursor(surface, hotX, hotY);
@@ -836,8 +836,8 @@ void handleLastGUIObjectDown(void)
 
 void updateMouseScaling(void)
 {
-	if (video.renderW > 0) video.fMouseXMul = (float)SCREEN_W / video.renderW;
-	if (video.renderH > 0) video.fMouseYMul = (float)SCREEN_H / video.renderH;
+	if (video.renderW > 0) video.dMouseXMul = (double)SCREEN_W / video.renderW;
+	if (video.renderH > 0) video.dMouseYMul = (double)SCREEN_H / video.renderH;
 }
 
 void readMouseXY(void)
@@ -916,8 +916,8 @@ void readMouseXY(void)
 	}
 
 	// multiply coords by video upscaling factors
-	mouse.x = (int32_t)floor(mx * video.fMouseXMul);
-	mouse.y = (int32_t)floor(my * video.fMouseYMul);
+	mouse.x = (int32_t)floor(mx * video.dMouseXMul);
+	mouse.y = (int32_t)floor(my * video.dMouseYMul);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 	{

@@ -852,7 +852,7 @@ but also potential stuttering.
 
 >@X040@C001Stretched:
 >@X060@C002
-Attempts to make fullscreen mode completely stretch out the image (can be buggy).
+Makes fullscreen mode completely stretch out the image.
 This can and will result in uneven pixel sizes, making the image look quite bad.
 The "Pixel filter" setting can help with this, but it makes the image look blurry.
  
@@ -941,8 +941,8 @@ END
 >
 >@X010@C001Video:
 >@C002
->@X010- "Stretced" mode will not actually stretch out the whole screen in some cases
->@X010- Fullscreen mode can have issues with the mouse pixel mapping on some Linux systems
+>@X010- Fullscreen mode can have issues with the mouse pixel mapping on some
+>@X021Linux systems.
 >@X010- Fullscreen mode can have several problems on multi-monitor systems
 
 END

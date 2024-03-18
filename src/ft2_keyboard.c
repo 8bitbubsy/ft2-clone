@@ -702,11 +702,6 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			if (keyb.leftAltPressed)
 			{
 				toggleFullscreen();
-
-				// prevent fullscreen toggle from firing twice on certain SDL2 Linux ports
-#ifdef __unix__
-				SDL_Delay(100);
-#endif
 				return true;
 			}
 		}

@@ -19,19 +19,20 @@ enum
 
 typedef struct video_t
 {
-	bool fullscreen, showFPSCounter;
-	uint32_t xScale, yScale;
+	bool fullscreen, showFPSCounter, useCustomRenderRect;
+	uint32_t mouseCursorUpscaleFactor;
 	uint32_t *frameBuffer, palette[PAL_NUM];
 #ifdef _WIN32
 	HWND hWnd;
 #endif
 	hpc_t vblankHpc;
 	SDL_Window *window;
-	double dMonitorRefreshRate;
-	float fMouseXMul, fMouseYMul;
-	uint8_t upscaleFactor;
+	double dMonitorRefreshRate, dHiDPIScaleX, dHiDPIScaleY;
+	double dMouseXMul, dMouseYMul;
+	uint8_t windowModeUpscaleFactor;
 	bool vsync60HzPresent, windowHidden;
 	int32_t renderX, renderY, renderW, renderH, displayW, displayH, windowW, windowH;
+	SDL_Rect renderRect;
 	SDL_Renderer *renderer;
 	SDL_Texture *texture;
 	SDL_Surface *iconSurface;
