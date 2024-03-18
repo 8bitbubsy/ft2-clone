@@ -915,6 +915,10 @@ void readMouseXY(void)
 		my -= video.renderY;
 	}
 
+	// this can happen...
+	if (mx < 0) mx = 0;
+	if (my < 0) my = 0;
+
 	// multiply coords by video upscaling factors
 	mouse.x = (int32_t)floor(mx * video.dMouseXMul);
 	mouse.y = (int32_t)floor(my * video.dMouseYMul);
