@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Fasttracker II clone
+Comment=
+Exec=ft2-clone
+Icon=Fasttracker II clone
+Path=
+Terminal=false
+StartupNotify=false
+Categories=AudioVideo;Audio;AudioVideoEditing;Sequencer;
