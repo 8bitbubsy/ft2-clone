@@ -24,7 +24,7 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	** -- STRUCT INFO: --
 	**  x        = x position
 	**  y        = y position
-	**  w        = clickable width space, relative to x
+	**  w        = clickable width in pixels, relative to x
 	**  group    = what group the radiobutton belongs to
 	**  funcOnUp = function to call when released
 	*/

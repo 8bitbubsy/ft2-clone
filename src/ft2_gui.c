@@ -139,15 +139,15 @@ bool setupGUI(void)
 
 	// set uninitialized GUI struct entries
 
-	textBox_t *t = &textBoxes[1]; // skip first entry, it's reserved for inputBox())
+	textBox_t *t = &textBoxes[1]; // skip first entry, it's reserved for inputBox()
 	for (int32_t i = 1; i < NUM_TEXTBOXES; i++, t++)
 	{
 		t->visible = false;
 		t->bufOffset = 0;
 		t->cursorPos = 0;
 		t->textPtr = NULL;
-		t->renderBufW = (9 + 1) * t->maxChars; // 9 = max character/glyph width possible
-		t->renderBufH = 10; // 10 = max character height possible
+		t->renderBufW = (9 + 1) * t->maxChars; // 9 = max text glyph width (+1 for kerning)
+		t->renderBufH = 10; // 10 = max text glyph height
 		t->renderW = t->w - (t->tx * 2);
 
 		t->renderBuf = (uint8_t *)malloc(t->renderBufW * t->renderBufH * sizeof (int8_t));

@@ -26,8 +26,8 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	** -- STRUCT INFO: --
 	**  x        = x position
 	**  y        = y position
-	**  w        = clickable width space, relative to x
-	**  h        = clickable height space, relative to y
+	**  w        = clickable width in pixels, relative to x
+	**  h        = clickable height in pixels, relative to y
 	**  funcOnUp = function to call when released
 	*/
 

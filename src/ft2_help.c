@@ -393,7 +393,7 @@ void showHelpScreen(void)
 		default:
 		case 0: tmpID = RB_HELP_FEATURES;       break;
 		case 1: tmpID = RB_HELP_EFFECTS;        break;
-		case 2: tmpID = RB_HELP_KEYBINDINGS;       break;
+		case 2: tmpID = RB_HELP_KEYBINDINGS;    break;
 		case 3: tmpID = RB_HELP_HOW_TO_USE_FT2; break;
 		case 4: tmpID = RB_HELP_FAQ;            break;
 		case 5: tmpID = RB_HELP_KNOWN_BUGS;     break;

@@ -12,25 +12,23 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.79"
+#define PROG_VER_STR "1.80"
 
 // do NOT change these! It will only mess things up...
 
 #define FT2_VBLANK_HZ 70.086302895323 /* nominal, 640x400 @ 70Hz */
 #define SCREEN_W 632
 #define SCREEN_H 400
-
-/* "60Hz" ranges everywhere from 59..61Hz depending on the monitor, so with
-** no vsync we will get stuttering because the rate is not perfect...
-*/
 #define VBLANK_HZ 60
 
 // 70Hz (FT2 vblank) delta -> 60Hz vblank delta (rounded)
 #define SCALE_VBLANK_DELTA(x) (int32_t)(((x) * ((double)VBLANK_HZ / FT2_VBLANK_HZ)) + 0.5)
 
-// scopes must be clocked slightly higher than the nominal vblank rate
+/* Scopes must be clocked slightly higher than the nominal vblank rate
+** to prevent update/draw racing issues. Setting it too high will
+** cause more issues!
+*/
 #define SCOPE_HZ 64
-
 
 /* Amount of extra bytes to allocate for every instrument sample,
 ** this is used for a hack for resampling interpolation to be
