@@ -33,7 +33,7 @@
 #include "ft2_sample_ed_features.h"
 #include "ft2_structs.h"
 
-#define CRASH_TEXT "Oh no! The Fasttracker II clone has crashed...\nA backup .xm was hopefully " \
+#define CRASH_TEXT "Oh no! The Fasttracker II clone has crashed...\nA backup of the song was hopefully " \
                    "saved to the current module directory.\n\nPlease report this bug if you can.\n" \
                    "Try to mention what you did before the crash happened.\n" \
                    "My email is on the bottom of https://16-bits.org"
