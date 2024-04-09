@@ -909,7 +909,7 @@ static uint32_t countOverflowingNotes(uint8_t mode, int8_t addValue, bool allIns
 			{
 				note_t *p = pattern[i];
 				if (p == NULL)
-					return 0; // empty pattern
+					continue; // empty pattern, skip it
 
 				for (int32_t row = 0; row < patternNumRows[i]; row++, p += pitch)
 				{
@@ -1052,7 +1052,7 @@ static void doTranspose(uint8_t mode, int8_t addValue, bool allInstrumentsFlag)
 			{
 				note_t *p = pattern[i];
 				if (p == NULL)
-					continue; // empty pattern
+					continue; // empty pattern, skip it
 
 				for (int32_t row = 0; row < patternNumRows[i]; row++, p += pitch)
 				{
