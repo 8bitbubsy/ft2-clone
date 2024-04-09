@@ -14,7 +14,7 @@
 		</data>
 		<key>Resources/Info.plist</key>
 		<data>
-		ZHmmRK90boQu0lf8kuoupR5C534=
+		xxjLXf8umGDvorJwQToOZvJb+LI=
 		</data>
 		<key>Resources/License.txt</key>
 		<data>
@@ -26,7 +26,7 @@
 		</data>
 		<key>Resources/default.metallib</key>
 		<data>
-		QwX80pzFcZED9JtaD8IhQ/uayn0=
+		YrRnNqKCIDuni+6CKxtbY1kbYlw=
 		</data>
 	</dict>
 	<key>files2</key>
@@ -508,11 +508,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			wJW6P5cSLWw7CLKwCduRMFILJMs=
+			NywZ7lb1AObplGXdgvKYUQnFr3E=
 			</data>
 			<key>hash2</key>
 			<data>
-			rfvhg9xhDPbHHDguY5qvRo/mzZyCbJMSA9625XkbQy0=
+			/XPmip0lyp07Lnry52Ki2A7dornwXXFxn1W94/cdCO0=
 			</data>
 		</dict>
 		<key>Headers/SDL_power.h</key>
@@ -563,11 +563,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			BP7HEBYnBwbk8tHzZPgc3YbrqxQ=
+			QR/EqmyEkjhJXrWe2LStfwBGG/4=
 			</data>
 			<key>hash2</key>
 			<data>
-			OaVGrGQNu1FqBbGBlpCqSy2PHisu9o9LzvAg42f1/JI=
+			uR4gNQwz5IYMMHZflMaZxOTwGwrYDLcyYQlbbPMpm3w=
 			</data>
 		</dict>
 		<key>Headers/SDL_rwops.h</key>
@@ -706,11 +706,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			OGZ8BfEEkHiQnTtIvNq9aYEj7FY=
+			WO6pCYeF3qTP69F4sWD442sgezQ=
 			</data>
 			<key>hash2</key>
 			<data>
-			juogOjtV5ZeXFCoHo69XFA1QWPNDN4r0MdblxepalE8=
+			pXT1eYRliBTvr45AyMoEr960xzfZ19y99t80KzPQv3U=
 			</data>
 		</dict>
 		<key>Headers/SDL_video.h</key>
@@ -783,11 +783,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			ZHmmRK90boQu0lf8kuoupR5C534=
+			xxjLXf8umGDvorJwQToOZvJb+LI=
 			</data>
 			<key>hash2</key>
 			<data>
-			B6t0lho1afDvcrYh3u2JI7SM9qV8RRd+48xEAIyinO8=
+			Ikl+0G36oc/K1BK2OQNF3aybj3O5vaHu74adDuyR5P8=
 			</data>
 		</dict>
 		<key>Resources/License.txt</key>
@@ -816,11 +816,11 @@
 		<dict>
 			<key>hash</key>
 			<data>
-			QwX80pzFcZED9JtaD8IhQ/uayn0=
+			YrRnNqKCIDuni+6CKxtbY1kbYlw=
 			</data>
 			<key>hash2</key>
 			<data>
-			81kjRE2J1UCGqrIQCmKYXixkYjbOC68/+l4AoNBo6C8=
+			goC4ji0E3XChWw9+V/QA4PFdbLXiQkmV6QWCcaD6Wzo=
 			</data>
 		</dict>
 	</dict>
