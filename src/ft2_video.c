@@ -255,16 +255,20 @@ void flipFrame(void)
 
 void showErrorMsgBox(const char *fmt, ...)
 {
-	char strBuf[256];
+	char strBuf[512+1];
 	va_list args;
 
 	// format the text string
 	va_start(args, fmt);
-	vsnprintf(strBuf, sizeof (strBuf), fmt, args);
+	vsnprintf(strBuf, sizeof (strBuf)-1, fmt, args);
 	va_end(args);
 
-	// window can be NULL here, no problem...
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", strBuf, video.window);
+	// SDL message boxes can be very buggy on Windows XP, use MessageBoxA() instead
+#ifdef _WIN32
+	MessageBoxA(NULL, strBuf, "Error", MB_OK | MB_ICONERROR);
+#else
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", strBuf, NULL);
+#endif
 }
 
 static void updateRenderSizeVars(void)
