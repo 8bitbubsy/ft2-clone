@@ -96,7 +96,9 @@ int main(int argc, char *argv[])
 #endif
 
 #ifdef _WIN32
-	// disable MIDI support if using Windows XP, as it is unstable
+	/* Disable MIDI support if using Windows XP,
+	** as it is unstable when initialized in an own thread.
+	*/
 	if (!IsWindowsVistaOrGreater())
 		midi.supported = false;
 

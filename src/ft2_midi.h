@@ -35,6 +35,6 @@ void scrollMidiInputDevListUp(void);
 void scrollMidiInputDevListDown(void);
 void sbMidiInputSetPos(uint32_t pos);
 bool testMidiInputDeviceListMouseDown(void);
-int32_t SDLCALL initMidiFunc(void *ptr);
+int32_t initMidiFunc(void *ptr);
 
 #endif

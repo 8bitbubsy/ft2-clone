@@ -29,7 +29,7 @@ midi_t midi; // globalized
 
 static volatile bool midiDeviceOpened;
 static bool recMIDIValidChn = true;
-static RtMidiPtr midiInDev;
+static volatile RtMidiPtr midiInDev;
 
 static inline void midiInSetChannel(uint8_t status)
 {
@@ -180,6 +180,7 @@ bool initMidiIn(void)
 	if (!midiInDev->ok)
 	{
 		rtmidi_in_free(midiInDev);
+		midiInDev = NULL;
 		return false;
 	}
 
@@ -188,16 +189,14 @@ bool initMidiIn(void)
 
 bool openMidiInDevice(uint32_t deviceID)
 {
-	if (midiDeviceOpened)
-		return false;
-
-	if (midiInDev == NULL || getNumMidiInDevices() == 0)
+	if (midiDeviceOpened || midiInDev == NULL || midi.numInputDevices == 0)
 		return false;
 
 	rtmidi_open_port(midiInDev, deviceID, "FT2 Clone MIDI Port");
 	if (!midiInDev->ok)
 		return false;
 
+	/*
 	rtmidi_in_set_callback(midiInDev, midiInCallback, NULL);
 	if (!midiInDev->ok)
 	{
@@ -206,6 +205,7 @@ bool openMidiInDevice(uint32_t deviceID)
 	}
 
 	rtmidi_in_ignore_types(midiInDev, true, true, true);
+	*/
 
 	midiDeviceOpened = true;
 	return true;
@@ -281,9 +281,7 @@ bool setMidiInputDeviceFromConfig(void)
 {
 	uint32_t i;
 
-	// XXX: Something in here is corrupting!
-
-	if (editor.midiConfigFileLocationU == NULL)
+	if (midiInDev == NULL || editor.midiConfigFileLocationU == NULL)
 		goto setDefMidiInputDev;
 
 	const uint32_t numDevices = getNumMidiInDevices();
@@ -353,7 +351,7 @@ setDefMidiInputDev:
 	}
 
 	midi.inputDevice = 0;
-	midi.inputDeviceName = strdup("RtMidi");
+	midi.inputDeviceName = strdup("Error configuring MIDI...");
 	midi.numInputDevices = 1;
 
 	return false;
@@ -497,16 +495,15 @@ bool testMidiInputDeviceListMouseDown(void)
 	return true;
 }
 
-int32_t SDLCALL initMidiFunc(void *ptr)
+int32_t initMidiFunc(void *ptr)
 {
-	midi.initThreadDone = false;
 	initMidiIn();
 	setMidiInputDeviceFromConfig();
 	openMidiInDevice(midi.inputDevice);
 	midi.rescanDevicesFlag = true;
 	midi.initThreadDone = true;
-	return true;
 
+	return true;
 	(void)ptr;
 }
 
