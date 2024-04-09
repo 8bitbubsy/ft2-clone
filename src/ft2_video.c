@@ -123,10 +123,10 @@ static void drawFPSCounter(void)
 	             "HPC frequency (timer): %.4fMHz\n" \
 	             "Audio frequency: %.1fkHz (expected %.1fkHz)\n" \
 	             "Audio buffer samples: %d (expected %d)\n" \
-	             "Audio latency: %.1fms (expected %.1fms)\n" \
 	             "Render size: %dx%d (offset %d,%d)\n" \
 	             "Disp. size: %dx%d (window: %dx%d)\n" \
 	             "Render scaling: x=%.4f, y=%.4f\n" \
+	             "DPI zoom factors: x=%.4f, y=%.4f\n" \
 	             "Mouse pixel-space muls: x=%.4f, y=%.4f\n" \
 	             "Relative mouse coords: %d,%d\n" \
 	             "Absolute mouse coords: %d,%d\n" \
@@ -138,10 +138,10 @@ static void drawFPSCounter(void)
 	             hpcFreq.freq64 / (1000.0 * 1000.0),
 	             audio.haveFreq / 1000.0, audio.wantFreq / 1000.0,
 	             audio.haveSamples, audio.wantSamples,
-	             dAudLatency, ((audio.wantSamples * 1000.0) / audio.wantFreq),
 	             video.renderW, video.renderH, video.renderX, video.renderY,
 	             video.displayW, video.displayH, video.windowW, video.windowH,
 	             (double)video.renderW / SCREEN_W, (double)video.renderH / SCREEN_H,
+	             video.dDpiZoomFactorX, video.dDpiZoomFactorY,
 	             video.dMouseXMul, video.dMouseYMul,
 	             mouse.x, mouse.y,
 	             mouse.absX, mouse.absY);
@@ -269,6 +269,7 @@ void showErrorMsgBox(const char *fmt, ...)
 
 static void updateRenderSizeVars(void)
 {
+	int32_t widthInPixels, heightInPixels;
 	SDL_DisplayMode dm;
 
 	int32_t di = SDL_GetWindowDisplayIndex(video.window);
@@ -293,6 +294,11 @@ static void updateRenderSizeVars(void)
 
 			video.renderW = video.windowW;
 			video.renderH = video.windowH;
+
+			// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
+			SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
+			video.dDpiZoomFactorX = (double)widthInPixels / video.windowW;
+			video.dDpiZoomFactorY = (double)heightInPixels / video.windowH;
 		}
 		else
 		{
@@ -304,16 +310,15 @@ static void updateRenderSizeVars(void)
 			video.renderX = (video.windowW - video.renderW) / 2;
 			video.renderY = (video.windowH - video.renderH) / 2;
 
-			// get hi-DPI upscale factors (returns 1.0 if no hi-DPI upscaling)
-			int32_t widthInPixels, heightInPixels;
+			// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
 			SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
-			double dHiDPIScaleX = (double)widthInPixels / video.windowW;
-			double dHiDPIScaleY = (double)heightInPixels / video.windowH;
+			video.dDpiZoomFactorX = (double)widthInPixels / video.windowW;
+			video.dDpiZoomFactorY = (double)heightInPixels / video.windowH;
 
-			video.renderRect.x = (int32_t)floor(video.renderX * dHiDPIScaleX);
-			video.renderRect.y = (int32_t)floor(video.renderY * dHiDPIScaleY);
-			video.renderRect.w = (int32_t)floor(video.renderW * dHiDPIScaleX);
-			video.renderRect.h = (int32_t)floor(video.renderH * dHiDPIScaleY);
+			video.renderRect.x = (int32_t)floor(video.renderX * video.dDpiZoomFactorX);
+			video.renderRect.y = (int32_t)floor(video.renderY * video.dDpiZoomFactorY);
+			video.renderRect.w = (int32_t)floor(video.renderW * video.dDpiZoomFactorX);
+			video.renderRect.h = (int32_t)floor(video.renderH * video.dDpiZoomFactorY);
 			video.useCustomRenderRect = true; // use the destination coordinates above in SDL_RenderCopy()
 		}
 	}
@@ -322,6 +327,11 @@ static void updateRenderSizeVars(void)
 		// windowed mode
 
 		SDL_GetWindowSize(video.window, &video.renderW, &video.renderH);
+
+		// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
+		SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
+		video.dDpiZoomFactorX = (double)widthInPixels / video.windowW;
+		video.dDpiZoomFactorY = (double)heightInPixels / video.windowH;
 	}
 
 	// "hardware mouse" calculations
