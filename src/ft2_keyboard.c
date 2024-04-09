@@ -24,6 +24,7 @@
 #include "ft2_audio.h"
 #include "ft2_trim.h"
 #include "ft2_sample_ed_features.h"
+#include "ft2_midi.h"
 #include "ft2_structs.h"
 
 keyb_t keyb; // globalized
@@ -1280,16 +1281,18 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 
 				return true;
 			}
-#ifdef HAS_MIDI
 			else if (keyb.leftCtrlPressed)
 			{
-				editor.currConfigScreen = 3;
-				showConfigScreen();
-				checkRadioButton(RB_CONFIG_MIDI_INPUT);
-
+#ifdef HAS_MIDI
+				if (midi.supported)
+				{
+					editor.currConfigScreen = 3;
+					showConfigScreen();
+					checkRadioButton(RB_CONFIG_MIDI_INPUT);
+				}
+#endif
 				return true;
 			}
-#endif
 		}
 		break;
 

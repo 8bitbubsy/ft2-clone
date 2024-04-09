@@ -9,6 +9,7 @@
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
 #include <windows.h>
+#include <versionhelpers.h>
 #include <SDL2/SDL_syswm.h>
 #else
 #include <unistd.h> // chdir()
@@ -34,10 +35,6 @@
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
 #include "ft2_hpc.h"
-
-#ifdef HAS_MIDI
-static SDL_Thread *initMidiThread;
-#endif
 
 static void initializeVars(void);
 static void cleanUpAndExit(void); // never call this inside the main loop
@@ -99,6 +96,10 @@ int main(int argc, char *argv[])
 #endif
 
 #ifdef _WIN32
+	// disable MIDI support if using Windows XP, as it is unstable
+	if (!IsWindowsVistaOrGreater())
+		midi.supported = false;
+
 #ifndef _MSC_VER
 	SetProcessDPIAware();
 #endif
@@ -231,14 +232,16 @@ int main(int argc, char *argv[])
 
 #ifdef HAS_MIDI
 	// set up MIDI input (in a thread because it can take quite a while on f.ex. macOS)
-	initMidiThread = SDL_CreateThread(initMidiFunc, NULL, NULL);
-	if (initMidiThread == NULL)
+	if (midi.supported)
 	{
-		showErrorMsgBox("Couldn't create MIDI initialization thread!");
-		cleanUpAndExit();
-		return 1;
+		midi.initMidiThread = SDL_CreateThread(initMidiFunc, NULL, NULL);
+		if (midi.initMidiThread == NULL)
+		{
+			showErrorMsgBox("Couldn't create MIDI initialization thread!");
+			cleanUpAndExit();
+			return 1;
+		}
 	}
-	SDL_DetachThread(initMidiThread); // don't wait for this thread, let it clean up when done
 #endif
 
 	hpc_ResetCounters(&video.vblankHpc); // quirk: this is needed for potential okBox() calls in handleModuleLoadFromArg()
@@ -271,6 +274,10 @@ static void initializeVars(void)
 	cpu.hasSSE2 = SDL_HasSSE2();
 
 	// clear common structs
+#ifdef HAS_MIDI
+	memset(&midi, 0, sizeof (midi));
+	midi.supported = true;
+#endif
 	memset(&video, 0, sizeof (video));
 	memset(&keyb, 0, sizeof (keyb));
 	memset(&mouse, 0, sizeof (mouse));
@@ -289,7 +296,7 @@ static void initializeVars(void)
 
 	// now set data that must be initialized to non-zero values...
 
-	audio.locked = true;
+	audio.locked = true; // XXX: Why..?
 	audio.rescanAudioDevicesSupported = true;
 
 	// set non-zero values
@@ -305,7 +312,7 @@ static void initializeVars(void)
 	editor.srcInstr = 1;
 	editor.curInstr = 1;
 	editor.curOctave = 4;
-	editor.smpEd_NoteNr = 48 + 1; // middle-C
+	editor.smpEd_NoteNr = 1+NOTE_C4;
 
 	editor.ptnJumpPos[0] = 0x00;
 	editor.ptnJumpPos[1] = 0x10;
@@ -316,14 +323,14 @@ static void initializeVars(void)
 	memset(editor.copyMask, 1, sizeof (editor.copyMask));
 	memset(editor.pasteMask, 1, sizeof (editor.pasteMask));
 
-#ifdef HAS_MIDI
-	midi.enable = true;
-#endif
-
 	editor.diskOpReadOnOpen = true;
 
 	audio.linearPeriodsFlag = true;
 	calcReplayerLogTab();
+
+#ifdef HAS_MIDI
+	midi.enable = true;
+#endif
 
 	editor.programRunning = true;
 }
@@ -331,10 +338,26 @@ static void initializeVars(void)
 static void cleanUpAndExit(void) // never call this inside the main loop!
 {
 #ifdef HAS_MIDI
-	if (midi.closeMidiOnExit)
+	if (midi.supported)
 	{
+		if (midi.initMidiThread != NULL)
+		{
+			SDL_WaitThread(midi.initMidiThread, NULL);
+			midi.initMidiThread = NULL;
+		}
+
+		midi.enable = false; // stop MIDI callback from doing things
+		while (midi.callbackBusy) SDL_Delay(1); // wait for MIDI callback to finish
+
 		closeMidiInDevice();
 		freeMidiIn();
+		freeMidiInputDeviceList();
+
+		if (midi.inputDeviceName != NULL)
+		{
+			free(midi.inputDeviceName);
+			midi.inputDeviceName = NULL;
+		}
 	}
 #endif
 
@@ -345,21 +368,10 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	freeDiskOp();
 	clearCopyBuffer();
 	freeAudioDeviceSelectorBuffers();
-#ifdef HAS_MIDI
-	freeMidiInputDeviceList();
-#endif
 	windUpFTHelp();
 	freeTextBoxes();
 	freeMouseCursors();
 	freeBMPs();
-
-#ifdef HAS_MIDI
-	if (midi.inputDeviceName != NULL)
-	{
-		free(midi.inputDeviceName);
-		midi.inputDeviceName = NULL;
-	}
-#endif
 
 	if (editor.audioDevConfigFileLocationU != NULL)
 	{
@@ -396,7 +408,7 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 static void osxSetDirToProgramDirFromArgs(char **argv)
 {
 	/* OS X/macOS: hackish way of setting the current working directory to the place where we double clicked
-	** on the icon (for protracker.ini loading)
+	** on the icon (for FT2.CFG loading)
 	*/
 
 	// if we launched from the terminal, argv[0][0] would be '.'

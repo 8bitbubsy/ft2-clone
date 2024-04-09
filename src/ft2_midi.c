@@ -1,3 +1,5 @@
+// this implements MIDI input only!
+
 #ifdef HAS_MIDI
 
 // for finding memory leaks in debug mode with Visual Studio
@@ -18,20 +20,16 @@
 #include "ft2_structs.h"
 #include "rtmidi/rtmidi_c.h"
 
-#define MAX_DEV_STR_LEN 256
-
 // hide POSIX warnings
 #ifdef _MSC_VER
 #pragma warning(disable: 4996)
 #endif
 
-// This implements MIDI input only!
-
 midi_t midi; // globalized
 
 static volatile bool midiDeviceOpened;
 static bool recMIDIValidChn = true;
-static RtMidiPtr midiDev;
+static RtMidiPtr midiInDev;
 
 static inline void midiInSetChannel(uint8_t status)
 {
@@ -97,12 +95,14 @@ static inline void midiInPitchBendChange(uint8_t data1, uint8_t data2)
 	}
 }
 
-static void midiInCallback(double dTimeStamp, const unsigned char *message, size_t messageSize, void *userData)
+static void midiInCallback(double timeStamp, const unsigned char *message, size_t messageSize, void *userData)
 {
 	uint8_t byte[3];
 
 	if (!midi.enable || messageSize < 2)
 		return;
+
+	midi.callbackBusy = true;
 
 	byte[0] = message[0];
 	if (byte[0] > 127 && byte[0] < 240)
@@ -122,25 +122,27 @@ static void midiInCallback(double dTimeStamp, const unsigned char *message, size
 		else if (byte[0] >= 224 && byte[0] <= 224+15) midiInPitchBendChange(byte[1], byte[2]);
 	}
 
-	(void)dTimeStamp;
+	midi.callbackBusy = false;
+
+	(void)timeStamp;
 	(void)userData;
 }
 
 static uint32_t getNumMidiInDevices(void)
 {
-	if (midiDev == NULL)
+	if (midiInDev == NULL)
 		return 0;
 
-	return rtmidi_get_port_count(midiDev);
+	return rtmidi_get_port_count(midiInDev);
 }
 
 static char *getMidiInDeviceName(uint32_t deviceID)
 {
-	if (midiDev == NULL)
-		return NULL;
+	if (midiInDev == NULL)
+		return NULL; // MIDI not initialized
 
-	char *devStr = (char *)rtmidi_get_port_name(midiDev, deviceID);
-	if (!midiDev->ok)
+	char *devStr = (char *)rtmidi_get_port_name(midiInDev, deviceID);
+	if (devStr == NULL || !midiInDev->ok)
 		return NULL;
 
 	return devStr;
@@ -148,14 +150,12 @@ static char *getMidiInDeviceName(uint32_t deviceID)
 
 void closeMidiInDevice(void)
 {
-	while (!midi.initThreadDone);
-
 	if (midiDeviceOpened)
 	{
-		if (midiDev != NULL)
+		if (midiInDev != NULL)
 		{
-			rtmidi_in_cancel_callback(midiDev);
-			rtmidi_close_port(midiDev);
+			rtmidi_in_cancel_callback(midiInDev);
+			rtmidi_close_port(midiInDev);
 		}
 
 		midiDeviceOpened = false;
@@ -164,51 +164,48 @@ void closeMidiInDevice(void)
 
 void freeMidiIn(void)
 {
-	while (!midi.initThreadDone);
-
-	if (midiDev != NULL)
+	if (midiInDev != NULL)
 	{
-		rtmidi_in_free(midiDev);
-		midiDev = NULL;
+		rtmidi_in_free(midiInDev);
+		midiInDev = NULL;
 	}
 }
 
 bool initMidiIn(void)
 {
-	if (midiDev != NULL)
-		return false; // already initialized
+	midiInDev = rtmidi_in_create_default();
+	if (midiInDev == NULL)
+		return false;
 
-	midiDev = rtmidi_in_create_default();
-	if (!midiDev->ok)
+	if (!midiInDev->ok)
 	{
-		midiDev = NULL;
+		rtmidi_in_free(midiInDev);
 		return false;
 	}
 
-	midiDeviceOpened = false;
 	return true;
 }
 
 bool openMidiInDevice(uint32_t deviceID)
 {
-	if (midiDev == NULL)
+	if (midiDeviceOpened)
 		return false;
 
-	if (getNumMidiInDevices() == 0)
+	if (midiInDev == NULL || getNumMidiInDevices() == 0)
 		return false;
 
-	rtmidi_open_port(midiDev, deviceID, "FT2 Clone MIDI Port");
-	if (!midiDev->ok)
+	rtmidi_open_port(midiInDev, deviceID, "FT2 Clone MIDI Port");
+	if (!midiInDev->ok)
 		return false;
 
-	rtmidi_in_set_callback(midiDev, midiInCallback, NULL);
-	if (!midiDev->ok)
+	rtmidi_in_set_callback(midiInDev, midiInCallback, NULL);
+	if (!midiInDev->ok)
 	{
-		rtmidi_close_port(midiDev);
+		rtmidi_close_port(midiInDev);
 		return false;
 	}
 
-	rtmidi_in_ignore_types(midiDev, true, true, true);
+	rtmidi_in_ignore_types(midiInDev, true, true, true);
 
 	midiDeviceOpened = true;
 	return true;
@@ -255,7 +252,7 @@ void recordMIDIEffect(uint8_t efx, uint8_t efxData)
 
 bool saveMidiInputDeviceToConfig(void)
 {
-	if (!midi.initThreadDone || midiDev == NULL || !midiDeviceOpened)
+	if (!midi.initThreadDone || midiInDev == NULL || !midiDeviceOpened)
 		return false;
 
 	const uint32_t numDevices = getNumMidiInDevices();
@@ -284,8 +281,10 @@ bool setMidiInputDeviceFromConfig(void)
 {
 	uint32_t i;
 
-	if (midi.inputDeviceName != NULL)
-		free(midi.inputDeviceName);
+	// XXX: Something in here is corrupting!
+
+	if (editor.midiConfigFileLocationU == NULL)
+		goto setDefMidiInputDev;
 
 	const uint32_t numDevices = getNumMidiInDevices();
 	if (numDevices == 0)
@@ -295,16 +294,15 @@ bool setMidiInputDeviceFromConfig(void)
 	if (f == NULL)
 		goto setDefMidiInputDev;
 
-	char *devString = (char *)malloc((MAX_DEV_STR_LEN+4) * sizeof (char));
+	char *devString = (char *)malloc(1024+2);
 	if (devString == NULL)
 	{
 		fclose(f);
 		goto setDefMidiInputDev;
 	}
-
 	devString[0] = '\0';
 
-	if (fgets(devString, MAX_DEV_STR_LEN, f) == NULL)
+	if (fgets(devString, 1024, f) == NULL)
 	{
 		fclose(f);
 		free(devString);
@@ -334,6 +332,12 @@ bool setMidiInputDeviceFromConfig(void)
 	if (i == numDevices)
 		goto setDefMidiInputDev;
 
+	if (midi.inputDeviceName != NULL)
+	{
+		free(midi.inputDeviceName);
+		midi.inputDeviceName = NULL;
+	}
+
 	midi.inputDevice = i;
 	midi.inputDeviceName = midiInStr;
 	midi.numInputDevices = numDevices;
@@ -342,9 +346,15 @@ bool setMidiInputDeviceFromConfig(void)
 
 	// couldn't load device, set default
 setDefMidiInputDev:
+	if (midi.inputDeviceName != NULL)
+	{
+		free(midi.inputDeviceName);
+		midi.inputDeviceName = NULL;
+	}
+
 	midi.inputDevice = 0;
 	midi.inputDeviceName = strdup("RtMidi");
-	midi.numInputDevices = numDevices;
+	midi.numInputDevices = 1;
 
 	return false;
 }
@@ -371,7 +381,7 @@ void rescanMidiInputDevices(void)
 	if (midi.numInputDevices > MAX_MIDI_DEVICES)
 		midi.numInputDevices = MAX_MIDI_DEVICES;
 
-	for (int32_t i = 0; i < midi.numInputDevices; i++)
+	for (uint32_t i = 0; i < midi.numInputDevices; i++)
 	{
 		char *deviceName = getMidiInDeviceName(i);
 		if (deviceName == NULL)
@@ -393,7 +403,7 @@ void drawMidiInputList(void)
 {
 	clearRect(114, 4, 365, 165);
 
-	if (!midi.initThreadDone || midiDev == NULL || midi.numInputDevices == 0)
+	if (!midi.initThreadDone || midiInDev == NULL || midi.numInputDevices == 0)
 	{
 		textOut(114, 4 + (0 * 11), PAL_FORGRND, "No MIDI input devices found!");
 		textOut(114, 4 + (1 * 11), PAL_FORGRND, "Either wait a few seconds for MIDI to initialize, or restart the");
@@ -403,7 +413,10 @@ void drawMidiInputList(void)
 
 	for (uint16_t i = 0; i < 15; i++)
 	{
-		const int32_t deviceEntry = getScrollBarPos(SB_MIDI_INPUT_SCROLL) + i;
+		uint32_t deviceEntry = getScrollBarPos(SB_MIDI_INPUT_SCROLL) + i;
+		if (deviceEntry > MAX_MIDI_DEVICES)
+			deviceEntry = MAX_MIDI_DEVICES;
+
 		if (deviceEntry < midi.numInputDevices)
 		{
 			if (midi.inputDeviceNames[deviceEntry] == NULL)
@@ -448,19 +461,19 @@ void sbMidiInputSetPos(uint32_t pos)
 bool testMidiInputDeviceListMouseDown(void)
 {
 	if (!ui.configScreenShown || editor.currConfigScreen != CONFIG_SCREEN_MIDI_INPUT)
-		return false; // we didn't click the area
+		return false;
+
+	if (mouse.x < 114 || mouse.x > 479 || mouse.y < 4 || mouse.y > 166)
+		return false; // we didn't click inside the list area
 
 	if (!midi.initThreadDone)
 		return true;
 
-	const int32_t mx = mouse.x;
-	const int32_t my = mouse.y;
+	uint32_t deviceNum = (uint32_t)scrollBars[SB_MIDI_INPUT_SCROLL].pos + ((mouse.y - 4) / 11);
+	if (deviceNum > MAX_MIDI_DEVICES)
+		deviceNum = MAX_MIDI_DEVICES;
 
-	if (my < 4 || my > 166 || mx < 114 || mx > 479)
-		return false; // we didn't click the area
-
-	const int32_t deviceNum = (int32_t)scrollBars[SB_MIDI_INPUT_SCROLL].pos + ((my - 4) / 11);
-	if (midi.numInputDevices <= 0 || deviceNum >= midi.numInputDevices)
+	if (midi.numInputDevices == 0 || deviceNum >= midi.numInputDevices)
 		return true;
 
 	if (midi.inputDeviceName != NULL)
@@ -469,6 +482,7 @@ bool testMidiInputDeviceListMouseDown(void)
 			return true; // we clicked the currently selected device, do nothing
 
 		free(midi.inputDeviceName);
+		midi.inputDeviceName = NULL;
 	}
 
 	midi.inputDeviceName = strdup(midi.inputDeviceNames[deviceNum]);
@@ -485,21 +499,17 @@ bool testMidiInputDeviceListMouseDown(void)
 
 int32_t SDLCALL initMidiFunc(void *ptr)
 {
-	midi.closeMidiOnExit = true;
-
 	midi.initThreadDone = false;
 	initMidiIn();
 	setMidiInputDeviceFromConfig();
 	openMidiInDevice(midi.inputDevice);
-	midi.initThreadDone = true;
-
 	midi.rescanDevicesFlag = true;
-
+	midi.initThreadDone = true;
 	return true;
 
 	(void)ptr;
 }
 
 #else
-typedef int make_iso_compilers_happy; // kludge: prevent warning about empty .c file if HAS_MIDI is not defined
+typedef int prevent_compiler_warning; // kludge: prevent warning about empty .c file if HAS_MIDI is not defined
 #endif

@@ -12,11 +12,11 @@
 typedef struct midi_t
 {
 	char *inputDeviceName, *inputDeviceNames[MAX_MIDI_DEVICES];
-	volatile bool closeMidiOnExit, initThreadDone;
-	uint32_t inputDevice;
-	bool enable, rescanDevicesFlag;
+	volatile bool supported, initThreadDone, callbackBusy, enable;
+	bool rescanDevicesFlag;
+	uint32_t inputDevice, numInputDevices;
 	int16_t currMIDIVibDepth, currMIDIPitch;
-	int32_t numInputDevices;
+	SDL_Thread *initMidiThread;
 } midi_t;
 
 extern midi_t midi; // ft2_midi.c

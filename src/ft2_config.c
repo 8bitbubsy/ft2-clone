@@ -290,7 +290,7 @@ bool loadConfig(bool showErrorFlag)
 	audio.currInputDevice = getAudioInputDeviceFromConfig();
 
 #ifdef HAS_MIDI
-	if (midi.initThreadDone)
+	if (midi.supported && midi.initThreadDone)
 	{
 		setMidiInputDeviceFromConfig();
 		if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
@@ -390,7 +390,8 @@ bool saveConfig(bool showErrorFlag)
 
 	saveAudioDevicesToConfig(audio.currOutputDevice, audio.currInputDevice);
 #ifdef HAS_MIDI
-	saveMidiInputDeviceToConfig();
+	if (midi.supported)
+		saveMidiInputDeviceToConfig();
 #endif
 
 	FILE *f = UNICHAR_FOPEN(editor.configFileLocationU, "wb");
@@ -673,7 +674,9 @@ static void setConfigFileLocation(void) // kinda hackish
 	strcat(editor.configFileLocationU, "/FT2.CFG");
 #endif
 
-	editor.midiConfigFileLocationU = getFullMidiDevConfigPathU();
+	if (midi.supported)
+		editor.midiConfigFileLocationU = getFullMidiDevConfigPathU();
+
 	editor.audioDevConfigFileLocationU = getFullAudDevConfigPathU();
 }
 
@@ -781,6 +784,8 @@ static void setConfigRadioButtonStates(void)
 {
 	uint16_t tmpID;
 
+
+
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_SELECT);
 	switch (editor.currConfigScreen)
 	{
@@ -795,6 +800,14 @@ static void setConfigRadioButtonStates(void)
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
 	showRadioButtonGroup(RB_GROUP_CONFIG_SELECT);
+
+	// hide MIDI radio button if MIDI is not supported (hackish)
+	if (!midi.supported)
+	{
+		radioButton_t *t = &radioButtons[RB_CONFIG_MIDI_INPUT];
+		hideRadioButton(RB_CONFIG_MIDI_INPUT);
+		fillRect(t->x, t->y, RADIOBUTTON_W, RADIOBUTTON_H, PAL_DESKTOP);
+	}
 }
 
 void setConfigAudioRadioButtonStates(void) // accessed by other .c files
@@ -1018,7 +1031,10 @@ static void setConfigMiscCheckButtonStates(void)
 	checkBoxes[CB_CONF_CHANGE_PATTLEN_INS_DEL].checked = config.recTrueInsert;
 	checkBoxes[CB_CONF_MIDI_ALLOW_PC].checked = config.recMIDIAllowPC;
 #ifdef HAS_MIDI
-	checkBoxes[CB_CONF_MIDI_ENABLE].checked = midi.enable;
+	if (midi.supported)
+		checkBoxes[CB_CONF_MIDI_ENABLE].checked = midi.enable;
+	else
+		checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
 #else
 	checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
 #endif
@@ -1109,7 +1125,8 @@ void showConfigScreen(void)
 	textOutShadow(21, 35, PAL_FORGRND, PAL_DSKTOP2, "Layout");
 	textOutShadow(21, 51, PAL_FORGRND, PAL_DSKTOP2, "Miscellaneous");
 #ifdef HAS_MIDI
-	textOutShadow(21, 67, PAL_FORGRND, PAL_DSKTOP2, "MIDI input");
+	if (midi.supported)
+		textOutShadow(21, 67, PAL_FORGRND, PAL_DSKTOP2, "MIDI input");
 #endif
 	textOutShadow(20, 93, PAL_FORGRND, PAL_DSKTOP2, "Auto save");
 
@@ -1377,6 +1394,7 @@ void showConfigScreen(void)
 		}
 		break;
 
+#ifdef HAS_MIDI
 		case CONFIG_SCREEN_MIDI_INPUT:
 		{
 			drawFramework(110, 0, 394, 173, FRAMEWORK_TYPE1);
@@ -1387,15 +1405,14 @@ void showConfigScreen(void)
 
 			blitFast(517, 51, bmp.midiLogo, 103, 55);
 
-#ifdef HAS_MIDI
 			showPushButton(PB_CONFIG_MIDI_INPUT_DOWN);
 			showPushButton(PB_CONFIG_MIDI_INPUT_UP);
 			rescanMidiInputDevices();
 			drawMidiInputList();
 			showScrollBar(SB_MIDI_INPUT_SCROLL);
-#endif
 		}
 		break;
+#endif
 	}
 }
 
@@ -2072,7 +2089,17 @@ void cbMIDIAllowPC(void)
 void cbMIDIEnable(void)
 {
 #ifdef HAS_MIDI
-	midi.enable ^= 1;
+	if (midi.supported)
+	{
+		midi.enable ^= 1;
+	}
+	else
+	{
+		checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
+		drawCheckBox(CB_CONF_MIDI_ENABLE);
+
+		okBox(0, "System message", "MIDI support is disabled for Windows XP as it is buggy!", NULL);
+	}
 #else
 	checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
 	drawCheckBox(CB_CONF_MIDI_ENABLE);
