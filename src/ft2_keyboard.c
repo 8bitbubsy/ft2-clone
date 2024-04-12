@@ -1284,12 +1284,9 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			else if (keyb.leftCtrlPressed)
 			{
 #ifdef HAS_MIDI
-				if (midi.supported)
-				{
-					editor.currConfigScreen = 3;
-					showConfigScreen();
-					checkRadioButton(RB_CONFIG_MIDI_INPUT);
-				}
+				editor.currConfigScreen = 3;
+				showConfigScreen();
+				checkRadioButton(RB_CONFIG_MIDI_INPUT);
 #endif
 				return true;
 			}

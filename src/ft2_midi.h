@@ -12,11 +12,13 @@
 typedef struct midi_t
 {
 	char *inputDeviceName, *inputDeviceNames[MAX_MIDI_DEVICES];
-	volatile bool supported, initThreadDone, callbackBusy, enable;
+	volatile bool initThreadDone, callbackBusy, enable;
 	bool rescanDevicesFlag;
 	uint32_t inputDevice, numInputDevices;
 	int16_t currMIDIVibDepth, currMIDIPitch;
+#ifdef __APPLE__
 	SDL_Thread *initMidiThread;
+#endif
 } midi_t;
 
 extern midi_t midi; // ft2_midi.c

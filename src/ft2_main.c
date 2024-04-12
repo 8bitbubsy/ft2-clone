@@ -9,7 +9,6 @@
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
 #include <windows.h>
-#include <versionhelpers.h>
 #include <SDL2/SDL_syswm.h>
 #else
 #include <unistd.h> // chdir()
@@ -96,12 +95,6 @@ int main(int argc, char *argv[])
 #endif
 
 #ifdef _WIN32
-	/* Disable MIDI support if using Windows XP,
-	** as it is unstable when initialized in an own thread.
-	*/
-	if (!IsWindowsVistaOrGreater())
-		midi.supported = false;
-
 #ifndef _MSC_VER
 	SetProcessDPIAware();
 #endif
@@ -153,19 +146,14 @@ int main(int argc, char *argv[])
 #ifdef __APPLE__
 	osxSetDirToProgramDirFromArgs(argv);
 #endif
-	if (!setupExecutablePath() || !loadBMPs())
+	if (!setupExecutablePath() || !loadBMPs() || !calcCubicSplineTable() || !calcWindowedSincTables())
 	{
 		cleanUpAndExit();
 		return 1;
 	}
 
-	if (!calcCubicSplineTable() || !calcWindowedSincTables()) // must be called before config is loaded
-	{
-		cleanUpAndExit();
-		return false;
-	}
+	loadConfigOrSetDefaults(); // config must be loaded at this exact point
 
-	loadConfigOrSetDefaults();
 	if (!setupWindow() || !setupRenderer())
 	{
 		// error message was shown in the functions above
@@ -233,17 +221,18 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef HAS_MIDI
-	// set up MIDI input (in a thread because it can take quite a while on f.ex. macOS)
-	if (midi.supported)
+#ifdef __APPLE__
+	// MIDI init can take several seconds on Mac, use thread
+	midi.initMidiThread = SDL_CreateThread(initMidiFunc, NULL, NULL);
+	if (midi.initMidiThread == NULL)
 	{
-		midi.initMidiThread = SDL_CreateThread(initMidiFunc, NULL, NULL);
-		if (midi.initMidiThread == NULL)
-		{
-			showErrorMsgBox("Couldn't create MIDI initialization thread!");
-			cleanUpAndExit();
-			return 1;
-		}
+		showErrorMsgBox("Couldn't create MIDI initialization thread!");
+		cleanUpAndExit();
+		return 1;
 	}
+#else
+	initMidiFunc(NULL);
+#endif
 #endif
 
 	hpc_ResetCounters(&video.vblankHpc); // quirk: this is needed for potential okBox() calls in handleModuleLoadFromArg()
@@ -278,7 +267,6 @@ static void initializeVars(void)
 	// clear common structs
 #ifdef HAS_MIDI
 	memset(&midi, 0, sizeof (midi));
-	midi.supported = true;
 #endif
 	memset(&video, 0, sizeof (video));
 	memset(&keyb, 0, sizeof (keyb));
@@ -340,26 +328,31 @@ static void initializeVars(void)
 static void cleanUpAndExit(void) // never call this inside the main loop!
 {
 #ifdef HAS_MIDI
-	if (midi.supported)
+#ifdef __APPLE__
+	// on Mac we used a thread to init MIDI (as it could take several seconds)
+	if (midi.initMidiThread != NULL)
 	{
-		if (midi.initMidiThread != NULL)
-		{
-			SDL_WaitThread(midi.initMidiThread, NULL);
-			midi.initMidiThread = NULL;
-		}
+		SDL_WaitThread(midi.initMidiThread, NULL);
+		midi.initMidiThread = NULL;
+	}
+#endif
+	midi.enable = false; // stop MIDI callback from doing things
+	while (midi.callbackBusy) SDL_Delay(1); // wait for MIDI callback to finish
 
-		midi.enable = false; // stop MIDI callback from doing things
-		while (midi.callbackBusy) SDL_Delay(1); // wait for MIDI callback to finish
+	closeMidiInDevice();
+	freeMidiIn();
+	freeMidiInputDeviceList();
 
-		closeMidiInDevice();
-		freeMidiIn();
-		freeMidiInputDeviceList();
+	if (midi.inputDeviceName != NULL)
+	{
+		free(midi.inputDeviceName);
+		midi.inputDeviceName = NULL;
+	}
 
-		if (midi.inputDeviceName != NULL)
-		{
-			free(midi.inputDeviceName);
-			midi.inputDeviceName = NULL;
-		}
+	if (editor.midiConfigFileLocationU != NULL)
+	{
+		free(editor.midiConfigFileLocationU);
+		editor.midiConfigFileLocationU = NULL;
 	}
 #endif
 
@@ -385,12 +378,6 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	{
 		free(editor.configFileLocationU);
 		editor.configFileLocationU = NULL;
-	}
-
-	if (editor.midiConfigFileLocationU != NULL)
-	{
-		free(editor.midiConfigFileLocationU);
-		editor.midiConfigFileLocationU = NULL;
 	}
 
 	if (editor.binaryPathU != NULL)

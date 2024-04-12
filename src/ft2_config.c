@@ -44,7 +44,7 @@ static uint8_t configBuffer[CONFIG_FILE_SIZE];
 static void xorConfigBuffer(uint8_t *ptr8)
 {
 	for (int32_t i = 0; i < CONFIG_FILE_SIZE; i++)
-		ptr8[i] ^= i*7;
+		ptr8[i] ^= (uint8_t)(i*7);
 }
 
 static int32_t calcChecksum(const uint8_t *p, uint16_t len) // for Nibbles highscore data
@@ -290,7 +290,7 @@ bool loadConfig(bool showErrorFlag)
 	audio.currInputDevice = getAudioInputDeviceFromConfig();
 
 #ifdef HAS_MIDI
-	if (midi.supported && midi.initThreadDone)
+	if (midi.initThreadDone)
 	{
 		setMidiInputDeviceFromConfig();
 		if (ui.configScreenShown && editor.currConfigScreen == CONFIG_SCREEN_MIDI_INPUT)
@@ -390,8 +390,7 @@ bool saveConfig(bool showErrorFlag)
 
 	saveAudioDevicesToConfig(audio.currOutputDevice, audio.currInputDevice);
 #ifdef HAS_MIDI
-	if (midi.supported)
-		saveMidiInputDeviceToConfig();
+	saveMidiInputDeviceToConfig();
 #endif
 
 	FILE *f = UNICHAR_FOPEN(editor.configFileLocationU, "wb");
@@ -470,6 +469,7 @@ static UNICHAR *getFullAudDevConfigPathU(void) // kinda hackish
 	return filePathU;
 }
 
+#ifdef HAS_MIDI
 static UNICHAR *getFullMidiDevConfigPathU(void) // kinda hackish
 {
 	int32_t mididevDotIniStrLen, ft2DotCfgStrLen;
@@ -501,6 +501,7 @@ static UNICHAR *getFullMidiDevConfigPathU(void) // kinda hackish
 
 	return filePathU;
 }
+#endif
 
 static void setConfigFileLocation(void) // kinda hackish
 {
@@ -523,8 +524,7 @@ static void setConfigFileLocation(void) // kinda hackish
 		return;
 	}
 
-	oldPathU[0] = 0;
-	tmpPathU[0] = 0;
+	oldPathU[0] = tmpPathU[0] = (UNICHAR)0;
 
 	if (GetCurrentDirectoryW(PATH_MAX - ft2DotCfgStrLen - 1, oldPathU) == 0)
 	{
@@ -674,9 +674,9 @@ static void setConfigFileLocation(void) // kinda hackish
 	strcat(editor.configFileLocationU, "/FT2.CFG");
 #endif
 
-	if (midi.supported)
-		editor.midiConfigFileLocationU = getFullMidiDevConfigPathU();
-
+#ifdef HAS_MIDI
+	editor.midiConfigFileLocationU = getFullMidiDevConfigPathU();
+#endif
 	editor.audioDevConfigFileLocationU = getFullAudDevConfigPathU();
 }
 
@@ -800,14 +800,6 @@ static void setConfigRadioButtonStates(void)
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
 	showRadioButtonGroup(RB_GROUP_CONFIG_SELECT);
-
-	// hide MIDI radio button if MIDI is not supported (hackish)
-	if (!midi.supported)
-	{
-		radioButton_t *t = &radioButtons[RB_CONFIG_MIDI_INPUT];
-		hideRadioButton(RB_CONFIG_MIDI_INPUT);
-		fillRect(t->x, t->y, RADIOBUTTON_W, RADIOBUTTON_H, PAL_DESKTOP);
-	}
 }
 
 void setConfigAudioRadioButtonStates(void) // accessed by other .c files
@@ -1031,10 +1023,7 @@ static void setConfigMiscCheckButtonStates(void)
 	checkBoxes[CB_CONF_CHANGE_PATTLEN_INS_DEL].checked = config.recTrueInsert;
 	checkBoxes[CB_CONF_MIDI_ALLOW_PC].checked = config.recMIDIAllowPC;
 #ifdef HAS_MIDI
-	if (midi.supported)
-		checkBoxes[CB_CONF_MIDI_ENABLE].checked = midi.enable;
-	else
-		checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
+	checkBoxes[CB_CONF_MIDI_ENABLE].checked = midi.enable;
 #else
 	checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
 #endif
@@ -1125,8 +1114,7 @@ void showConfigScreen(void)
 	textOutShadow(21, 35, PAL_FORGRND, PAL_DSKTOP2, "Layout");
 	textOutShadow(21, 51, PAL_FORGRND, PAL_DSKTOP2, "Miscellaneous");
 #ifdef HAS_MIDI
-	if (midi.supported)
-		textOutShadow(21, 67, PAL_FORGRND, PAL_DSKTOP2, "MIDI input");
+	textOutShadow(21, 67, PAL_FORGRND, PAL_DSKTOP2, "MIDI input");
 #endif
 	textOutShadow(20, 93, PAL_FORGRND, PAL_DSKTOP2, "Auto save");
 
@@ -2089,17 +2077,7 @@ void cbMIDIAllowPC(void)
 void cbMIDIEnable(void)
 {
 #ifdef HAS_MIDI
-	if (midi.supported)
-	{
-		midi.enable ^= 1;
-	}
-	else
-	{
-		checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
-		drawCheckBox(CB_CONF_MIDI_ENABLE);
-
-		okBox(0, "System message", "MIDI support is disabled for Windows XP as it is buggy!", NULL);
-	}
+	midi.enable ^= 1;
 #else
 	checkBoxes[CB_CONF_MIDI_ENABLE].checked = false;
 	drawCheckBox(CB_CONF_MIDI_ENABLE);

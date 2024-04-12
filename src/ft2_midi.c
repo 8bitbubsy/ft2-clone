@@ -196,7 +196,6 @@ bool openMidiInDevice(uint32_t deviceID)
 	if (!midiInDev->ok)
 		return false;
 
-	/*
 	rtmidi_in_set_callback(midiInDev, midiInCallback, NULL);
 	if (!midiInDev->ok)
 	{
@@ -205,7 +204,6 @@ bool openMidiInDevice(uint32_t deviceID)
 	}
 
 	rtmidi_in_ignore_types(midiInDev, true, true, true);
-	*/
 
 	midiDeviceOpened = true;
 	return true;
