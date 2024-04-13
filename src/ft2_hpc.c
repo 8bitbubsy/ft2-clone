@@ -1,5 +1,13 @@
 /*
-** Hardware Performance Counter delay routines
+** Hardware Performance Counter delay routines by 8bitbubsy.
+**
+** These are by no means well written, and are made for specific
+** usage cases. There may be soome hackish design choices here.
+**
+** NOTE: hpc_SetDurationInHz() has quite a bit of overhead, so it's
+**       recommended to have one hpcFreq_t counter for each delay value,
+**       then call hpc_SetDurationInHz()/hpc_SetDurationInMs() on program
+**       init instead of every time you want to delay.
 */
 
 #ifdef _WIN32
@@ -13,7 +21,7 @@
 #include <stdbool.h>
 #include "ft2_hpc.h"
 
-#define FRAC_BITS 63
+#define FRAC_BITS 63 /* leaves one bit for frac overflow test */
 #define FRAC_SCALE (1ULL << FRAC_BITS)
 #define FRAC_MASK (FRAC_SCALE-1)
 
@@ -31,7 +39,7 @@ static NTSTATUS (__stdcall *NtSetTimerResolution)(ULONG DesiredResolution, BOOLE
 
 static void (*usleep)(int32_t usec);
 
-static void usleepGood(int32_t usec)
+static void usleepAcceptable(int32_t usec)
 {
 	LARGE_INTEGER delayInterval;
 
@@ -51,7 +59,7 @@ static void usleepPoor(int32_t usec) // fallback if no NtDelayExecution()
 static void windowsSetupUsleep(void)
 {
 	NtDelayExecution = (NTSTATUS (__stdcall *)(BOOL, PLARGE_INTEGER))GetProcAddress(GetModuleHandle("ntdll.dll"), "NtDelayExecution");
-	usleep = (NtDelayExecution != NULL) ? usleepGood : usleepPoor;
+	usleep = (NtDelayExecution != NULL) ? usleepAcceptable : usleepPoor;
 
 	NtQueryTimerResolution = (NTSTATUS (__stdcall *)(PULONG, PULONG, PULONG))GetProcAddress(GetModuleHandle("ntdll.dll"), "NtQueryTimerResolution");
 	NtSetTimerResolution = (NTSTATUS (__stdcall *)(ULONG, BOOLEAN, PULONG))GetProcAddress(GetModuleHandle("ntdll.dll"), "NtSetTimerResolution");
@@ -92,13 +100,34 @@ static uint64_t getFrac64FromU64DivU32(uint64_t dividend, uint32_t divisor)
 	return ((uint64_t)resultHi << 32) | resultLo;
 }
 
-void hpc_SetDurationInHz(hpc_t *hpc, uint32_t hz)
+void hpc_SetDurationInHz(hpc_t *hpc, double dHz) // dHz = max 8191.999inf Hz (0.12ms)
 {
-	// set 64:63fp value
-	hpc->durationInt = hpcFreq.freq64 / hz;
-	hpc->durationFrac = getFrac64FromU64DivU32(hpcFreq.freq64, hz) >> 1;
+#define BITS_IN_UINT32 32
 
-	hpc->resetFrame = hz * (60 * 30); // reset counters every half an hour
+	/* 19 = Good compensation between fraction bits and max integer size.
+	** Non-realtime OSes probably can't do a thread delay with such a
+	** high precision (0.12ms) anyway.
+	*/
+#define INPUT_FRAC_BITS 19
+#define INPUT_FRAC_SCALE (1UL << INPUT_FRAC_BITS)
+#define INPUT_INT_MAX ((1UL << (BITS_IN_UINT32-INPUT_FRAC_BITS))-1)
+
+	if (dHz > INPUT_INT_MAX)
+		dHz = INPUT_INT_MAX;
+
+	const uint32_t fpHz = (uint32_t)((dHz * INPUT_FRAC_SCALE) + 0.5);
+
+	// set 64:63fp value
+	const uint64_t fpFreq64 = hpcFreq.freq64 << INPUT_FRAC_BITS;
+	hpc->durationInt = fpFreq64 / fpHz;
+	hpc->durationFrac = getFrac64FromU64DivU32(fpFreq64, fpHz) >> 1; // 64 -> 63 bits (1 bit for frac overflow test)
+
+	hpc->resetFrame = ((uint64_t)fpHz * (60 * 30)) / INPUT_FRAC_SCALE; // reset counters every half an hour
+}
+
+void hpc_SetDurationInMs(hpc_t *hpc, double dMs) // dMs = minimum 0.12208521548 ms
+{
+	hpc_SetDurationInHz(hpc, 1000.0 / dMs);
 }
 
 void hpc_ResetCounters(hpc_t *hpc)
@@ -152,7 +181,7 @@ void hpc_Wait(hpc_t *hpc)
 	/* The counter ("endTimeInt") can accumulate major errors after a couple of hours,
 	** since each frame is not happening at perfect intervals.
 	** To fix this, reset the counter's int & frac once every half an hour. We should only
-	** get up to one frame of stutter while they are resetting, then it's back to normal.
+	** get up to one frame of jitter while they are resetting, then it's back to normal.
 	*/
 	hpc->frameCounter++;
 	if (hpc->frameCounter >= hpc->resetFrame)

@@ -19,6 +19,7 @@ typedef struct
 extern hpcFreq_t hpcFreq;
 
 void hpc_Init(void);
-void hpc_SetDurationInHz(hpc_t *hpc, uint32_t dHz);
+void hpc_SetDurationInHz(hpc_t *hpc, double dHz); // dHz = max 8191.999inf Hz (0.12ms)
+void hpc_SetDurationInMs(hpc_t *hpc, double dMs); // dMs = minimum 0.12208521548 ms
 void hpc_ResetCounters(hpc_t *hpc);
 void hpc_Wait(hpc_t *hpc);
