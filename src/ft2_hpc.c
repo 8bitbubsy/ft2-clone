@@ -2,7 +2,7 @@
 ** Hardware Performance Counter delay routines by 8bitbubsy.
 **
 ** These are by no means well written, and are made for specific
-** usage cases. There may be soome hackish design choices here.
+** usage cases. There may be some hackish design choices here.
 **
 ** NOTE: hpc_SetDurationInHz() has quite a bit of overhead, so it's
 **       recommended to have one hpcFreq_t counter for each delay value,
@@ -100,15 +100,15 @@ static uint64_t getFrac64FromU64DivU32(uint64_t dividend, uint32_t divisor)
 	return ((uint64_t)resultHi << 32) | resultLo;
 }
 
-void hpc_SetDurationInHz(hpc_t *hpc, double dHz) // dHz = max 8191.999inf Hz (0.12ms)
+void hpc_SetDurationInHz(hpc_t *hpc, double dHz) // dHz = max 4095.999inf Hz (0.24ms)
 {
 #define BITS_IN_UINT32 32
 
-	/* 19 = Good compensation between fraction bits and max integer size.
-	** Non-realtime OSes probably can't do a thread delay with such a
-	** high precision (0.12ms) anyway.
+	/* 20 = Good compensation between fraction bits and max integer size.
+	** Most non-realtime OSes probably can't do a thread delay with such a
+	** high precision ( 0.24ms, 1000/(2^(32-20)-1) ) anyway.
 	*/
-#define INPUT_FRAC_BITS 19
+#define INPUT_FRAC_BITS 20
 #define INPUT_FRAC_SCALE (1UL << INPUT_FRAC_BITS)
 #define INPUT_INT_MAX ((1UL << (BITS_IN_UINT32-INPUT_FRAC_BITS))-1)
 
@@ -125,7 +125,7 @@ void hpc_SetDurationInHz(hpc_t *hpc, double dHz) // dHz = max 8191.999inf Hz (0.
 	hpc->resetFrame = ((uint64_t)fpHz * (60 * 30)) / INPUT_FRAC_SCALE; // reset counters every half an hour
 }
 
-void hpc_SetDurationInMs(hpc_t *hpc, double dMs) // dMs = minimum 0.12208521548 ms
+void hpc_SetDurationInMs(hpc_t *hpc, double dMs) // dMs = minimum 0.2442002442 ms
 {
 	hpc_SetDurationInHz(hpc, 1000.0 / dMs);
 }
