@@ -22,15 +22,18 @@ float *fKaiserSinc = NULL, *fDownSample1 = NULL, *fDownSample2 = NULL;
 // zeroth-order modified Bessel function of the first kind (series approximation)
 static double besselI0(double z)
 {
+#define EPSILON (1E-15)
+
 	double s = 1.0, ds = 1.0, d = 2.0;
+	const double zz = z * z;
 
 	do
 	{
-		ds *= (z * z) / (d * d);
+		ds *= zz / (d * d);
 		s += ds;
 		d += 2.0;
 	}
-	while (ds > s*1E-15);
+	while (ds > s*EPSILON);
 
 	return s;
 }
@@ -39,21 +42,21 @@ static void getSinc(uint32_t numTaps, float *fLUTPtr, const double beta, const d
 {
 	const double I0Beta = besselI0(beta);
 	const double kPi = MY_PI * cutoff;
+	const double xMul = 1.0 / ((numTaps / 2) * (numTaps / 2));
 
 	const uint32_t length = numTaps * SINC_PHASES;
-	const uint32_t tapBits = (int32_t)log2(numTaps);
+	const uint32_t tapBits = (uint32_t)log2(numTaps);
 	const uint32_t tapsMinus1 = numTaps - 1;
-	const double xMul = 1.0 / ((numTaps / 2) * (numTaps / 2));
-	const int32_t midTap = (numTaps / 2) * SINC_PHASES;
+	const int32_t midPoint = (numTaps / 2) * SINC_PHASES;
 
 	for (uint32_t i = 0; i < length; i++)
 	{
 		const int32_t ix = ((tapsMinus1 - (i & tapsMinus1)) << SINC_PHASES_BITS) + (i >> tapBits);
 
 		double dSinc = 1.0;
-		if (ix != midTap)
+		if (ix != midPoint)
 		{
-			const double x = (ix - midTap) * (1.0 / SINC_PHASES);
+			const double x = (ix - midPoint) * (1.0 / SINC_PHASES);
 			const double xPi = x * kPi;
 
 			// sinc with Kaiser window

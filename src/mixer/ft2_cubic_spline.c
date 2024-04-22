@@ -18,7 +18,7 @@ bool calcCubicSplineTable(void)
 	float *fPtr = fCubicSplineLUT;
 	for (int32_t i = 0; i < CUBIC_SPLINE_PHASES; i++)
 	{
-		const double x1 = i * (1.0 / (double)CUBIC_SPLINE_PHASES); // i / CUBIC_SPLINE_PHASES
+		const double x1 = i * (1.0 / CUBIC_SPLINE_PHASES);
 		const double x2 = x1 * x1; // x^2
 		const double x3 = x2 * x1; // x^3
 
