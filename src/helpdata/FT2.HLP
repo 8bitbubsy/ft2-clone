@@ -425,8 +425,14 @@ Delete  @T160Delete note or volume column at cursor.
 >Sh+Delete @T160Delete note, volume and effect at cursor.
 >Ctrl+Delete @T160Delete volume and effect at cursor.
 >Alt+Delete @T160Delete effect at cursor.
+>
 >Insert  @T160Insert note at cursor.
 >Sh+Insert  @T160Insert line at cursor.
+>
+>@X010@C002Alternative keys (Mac or keyboards without Insert):
+>@X060@C002Ctrl+Return  @T160Insert note at cursor.
+>Ctrl+Sh+Return  @T160Insert line at cursor.
+>
 >Backspace @T160Delete previous note.
 >Sh+Backspace @T160Delete previous line.
 >Alt+Cursor @T160Mark block.
