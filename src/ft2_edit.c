@@ -628,7 +628,7 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 	               (scancode >= SDL_SCANCODE_1) && (scancode <= SDL_SCANCODE_0);
 
 	if (frKeybHack || !keyb.keyModifierDown)
-		return (testEditKeys(scancode, keycode));
+		return testEditKeys(scancode, keycode);
 
 	return false;
 }

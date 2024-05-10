@@ -2955,7 +2955,7 @@ void exitSampleEditor(void)
 
 void showSampleEditor(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideInstEditor();
@@ -3492,7 +3492,7 @@ void showSampleEditorExt(void)
 	hideTopScreen();
 	showTopScreen(false);
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	if (!ui.sampleEditorShown)

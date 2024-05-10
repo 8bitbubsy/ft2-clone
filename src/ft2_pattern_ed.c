@@ -23,7 +23,6 @@
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
 
-
 // for pattern marking w/ keyboard
 static int8_t lastChMark;
 static int16_t lastRowMark;
@@ -224,7 +223,7 @@ void hideAdvEdit(void)
 
 void showAdvEdit(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
@@ -296,7 +295,7 @@ void drawTranspose(void)
 
 void showTranspose(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
@@ -487,7 +486,7 @@ static void updatePatternEditorGUI(void)
 	pushButton_t *p;
 	textBox_t *t;
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		// extended pattern editor
 
@@ -624,7 +623,7 @@ void patternEditorExtended(void)
 	hideSampleEditor();
 	hideInstEditor();
 
-	ui.extended = true;
+	ui.extendedPatternEditor = true;
 	ui.patternEditorShown = true;
 	updatePatternEditorGUI(); // change pattern editor layout (based on ui.extended flag)
 	ui.updatePatternEditor = true; // redraw pattern editor
@@ -638,6 +637,8 @@ void patternEditorExtended(void)
 
 	drawFramework(2,  2, 51, 20, FRAMEWORK_TYPE2);
 	drawFramework(2, 31, 51, 20, FRAMEWORK_TYPE2);
+
+	drawFramework(0, 53, SCREEN_W, 15, FRAMEWORK_TYPE1);
 
 	showScrollBar(SB_POS_ED);
 
@@ -664,6 +665,11 @@ void patternEditorExtended(void)
 	textOutShadow(222, 39, PAL_FORGRND, PAL_DSKTOP2, "Ptn.");
 	textOutShadow(305, 39, PAL_FORGRND, PAL_DSKTOP2, "Ln.");
 
+	textOutShadow(4, 56, PAL_FORGRND, PAL_DSKTOP2, "Global volume");
+	textOutShadow(545, 56, PAL_FORGRND, PAL_DSKTOP2, "Time");
+	charOutShadow(591, 56, PAL_FORGRND, PAL_DSKTOP2, ':');
+	charOutShadow(611, 56, PAL_FORGRND, PAL_DSKTOP2, ':');
+
 	ui.instrSwitcherShown = true;
 	showInstrumentSwitcher();
 
@@ -681,7 +687,7 @@ void patternEditorExtended(void)
 
 void exitPatternEditorExtended(void)
 {
-	ui.extended = false;
+	ui.extendedPatternEditor = false;
 	updatePatternEditorGUI();
 	hidePushButton(PB_EXIT_EXT_PATT);
 
@@ -713,7 +719,7 @@ void exitPatternEditorExtended(void)
 
 void togglePatternEditorExtended(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 	else
 		patternEditorExtended();
@@ -777,7 +783,7 @@ static int8_t mouseXToCh(void) // used to get channel num from mouse x (for patt
 
 static int16_t mouseYToRow(void) // used to get row num from mouse y (for pattern marking)
 {
-	const pattCoordsMouse_t *pattCoordsMouse = &pattCoordMouseTable[config.ptnStretch][ui.pattChanScrollShown][ui.extended];
+	const pattCoordsMouse_t *pattCoordsMouse = &pattCoordMouseTable[config.ptnStretch][ui.pattChanScrollShown][ui.extendedPatternEditor];
 
 	// clamp mouse y to boundaries
 	const int16_t maxY = ui.pattChanScrollShown ? 382 : 396;
@@ -806,7 +812,7 @@ static int16_t mouseYToRow(void) // used to get row num from mouse y (for patter
 		int16_t row = (editor.row + 1) + ((my - pattCoordsMouse->lowerRowsY) / charHeight);
 
 		// prevent being able to mark the next unseen row on the bottom (in some configurations)
-		const uint8_t mode = (ui.extended * 4) + (config.ptnStretch * 2) + ui.pattChanScrollShown;
+		const uint8_t mode = (ui.extendedPatternEditor * 4) + (config.ptnStretch * 2) + ui.pattChanScrollShown;
 
 		const int16_t maxRow = (ptnNumRows[mode] + (editor.row - ptnLineSub[mode])) - 1;
 		if (row > maxRow)
@@ -905,7 +911,7 @@ void handlePatternDataMouseDown(bool mouseButtonHeld)
 	// scroll down/up with mouse (if song is not playing)
 	if (!songPlaying)
 	{
-		y1 = ui.extended ? 56 : 176;
+		y1 = ui.extendedPatternEditor ? 71 : 176;
 		y2 = ui.pattChanScrollShown ? 382 : 396;
 
 		if (mouse.y < y1)
@@ -1970,7 +1976,7 @@ void drawPosEdNums(int16_t songPos)
 		songPos = song.songLength - 1;
 
 	// clear
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		clearRect(8,  4, 39, 16);
 		fillRect(8, 23, 39, 7, PAL_DESKTOP);
@@ -1995,7 +2001,7 @@ void drawPosEdNums(int16_t songPos)
 
 		assert(entry < 256);
 
-		if (ui.extended)
+		if (ui.extendedPatternEditor)
 		{
 			pattTwoHexOut(8,  4 + (y * 9), (uint8_t)entry, color1);
 			pattTwoHexOut(32, 4 + (y * 9), song.orders[entry], color1);
@@ -2010,7 +2016,7 @@ void drawPosEdNums(int16_t songPos)
 	assert(songPos < 256);
 
 	// middle
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		pattTwoHexOut(8,  23, (uint8_t)songPos, color2);
 		pattTwoHexOut(32, 23, song.orders[songPos], color2);
@@ -2028,7 +2034,7 @@ void drawPosEdNums(int16_t songPos)
 		if (entry >= song.songLength)
 			break;
 
-		if (ui.extended)
+		if (ui.extendedPatternEditor)
 		{
 			pattTwoHexOut(8,  33 + (y * 9), (uint8_t)entry, color1);
 			pattTwoHexOut(32, 33 + (y * 9), song.orders[entry], color1);
@@ -2045,7 +2051,7 @@ void drawSongLength(void)
 {
 	int16_t x, y;
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		x = 165;
 		y = 5;
@@ -2063,7 +2069,7 @@ void drawSongLoopStart(void)
 {
 	int16_t x, y;
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		x = 165;
 		y = 19;
@@ -2079,7 +2085,7 @@ void drawSongLoopStart(void)
 
 void drawSongBPM(uint16_t val)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		return;
 
 	if (val > 255)
@@ -2090,7 +2096,7 @@ void drawSongBPM(uint16_t val)
 
 void drawSongSpeed(uint16_t val)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		return;
 
 	if (val > 99)
@@ -2103,7 +2109,7 @@ void drawEditPattern(uint16_t editPattern)
 {
 	int16_t x, y;
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		x = 252;
 		y = 39;
@@ -2121,7 +2127,7 @@ void drawPatternLength(uint16_t editPattern)
 {
 	int16_t x, y;
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		x = 326;
 		y = 39;
@@ -2137,11 +2143,13 @@ void drawPatternLength(uint16_t editPattern)
 
 void drawGlobalVol(uint16_t val)
 {
-	if (ui.extended)
-		return;
+	uint16_t x = 87, y = 80;
+
+	if (ui.extendedPatternEditor)
+		y = 56;
 
 	assert(val <= 64);
-	textOutFixed(87, 80, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[val]);
+	textOutFixed(x, y, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[val]);
 }
 
 void drawIDAdd(void)
@@ -2175,9 +2183,17 @@ void drawPlaybackTime(void)
 		last_TimeS = seconds;
 	}
 
-	textOutFixed(235, 80, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeH]);
-	textOutFixed(255, 80, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeM]);
-	textOutFixed(275, 80, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeS]);
+	uint16_t x = 235, y = 80;
+
+	if (ui.extendedPatternEditor)
+	{
+		x = 576;
+		y = 56;
+	}
+
+	textOutFixed(x+0, y, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeH]);
+	textOutFixed(x+20, y, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeM]);
+	textOutFixed(x+40, y, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[last_TimeS]);
 }
 
 void drawSongName(void)
@@ -2230,7 +2246,7 @@ void updateInstrumentSwitcher(void)
 	if (ui.aboutScreenShown || ui.configScreenShown || ui.helpScreenShown || ui.nibblesShown)
 		return; // don't redraw instrument switcher when it's not shown!
 
-	if (ui.extended) // extended pattern editor
+	if (ui.extendedPatternEditor) // extended pattern editor
 	{
 		//INSTRUMENTS
 
@@ -2341,7 +2357,7 @@ void showInstrumentSwitcher(void)
 	for (uint16_t i = 0; i < 8; i++)
 		showTextBox(TB_INST1 + i);
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		hidePushButton(PB_SAMPLE_LIST_UP);
 		hidePushButton(PB_SAMPLE_LIST_DOWN);

@@ -504,7 +504,7 @@ static void setupLoadedModule(void)
 	diskOpSetFilename(DISKOP_ITEM_MODULE, editor.tmpFilenameU);
 
 	// redraw top part of screen
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		togglePatternEditorExtended(); // exit
 		togglePatternEditorExtended(); // re-enter (force redrawing)

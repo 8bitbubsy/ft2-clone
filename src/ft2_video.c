@@ -1034,15 +1034,34 @@ void handleRedrawing(void)
 					if (!songPlaying || editor.wavIsRendering)
 						setScrollBarPos(SB_POS_ED, editor.songPos, false);
 
-					// draw current mode text (not while in extended pattern editor mode)
-					if (!ui.extended)
-					{
-						fillRect(115, 80, 74, 10, PAL_DESKTOP);
+					// draw current mode text
 
-						     if (playMode == PLAYMODE_PATT)    textOut(115, 80, PAL_FORGRND, "> Play ptn. <");
-						else if (playMode == PLAYMODE_EDIT)    textOut(121, 80, PAL_FORGRND, "> Editing <");
-						else if (playMode == PLAYMODE_RECSONG) textOut(114, 80, PAL_FORGRND, "> Rec. sng. <");
-						else if (playMode == PLAYMODE_RECPATT) textOut(115, 80, PAL_FORGRND, "> Rec. ptn. <");
+					const char *str = NULL;
+					     if (playMode == PLAYMODE_PATT)    str = "> Play ptn. <";
+					else if (playMode == PLAYMODE_EDIT)    str = "> Editing <";
+					else if (playMode == PLAYMODE_RECSONG) str = "> Rec. sng. <";
+					else if (playMode == PLAYMODE_RECPATT) str = "> Rec. ptn. <";
+
+					uint16_t areaWidth = 102;
+					uint16_t maxStrWidth = 76; // wide enough
+					uint16_t x = 101;
+					uint16_t y = 80;
+
+					if (ui.extendedPatternEditor)
+					{
+						y = 56;
+						areaWidth = 443;
+					}
+
+					// clear area
+					uint16_t clrX = x + ((areaWidth - maxStrWidth) / 2);
+					fillRect(clrX, y, maxStrWidth, FONT1_CHAR_H+1, PAL_DESKTOP);
+
+					// draw text (if needed)
+					if (str != NULL)
+					{
+						x += (areaWidth - textWidth(str)) / 2;
+						textOut(x, y, PAL_FORGRND, str);
 					}
 				}
 			}
@@ -1054,11 +1073,11 @@ void handleRedrawing(void)
 				setScrollBarEnd(SB_POS_ED, (song.songLength - 1) + 5);
 			}
 
-			if (!ui.extended)
-			{
-				if (!ui.diskOpShown)
-					drawPlaybackTime();
+			if (!ui.diskOpShown)
+				drawPlaybackTime();
 
+			if (!ui.extendedPatternEditor)
+			{
 				if (ui.sampleEditorExtShown)
 					handleSampleEditorExtRedrawing();
 				else if (ui.scopesShown)

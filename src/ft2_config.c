@@ -1091,7 +1091,7 @@ static void setConfigMiscRadioButtonStates(void)
 
 void showConfigScreen(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();

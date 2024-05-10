@@ -45,7 +45,7 @@ typedef struct ui_t
 	bool sysReqEnterPressed;
 
 	// all screens
-	bool extended, sysReqShown;
+	bool extendedPatternEditor, sysReqShown;
 
 	// top screens
 	bool instrSwitcherShown, aboutScreenShown, helpScreenShown, configScreenShown;

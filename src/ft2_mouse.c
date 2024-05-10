@@ -459,7 +459,7 @@ void mouseWheelHandler(bool directionUp)
 	if (ui.sysReqShown || editor.editTextFlag)
 		return;
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 	{
 		if (mouse.y <= 52)
 		{
@@ -585,7 +585,7 @@ static bool testPatternDataMouseDown(void)
 {
 	if (ui.patternEditorShown)
 	{
-		const int32_t y1 = ui.extended ? 56 : 176;
+		const int32_t y1 = ui.extendedPatternEditor ? 71 : 176;
 		const int32_t y2 = ui.pattChanScrollShown ? 382 : 396;
 
 		if (mouse.y >= y1 && mouse.y <= y2 && mouse.x >= 29 && mouse.x <= 602)

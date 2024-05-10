@@ -1099,7 +1099,7 @@ void hideTrimScreen(void)
 
 void showTrimScreen(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();

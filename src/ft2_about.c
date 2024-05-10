@@ -190,7 +190,7 @@ void renderAboutScreenFrame(void)
 
 void showAboutScreen(void) // called once when about screen is opened
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();

@@ -373,7 +373,7 @@ void showHelpScreen(void)
 {
 	uint16_t tmpID;
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();

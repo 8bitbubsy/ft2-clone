@@ -104,7 +104,7 @@ static void drawWindow(uint16_t w)
 {
 	const uint16_t h = SYSTEM_REQUEST_H;
 	const uint16_t x = (SCREEN_W - w) / 2;
-	const uint16_t y = ui.extended ? 91 : SYSTEM_REQUEST_Y;
+	const uint16_t y = ui.extendedPatternEditor ? 91 : SYSTEM_REQUEST_Y;
 
 	// main fill
 	fillRect(x + 1, y + 1, w - 2, h - 2, PAL_BUTTONS);
@@ -233,7 +233,7 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 	const uint16_t x = (SCREEN_W - wlen) / 2;
 
 	// the dialog's y position differs in extended pattern editor mode
-	const uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
+	const uint16_t y = ui.extendedPatternEditor ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set up buttons
 	for (uint16_t i = 0; i < numButtons; i++)
@@ -456,7 +456,7 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 		wlen = 600;
 
 	// the box y position differs in extended pattern editor mode
-	const uint16_t y = ui.extended ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
+	const uint16_t y = ui.extendedPatternEditor ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
 	// set further text box settings
 	t->x = (SCREEN_W - TEXTBOX_W) / 2;

@@ -718,7 +718,7 @@ NoMove:
 
 void showNibblesScreen(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();

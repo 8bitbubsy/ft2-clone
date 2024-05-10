@@ -54,7 +54,7 @@ void updatePattFontPtrs(void)
 void drawPatternBorders(void)
 {
 	// get heights/pos/rows depending on configuration
-	const pattCoord2_t *pattCoord = &pattCoord2Table[config.ptnStretch][ui.pattChanScrollShown][ui.extended];
+	const pattCoord2_t *pattCoord = &pattCoord2Table[config.ptnStretch][ui.pattChanScrollShown][ui.extendedPatternEditor];
 
 	// set pattern cursor Y position
 	editor.ptnCursorY = pattCoord->lowerRowsY - 9;
@@ -81,7 +81,7 @@ void drawPatternBorders(void)
 	{
 		// pattern editor w/ framework
 
-		if (ui.extended)
+		if (ui.extendedPatternEditor)
 		{
 			vLine(0,   54, 345, PAL_DSKTOP1);
 			vLine(631, 53, 346, PAL_DSKTOP2);
@@ -89,8 +89,8 @@ void drawPatternBorders(void)
 			vLine(1,   54, 345, PAL_DESKTOP);
 			vLine(630, 54, 345, PAL_DESKTOP);
 
-			hLine(0, 53, 631, PAL_DSKTOP1);
-			hLine(1, 54, 630, PAL_DESKTOP);
+			hLine(0, 68, 631, PAL_DSKTOP1);
+			hLine(1, 69, 630, PAL_DESKTOP);
 
 			if (!ui.pattChanScrollShown)
 			{
@@ -145,7 +145,7 @@ void drawPatternBorders(void)
 	{
 		// pattern editor without framework
 
-		if (ui.extended)
+		if (ui.extendedPatternEditor)
 		{
 			const int32_t clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof (int32_t) * 330) : (SCREEN_W * sizeof (int32_t) * 347);
 			memset(&video.frameBuffer[53 * SCREEN_W], 0, clearSize);
@@ -212,7 +212,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 	if (pattMark.markX1 > endCh || pattMark.markX2 < startCh || pattMark.markY1 > endRow || pattMark.markY2 < startRow)
 		return;
 
-	const markCoord_t *markCoord = &markCoordTable[config.ptnStretch][ui.pattChanScrollShown][ui.extended];
+	const markCoord_t *markCoord = &markCoordTable[config.ptnStretch][ui.pattChanScrollShown][ui.extendedPatternEditor];
 	const int32_t pattYStart = markCoord->upperRowsY;
 
 	// X1
@@ -664,7 +664,8 @@ void writePattern(int32_t currRow, int32_t currPattern)
 
 	// get heights/pos/rows depending on configuration
 	uint32_t rowHeight = config.ptnStretch ? 11 : 8;
-	const pattCoord_t *pattCoord = &pattCoordTable[config.ptnStretch][ui.pattChanScrollShown][ui.extended];
+	const pattCoord_t *pattCoord = &pattCoordTable[config.ptnStretch][ui.pattChanScrollShown][ui.extendedPatternEditor];
+	const pattCoord2_t *pattCoord2 = &pattCoord2Table[config.ptnStretch][ui.pattChanScrollShown][ui.extendedPatternEditor];
 	const int32_t midRowTextY = pattCoord->midRowTextY;
 	const int32_t lowerRowsTextY = pattCoord->lowerRowsTextY;
 	int32_t row = currRow - pattCoord->numUpperRows;
@@ -742,7 +743,7 @@ void writePattern(int32_t currRow, int32_t currPattern)
 
 	// channel numbers must be drawn lastly
 	if (config.ptnChnNumbers)
-		drawChannelNumbering(pattCoord->upperRowsTextY);
+		drawChannelNumbering(pattCoord2->upperRowsY+2);
 }
 
 // ========== CHARACTER DRAWING ROUTINES FOR PATTERN EDITOR ==========

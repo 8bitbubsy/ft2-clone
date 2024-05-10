@@ -2274,7 +2274,7 @@ void showDiskOpScreen(void)
 		firstTimeOpeningDiskOp = false;
 	}
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();

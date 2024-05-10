@@ -70,6 +70,11 @@ void readKeyModifiers(void)
 	keyb.leftCommandPressed = (modState & KMOD_LGUI) ? true : false;
 #endif
 	keyb.keyModifierDown = (modState & (KMOD_LSHIFT | KMOD_LCTRL | KMOD_LALT | KMOD_LGUI)) ? true : false;
+
+
+#ifdef _WIN32
+	keyb.leftWinKeyDown = (modState & KMOD_LGUI) ? true : false;
+#endif
 }
 
 void keyUpHandler(SDL_Scancode scancode, SDL_Keycode keycode)
@@ -86,7 +91,7 @@ void keyUpHandler(SDL_Scancode scancode, SDL_Keycode keycode)
 		return;
 	}
 
-	if (cursor.object == CURSOR_NOTE && !keyb.keyModifierDown)
+	if (ui.patternEditorShown && cursor.object == CURSOR_NOTE && !keyb.keyModifierDown)
 		testNoteKeysRelease(scancode);
 
 	if (scancode == SDL_SCANCODE_KP_PLUS)
@@ -152,7 +157,7 @@ void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepea
 	if (scancode == SDL_SCANCODE_KP_PLUS)
 		keyb.numPadPlusPressed = true;
 
-	if (handleEditKeys(keycode, scancode))
+	if (ui.patternEditorShown && handleEditKeys(keycode, scancode))
 		return;
 
 	if (keyb.keyModifierDown && checkModifiedKeys(keycode))
@@ -340,7 +345,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 
 			if (!ui.nibblesShown     && !ui.configScreenShown &&
 				!ui.aboutScreenShown && !ui.diskOpShown       &&
-				!ui.helpScreenShown  && !ui.extended)
+				!ui.helpScreenShown  && !ui.extendedPatternEditor)
 			{
 				drawIDAdd();
 			}
@@ -559,7 +564,7 @@ static void handleKeys(SDL_Keycode keycode, SDL_Scancode scanKey)
 		break;
 
 		// PATTERN EDITOR POSITION KEYS
-
+		
 		case SDLK_INSERT:
 		{
 			if (keyb.leftShiftPressed)
@@ -700,10 +705,17 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 		case SDLK_KP_ENTER:
 		case SDLK_RETURN:
 		{
-			if (keyb.leftAltPressed)
+			if (keyb.leftAltPressed && !keyb.leftCtrlPressed)
 			{
 				toggleFullscreen();
 				return true;
+			}
+			else if (keyb.leftCommandPressed || keyb.leftCtrlPressed)
+			{
+				if (keyb.leftShiftPressed)
+					insertPatternLine();
+				else
+					insertPatternNote();
 			}
 		}
 		break;
@@ -897,7 +909,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				video.showFPSCounter ^= 1;
 				if (!video.showFPSCounter)
 				{
-					if (ui.extended) // yet another kludge...
+					if (ui.extendedPatternEditor) // yet another kludge...
 						exitPatternEditorExtended();
 
 					showTopScreen(false);
@@ -1150,7 +1162,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 			}
 			else if (keyb.leftCtrlPressed)
 			{
-				if (ui.extended)
+				if (ui.extendedPatternEditor)
 					exitPatternEditorExtended();
 
 				if (ui.sampleEditorShown)    hideSampleEditor();

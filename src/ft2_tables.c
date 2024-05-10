@@ -471,11 +471,12 @@ const int8_t maxVisibleChans2[4] = { 4, 6, 8, 12 };
 
 const uint16_t chanWidths[6] = { 141, 141, 93, 69, 45, 45 };
 
+// for pattern marking
 const pattCoordsMouse_t pattCoordMouseTable[2][2][2] =
 {
 	/*
-		uint16_t upperRowsY, midRowY, lowerRowsY;
-		uint16_t numUpperRows;
+	struct organization:
+	   upperRowsY, midRowY, lowerRowsY, numUpperRows
 	*/
 
 	// no pattern stretch
@@ -483,13 +484,13 @@ const pattCoordsMouse_t pattCoordMouseTable[2][2][2] =
 		// no pattern channel scroll
 		{
 			{ 177, 281, 293, 13 }, //   normal pattern editor
-			{  57, 217, 229, 20 }, // extended pattern editor
+			{  73, 225, 237, 19 }, // extended pattern editor
 		},
 
 		// pattern channel scroll
 		{
 			{ 177, 274, 286, 12 }, //   normal pattern editor
-			{  57, 210, 222, 19 }, // extended pattern editor
+			{  73, 225, 237, 19 }, // extended pattern editor
 		}
 	},
 
@@ -498,13 +499,13 @@ const pattCoordsMouse_t pattCoordMouseTable[2][2][2] =
 		// no pattern channel scroll
 		{
 			{ 176, 275, 286,  9 }, //   normal pattern editor
-			{  56, 221, 232, 15 }, // extended pattern editor
+			{  75, 229, 240, 14 }, // extended pattern editor
 		},
 
 		// pattern channel scroll
 		{
-			{ 175, 274, 284,  9 }, //   normal pattern editor
-			{  55, 209, 219, 14 }, // extended pattern editor
+			{ 175, 274, 283,  9 }, //   normal pattern editor
+			{  73, 277, 238, 14 }, // extended pattern editor
 		},
 	}
 };
@@ -565,20 +566,26 @@ const uint8_t hex2Dec[256] =
 	80,81,82,83,84,85
 };
 
+// for actual pattern data drawing
 const pattCoord_t pattCoordTable[2][2][2] =
 {
+	/*
+	struct organization:
+	   upperRowsY, lowerRowsY, upperRowsTextY, midRowTextY, lowerRowsTextY, numUpperRows, numLowerRows
+	*/
+
 	// no pattern stretch
 	{
 		// no pattern channel scroll
 		{
 			{ 176, 292, 177, 283, 293, 13, 13 }, // normal pattern editor
-			{  56, 228,  57, 219, 229, 20, 21 }, // extended pattern editor
+			{  71, 236,  73, 227, 237, 19, 20 }, // extended pattern editor
 		},
 
 		// pattern channel scroll
 		{
 			{ 176, 285, 177, 276, 286, 12, 12 }, // normal pattern editor
-			{  56, 221,  57, 212, 222, 19, 20 }, // extended pattern editor
+			{  71, 236,  73, 227, 237, 19, 18 }, // extended pattern editor
 		}
 	},
 
@@ -587,31 +594,37 @@ const pattCoord_t pattCoordTable[2][2][2] =
 		// no pattern channel scroll
 		{
 			{ 177, 286, 178, 277, 288,  9, 10 }, // normal pattern editor
-			{  56, 232,  58, 223, 234, 15, 15 }, // extended pattern editor
+			{  71, 240,  77, 231, 242, 14, 14 }, // extended pattern editor
 		},
 
 		// pattern channel scroll
 		{
 			{  176, 285, 177, 276, 286,  9,  9 }, // normal pattern editor
-			{   56, 220,  57, 211, 221, 14, 15 }, // extended pattern editor
+			{   71, 238,  75, 229, 240, 14, 13 }, // extended pattern editor
 		},
 	}
 };
 
+// for framework drawing
 const pattCoord2_t pattCoord2Table[2][2][2] =
 {
+	/*
+	struct organization:
+	   upperRowsY, lowerRowsY, upperRowsH, lowerRowsH
+	*/
+
 	// no pattern stretch
 	{
 		// no pattern channel scroll
 		{
 			{ 175, 291, 107, 107 }, //   normal pattern editor
-			{  55, 227, 163, 171 }, // extended pattern editor
+			{  70, 235, 156, 163 }, // extended pattern editor
 		},
 
 		// pattern channel scroll
 		{
 			{ 175, 284, 100, 100 }, //   normal pattern editor
-			{  55, 220, 156, 164 }, // extended pattern editor
+			{  70, 235, 156, 149 }, // extended pattern editor
 		}
 	},
 
@@ -620,31 +633,36 @@ const pattCoord2_t pattCoord2Table[2][2][2] =
 		// no pattern channel scroll
 		{
 			{ 175, 285, 101, 113 }, //   normal pattern editor
-			{  55, 231, 167, 167 }, // extended pattern editor
+			{  70, 239, 160, 159 }, // extended pattern editor
 		},
 
 		// pattern channel scroll
 		{
 			{ 175, 284, 100, 100 }, //   normal pattern editor
-			{  55, 219, 155, 165 }, // extended pattern editor
+			{  70, 237, 158, 148 }, // extended pattern editor
 		},
 	}
 };
 
 const markCoord_t markCoordTable[2][2][2] =
 {
+	/*
+	struct organization:
+	   upperRowsY, midRowY, lowerRowsY
+	*/
+
 	// no pattern stretch
 	{
 		// no pattern channel scroll
 		{
 			{ 177, 281, 293 }, //   normal pattern editor
-			{  57, 217, 229 }, // extended pattern editor
+			{  73, 225, 237 }, // extended pattern editor
 		},
 
 		// pattern channel scroll
 		{
 			{ 177, 274, 286 }, //   normal pattern editor
-			{  57, 210, 222 }, // extended pattern editor
+			{  73, 225, 237 }, // extended pattern editor
 		}
 	},
 
@@ -653,13 +671,13 @@ const markCoord_t markCoordTable[2][2][2] =
 		// no pattern channel scroll
 		{
 			{ 176, 275, 286 }, //   normal pattern editor
-			{  56, 221, 232 }, // extended pattern editor
+			{  75, 229, 240 }, // extended pattern editor
 		},
 
 		// pattern channel scroll
 		{
 			{ 175, 274, 284 }, //   normal pattern editor
-			{  55, 209, 219 }, // extended pattern editor
+			{  73, 227, 238 }, // extended pattern editor
 		},
 	}
 };

@@ -150,7 +150,7 @@ void resetWavRenderer(void)
 
 void showWavRenderer(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();

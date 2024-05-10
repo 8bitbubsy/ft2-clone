@@ -2263,7 +2263,7 @@ void updateInstEditor(void)
 
 void showInstEditor(void)
 {
-	if (ui.extended) exitPatternEditorExtended();
+	if (ui.extendedPatternEditor) exitPatternEditorExtended();
 	if (ui.sampleEditorShown) hideSampleEditor();
 	if (ui.sampleEditorExtShown) hideSampleEditorExt();
 
@@ -2669,7 +2669,7 @@ void drawInstEditorExt(void)
 
 void showInstEditorExt(void)
 {
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
@@ -2902,7 +2902,7 @@ bool testInstrSwitcherMouseDown(void)
 	if (!ui.instrSwitcherShown)
 		return false;
 
-	if (ui.extended)
+	if (ui.extendedPatternEditor)
 		return testInstrSwitcherExtended();
 	else
 		return testInstrSwitcherNormal();

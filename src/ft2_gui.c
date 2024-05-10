@@ -1247,7 +1247,7 @@ void showTopScreen(bool restoreScreens)
 
 void showBottomScreen(void)
 {
-	if (ui.extended || ui.patternEditorShown)
+	if (ui.extendedPatternEditor || ui.patternEditorShown)
 		showPatternEditor();
 	else if (ui.instEditorShown)
 		showInstEditor();
