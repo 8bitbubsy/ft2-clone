@@ -92,6 +92,11 @@ void drawPatternBorders(void)
 			hLine(0, 68, 631, PAL_DSKTOP1);
 			hLine(1, 69, 630, PAL_DESKTOP);
 
+			// fix corrupt graphics (not sure why, yet...)
+			video.frameBuffer[(67*SCREEN_W)+0] = PAL_DSKTOP1;
+			video.frameBuffer[(67*SCREEN_W)+1] = PAL_DSKTOP1;
+			video.frameBuffer[(67*SCREEN_W)+630] = PAL_DSKTOP1;
+
 			if (!ui.pattChanScrollShown)
 			{
 				hLine(1, 398, 630, PAL_DESKTOP);
