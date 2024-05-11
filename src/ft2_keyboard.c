@@ -91,7 +91,7 @@ void keyUpHandler(SDL_Scancode scancode, SDL_Keycode keycode)
 		return;
 	}
 
-	if (ui.patternEditorShown && cursor.object == CURSOR_NOTE && !keyb.keyModifierDown)
+	if (cursor.object == CURSOR_NOTE && !keyb.keyModifierDown)
 		testNoteKeysRelease(scancode);
 
 	if (scancode == SDL_SCANCODE_KP_PLUS)
@@ -157,7 +157,7 @@ void keyDownHandler(SDL_Scancode scancode, SDL_Keycode keycode, bool keyWasRepea
 	if (scancode == SDL_SCANCODE_KP_PLUS)
 		keyb.numPadPlusPressed = true;
 
-	if (ui.patternEditorShown && handleEditKeys(keycode, scancode))
+	if (handleEditKeys(keycode, scancode))
 		return;
 
 	if (keyb.keyModifierDown && checkModifiedKeys(keycode))

@@ -43,8 +43,10 @@ static bool testNoteKeys(SDL_Scancode scancode)
 	const int8_t noteNum = scancodeKeyToNote(scancode);
 	if (noteNum == NOTE_OFF)
 	{
+		bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
+
 		// inserts "note off" if editing song
-		if (playMode == PLAYMODE_EDIT || playMode == PLAYMODE_RECPATT || playMode == PLAYMODE_RECSONG)
+		if (editmode || playMode == PLAYMODE_RECPATT || playMode == PLAYMODE_RECSONG)
 		{
 			pauseMusic();
 			const volatile uint16_t curPattern = editor.editPattern;
@@ -88,20 +90,21 @@ static bool testEditKeys(SDL_Scancode scancode, SDL_Keycode keycode)
 {
 	int8_t i;
 
+	bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
+
 	if (cursor.object == CURSOR_NOTE)
 	{
 		// the edit cursor is at the note slot
 
 		if (testNoteKeys(scancode))
 		{
-			keyb.keyRepeat = (playMode == PLAYMODE_EDIT); // repeat keys only if in edit mode
+			keyb.keyRepeat = editmode; // repeat keys only if in edit mode
 			return true; // we jammed an instrument
 		}
 
 		return false; // no note key pressed, test other keys
 	}
-
-	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
+	if (!editmode && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
 		return false; // we're not editing, test other keys
 
 	// convert key to slot data
@@ -348,7 +351,7 @@ void recordNote(uint8_t noteNum, int8_t vol) // directly ported from the origina
 		tick = 0;
 	}
 
-	bool editmode = (playMode == PLAYMODE_EDIT);
+	bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
 	bool recmode = (playMode == PLAYMODE_RECSONG) || (playMode == PLAYMODE_RECPATT);
 
 	if (noteNum == NOTE_OFF)
@@ -564,7 +567,8 @@ bool handleEditKeys(SDL_Keycode keycode, SDL_Scancode scancode)
 	// special case for delete - manipulate note data
 	if (keycode == SDLK_DELETE)
 	{
-		if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
+		bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
+		if (!editmode && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
 			return false; // we're not editing, test other keys
 
 		pauseMusic();
@@ -663,7 +667,8 @@ void writeFromMacroSlot(uint8_t slot)
 	int16_t row = editor.row;
 	resumeMusic();
 
-	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
+	bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
+	if (!editmode && playMode != PLAYMODE_RECSONG && playMode != PLAYMODE_RECPATT)
 		return;
 
 	if (!allocatePattern(curPattern))
@@ -707,7 +712,8 @@ void insertPatternNote(void)
 	int16_t row = editor.row;
 	resumeMusic();
 
-	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
+	bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
+	if (!editmode && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
 	note_t *p = pattern[curPattern];
@@ -737,7 +743,8 @@ void insertPatternLine(void)
 	int16_t row = editor.row;
 	resumeMusic();
 
-	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
+	bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
+	if (!editmode && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
 	setPatternLen(curPattern, patternNumRows[curPattern] + config.recTrueInsert); // config.recTrueInsert is 0 or 1
@@ -772,7 +779,8 @@ void deletePatternNote(void)
 	int16_t row = editor.row;
 	resumeMusic();
 
-	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
+	bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
+	if (!editmode && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
 	const int16_t numRows = patternNumRows[curPattern];
@@ -813,7 +821,8 @@ void deletePatternLine(void)
 	int16_t row = editor.row;
 	resumeMusic();
 
-	if (playMode != PLAYMODE_EDIT && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
+	bool editmode = ui.patternEditorShown && (playMode == PLAYMODE_EDIT);
+	if (!editmode && playMode != PLAYMODE_RECPATT && playMode != PLAYMODE_RECSONG)
 		return;
 
 	const int16_t numRows = patternNumRows[curPattern];
