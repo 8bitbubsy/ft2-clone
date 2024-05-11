@@ -83,19 +83,14 @@ void drawPatternBorders(void)
 
 		if (ui.extendedPatternEditor)
 		{
-			vLine(0,   54, 345, PAL_DSKTOP1);
-			vLine(631, 53, 346, PAL_DSKTOP2);
+			vLine(0,   69, 330, PAL_DSKTOP1);
+			vLine(631, 68, 331, PAL_DSKTOP2);
 
-			vLine(1,   54, 345, PAL_DESKTOP);
-			vLine(630, 54, 345, PAL_DESKTOP);
+			vLine(1,   69, 330, PAL_DESKTOP);
+			vLine(630, 69, 330, PAL_DESKTOP);
 
 			hLine(0, 68, 631, PAL_DSKTOP1);
 			hLine(1, 69, 630, PAL_DESKTOP);
-
-			// fix corrupt graphics (not sure why, yet...)
-			video.frameBuffer[(67*SCREEN_W)+0] = PAL_DSKTOP1;
-			video.frameBuffer[(67*SCREEN_W)+1] = PAL_DSKTOP1;
-			video.frameBuffer[(67*SCREEN_W)+630] = PAL_DSKTOP1;
 
 			if (!ui.pattChanScrollShown)
 			{
