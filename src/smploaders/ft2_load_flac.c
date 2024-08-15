@@ -432,5 +432,6 @@ static void error_callback(const FLAC__StreamDecoder *decoder, FLAC__StreamDecod
 	(void)decoder;
 	(void)client_data;
 }
-
+#else
+typedef int prevent_compiler_warning; // kludge: prevent warning about empty .c file if HAS_LIBFLAC is not defined
 #endif
