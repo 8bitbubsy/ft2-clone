@@ -910,8 +910,6 @@ static void calcAudioLatencyVars(int32_t audioBufferSize, int32_t audioFreq)
 
 	audio.audLatencyPerfValInt = (uint32_t)dInt;
 	audio.audLatencyPerfValFrac = (uint64_t)((dFrac * TICK_TIME_FRAC_SCALE) + 0.5); // rounded
-
-	audio.dAudioLatencyMs = dAudioLatencySecs * 1000.0;
 }
 
 static void setLastWorkingAudioDevName(void)

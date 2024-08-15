@@ -50,7 +50,7 @@ typedef struct audio_t
 	uint64_t tickTime64, tickTime64Frac;
 
 	float *fMixBufferL, *fMixBufferR;
-	double dHz2MixDeltaMul, dAudioLatencyMs;
+	double dHz2MixDeltaMul;
 
 	SDL_AudioDeviceID dev;
 	uint32_t wantFreq, haveFreq, wantSamples, haveSamples;

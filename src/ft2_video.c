@@ -111,10 +111,6 @@ static void drawFPSCounter(void)
 	if (dRefreshRate < 0.0 || dRefreshRate > 9999.9)
 		dRefreshRate = 9999.9; // prevent number from overflowing text box
 
-	double dAudLatency = audio.dAudioLatencyMs;
-	if (dAudLatency < 0.0 || dAudLatency > 999999999.9999)
-		dAudLatency = 999999999.9999; // prevent number from overflowing text box
-
 	sprintf(fpsTextBuf,
 	             "SDL version: %u.%u.%u\n" \
 	             "Frames per second: %.3f\n" \
