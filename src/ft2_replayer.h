@@ -5,6 +5,7 @@
 #include "ft2_unicode.h"
 #include "mixer/ft2_cubic_spline.h"
 #include "mixer/ft2_windowed_sinc.h"
+
 enum
 {
 	// voice flags

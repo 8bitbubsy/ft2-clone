@@ -24,7 +24,6 @@
 #include "ft2_sampling.h"
 #include "ft2_module_loader.h"
 #include "ft2_midi.h"
-#include "ft2_midi.h"
 #include "ft2_mouse.h"
 #include "ft2_edit.h"
 #include "ft2_sample_ed_features.h"
