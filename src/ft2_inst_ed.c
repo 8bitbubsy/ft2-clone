@@ -1560,7 +1560,7 @@ void cbPEnvLoop(void)
 	setSongModifiedFlag();
 }
 
-static void pinoaNumberOut(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint8_t val)
+static void pianoNumberOut(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint8_t val)
 {
 	assert(val <= 0xF);
 
@@ -1588,9 +1588,9 @@ static void writePianoNumber(uint8_t note, uint8_t key, uint8_t octave)
 	const uint16_t x = keyDigitXPos[key] + (octave * 77);
 
 	if (keyIsBlackTab[key])
-		pinoaNumberOut(x, 361, PAL_FORGRND, PAL_BCKGRND, number);
+		pianoNumberOut(x, 361, PAL_FORGRND, PAL_BCKGRND, number);
 	else
-		pinoaNumberOut(x, 385, PAL_BCKGRND, PAL_FORGRND, number);
+		pianoNumberOut(x, 385, PAL_BCKGRND, PAL_FORGRND, number);
 }
 
 static void drawBlackPianoKey(uint8_t key, uint8_t octave, bool keyDown)
