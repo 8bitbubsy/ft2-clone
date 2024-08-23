@@ -21,7 +21,6 @@ typedef struct mouse_t
 	int8_t buttonCounter, mode;
 	int16_t lastUsedObjectID, lastUsedObjectType, lastEditBox;
 	int32_t absX, absY, rawX, rawY, x, y, lastX, lastY, xBias, yBias, setPosX, setPosY;
-	int32_t lastScrollX, lastScrollXTmp, lastScrollY, saveMouseX, saveMouseY;
 	uint32_t buttonState;
 } mouse_t;
 

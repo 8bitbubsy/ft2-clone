@@ -21,11 +21,15 @@
 #include "ft2_palette.h"
 #include "ft2_structs.h"
 
+#define FIXED_THUMB_SIZE 15
+
+static int32_t lastMouseX, lastMouseY, scrollBias;
+
 /* Prevent the scrollbar thumbs from being so small that
 ** it's difficult to use them. In units of pixels.
 ** Shouldn't be higher than 9!
 */
-#define MIN_THUMB_LENGTH 5
+#define MIN_THUMB_SIZE 5
 
 scrollBar_t scrollBars[NUM_SCROLLBARS] =
 {
@@ -39,73 +43,73 @@ scrollBar_t scrollBars[NUM_SCROLLBARS] =
 	**  w         = width
 	**  h         = height
 	**  type      = scrollbar type (vertical/horizontal)
-	**  style     = scrollbar style (flat/noflat)
+	**  style     = scrollbar style (dynamic or fixed thumb size)
 	** funcOnDown = function to call when pressed
 	*/
 
 	// ------ POSITION EDITOR SCROLLBARS ------
-	//x,  y,  w,  h,  type,               style                 funcOnDown
-	{ 55, 15, 18, 21, SCROLLBAR_VERTICAL, SCROLLBAR_THUMB_FLAT, sbPosEdPos },
+	//x,  y,  w,  h,  type,               style                         funcOnDown
+	{ 55, 15, 18, 21, SCROLLBAR_VERTICAL, SCROLLBAR_DYNAMIC_THUMB_SIZE, sbPosEdPos },
 
 	// ------ INSTRUMENT SWITCHER SCROLLBARS ------
-	//x,   y,   w,  h,  type,               style                 funcOnDown
-	{ 566, 112, 18, 28, SCROLLBAR_VERTICAL, SCROLLBAR_THUMB_FLAT, sbSmpBankPos },
+	//x,   y,   w,  h,  type,               style                         funcOnDown
+	{ 566, 112, 18, 28, SCROLLBAR_VERTICAL, SCROLLBAR_DYNAMIC_THUMB_SIZE, sbSmpBankPos },
 
 	// ------ PATTERN VIEWER SCROLLBARS ------
-	//x,  y,   w,   h,  type,                 style                 funcOnDown
-	{ 28, 385, 576, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_FLAT, setChannelScrollPos },
+	//x,  y,   w,   h,  type,                 style                         funcOnDown
+	{ 28, 385, 576, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_DYNAMIC_THUMB_SIZE, setChannelScrollPos },
 
 	// ------ HELP SCREEN SCROLLBARS ------
-	//x,   y,  w,  h,   type,               style                 funcOnDown
-	{ 611, 15, 18, 143, SCROLLBAR_VERTICAL, SCROLLBAR_THUMB_FLAT, helpScrollSetPos },
+	//x,   y,  w,  h,   type,               style                         funcOnDown
+	{ 611, 15, 18, 143, SCROLLBAR_VERTICAL, SCROLLBAR_DYNAMIC_THUMB_SIZE, helpScrollSetPos },
 
 	// ------ SAMPLE EDITOR SCROLLBARS ------
-	//x,  y,   w,   h,  type,                 style                 funcOnDown
-	{ 26, 331, 580, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_FLAT, scrollSampleData },
+	//x,  y,   w,   h,  type,                 style                         funcOnDown
+	{ 26, 331, 580, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_DYNAMIC_THUMB_SIZE, scrollSampleData },
 
 	// ------ INSTRUMENT EDITOR SCROLLBARS ------
-	//x,   y,   w,  h,  type,                 style                   funcOnDown
-	{ 544, 175, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, setVolumeScroll },
-	{ 544, 189, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, setPanningScroll },
-	{ 544, 203, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, setFinetuneScroll },
-	{ 544, 220, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, setFadeoutScroll },
-	{ 544, 234, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, setVibSpeedScroll },
-	{ 544, 248, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, setVibDepthScroll },
-	{ 544, 262, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, setVibSweepScroll },
+	//x,   y,   w,  h,  type,                 style                       funcOnDown
+	{ 544, 175, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, setVolumeScroll },
+	{ 544, 189, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, setPanningScroll },
+	{ 544, 203, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, setFinetuneScroll },
+	{ 544, 220, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, setFadeoutScroll },
+	{ 544, 234, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, setVibSpeedScroll },
+	{ 544, 248, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, setVibDepthScroll },
+	{ 544, 262, 62, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, setVibSweepScroll },
 
 	// ------ INSTRUMENT EDITOR EXTENSION SCROLLBARS ------
-	//x,   y,   w,  h,  type,                 style                   funcOnDown
-	{ 195, 130, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbMidiChPos },
-	{ 195, 144, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbMidiPrgPos },
-	{ 195, 158, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbMidiBendPos },
+	//x,   y,   w,  h,  type,                 style                       funcOnDown
+	{ 195, 130, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, sbMidiChPos },
+	{ 195, 144, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, sbMidiPrgPos },
+	{ 195, 158, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, sbMidiBendPos },
 
 	// ------ CONFIG AUDIO SCROLLBARS ------
-	//x,   y,   w,  h,  type,                 style                   funcOnDown
-	{ 365,  29, 18, 43, SCROLLBAR_VERTICAL,   SCROLLBAR_THUMB_FLAT,   sbAudOutputSetPos },
-	{ 365, 116, 18, 21, SCROLLBAR_VERTICAL,   SCROLLBAR_THUMB_FLAT,   sbAudInputSetPos },
-	{ 529, 117, 79, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbAmp },
-	{ 529, 143, 79, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbMasterVol },
+	//x,   y,   w,  h,  type,                 style                         funcOnDown
+	{ 365,  29, 18, 43, SCROLLBAR_VERTICAL,   SCROLLBAR_DYNAMIC_THUMB_SIZE, sbAudOutputSetPos },
+	{ 365, 116, 18, 21, SCROLLBAR_VERTICAL,   SCROLLBAR_DYNAMIC_THUMB_SIZE, sbAudInputSetPos },
+	{ 529, 117, 79, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE,   sbAmp },
+	{ 529, 143, 79, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE,   sbMasterVol },
 
 	// ------ CONFIG LAYOUT SCROLLBARS ------
-	//x,   y,  w,  h,  type,                 style                   funcOnDown
-	{ 536, 15, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbPalRPos },
-	{ 536, 29, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbPalGPos },
-	{ 536, 43, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbPalBPos },
-	{ 536, 71, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbPalContrastPos },
+	//x,   y,  w,  h,  type,                 style                       funcOnDown
+	{ 536, 15, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, sbPalRPos },
+	{ 536, 29, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, sbPalGPos },
+	{ 536, 43, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, sbPalBPos },
+	{ 536, 71, 70, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, sbPalContrastPos },
 
 	// ------ CONFIG MISCELLANEOUS SCROLLBARS ------
-	//x,   y,   w,  h,  type,                 style                   funcOnDown
-	{ 578, 158, 29, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_THUMB_NOFLAT, sbMIDISens },
+	//x,   y,   w,  h,  type,                 style                       funcOnDown
+	{ 578, 158, 29, 13, SCROLLBAR_HORIZONTAL, SCROLLBAR_FIXED_THUMB_SIZE, sbMIDISens },
 
 #ifdef HAS_MIDI
 	// ------ CONFIG MIDI SCROLLBARS ------
-	//x,   y,  w,  h,   type,               style                 funcOnDown
-	{ 483, 15, 18, 143, SCROLLBAR_VERTICAL, SCROLLBAR_THUMB_FLAT, sbMidiInputSetPos },
+	//x,   y,  w,  h,   type,               style                         funcOnDown
+	{ 483, 15, 18, 143, SCROLLBAR_VERTICAL, SCROLLBAR_DYNAMIC_THUMB_SIZE, sbMidiInputSetPos },
 #endif
 
 	// ------ DISK OP. SCROLLBARS ------
-	//x,   y,  w,  h,   type,               style                 funcOnDown
-	{ 335, 15, 18, 143, SCROLLBAR_VERTICAL, SCROLLBAR_THUMB_FLAT, sbDiskOpSetPos }
+	//x,   y,  w,  h,   type,               style                         funcOnDown
+	{ 335, 15, 18, 143, SCROLLBAR_VERTICAL, SCROLLBAR_DYNAMIC_THUMB_SIZE, sbDiskOpSetPos }
 };
 
 void drawScrollBar(uint16_t scrollBarID)
@@ -126,14 +130,15 @@ void drawScrollBar(uint16_t scrollBarID)
 	clearRect(scrollBar->x, scrollBar->y, scrollBar->w, scrollBar->h);
 
 	// draw thumb
-	if (scrollBar->thumbType == SCROLLBAR_THUMB_FLAT)
+
+	if (scrollBar->thumbType == SCROLLBAR_DYNAMIC_THUMB_SIZE)
 	{
-		// flat
 		fillRect(thumbX, thumbY, thumbW, thumbH, PAL_PATTEXT);
 	}
 	else
 	{
-		// 3D
+		// fixed thumb size
+
 		fillRect(thumbX, thumbY, thumbW, thumbH, PAL_BUTTONS);
 
 		if (scrollBar->state == SCROLLBAR_UNPRESSED)
@@ -171,7 +176,7 @@ void hideScrollBar(uint16_t scrollBarID)
 
 static void setScrollBarThumbCoords(uint16_t scrollBarID)
 {
-	int16_t thumbX, thumbY, thumbW, thumbH, scrollEnd, realThumbLength;
+	int16_t thumbX, thumbY, thumbW, thumbH, scrollEnd, originalThumbSize;
 	int32_t tmp32, length, end;
 	double dTmp;
 
@@ -198,17 +203,13 @@ static void setScrollBarThumbCoords(uint16_t scrollBarID)
 		thumbH = scrollBar->h - 2;
 		scrollEnd = scrollBar->x + scrollBar->w;
 
-		if (scrollBar->thumbType == SCROLLBAR_THUMB_NOFLAT)
+		if (scrollBar->thumbType == SCROLLBAR_FIXED_THUMB_SIZE)
 		{
-			realThumbLength = 15;
-
-			thumbW = realThumbLength;
-			if (thumbW < MIN_THUMB_LENGTH)
-				thumbW = MIN_THUMB_LENGTH;
+			thumbW = originalThumbSize = FIXED_THUMB_SIZE;
 
 			if (scrollBar->end > 0)
 			{
-				length = scrollBar->w - realThumbLength;
+				length = scrollBar->w - originalThumbSize;
 				dTmp = (length / (double)scrollBar->end) * scrollBar->pos;
 				tmp32 = (int32_t)(dTmp + 0.5);
 				thumbX = (int16_t)(scrollBar->x + tmp32);
@@ -224,16 +225,16 @@ static void setScrollBarThumbCoords(uint16_t scrollBarID)
 			{
 				dTmp = (scrollBar->w / (double)scrollBar->end) * scrollBar->page;
 				tmp32 = (int32_t)(dTmp + 0.5);
-				realThumbLength = (int16_t)CLAMP(tmp32, 1, scrollBar->w);
+				originalThumbSize = (int16_t)CLAMP(tmp32, 1, scrollBar->w);
 			}
 			else
 			{
-				realThumbLength = 1;
+				originalThumbSize = 1;
 			}
 
-			thumbW = realThumbLength;
-			if (thumbW < MIN_THUMB_LENGTH)
-				thumbW = MIN_THUMB_LENGTH;
+			thumbW = originalThumbSize;
+			if (thumbW < MIN_THUMB_SIZE)
+				thumbW = MIN_THUMB_SIZE;
 
 			if (scrollBar->end > scrollBar->page)
 			{
@@ -267,16 +268,16 @@ static void setScrollBarThumbCoords(uint16_t scrollBarID)
 		{
 			dTmp = (scrollBar->h / (double)scrollBar->end) * scrollBar->page;
 			tmp32 = (int32_t)(dTmp + 0.5);
-			realThumbLength = (int16_t)CLAMP(tmp32, 1, scrollBar->h);
+			originalThumbSize = (int16_t)CLAMP(tmp32, 1, scrollBar->h);
 		}
 		else
 		{
-			realThumbLength = 1;
+			originalThumbSize = 1;
 		}
 
-		thumbH = realThumbLength;
-		if (thumbH < MIN_THUMB_LENGTH)
-			thumbH = MIN_THUMB_LENGTH;
+		thumbH = originalThumbSize;
+		if (thumbH < MIN_THUMB_SIZE)
+			thumbH = MIN_THUMB_SIZE;
 
 		if (scrollBar->end > scrollBar->page)
 		{
@@ -299,7 +300,7 @@ static void setScrollBarThumbCoords(uint16_t scrollBarID)
 	}
 
 	// set values now
-	scrollBar->realThumbLength = realThumbLength;
+	scrollBar->originalThumbSize = originalThumbSize;
 	scrollBar->thumbX = thumbX;
 	scrollBar->thumbY = thumbY;
 	scrollBar->thumbW = thumbW;
@@ -339,7 +340,7 @@ void scrollBarScrollDown(uint16_t scrollBarID, uint32_t amount)
 		return;
 
 	uint32_t endPos = scrollBar->end;
-	if (scrollBar->thumbType == SCROLLBAR_THUMB_FLAT)
+	if (scrollBar->thumbType == SCROLLBAR_DYNAMIC_THUMB_SIZE)
 	{
 		if (endPos >= scrollBar->page)
 			endPos -= scrollBar->page;
@@ -391,7 +392,7 @@ void setScrollBarPos(uint16_t scrollBarID, uint32_t pos, bool triggerCallBack)
 	}
 
 	uint32_t endPos = scrollBar->end;
-	if (scrollBar->thumbType == SCROLLBAR_THUMB_FLAT)
+	if (scrollBar->thumbType == SCROLLBAR_DYNAMIC_THUMB_SIZE)
 	{
 		if (endPos >= scrollBar->page)
 			endPos -= scrollBar->page;
@@ -483,49 +484,48 @@ bool testScrollBarMouseDown(void)
 		end = NUM_SCROLLBARS;
 	}
 
-	const int32_t mx = mouse.x;
-	const int32_t my = mouse.y;
-
 	scrollBar_t *scrollBar = &scrollBars[start];
 	for (uint16_t i = start; i < end; i++, scrollBar++)
 	{
 		if (!scrollBar->visible)
 			continue;
 
-		if (mx >= scrollBar->x && mx < scrollBar->x+scrollBar->w &&
-		    my >= scrollBar->y && my < scrollBar->y+scrollBar->h)
+		if (mouse.x >= scrollBar->x && mouse.x < scrollBar->x+scrollBar->w &&
+		    mouse.y >= scrollBar->y && mouse.y < scrollBar->y+scrollBar->h)
 		{
 			mouse.lastUsedObjectID = i;
 			mouse.lastUsedObjectType = OBJECT_SCROLLBAR;
 
 			// kludge for when a system request is about to open
 			scrollBar->state = SCROLLBAR_PRESSED;
-			if (scrollBar->thumbType == SCROLLBAR_THUMB_NOFLAT)
+			if (scrollBar->thumbType == SCROLLBAR_FIXED_THUMB_SIZE)
 				drawScrollBar(mouse.lastUsedObjectType);
 
 			if (scrollBar->type == SCROLLBAR_HORIZONTAL)
 			{
-				mouse.lastScrollXTmp = mouse.lastScrollX = mx;
+				lastMouseX = mouse.x;
 
-				if (mx >= scrollBar->thumbX && mx < scrollBar->thumbX+scrollBar->thumbW)
+				if (mouse.x >= scrollBar->thumbX && mouse.x < scrollBar->thumbX+scrollBar->thumbW)
 				{
-					mouse.saveMouseX = mouse.lastScrollX - scrollBar->thumbX;
+					// clicked on thumb
+
+					scrollBias = mouse.x - scrollBar->thumbX;
 				}
 				else
 				{
-					mouse.saveMouseX = scrollBar->thumbW >> 1;
+					// clicked outside of thumb
 
-					scrollPos = mouse.lastScrollX - scrollBar->x - mouse.saveMouseX;
-					if (scrollBar->thumbType == SCROLLBAR_THUMB_NOFLAT)
-					{
-						dTmp = scrollPos * (scrollBar->w / (double)(scrollBar->w - scrollBar->thumbW));
-						scrollPos = (int32_t)(dTmp + 0.5);
-					}
+					scrollBias = scrollBar->thumbW >> 1;
 
+					scrollPos = mouse.x - scrollBias - scrollBar->x;
 					assert(scrollBar->w > 0);
 					scrollPos = CLAMP(scrollPos, 0, scrollBar->w);
 
-					length = scrollBar->w + (scrollBar->realThumbLength - scrollBar->thumbW);
+					if (scrollBar->thumbType == SCROLLBAR_FIXED_THUMB_SIZE)
+						length = scrollBar->w - scrollBar->thumbW;
+					else
+						length = scrollBar->w + (scrollBar->originalThumbSize - scrollBar->thumbW);
+
 					if (length < 1)
 						length = 1;
 
@@ -537,21 +537,28 @@ bool testScrollBarMouseDown(void)
 			}
 			else
 			{
-				mouse.lastScrollY = my;
-				if (my >= scrollBar->thumbY && my < scrollBar->thumbY+scrollBar->thumbH)
+				// vertical scroll bar
+
+				lastMouseY = mouse.y;
+
+				if (mouse.y >= scrollBar->thumbY && mouse.y < scrollBar->thumbY+scrollBar->thumbH)
 				{
-					mouse.saveMouseY = mouse.lastScrollY - scrollBar->thumbY;
+					// clicked on thumb
+
+					scrollBias = mouse.y - scrollBar->thumbY;
 				}
 				else
 				{
-					mouse.saveMouseY = scrollBar->thumbH >> 1;
+					// clicked outside of thumb
 
-					scrollPos = mouse.lastScrollY - scrollBar->y - mouse.saveMouseY;
+					scrollBias = scrollBar->thumbH >> 1;
+
+					scrollPos = mouse.y - scrollBias - scrollBar->y;
 
 					assert(scrollBar->h > 0);
 					scrollPos = CLAMP(scrollPos, 0, scrollBar->h);
 
-					length = scrollBar->h + (scrollBar->realThumbLength - scrollBar->thumbH);
+					length = scrollBar->h + (scrollBar->originalThumbSize - scrollBar->thumbH);
 					if (length < 1)
 						length = 1;
 
@@ -567,7 +574,7 @@ bool testScrollBarMouseDown(void)
 				return true;
 
 			scrollBar->state = SCROLLBAR_PRESSED;
-			if (scrollBar->thumbType == SCROLLBAR_THUMB_NOFLAT)
+			if (scrollBar->thumbType == SCROLLBAR_FIXED_THUMB_SIZE)
 				drawScrollBar(mouse.lastUsedObjectID);
 
 			return true;
@@ -594,7 +601,7 @@ void testScrollBarMouseRelease(void)
 
 void handleScrollBarsWhileMouseDown(void)
 {
-	int32_t scrollX, scrollY, length;
+	int32_t scrollPos, length;
 	double dTmp;
 
 	assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_SCROLLBARS);
@@ -604,29 +611,26 @@ void handleScrollBarsWhileMouseDown(void)
 
 	if (scrollBar->type == SCROLLBAR_HORIZONTAL)
 	{
-		if (mouse.x != mouse.lastScrollX)
+		if (mouse.x != lastMouseX)
 		{
-			mouse.lastScrollX = mouse.x;
-			scrollX = mouse.lastScrollX - mouse.saveMouseX - scrollBar->x;
+			lastMouseX = mouse.x;
 
-			if (scrollBar->thumbType == SCROLLBAR_THUMB_NOFLAT)
-			{
-				assert(scrollBar->w >= 16);
-				dTmp = scrollX * (scrollBar->w / (double)(scrollBar->w - scrollBar->thumbW));
-				scrollX = (int32_t)(dTmp + 0.5);
-			}
-
+			scrollPos = mouse.x - scrollBias - scrollBar->x;
 			assert(scrollBar->w > 0);
-			scrollX = CLAMP(scrollX, 0, scrollBar->w);
+			scrollPos = CLAMP(scrollPos, 0, scrollBar->w);
 
-			length = scrollBar->w + (scrollBar->realThumbLength - scrollBar->thumbW);
+			if (scrollBar->thumbType == SCROLLBAR_FIXED_THUMB_SIZE)
+				length = scrollBar->w - scrollBar->thumbW;
+			else
+				length = scrollBar->w + (scrollBar->originalThumbSize - scrollBar->thumbW);
+
 			if (length < 1)
 				length = 1;
 
-			dTmp = ((double)scrollX * scrollBar->end) / length;
-			scrollX = (int32_t)(dTmp + 0.5);
+			dTmp = ((double)scrollPos * scrollBar->end) / length;
+			scrollPos = (int32_t)(dTmp + 0.5);
 
-			setScrollBarPos(mouse.lastUsedObjectID, scrollX, true);
+			setScrollBarPos(mouse.lastUsedObjectID, scrollPos, true);
 
 			if (mouse.lastUsedObjectID != OBJECT_ID_NONE) // this can change in the callback in setScrollBarPos()
 				drawScrollBar(mouse.lastUsedObjectID);
@@ -634,23 +638,25 @@ void handleScrollBarsWhileMouseDown(void)
 	}
 	else
 	{
-		if (mouse.y != mouse.lastScrollY)
-		{
-			mouse.lastScrollY = mouse.y;
+		// vertical scroll bar
 
-			scrollY = mouse.lastScrollY - mouse.saveMouseY - scrollBar->y;
+		if (mouse.y != lastMouseY)
+		{
+			lastMouseY = mouse.y;
+
+			scrollPos = mouse.y - scrollBias - scrollBar->y;
 
 			assert(scrollBar->h > 0);
-			scrollY = CLAMP(scrollY, 0, scrollBar->h);
+			scrollPos = CLAMP(scrollPos, 0, scrollBar->h);
 
-			length = scrollBar->h + (scrollBar->realThumbLength - scrollBar->thumbH);
+			length = scrollBar->h + (scrollBar->originalThumbSize - scrollBar->thumbH);
 			if (length < 1)
 				length = 1;
 
-			dTmp = ((double)scrollY * scrollBar->end) / length;
-			scrollY = (int32_t)(dTmp + 0.5);
+			dTmp = ((double)scrollPos * scrollBar->end) / length;
+			scrollPos = (int32_t)(dTmp + 0.5);
 
-			setScrollBarPos(mouse.lastUsedObjectID, scrollY, true);
+			setScrollBarPos(mouse.lastUsedObjectID, scrollPos, true);
 
 			if (mouse.lastUsedObjectID != OBJECT_ID_NONE) // this can change in the callback in setScrollBarPos()
 				drawScrollBar(mouse.lastUsedObjectID);

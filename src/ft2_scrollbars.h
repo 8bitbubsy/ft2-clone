@@ -62,8 +62,8 @@ enum
 	SCROLLBAR_PRESSED = 1,
 	SCROLLBAR_HORIZONTAL = 0,
 	SCROLLBAR_VERTICAL = 1,
-	SCROLLBAR_THUMB_NOFLAT = 0,
-	SCROLLBAR_THUMB_FLAT = 1
+	SCROLLBAR_FIXED_THUMB_SIZE = 0,
+	SCROLLBAR_DYNAMIC_THUMB_SIZE = 1
 };
 
 typedef struct scrollBar_t // DO NOT TOUCH!
@@ -75,7 +75,7 @@ typedef struct scrollBar_t // DO NOT TOUCH!
 	bool visible;
 	uint8_t state;
 	uint32_t pos, page, end;
-	uint16_t thumbX, thumbY, thumbW, thumbH, realThumbLength;
+	uint16_t thumbX, thumbY, thumbW, thumbH, originalThumbSize;
 } scrollBar_t;
 
 void drawScrollBar(uint16_t scrollBarID);
