@@ -428,8 +428,11 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 	// calculate real number of echoes
 	double dSmp = sample16Bit ? 32768.0 : 128.0;
 	int32_t k = 0;
-	while (k++ < echo_nEcho && dSmp >= 1.0)
+	while (k < echo_nEcho && dSmp >= 1.0)
+	{
 		dSmp *= dVolChange;
+		k++;
+	}
 	int32_t nEchoes = k + 1;
 
 	if (nEchoes < 1)
