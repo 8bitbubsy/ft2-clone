@@ -1199,9 +1199,9 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 	if (len <= 0)
 		goto applyVolumeExit;
 
-	bool mustInterpolate = (dVol_StartVol != dVol_EndVol);
-	const double dVol = dVol_StartVol / 100.0;
-	const double dPosMul = ((dVol_EndVol / 100.0) - dVol) / len;
+	const bool mustInterpolate = (dVol_StartVol != dVol_EndVol);
+	const double dVolDelta = ((dVol_EndVol - dVol_StartVol) / 100.0) / len;
+	double dVol = dVol_StartVol / 100.0;
 
 	pauseAudio();
 	unfixSample(s);
@@ -1212,23 +1212,18 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 		{
 			for (int32_t i = 0; i < len; i++)
 			{
-				double dSmp = (int32_t)ptr16[i] * (dVol + (i * dPosMul)); // linear interpolation
-				DROUND(dSmp);
-
-				int32_t smp32 = (int32_t)dSmp;
+				int32_t smp32 = (int32_t)((int32_t)ptr16[i] * dVol);
 				CLAMP16(smp32);
 				ptr16[i] = (int16_t)smp32;
-			}
 
+				dVol += dVolDelta;
+			}
 		}
 		else // no interpolation needed
 		{
 			for (int32_t i = 0; i < len; i++)
 			{
-				double dSmp = (int32_t)ptr16[i] * dVol;
-				DROUND(dSmp);
-
-				int32_t smp32 = (int32_t)dSmp;
+				int32_t smp32 = (int32_t)((int32_t)ptr16[i] * dVol);
 				CLAMP16(smp32);
 				ptr16[i] = (int16_t)smp32;
 			}
@@ -1241,22 +1236,18 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 		{
 			for (int32_t i = 0; i < len; i++)
 			{
-				double dSmp = (int32_t)ptr8[i] * (dVol + (i * dPosMul)); // linear interpolation
-				DROUND(dSmp);
-
-				int32_t smp32 = (int32_t)dSmp;
+				int32_t smp32 = (int32_t)((int32_t)ptr8[i] * dVol);
 				CLAMP8(smp32);
 				ptr8[i] = (int8_t)smp32;
+
+				dVol += dVolDelta;
 			}
 		}
 		else // no interpolation needed
 		{
 			for (int32_t i = 0; i < len; i++)
 			{
-				double dSmp = (int32_t)ptr8[i] * dVol;
-				DROUND(dSmp);
-
-				int32_t smp32 = (int32_t)dSmp;
+				int32_t smp32 = (int32_t)((int32_t)ptr8[i] * dVol);
 				CLAMP8(smp32);
 				ptr8[i] = (int8_t)smp32;
 			}
