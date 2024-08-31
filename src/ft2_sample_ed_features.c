@@ -115,11 +115,10 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	pauseAudio();
 	unfixSample(s);
 
-	/* Nearest-neighbor resampling (no interpolation).
+	/* Fast nearest-neighbor resampling.
 	**
 	** Could benefit from windowed-sinc interpolation,
-	** but it seems like some people prefer no resampling
-	** interpolation (like FT2).
+	** but it seems like some people prefer it the way it is.
 	*/
 
 	if (newLen > 0)
@@ -131,8 +130,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 
 			for (uint32_t i = 0; i < newLen; i++)
 			{
-				const uint32_t position = posFrac64 >> 32;
-				dst16[i] = src16[position];
+				dst16[i] = src16[posFrac64 >> 32];
 				posFrac64 += delta64;
 			}
 		}
@@ -143,8 +141,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 
 			for (uint32_t i = 0; i < newLen; i++)
 			{
-				const uint32_t position = posFrac64 >> 32;
-				dst8[i] = src8[position];
+				dst8[i] = src8[posFrac64 >> 32];
 				posFrac64 += delta64;
 			}
 		}
