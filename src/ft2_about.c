@@ -7,6 +7,7 @@
 #include "ft2_structs.h"
 #include "ft2_pattern_ed.h" // exitPatternEditorExtended()
 
+#define SINUS_PHASES 1024
 #define NUM_STARS 2000
 #define ABOUT_SCREEN_X 3
 #define ABOUT_SCREEN_Y 3
@@ -29,6 +30,8 @@ static char *customText1 = "Clone by Olav \"8bitbubsy\" S\025rensen";
 static char *customText2 = "https://16-bits.org";
 static char customText3[256];
 static int16_t customText1Y, customText2Y, customText3Y, customText1X, customText2X, customText3X;
+static int16_t sin16[SINUS_PHASES], cos16[SINUS_PHASES];
+static int32_t sinPage, cosPage;
 static uint32_t randSeed;
 static vector_t starPoints[NUM_STARS], rotation;
 static matrix_t matrix;
@@ -86,6 +89,15 @@ void initAboutScreen(void)
 		s->y = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
 		s->z = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
 	}
+
+	// pre-calc sinus/cosinus tables
+	for (int32_t i = 0; i < SINUS_PHASES; i++)
+	{
+		sin16[i] = (int16_t)round(32767.0 * sin(i * M_PI * 2.0 / SINUS_PHASES));
+		cos16[i] = (int16_t)round(32767.0 * cos(i * M_PI * 2.0 / SINUS_PHASES));
+	}
+
+	sinPage = cosPage = 0;
 }
 
 static void blendPixel(int32_t x, int32_t y, uint32_t r, uint32_t g, uint32_t b, uint16_t alpha)
@@ -170,17 +182,43 @@ static void starfield(void)
 
 void renderAboutScreenFrame(void)
 {
-	// remember the good old days when you couldn't do this per frame?
+	// remember when you couldn't do this per frame?
 	clearRect(ABOUT_SCREEN_X, ABOUT_SCREEN_Y, ABOUT_SCREEN_W, ABOUT_SCREEN_H);
 
 	// 3D starfield
 	rotateMatrix();
-	rotation.x -= 0.00006f;
-	rotation.z += 0.00003f;
+	rotation.x -= 0.00009f;
+	rotation.z += 0.00006f;
 	starfield();
 
-	// logo + text
-	blit32(91, 31, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H);
+	// waving logo
+
+	for (int32_t y = 0; y < ABOUT_SCREEN_H; y++)
+	{
+		for (int32_t x = 0; x < ABOUT_SCREEN_W; x++)
+		{
+			int32_t xx = (((ABOUT_LOGO_W/2)+x) - 310) + (sin16[(sinPage+(x       )) & (SINUS_PHASES-1)] >> 10);
+			int32_t yy = (((ABOUT_LOGO_H/2)+y) -  75) + (sin16[(cosPage+(y+(x<<1))) & (SINUS_PHASES-1)] >> 11);
+
+			if (xx >= 0 && xx < ABOUT_LOGO_W && yy >= 0 && yy < ABOUT_LOGO_H)
+			{
+				const uint32_t pixel = bmp.ft2AboutLogo[(yy * ABOUT_LOGO_W) + xx];
+				if (pixel != 0x00FF00)
+					video.frameBuffer[((ABOUT_SCREEN_X+y) * SCREEN_W) + (ABOUT_SCREEN_Y+x)] = pixel;
+			}
+		}
+	}
+
+	sinPage += 2;
+	if (sinPage >= SINUS_PHASES)
+		sinPage -= SINUS_PHASES;
+
+	cosPage += 3;
+	if (cosPage >= SINUS_PHASES)
+		cosPage -= SINUS_PHASES;
+
+	// static text
+
 	textOut(customText1X, customText1Y, PAL_FORGRND, customText1);
 	textOut(customText2X, customText2Y, PAL_FORGRND, customText2);
 	textOut(customText3X, customText3Y, PAL_FORGRND, customText3);
