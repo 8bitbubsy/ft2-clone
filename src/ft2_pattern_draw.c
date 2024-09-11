@@ -147,8 +147,8 @@ void drawPatternBorders(void)
 
 		if (ui.extendedPatternEditor)
 		{
-			const int32_t clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof (int32_t) * 330) : (SCREEN_W * sizeof (int32_t) * 347);
-			memset(&video.frameBuffer[53 * SCREEN_W], 0, clearSize);
+			const int32_t clearSize = ui.pattChanScrollShown ? (SCREEN_W * sizeof (int32_t) * 315) : (SCREEN_W * sizeof (int32_t) * 332);
+			memset(&video.frameBuffer[68 * SCREEN_W], 0, clearSize);
 		}
 		else
 		{
