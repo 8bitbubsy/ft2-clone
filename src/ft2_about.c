@@ -5,8 +5,10 @@
 #include "ft2_bmp.h"
 #include "ft2_video.h"
 #include "ft2_structs.h"
+#include "ft2_gfxdata.h"
 #include "ft2_pattern_ed.h" // exitPatternEditorExtended()
 
+#define LOGO_ALPHA_PERCENTAGE 70
 #define SINUS_PHASES 1024
 #define NUM_STARS 2000
 #define ABOUT_SCREEN_X 3
@@ -14,7 +16,7 @@
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
 #define ABOUT_LOGO_W 449
-#define ABOUT_LOGO_H 110
+#define ABOUT_LOGO_H 75
 
 typedef struct
 {
@@ -26,13 +28,16 @@ typedef struct
 	vector_t x, y, z;
 } matrix_t;
 
+static char dotScrollText[] = "So yeah, the FT2 clone is here! Hope you like it... See you in the next one! ;)                        ";
+static char *customText0 = "Original FT2 by Magnus \"Vogue\" H\224gdahl & Fredrik \"Mr.H\" Huss";
 static char *customText1 = "Clone by Olav \"8bitbubsy\" S\025rensen";
 static char *customText2 = "https://16-bits.org";
 static char customText3[256];
-static int16_t customText1Y, customText2Y, customText3Y, customText1X, customText2X, customText3X;
-static int16_t sin16[SINUS_PHASES], cos16[SINUS_PHASES];
-static int32_t sinPage, cosPage;
-static uint32_t randSeed;
+static int16_t customText0X, customText0Y, customText1Y, customText2Y;
+static int16_t customText3Y, customText1X, customText2X, customText3X;
+static int16_t sin16[SINUS_PHASES];
+static uint16_t logoAlpha16;
+static uint32_t randSeed, sinp1, sinp2;
 static vector_t starPoints[NUM_STARS], rotation;
 static matrix_t matrix;
 
@@ -90,14 +95,13 @@ void initAboutScreen(void)
 		s->z = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
 	}
 
-	// pre-calc sinus/cosinus tables
+	// pre-calc sinus table
 	for (int32_t i = 0; i < SINUS_PHASES; i++)
-	{
 		sin16[i] = (int16_t)round(32767.0 * sin(i * M_PI * 2.0 / SINUS_PHASES));
-		cos16[i] = (int16_t)round(32767.0 * cos(i * M_PI * 2.0 / SINUS_PHASES));
-	}
 
-	sinPage = cosPage = 0;
+	sinp1 = 0;
+	sinp2 = SINUS_PHASES/4; // cosine offset
+	logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
 }
 
 static void blendPixel(int32_t x, int32_t y, uint32_t r, uint32_t g, uint32_t b, uint16_t alpha)
@@ -180,6 +184,14 @@ static void starfield(void)
 	}
 }
 
+static uint32_t blendPixelAB(uint32_t pixelA, uint32_t pixelB, uint16_t alpha)
+{
+	const int32_t r = ((RGB32_R(pixelA) * (alpha ^ 65535)) + (RGB32_R(pixelB) * alpha)) >> 16;
+	const int32_t g = ((RGB32_G(pixelA) * (alpha ^ 65535)) + (RGB32_G(pixelB) * alpha)) >> 16;
+	const int32_t b = ((RGB32_B(pixelA) * (alpha ^ 65535)) + (RGB32_B(pixelB) * alpha)) >> 16;
+	return RGB32(r, g, b);
+}
+
 void renderAboutScreenFrame(void)
 {
 	// remember when you couldn't do this per frame?
@@ -187,43 +199,40 @@ void renderAboutScreenFrame(void)
 
 	// 3D starfield
 	rotateMatrix();
-	rotation.x -= 0.00009f;
-	rotation.z += 0.00006f;
+	rotation.x -= 0.0003f;
+	rotation.y -= 0.0002f;
+	rotation.z += 0.0001f;
 	starfield();
 
-	// waving logo
+	// waving FT2 logo
 
-	for (int32_t y = 0; y < ABOUT_SCREEN_H; y++)
+	uint32_t *dstPtr = video.frameBuffer + (ABOUT_SCREEN_Y * SCREEN_W) + ABOUT_SCREEN_X;
+	for (int32_t y = 0; y < ABOUT_SCREEN_H; y++, dstPtr += SCREEN_W)
 	{
 		for (int32_t x = 0; x < ABOUT_SCREEN_W; x++)
 		{
-			int32_t xx = (((ABOUT_LOGO_W/2)+x) - 310) + (sin16[(sinPage+(x       )) & (SINUS_PHASES-1)] >> 10);
-			int32_t yy = (((ABOUT_LOGO_H/2)+y) -  75) + (sin16[(cosPage+(y+(x<<1))) & (SINUS_PHASES-1)] >> 11);
+			int32_t srcX = (x - ((ABOUT_SCREEN_W-ABOUT_LOGO_W)/2)) + (sin16[(sinp1+x)     & (SINUS_PHASES-1)] >> 10);
+			int32_t srcY = (y - ((ABOUT_SCREEN_H-ABOUT_LOGO_H)/2)+20) + (sin16[(sinp2+y+x+x) & (SINUS_PHASES-1)] >> 11);
 
-			if (xx >= 0 && xx < ABOUT_LOGO_W && yy >= 0 && yy < ABOUT_LOGO_H)
+			if ((uint32_t)srcX < ABOUT_LOGO_W && (uint32_t)srcY < ABOUT_LOGO_H)
 			{
-				const uint32_t pixel = bmp.ft2AboutLogo[(yy * ABOUT_LOGO_W) + xx];
-				if (pixel != 0x00FF00)
-					video.frameBuffer[((ABOUT_SCREEN_X+y) * SCREEN_W) + (ABOUT_SCREEN_Y+x)] = pixel;
+				const uint32_t logoPixel = bmp.ft2AboutLogo[(srcY * ABOUT_LOGO_W) + srcX];
+				if (logoPixel != 0x00FF00) // transparency
+					dstPtr[x] = blendPixelAB(dstPtr[x], logoPixel, logoAlpha16);
 			}
 		}
 	}
 
-	sinPage += 2;
-	if (sinPage >= SINUS_PHASES)
-		sinPage -= SINUS_PHASES;
+	sinp1 = (sinp1 + 2) & (SINUS_PHASES-1);
+	sinp2 = (sinp2 + 3) & (SINUS_PHASES-1);
 
-	cosPage += 3;
-	if (cosPage >= SINUS_PHASES)
-		cosPage -= SINUS_PHASES;
-
-	// static text
-
+	// static texts
+	textOut(customText0X, customText0Y, PAL_FORGRND, customText0);
 	textOut(customText1X, customText1Y, PAL_FORGRND, customText1);
 	textOut(customText2X, customText2Y, PAL_FORGRND, customText2);
 	textOut(customText3X, customText3Y, PAL_FORGRND, customText3);
 
-	showPushButton(PB_EXIT_ABOUT);
+	showPushButton(PB_EXIT_ABOUT); // yes, we have to redraw the exit button per frame :)
 }
 
 void showAboutScreen(void) // called once when about screen is opened
@@ -239,10 +248,12 @@ void showAboutScreen(void) // called once when about screen is opened
 	showPushButton(PB_EXIT_ABOUT);
 
 	sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
-	customText1X = (SCREEN_W - textWidth(customText1)) / 2;
+	customText0X = (SCREEN_W    - textWidth(customText0)) / 2;
+	customText1X = (SCREEN_W    - textWidth(customText1)) / 2;
 	customText2X = (SCREEN_W-8) - textWidth(customText2);
 	customText3X = (SCREEN_W-8) - textWidth(customText3);
-	customText1Y = 157;
+	customText0Y = 157-28;
+	customText1Y = 157-12;
 	customText2Y = 157-12;
 	customText3Y = 157;
 
