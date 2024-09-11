@@ -28,6 +28,7 @@ typedef struct scope_t
 	bool wasCleared, sample16Bit;
 	uint8_t loopType;
 	int32_t volume, direction, loopStart, loopLength, sampleEnd, position;
+	uint32_t drawDelta;
 	uint64_t delta, positionFrac;
 } scope_t;
 

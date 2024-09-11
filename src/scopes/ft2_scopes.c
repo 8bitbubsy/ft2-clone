@@ -432,6 +432,11 @@ void drawScopes(void)
 			// scope is active
 			scope[i].wasCleared = false;
 
+			// get relative voice Hz (in relation to middle-C rate), and scale to 16.16fp
+			const uint32_t relHz16 = (uint32_t)(scope[i].delta * (((double)SCOPE_HZ / SCOPE_FRAC_SCALE) / (C4_FREQ / 65536.0)));
+
+			scope[i].drawDelta = relHz16 << 1; // FT2 does this to the final 16.16fp value
+
 			// clear scope background
 			clearRect(scopeXOffs, scopeYOffs, scopeDrawLen, SCOPE_HEIGHT);
 

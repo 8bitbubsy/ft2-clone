@@ -10,7 +10,7 @@
 #define SCOPE_REGS_NO_LOOP \
 	const int32_t volume = s->volume; \
 	const int32_t sampleEnd = s->sampleEnd; \
-	const uint32_t delta = (uint32_t)(s->delta >> (SCOPE_FRAC_BITS-10)); \
+	const uint32_t delta = s->drawDelta; \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	const uint32_t width = x + w; \
 	int32_t sample; \
@@ -22,7 +22,7 @@
 	const int32_t sampleEnd = s->sampleEnd; \
 	const int32_t loopStart = s->loopStart; \
 	const int32_t loopLength = s->loopLength; \
-	const uint32_t delta = (uint32_t)(s->delta >> (SCOPE_FRAC_BITS-10)); \
+	const uint32_t delta = s->drawDelta; \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	const uint32_t width = x + w; \
 	int32_t sample; \
@@ -34,7 +34,7 @@
 	const int32_t sampleEnd = s->sampleEnd; \
 	const int32_t loopStart = s->loopStart; \
 	const int32_t loopLength = s->loopLength; \
-	const uint32_t delta = (uint32_t)(s->delta >> (SCOPE_FRAC_BITS-10)); \
+	const uint32_t delta = s->drawDelta; \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	const uint32_t width = x + w; \
 	int32_t sample; \
