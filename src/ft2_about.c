@@ -28,7 +28,6 @@ typedef struct
 	vector_t x, y, z;
 } matrix_t;
 
-static char dotScrollText[] = "So yeah, the FT2 clone is here! Hope you like it... See you in the next one! ;)                        ";
 static char *customText0 = "Original FT2 by Magnus \"Vogue\" H\224gdahl & Fredrik \"Mr.H\" Huss";
 static char *customText1 = "Clone by Olav \"8bitbubsy\" S\025rensen";
 static char *customText2 = "https://16-bits.org";
