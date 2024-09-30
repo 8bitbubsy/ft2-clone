@@ -9,6 +9,8 @@
 #include "ft2_pattern_ed.h" // exitPatternEditorExtended()
 
 #define LOGO_ALPHA_PERCENTAGE 70
+#define STAR_ALPHA_PERCENTAGE 91
+#define STARSHINE_ALPHA_PERCENTAGE 20
 #define SINUS_PHASES 1024
 #define NUM_STARS 2000
 #define ABOUT_SCREEN_X 3
@@ -35,7 +37,7 @@ static char customText3[256];
 static int16_t customText0X, customText0Y, customText1Y, customText2Y;
 static int16_t customText3Y, customText1X, customText2X, customText3X;
 static int16_t sin16[SINUS_PHASES];
-static uint16_t logoAlpha16;
+static uint16_t logoAlpha16, starShineAlpha16, starAlpha16;
 static uint32_t randSeed, sinp1, sinp2;
 static vector_t starPoints[NUM_STARS], rotation;
 static matrix_t matrix;
@@ -56,32 +58,29 @@ static void rotateMatrix(void)
 {
 #define MY_2PI_FLOAT 6.2831853071796f
 
-	const float x2pi = rotation.x * MY_2PI_FLOAT;
-	const float sa = sinf(x2pi);
-	const float ca = cosf(x2pi);
+	const float xsin = sinf(rotation.x * MY_2PI_FLOAT);
+	const float xcos = cosf(rotation.x * MY_2PI_FLOAT);
 
-	const float y2pi = rotation.y * MY_2PI_FLOAT;
-	const float sb = sinf(y2pi);
-	const float cb = cosf(y2pi);
+	const float ysin = sinf(rotation.y * MY_2PI_FLOAT);
+	const float ycos = cosf(rotation.y * MY_2PI_FLOAT);
 
-	const float z2pi = rotation.z * MY_2PI_FLOAT;
-	const float sc = sinf(z2pi);
-	const float cc = cosf(z2pi);
+	const float zsin = sinf(rotation.z * MY_2PI_FLOAT);
+	const float zcos = cosf(rotation.z * MY_2PI_FLOAT);
 
 	// x
-	matrix.x.x = (ca * cc) + (sc * sa * sb);
-	matrix.y.x = sa * cb;
-	matrix.z.x = (cc * sa * sb) - (ca * sc);
+	matrix.x.x = (xcos * zcos) + (zsin * xsin * ysin);
+	matrix.y.x = xsin * ycos;
+	matrix.z.x = (zcos * xsin * ysin) - (xcos * zsin);
 
 	// y
-	matrix.x.y = (sc * ca * sb) - (sa * cc);
-	matrix.y.y = ca * cb;
-	matrix.z.y = (sa * sc) + (cc * ca * sb);
+	matrix.x.y = (zsin * xcos * ysin) - (xsin * zcos);
+	matrix.y.y = xcos * ycos;
+	matrix.z.y = (xsin * zsin) + (zcos * xcos * ysin);
 
 	// z
-	matrix.x.z = cb * sc;
-	matrix.y.z = -sb;
-	matrix.z.z = cb * cc;
+	matrix.x.z = ycos * zsin;
+	matrix.y.z = -ysin;
+	matrix.z.z = ycos * zcos;
 }
 
 void initAboutScreen(void)
@@ -101,21 +100,29 @@ void initAboutScreen(void)
 	sinp1 = 0;
 	sinp2 = SINUS_PHASES/4; // cosine offset
 	logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
+	starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
+	starAlpha16 = (65535 * STAR_ALPHA_PERCENTAGE) / 100;
 }
 
-static void blendPixel(int32_t x, int32_t y, uint32_t r, uint32_t g, uint32_t b, uint16_t alpha)
+static uint32_t blendPixels(uint32_t pixelA, uint32_t pixelB, uint16_t alpha)
+{
+	const uint16_t invAlpha = alpha ^ 0xFFFF;
+
+	const int32_t r = ((RGB32_R(pixelA) * invAlpha) + (RGB32_R(pixelB) * alpha)) >> 16;
+	const int32_t g = ((RGB32_G(pixelA) * invAlpha) + (RGB32_G(pixelB) * alpha)) >> 16;
+	const int32_t b = ((RGB32_B(pixelA) * invAlpha) + (RGB32_B(pixelB) * alpha)) >> 16;
+	return RGB32(r, g, b);
+}
+
+static void blendPixelsXY(uint32_t x, uint32_t y, uint32_t pixelB_r, uint32_t pixelB_g, uint32_t pixelB_b, uint16_t alpha)
 {
 	uint32_t *p = &video.frameBuffer[(y * SCREEN_W) + x];
+	const uint32_t pixelA = *p;
 
-	const uint32_t srcPixel = *p;
-
-	const uint32_t srcR = RGB32_R(srcPixel);
-	const uint32_t srcG = RGB32_G(srcPixel);
-	const uint32_t srcB = RGB32_B(srcPixel);
-
-	r = ((srcR * (alpha ^ 65535)) + (r * alpha)) >> 16;
-	g = ((srcG * (alpha ^ 65535)) + (g * alpha)) >> 16;
-	b = ((srcB * (alpha ^ 65535)) + (b * alpha)) >> 16;
+	const uint16_t invAlpha = alpha ^ 0xFFFF;
+	const int32_t r = ((RGB32_R(pixelA) * invAlpha) + (pixelB_r * alpha)) >> 16;
+	const int32_t g = ((RGB32_G(pixelA) * invAlpha) + (pixelB_g * alpha)) >> 16;
+	const int32_t b = ((RGB32_B(pixelA) * invAlpha) + (pixelB_b * alpha)) >> 16;
 
 	*p = RGB32(r, g, b);
 }
@@ -143,57 +150,47 @@ static void starfield(void)
 		if (outX < ABOUT_SCREEN_X || outX >= ABOUT_SCREEN_X+ABOUT_SCREEN_W)
 			continue;
 
-		int32_t d = (int32_t)(z * 256.0f);
-		if (d > 255)
-			d = 255;
-		d ^= 255;
+		int32_t intensity255 = (int32_t)(z * 256.0f);
+		if (intensity255 > 255)
+			intensity255 = 255;
+		intensity255 ^= 255;
 
 		// add a tint of blue to the star pixel
 
-		int32_t r = d - 79;
+		int32_t r = intensity255 - 79;
 		if (r < 0)
 			r = 0;
 
-		int32_t g = d - 38;
+		int32_t g = intensity255 - 38;
 		if (g < 0)
 			g = 0;
 
-		int32_t b = d + 64;
+		int32_t b = intensity255 + 64;
 		if (b > 255)
 			b = 255;
 
-		// blend sides of star
-
-		const uint16_t sidesAlpha = 13000;
+		// plot and blend sides of star (basic shine effect)
 
 		if (outX-1 >= ABOUT_SCREEN_X)
-			blendPixel(outX-1, outY, r, g, b, sidesAlpha);
+			blendPixelsXY(outX-1, outY, r, g, b, starShineAlpha16);
 
 		if (outX+1 < ABOUT_SCREEN_X+ABOUT_SCREEN_W)
-			blendPixel(outX+1, outY, r, g, b, sidesAlpha);
+			blendPixelsXY(outX+1, outY, r, g, b, starShineAlpha16);
 
 		if (outY-1 >= ABOUT_SCREEN_Y)
-			blendPixel(outX, outY-1, r, g, b, sidesAlpha);
+			blendPixelsXY(outX, outY-1, r, g, b, starShineAlpha16);
 
 		if (outY+1 < ABOUT_SCREEN_Y+ABOUT_SCREEN_H)
-			blendPixel(outX, outY+1, r, g, b, sidesAlpha);
+			blendPixelsXY(outX, outY+1, r, g, b, starShineAlpha16);
 
-		// plot main star pixel
-		blendPixel(outX, outY, r, g, b, 60000);
+		// plot center pixel
+		blendPixelsXY(outX, outY, r, g, b, starAlpha16);
 	}
-}
-
-static uint32_t blendPixelAB(uint32_t pixelA, uint32_t pixelB, uint16_t alpha)
-{
-	const int32_t r = ((RGB32_R(pixelA) * (alpha ^ 65535)) + (RGB32_R(pixelB) * alpha)) >> 16;
-	const int32_t g = ((RGB32_G(pixelA) * (alpha ^ 65535)) + (RGB32_G(pixelB) * alpha)) >> 16;
-	const int32_t b = ((RGB32_B(pixelA) * (alpha ^ 65535)) + (RGB32_B(pixelB) * alpha)) >> 16;
-	return RGB32(r, g, b);
 }
 
 void renderAboutScreenFrame(void)
 {
-	// remember when you couldn't do this per frame?
+	// remember the days when you couldn't afford to do this per frame?
 	clearRect(ABOUT_SCREEN_X, ABOUT_SCREEN_Y, ABOUT_SCREEN_W, ABOUT_SCREEN_H);
 
 	// 3D starfield
@@ -210,14 +207,14 @@ void renderAboutScreenFrame(void)
 	{
 		for (int32_t x = 0; x < ABOUT_SCREEN_W; x++)
 		{
-			int32_t srcX = (x - ((ABOUT_SCREEN_W-ABOUT_LOGO_W)/2)) + (sin16[(sinp1+x)     & (SINUS_PHASES-1)] >> 10);
+			int32_t srcX = (x - ((ABOUT_SCREEN_W-ABOUT_LOGO_W)/2))    + (sin16[(sinp1+x)     & (SINUS_PHASES-1)] >> 10);
 			int32_t srcY = (y - ((ABOUT_SCREEN_H-ABOUT_LOGO_H)/2)+20) + (sin16[(sinp2+y+x+x) & (SINUS_PHASES-1)] >> 11);
 
 			if ((uint32_t)srcX < ABOUT_LOGO_W && (uint32_t)srcY < ABOUT_LOGO_H)
 			{
 				const uint32_t logoPixel = bmp.ft2AboutLogo[(srcY * ABOUT_LOGO_W) + srcX];
 				if (logoPixel != 0x00FF00) // transparency
-					dstPtr[x] = blendPixelAB(dstPtr[x], logoPixel, logoAlpha16);
+					dstPtr[x] = blendPixels(dstPtr[x], logoPixel, logoAlpha16);
 			}
 		}
 	}

@@ -103,8 +103,8 @@
 #define LINEAR_INTERPOLATION(s, f, scale) \
 { \
 	const int32_t frac = (uint32_t)(f) >> 1; /* uint32 -> int32 range, faster int->float conv. (x86/x86_64) */ \
-	const float fFrac = frac * (1.0f / (MIXER_FRAC_SCALE/2)); /* 0.0f .. 0.9999999f */ \
-	fSample = ((s[0] + (s[1]-s[0]) * fFrac)) * (1.0f / scale); \
+	const float fFrac = (int32_t)frac * (1.0f / (MIXER_FRAC_SCALE/2)); /* 0.0f .. 0.9999999f */ \
+	fSample = (s[0] + ((s[1] - s[0]) * fFrac)) * (1.0f / scale); \
 }
 
 #define RENDER_8BIT_SMP_LINTRP \
