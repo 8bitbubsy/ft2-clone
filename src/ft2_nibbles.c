@@ -780,7 +780,7 @@ void showNibblesScreen(void)
 		case 0: radioButtons[RB_NIBBLES_NOVICE].state  = RADIOBUTTON_CHECKED; break;
 		case 1: radioButtons[RB_NIBBLES_AVERAGE].state = RADIOBUTTON_CHECKED; break;
 		case 2: radioButtons[RB_NIBBLES_PRO].state     = RADIOBUTTON_CHECKED; break;
-		case 3: radioButtons[RB_NIBBLES_MANIAC].state  = RADIOBUTTON_CHECKED; break;
+		case 3: radioButtons[RB_NIBBLES_TRITON].state  = RADIOBUTTON_CHECKED; break;
 	}
 	showRadioButtonGroup(RB_GROUP_NIBBLES_DIFFICULTY);
 }
@@ -910,7 +910,7 @@ void nibblesSetPro(void)
 void nibblesSetTriton(void)
 {
 	config.NI_Speed = 3;
-	checkRadioButton(RB_NIBBLES_MANIAC);
+	checkRadioButton(RB_NIBBLES_TRITON);
 }
 
 // CHECK BOXES
