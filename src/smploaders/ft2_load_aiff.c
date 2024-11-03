@@ -15,7 +15,7 @@
 #include "../ft2_sysreqs.h"
 #include "../ft2_sample_loader.h"
 
-static uint32_t getAIFFSampleRate(uint8_t *in);
+static double getAIFFSampleRate(uint8_t *in);
 static bool aiffIsStereo(FILE *f); // only ran on files that are confirmed to be AIFFs
 
 bool loadAIFF(FILE *f, uint32_t filesize)
@@ -128,7 +128,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	uint32_t sampleRate = getAIFFSampleRate(sampleRateBytes);
+	double dSampleRate = getAIFFSampleRate(sampleRateBytes);
 
 	// sample data chunk
 
@@ -578,14 +578,14 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 	s->volume = 64;
 	s->panning = 128;
 
-	tuneSample(s, sampleRate, audio.linearPeriodsFlag);
+	setSampleC4Hz(s, dSampleRate);
 
 	return true;
 }
 
-static uint32_t getAIFFSampleRate(uint8_t *in)
+static double getAIFFSampleRate(uint8_t *in)
 {
-	/* 80-bit IEEE-754 to unsigned 32-bit integer (rounded).
+	/* 80-bit IEEE-754 to unsigned double-precision float.
 	** Sign bit is ignored.
 	*/
 
@@ -598,8 +598,7 @@ static uint32_t getAIFFSampleRate(uint8_t *in)
 	double dExp = exp15 - EXP_BIAS;
 	double dMantissa = mantissa63 / (INT64_MAX+1.0);
 
-	double dResult = (1.0 + dMantissa) * exp2(dExp);
-	return (uint32_t)round(dResult);
+	return (1.0 + dMantissa) * exp2(dExp);
 }
 
 static bool aiffIsStereo(FILE *f) // only ran on files that are confirmed to be AIFFs

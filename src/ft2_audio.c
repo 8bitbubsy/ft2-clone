@@ -177,6 +177,7 @@ void setMixerBPM(int32_t bpm)
 
 	audio.samplesPerTickInt = audio.samplesPerTickIntTab[i];
 	audio.samplesPerTickFrac = audio.samplesPerTickFracTab[i];
+	audio.fSamplesPerTickIntMul = (float)(1.0 / (double)audio.samplesPerTickInt);
 
 	// for audio/video sync timestamp
 	tickTimeLenInt = audio.tickTimeIntTab[i];
@@ -261,10 +262,8 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 			const float fVolumeRDiff = 0.0f - f->fCurrVolumeR;
 
 			f->volumeRampLength = audio.quickVolRampSamples; // 5ms
-			const float fVolumeRampLength = (float)(int32_t)f->volumeRampLength;
-
-			f->fVolumeLDelta = fVolumeLDiff / fVolumeRampLength;
-			f->fVolumeRDelta = fVolumeRDiff / fVolumeRampLength;
+			f->fVolumeLDelta = fVolumeLDiff * audio.fQuickVolRampSamplesMul;
+			f->fVolumeRDelta = fVolumeRDiff * audio.fQuickVolRampSamplesMul;
 
 			f->isFadeOutVoice = true;
 		}
@@ -282,12 +281,20 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 		const float fVolumeLDiff = v->fTargetVolumeL - v->fCurrVolumeL;
 		const float fVolumeRDiff = v->fTargetVolumeR - v->fCurrVolumeR;
 
-		// IS_QuickVol = 5ms, otherwise the duration of a tick
-		v->volumeRampLength = (status & IS_QuickVol) ? audio.quickVolRampSamples : audio.samplesPerTickInt;
-		const float fVolumeRampLength = (float)(int32_t)v->volumeRampLength;
+		float fRampLengthMul;
+		if (status & IS_QuickVol) // duration of 5ms
+		{
+			v->volumeRampLength = audio.quickVolRampSamples;
+			fRampLengthMul = audio.fQuickVolRampSamplesMul;
+		}
+		else // duration of a tick
+		{
+			v->volumeRampLength = audio.samplesPerTickInt;
+			fRampLengthMul = audio.fSamplesPerTickIntMul;
+		}
 
-		v->fVolumeLDelta = fVolumeLDiff / fVolumeRampLength;
-		v->fVolumeRDelta = fVolumeRDiff / fVolumeRampLength;
+		v->fVolumeLDelta = fVolumeLDiff * fRampLengthMul;
+		v->fVolumeRDelta = fVolumeRDiff * fRampLengthMul;
 	}
 }
 
@@ -340,7 +347,7 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 		return;
 	}
 
-	v->mixFuncOffset = ((int32_t)sample16Bit * 15) + (audio.interpolationType * 3) + loopType;
+	v->mixFuncOffset = ((int32_t)sample16Bit * 18) + (audio.interpolationType * 3) + loopType;
 	v->active = true;
 }
 
@@ -462,6 +469,8 @@ static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 	voice_t *v = voice; // normal voices
 	voice_t *r = &voice[MAX_CHANNELS]; // volume ramp fadeout-voices
 
+	const int32_t mixOffsetBias = 3 * NUM_INTERPOLATORS * 2; // 3 = loop types (off/fwd/bidi), 2 = bit depths (8-bit/16-bit)
+
 	for (int32_t i = 0; i < song.numChannels; i++, v++, r++)
 	{
 		if (v->active)
@@ -470,11 +479,11 @@ static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 			if (!volRampFlag && v->fCurrVolumeL == 0.0f && v->fCurrVolumeR == 0.0f)
 				silenceMixRoutine(v, samplesToMix);
 			else
-				mixFuncTab[((int32_t)volRampFlag * (3*5*2)) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
+				mixFuncTab[((int32_t)volRampFlag * mixOffsetBias) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
 		}
 
 		if (r->active) // volume ramp fadeout-voice
-			mixFuncTab[(3*5*2) + r->mixFuncOffset](r, bufferPosition, samplesToMix);
+			mixFuncTab[mixOffsetBias + r->mixFuncOffset](r, bufferPosition, samplesToMix);
 	}
 }
 

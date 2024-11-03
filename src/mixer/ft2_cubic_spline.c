@@ -1,3 +1,7 @@
+/*
+** Cubic Hermite spline (Catmull-Rom) interpolation LUT generator
+*/
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -22,10 +26,15 @@ bool calcCubicSplineTable(void)
 		const double x2 = x1 * x1; // x^2
 		const double x3 = x2 * x1; // x^3
 
-		*fPtr++ = (float)(-0.5 * x3 + 1.0 * x2 - 0.5 * x1);
-		*fPtr++ = (float)( 1.5 * x3 - 2.5 * x2 + 1.0);
-		*fPtr++ = (float)(-1.5 * x3 + 2.0 * x2 + 0.5 * x1);
-		*fPtr++ = (float)( 0.5 * x3 - 0.5 * x2);
+		const double t1 = -0.5 * x3 +       x2 - 0.5 * x1;
+		const double t2 =  1.5 * x3 - 2.5 * x2 + 1.0;
+		const double t3 = -1.5 * x3 + 2.0 * x2 + 0.5 * x1;
+		const double t4 =  0.5 * x3 - 0.5 * x2;
+
+		*fPtr++ = (float)t1;
+		*fPtr++ = (float)t2;
+		*fPtr++ = (float)t3;
+		*fPtr++ = (float)t4;
 	}
 
 	return true;

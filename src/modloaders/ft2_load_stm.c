@@ -212,7 +212,7 @@ bool loadSTM(FILE *f, uint32_t filesize)
 			s->loopLength = hdr.smp[i].loopEnd - hdr.smp[i].loopStart;
 
 			memcpy(s->name, hdr.smp[i].name, 12);
-			tuneSample(s, hdr.smp[i].midCFreq, tmpLinearPeriodsFlag);
+			setSampleC4Hz(s, hdr.smp[i].midCFreq);
 
 			if (s->loopStart < s->length && hdr.smp[i].loopEnd > s->loopStart && hdr.smp[i].loopEnd != 0xFFFF)
 			{

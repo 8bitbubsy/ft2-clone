@@ -94,7 +94,7 @@ bool loadFLAC(FILE *f, uint32_t filesize)
 	FLAC__stream_decoder_finish(decoder);
 	FLAC__stream_decoder_delete(decoder);
 
-	tuneSample(s, sampleRate, audio.linearPeriodsFlag);
+	setSampleC4Hz(s, sampleRate);
 
 	return true;
 
@@ -378,7 +378,7 @@ static FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *
 			{
 				int16_t *dst16 = (int16_t *)s->dataPtr + samplesRead;
 				for (uint32_t i = 0; i < blockSize; i++)
-					dst16[i] = (int16_t)((src32_L[i] + src32_R[i]) >> (16+1));
+					dst16[i] = (int16_t)((src32_L[i] + src32_R[i]) >> ((24-16)+1));
 			}
 			break;
 
@@ -411,7 +411,7 @@ static FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *
 			{
 				int16_t *dst16 = (int16_t *)s->dataPtr + samplesRead;
 				for (uint32_t i = 0; i < blockSize; i++)
-					dst16[i] = (int16_t)(src32[i] >> 8);
+					dst16[i] = (int16_t)(src32[i] >> (24-16));
 			}
 			break;
 

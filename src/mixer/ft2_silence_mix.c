@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdint.h>
 #include "../ft2_audio.h"
 
@@ -5,13 +6,13 @@
 
 void silenceMixRoutine(voice_t *v, int32_t numSamples)
 {
-	const uint64_t samplesToMix = (uint64_t)v->delta * (uint32_t)numSamples; // fixed-point
+	assert((uint32_t)numSamples <= UINT16_MAX);
 
-	const uint32_t samples = (uint32_t)(samplesToMix >> MIXER_FRAC_BITS);
-	const uint64_t samplesFrac = (samplesToMix & MIXER_FRAC_MASK) + v->positionFrac;
+	const uint32_t samplesInt = (uint32_t)(v->delta >> MIXER_FRAC_BITS) * (uint32_t)numSamples;
+	const uint64_t samplesFrac = (uint64_t)(v->delta & MIXER_FRAC_SCALE) * (uint32_t)numSamples;
 
-	uint32_t position = v->position + samples + (uint32_t)(samplesFrac >> MIXER_FRAC_BITS);
-	uint64_t positionFrac = samplesFrac & MIXER_FRAC_MASK;
+	uint32_t position = v->position + samplesInt + (uint32_t)(samplesFrac >> MIXER_FRAC_BITS);
+	uint32_t positionFrac = samplesFrac & MIXER_FRAC_MASK;
 
 	if (position < (uint32_t)v->sampleEnd) // we haven't reached the sample's end yet
 	{
@@ -39,6 +40,8 @@ void silenceMixRoutine(voice_t *v, int32_t numSamples)
 	{
 		if (v->loopLength >= 2)
 		{
+			// wrap as forward loop (position is inverted if sampling backwards, when needed)
+
 			const uint32_t overflow = position - v->sampleEnd;
 			const uint32_t cycles = overflow / v->loopLength;
 			const uint32_t phase = overflow % v->loopLength;

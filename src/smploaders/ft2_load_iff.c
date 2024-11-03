@@ -143,7 +143,7 @@ bool loadIFF(FILE *f, uint32_t filesize)
 	s->volume = (uint8_t)volume;
 	s->panning = 128;
 
-	tuneSample(s, sampleRate, audio.linearPeriodsFlag);
+	setSampleC4Hz(s, sampleRate);
 
 	// set name
 	if (namePtr != 0 && nameLen > 0)

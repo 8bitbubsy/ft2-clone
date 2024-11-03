@@ -49,7 +49,7 @@ typedef struct audio_t
 
 	uint64_t tickTime64, tickTime64Frac;
 
-	float *fMixBufferL, *fMixBufferR;
+	float *fMixBufferL, *fMixBufferR, fQuickVolRampSamplesMul, fSamplesPerTickIntMul;
 	double dHz2MixDeltaMul;
 
 	SDL_AudioDeviceID dev;

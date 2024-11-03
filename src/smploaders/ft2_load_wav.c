@@ -592,7 +592,7 @@ bool loadWAV(FILE *f, uint32_t filesize)
 	bool sample16Bit = !!(s->flags & SAMPLE_16BIT);
 	reallocateSmpData(s, sampleLength, sample16Bit); // readjust memory needed
 
-	tuneSample(s, sampleRate, audio.linearPeriodsFlag);
+	setSampleC4Hz(s, sampleRate);
 
 	s->volume = 64;
 	s->panning = 128;

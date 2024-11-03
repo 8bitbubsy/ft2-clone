@@ -27,6 +27,7 @@
 #include "ft2_sample_loader.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
+#include "mixer/ft2_gaussian.h"
 #include "mixer/ft2_cubic_spline.h"
 #include "mixer/ft2_windowed_sinc.h"
 
@@ -139,73 +140,23 @@ void removeSongModifiedFlag(void)
 	editor.updateWindowTitle = true;
 }
 
-// used on external sample load and during sample loading (on some module formats)
-void tuneSample(sample_t *s, const int32_t midCFreq, bool linearPeriodsFlag)
+void setSampleC4Hz(sample_t *s, double dC4Hz)
 {
-	#define MIN_PERIOD (0)
-	#define MAX_PERIOD (((10*12*16)-1)-1) /* -1 (because of bugged amigaPeriods table values) */
+	/* Sets a sample's relative note and finetune according to input C-4 rate.
+	**
+	** Note:
+	** This algorithm uses only 5 finetune bits (like FT2 internally),
+	** so that the resulting finetune is the same when loading it in a
+	** tracker that does support the full 8 finetune bits.
+	*/
 
-	double (*dGetHzFromPeriod)(int32_t) = linearPeriodsFlag ? dLinearPeriod2Hz : dAmigaPeriod2Hz;
-	const uint16_t *periodTab = linearPeriodsFlag ? linearPeriods : amigaPeriods;
+	const double dC4PeriodOffset = (NOTE_C4 * 16) + 16;
+	int32_t period = (int32_t)round(dC4PeriodOffset + (log2(dC4Hz / C4_FREQ) * 12.0 * 16.0));
 
-	if (midCFreq <= 0 || periodTab == NULL)
-	{
-		s->finetune = s->relativeNote = 0;
-		return;
-	}
+	// Hi-limit is A#9 at highest finetune. B-9 is bugged in FT2, don't include it.
+	period = CLAMP(period, 0, (12 * 16 * 10) - 1);
 
-	// handle frequency boundaries first...
-
-	if (midCFreq <= (int32_t)dGetHzFromPeriod(periodTab[MIN_PERIOD]))
-	{
-		s->finetune = -128;
-		s->relativeNote = -48;
-		return;
-	}
-
-	if (midCFreq >= (int32_t)dGetHzFromPeriod(periodTab[MAX_PERIOD]))
-	{
-		s->finetune = 127;
-		s->relativeNote = 71;
-		return;
-	}
-
-	// check if midCFreq is matching any of the non-finetuned note frequencies (C-0..B-9)
-
-	for (int8_t i = 0; i < 10*12; i++)
-	{
-		if (midCFreq == (int32_t)dGetHzFromPeriod(periodTab[16 + (i<<4)]))
-		{
-			s->finetune = 0;
-			s->relativeNote = i - NOTE_C4;
-			return;
-		}
-	}
-
-	// find closest frequency in period table
-
-	int32_t period = MAX_PERIOD;
-	for (; period >= MIN_PERIOD; period--)
-	{
-		const int32_t curr = (int32_t)dGetHzFromPeriod(periodTab[period]);
-		if (midCFreq == curr)
-			break;
-
-		if (midCFreq > curr)
-		{
-			const int32_t next = (int32_t)dGetHzFromPeriod(periodTab[period+1]);
-			const int32_t errorCurr = ABS(curr-midCFreq);
-			const int32_t errorNext = ABS(next-midCFreq);
-
-			if (errorCurr <= errorNext)
-				break; // current is the closest
-
-			period++;
-			break; // current+1 is the closest
-		}
-	}
-
-	s->finetune = ((period & 31) - 16) << 3;
+	s->finetune = ((period & 31) - 16) << 3; // 0..31 -> -128..120
 	s->relativeNote = (int8_t)(((period & ~31) >> 4) - NOTE_C4);
 }
 
@@ -452,7 +403,8 @@ void calcReplayerVars(int32_t audioFreq)
 		return;
 
 	audio.dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
-	audio.quickVolRampSamples = (uint32_t)round(audioFreq / (double)FT2_QUICKRAMP_SAMPLES);
+	audio.quickVolRampSamples = (uint32_t)round(audioFreq / (1000.0 / FT2_QUICK_VOLRAMP_MILLISECONDS));
+	audio.fQuickVolRampSamplesMul = (float)(1.0 / (double)audio.quickVolRampSamples);
 
 	for (int32_t bpm = MIN_BPM; bpm <= MAX_BPM; bpm++)
 	{
@@ -477,7 +429,7 @@ void calcReplayerVars(int32_t audioFreq)
 }
 
 // for piano in Instr. Ed. (values outside 0..95 can happen)
-int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote) 
+int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote)
 {
 	assert(note2Period != NULL);
 	if (period > note2Period[0])
@@ -2838,6 +2790,7 @@ void closeReplayer(void)
 		instr[131] = NULL;
 	}
 
+	freeGaussianTable();
 	freeCubicSplineTable();
 	freeWindowedSincTables();
 }

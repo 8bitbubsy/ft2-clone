@@ -563,7 +563,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 				s->loopStart = smpHdr.loopStart;
 				s->loopLength = smpHdr.loopEnd - smpHdr.loopStart;
 
-				tuneSample(s, smpHdr.midCFreq, tmpLinearPeriodsFlag);
+				setSampleC4Hz(s, smpHdr.midCFreq);
 
 				if (sample16Bit)
 				{

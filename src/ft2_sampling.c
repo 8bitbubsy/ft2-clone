@@ -383,14 +383,14 @@ void startSampling(void)
 
 	smpL = &instr[editor.curInstr]->smp[editor.curSmp];
 	freeSample(editor.curInstr, editor.curSmp); // also sets pan to 128 and vol to 64
-	tuneSample(smpL, samplingRate, audio.linearPeriodsFlag);
+	setSampleC4Hz(smpL, samplingRate);
 	smpL->flags |= SAMPLE_16BIT;
 
 	if (sampleInStereo)
 	{
 		smpR = &instr[editor.curInstr]->smp[editor.curSmp+1];
 		freeSample(editor.curInstr, editor.curSmp+1); // also sets pan to 128 and vol to 64
-		tuneSample(smpR, samplingRate, audio.linearPeriodsFlag);
+		setSampleC4Hz(smpR, samplingRate);
 		smpR->flags |= SAMPLE_16BIT;
 
 		strcpy(smpL->name, "Left sample");

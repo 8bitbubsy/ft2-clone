@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_unicode.h"
+#include "mixer/ft2_gaussian.h"
 #include "mixer/ft2_cubic_spline.h"
 #include "mixer/ft2_windowed_sinc.h"
 
@@ -47,7 +48,7 @@ enum
 #define C4_FREQ 8363
 #define NOTE_C4 (4*12)
 #define NOTE_OFF 97
-#define MAX_NOTES (10*12*16+16)
+#define MAX_NOTES ((10*12*16)+16)
 #define MAX_PATTERNS 256
 #define MAX_PATT_LEN 256
 #define MAX_INST 128
@@ -57,7 +58,7 @@ enum
 #define INSTR_HEADER_SIZE 263
 #define INSTR_XI_HEADER_SIZE 298
 #define MAX_SAMPLE_LEN 0x3FFFFFFF
-#define FT2_QUICKRAMP_SAMPLES 200
+#define FT2_QUICK_VOLRAMP_MILLISECONDS 5
 #define PROG_NAME_STR "Fasttracker II clone"
 
 enum // sample flags
@@ -287,10 +288,7 @@ void fixSongName(void);
 void fixInstrAndSampleNames(int16_t insNum);
 
 void calcReplayerVars(int32_t rate);
-
-// used on external sample load and during sample loading in some module formats
-void tuneSample(sample_t *s, const int32_t midCFreq, bool linearPeriodsFlag);
-
+void setSampleC4Hz(sample_t *s, double dC4Hz);
 void calcReplayerLogTab(void); // for linear period -> hz calculation
 
 double dLinearPeriod2Hz(int32_t period);

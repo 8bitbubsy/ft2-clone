@@ -317,9 +317,9 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 365,  72, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    scrollAudOutputDevListDown, NULL },
 	{ 365, 103, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    scrollAudInputDevListUp,    NULL },
 	{ 365, 137, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    scrollAudInputDevListDown,  NULL },
-	{ 508, 117, 21, 13, 1, 4, ARROW_LEFT_STRING,  NULL,    configAmpDown,              NULL },
+	{ 512, 117, 21, 13, 1, 4, ARROW_LEFT_STRING,  NULL,    configAmpDown,              NULL },
 	{ 608, 117, 21, 13, 1, 4, ARROW_RIGHT_STRING, NULL,    configAmpUp,                NULL },
-	{ 508, 143, 21, 13, 1, 0, ARROW_LEFT_STRING,  NULL,    configMasterVolDown,        NULL },
+	{ 512, 143, 21, 13, 1, 0, ARROW_LEFT_STRING,  NULL,    configMasterVolDown,        NULL },
 	{ 608, 143, 21, 13, 1, 0, ARROW_RIGHT_STRING, NULL,    configMasterVolUp,          NULL },
 
 	// ------ CONFIG LAYOUT PUSHBUTTONS ------

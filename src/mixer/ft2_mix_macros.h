@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../ft2_audio.h"
+#include "ft2_cubic_spline.h"
+#include "ft2_gaussian.h"
 #include "ft2_windowed_sinc.h"
 
 /* ----------------------------------------------------------------------- */
@@ -79,7 +81,7 @@
 	fVolumeR += fVolumeRDelta;
 
 /* ----------------------------------------------------------------------- */
-/*                            NO INTERPOLATION                             */
+/*                  NO INTERPOLATION (NEAREST NEIGHBOR)                    */
 /* ----------------------------------------------------------------------- */
 
 #define RENDER_8BIT_SMP \
@@ -163,6 +165,36 @@
 #define RENDER_16BIT_SMP_CINTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
 	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+/* ----------------------------------------------------------------------- */
+/*                         GAUSSIAN INTERPOLATION                          */
+/* ----------------------------------------------------------------------- */
+
+// through LUT: mixer/ft2_gaussian.c
+
+/* It may look like we are potentially going out of bounds while looking up the sample points,
+** but the sample data is actually padded on the right side, where correct tap are stored according
+** to loop mode (or no loop).
+*/
+
+#define GAUSSIAN_INTERPOLATION(s, f, scale) \
+{ \
+	const float *t = fGaussianLUT + (((uint32_t)(f) >> GAUSSIAN_FSHIFT) & GAUSSIAN_FMASK); \
+	fSample = ((s[0] * t[0]) + \
+			   (s[1] * t[1]) + \
+			   (s[2] * t[2]) + \
+			   (s[3] * t[3])) * (1.0f / scale); \
+}
+
+#define RENDER_8BIT_SMP_GINTRP \
+	GAUSSIAN_INTERPOLATION(smpPtr, positionFrac, 128.0f) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+#define RENDER_16BIT_SMP_GINTRP \
+	GAUSSIAN_INTERPOLATION(smpPtr, positionFrac, 32768.0f) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 

@@ -75,28 +75,29 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 
 	// audio buffer size
 	//x,   y,  w,   group,                           funcOnUp
-	{ 390, 16,  46, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigAudioBuffSmall  },
-	{ 390, 30, 113, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigAudioBuffMedium },
-	{ 390, 44,  50, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigAudioBuffLarge },
+	{ 390, 16,  45, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigAudioBuffSmall  },
+	{ 390, 30, 112, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigAudioBuffMedium },
+	{ 390, 44,  49, RB_GROUP_CONFIG_SOUND_BUFF_SIZE, rbConfigAudioBuffLarge },
 
 	// audio bit depth
 	//x,   y,  w,  group,                           funcOnUp
-	{ 390, 74, 52, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio16Bit },
-	{ 390, 88, 93, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio32BitFloat },
+	{ 390, 73, 51, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio16Bit },
+	{ 453, 73, 51, RB_GROUP_CONFIG_AUDIO_BIT_DEPTH, rbConfigAudio32BitFloat },
 
 	// audio interpolation
 	//x,   y,   w,   group,                               funcOnUp
-	{ 390, 104, 109, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpDisabled },
-	{ 390, 118,  91, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpLinear },
-	{ 390, 132,  86, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpCubic },
-	{ 390, 146,  95, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrp8PointSinc },
-	{ 390, 160, 102, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrp16PointSinc },
+	{ 390,  90, 108, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpDisabled },
+	{ 390, 104,  90, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpLinear },
+	{ 390, 118, 115, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpGaussian },
+	{ 390, 132,  95, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpCubic },
+	{ 390, 146,  94, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrp8PointSinc },
+	{ 390, 160, 101, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrp16PointSinc },
 
 	// audio output frequency
 	//x,   y,  w,  group,                      funcOnUp
-	{ 509, 16, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
-	{ 509, 30, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
-	{ 509, 44, 66, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio96kHz },
+	{ 513, 16, 65, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio44kHz },
+	{ 513, 30, 65, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio48kHz },
+	{ 513, 44, 65, RB_GROUP_CONFIG_AUDIO_FREQ, rbConfigAudio96kHz },
 
 	// audio input frequency
 	//x,   y,   w,  group,                            funcOnUp
@@ -106,8 +107,8 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 
 	// frequency slides
 	//x,   y,  w,   group,                       funcOnUp
-	{ 509, 74,  50, RB_GROUP_CONFIG_FREQ_SLIDES, rbConfigFreqSlidesAmiga  },
-	{ 509, 88, 108, RB_GROUP_CONFIG_FREQ_SLIDES, rbConfigFreqSlidesLinear },
+	{ 513, 74,  49, RB_GROUP_CONFIG_FREQ_SLIDES, rbConfigFreqSlidesAmiga  },
+	{ 513, 88, 107, RB_GROUP_CONFIG_FREQ_SLIDES, rbConfigFreqSlidesLinear },
 
 	// ------ CONFIG LAYOUT ------
 

@@ -20,14 +20,6 @@ enum
 	CONFIG_HIDE_ERRORS = 0,
 	CONFIG_SHOW_ERRORS = 1,
 
-	// don't change the order of these! (yes, it looks off)
-	INTERPOLATION_DISABLED = 0,
-	INTERPOLATION_SINC8 = 1,
-	INTERPOLATION_LINEAR = 2,
-	INTERPOLATION_SINC16 = 3,
-	INTERPOLATION_CUBIC = 4,
-	// ------
-
 	MOUSE_IDLE_SHAPE_NICE = 0,
 	MOUSE_IDLE_SHAPE_UGLY = 1,
 	MOUSE_IDLE_SHAPE_AWFUL = 2,
@@ -55,21 +47,13 @@ enum
 	PAL_JUNGLE = 5,
 	PAL_LITHE_DARK = 6,
 	PAL_ROSE = 7,
-	PAL_DARK_MODE = 8,
+	PAL_DARK_MODE = 8, // default
 	PAL_VIOLENT = 9,
-	PAL_WHY_COLORS = 10, // default
+	PAL_WHY_COLORS = 10,
 	PAL_USER_DEFINED = 11,
 
 	FILESORT_EXT = 0,
 	FILESORT_NAME = 1,
-
-	ONE_PLAYER = 0,
-	TWO_PLAYERS = 1,
-
-	DIFFICULTY_NOVICE = 0,
-	DIFFICULTY_AVERAGE = 1,
-	DIFFICULTY_PRO = 2,
-	DIFFICULTY_MANIAC = 3,
 
 	DONT_SHOW_IMPORT_WARNING_FLAG = 64,
 	DONT_SHOW_NOT_YET_APPLIED_WARNING_FLAG = 32,
@@ -221,6 +205,7 @@ void rbConfigAudio16Bit(void);
 void rbConfigAudio32BitFloat(void);
 void rbConfigAudioIntrpDisabled(void);
 void rbConfigAudioIntrpLinear(void);
+void rbConfigAudioIntrpGaussian(void);
 void rbConfigAudioIntrpCubic(void);
 void rbConfigAudioIntrp8PointSinc(void);
 void rbConfigAudioIntrp16PointSinc(void);

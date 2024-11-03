@@ -139,7 +139,7 @@ static void loadConfigFromBuffer(bool defaults)
 	config.recMIDIVolSens = CLAMP(config.recMIDIVolSens, 0, 200);
 	config.recMIDIChn  = CLAMP(config.recMIDIChn, 1, 16);
 
-	if (config.interpolation > 4)
+	if (config.interpolation >= NUM_INTERPOLATORS)
 		config.interpolation = INTERPOLATION_SINC8; // default (sinc, 8 point)
 
 	if (config.recTrueInsert > 1)
@@ -837,6 +837,8 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 		tmpID = RB_CONFIG_AUDIO_INTRP_SINC16;
 	else if (config.interpolation == INTERPOLATION_CUBIC)
 		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC;
+	else if (config.interpolation == INTERPOLATION_GAUSSIAN)
+		tmpID = RB_CONFIG_AUDIO_INTRP_GAUSSIAN;
 	else
 		tmpID = RB_CONFIG_AUDIO_INTRP_SINC8; // default case
 
@@ -1126,13 +1128,13 @@ void showConfigScreen(void)
 			drawFramework(110,   0, 276, 87, FRAMEWORK_TYPE1);
 			drawFramework(110,  87, 276, 86, FRAMEWORK_TYPE1);
 
-			drawFramework(386,   0, 119, 58, FRAMEWORK_TYPE1);
-			drawFramework(386,  58, 119, 44, FRAMEWORK_TYPE1);
-			drawFramework(386, 102, 119, 71, FRAMEWORK_TYPE1);
+			drawFramework(386,   0, 123, 58, FRAMEWORK_TYPE1);
+			drawFramework(386,  58, 123, 29, FRAMEWORK_TYPE1);
+			drawFramework(386,  87, 123, 86, FRAMEWORK_TYPE1);
 
-			drawFramework(505,   0, 127, 58, FRAMEWORK_TYPE1);
-			drawFramework(505, 102, 127, 71, FRAMEWORK_TYPE1);
-			drawFramework(505,  58, 127, 44, FRAMEWORK_TYPE1);
+			drawFramework(509,   0, 123, 58, FRAMEWORK_TYPE1);
+			drawFramework(509, 102, 123, 71, FRAMEWORK_TYPE1);
+			drawFramework(509,  58, 123, 44, FRAMEWORK_TYPE1);
 
 			drawFramework(112,  16, AUDIO_SELECTORS_BOX_WIDTH+4, 69, FRAMEWORK_TYPE2);
 			drawFramework(112, 103, AUDIO_SELECTORS_BOX_WIDTH+4, 47, FRAMEWORK_TYPE2);
@@ -1161,33 +1163,34 @@ void showConfigScreen(void)
 			textOutShadow(336, 157, PAL_FORGRND, PAL_DSKTOP2, "96.0kHz");
 
 			textOutShadow(390,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio buffer size:");
-			textOutShadow(406,  17, PAL_FORGRND, PAL_DSKTOP2, "Small");
-			textOutShadow(406,  31, PAL_FORGRND, PAL_DSKTOP2, "Medium (default)");
-			textOutShadow(406,  45, PAL_FORGRND, PAL_DSKTOP2, "Large");
+			textOutShadow(405,  17, PAL_FORGRND, PAL_DSKTOP2, "Small");
+			textOutShadow(405,  31, PAL_FORGRND, PAL_DSKTOP2, "Medium (default)");
+			textOutShadow(405,  45, PAL_FORGRND, PAL_DSKTOP2, "Large");
 
 			textOutShadow(390,  61, PAL_FORGRND, PAL_DSKTOP2, "Audio bit depth:");
-			textOutShadow(406,  75, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
-			textOutShadow(406,  89, PAL_FORGRND, PAL_DSKTOP2, "32-bit (float)");
+			textOutShadow(405,  74, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
+			textOutShadow(468,  74, PAL_FORGRND, PAL_DSKTOP2, "32-bit");
 
-			textOutShadow(406, 105, PAL_FORGRND, PAL_DSKTOP2, "No interpolation");
-			textOutShadow(406, 119, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
-			textOutShadow(406, 133, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
-			textOutShadow(406, 147, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
-			textOutShadow(406, 161, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
+			textOutShadow(405,  91, PAL_FORGRND, PAL_DSKTOP2, "No interpolation");
+			textOutShadow(405, 105, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
+			textOutShadow(405, 119, PAL_FORGRND, PAL_DSKTOP2, "Gaussian (SNES)");
+			textOutShadow(405, 133, PAL_FORGRND, PAL_DSKTOP2, "Cubic Hermite");
+			textOutShadow(405, 147, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
+			textOutShadow(405, 161, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
 
-			textOutShadow(509,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
-			textOutShadow(525,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
-			textOutShadow(525,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz");
-			textOutShadow(525,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
+			textOutShadow(513,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
+			textOutShadow(528,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
+			textOutShadow(528,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz");
+			textOutShadow(528,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
 
-			textOutShadow(509,  61, PAL_FORGRND, PAL_DSKTOP2, "Frequency slides:");
-			textOutShadow(525,  75, PAL_FORGRND, PAL_DSKTOP2, "Amiga");
-			textOutShadow(525,  89, PAL_FORGRND, PAL_DSKTOP2, "Linear (default)");
+			textOutShadow(513,  61, PAL_FORGRND, PAL_DSKTOP2, "Frequency slides:");
+			textOutShadow(528,  75, PAL_FORGRND, PAL_DSKTOP2, "Amiga");
+			textOutShadow(528,  89, PAL_FORGRND, PAL_DSKTOP2, "Linear (default)");
 
-			textOutShadow(509, 105, PAL_FORGRND, PAL_DSKTOP2, "Amplification:");
+			textOutShadow(513, 105, PAL_FORGRND, PAL_DSKTOP2, "Amplification:");
 			charOutShadow(621, 105, PAL_FORGRND, PAL_DSKTOP2, 'x');
-			textOutShadow(509, 133, PAL_FORGRND, PAL_DSKTOP2, "Master volume:");
-			textOutShadow(525, 160, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
+			textOutShadow(513, 133, PAL_FORGRND, PAL_DSKTOP2, "Master volume:");
+			textOutShadow(529, 160, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
 
 			setConfigAudioRadioButtonStates();
 			setConfigAudioCheckButtonStates();
@@ -1623,6 +1626,13 @@ void rbConfigAudioIntrpLinear(void)
 	config.interpolation = INTERPOLATION_LINEAR;
 	audioSetInterpolationType(config.interpolation);
 	checkRadioButton(RB_CONFIG_AUDIO_INTRP_LINEAR);
+}
+
+void rbConfigAudioIntrpGaussian(void)
+{
+	config.interpolation = INTERPOLATION_GAUSSIAN;
+	audioSetInterpolationType(config.interpolation);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_GAUSSIAN);
 }
 
 void rbConfigAudioIntrpCubic(void)
