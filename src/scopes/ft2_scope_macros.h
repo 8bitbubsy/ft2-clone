@@ -1,6 +1,8 @@
 #pragma once
 
 #include <stdint.h>
+#include "../ft2_header.h"
+#include "../mixer/ft2_windowed_sinc.h"
 #include "ft2_scopes.h"
 
 /* ----------------------------------------------------------------------- */
@@ -10,113 +12,72 @@
 #define SCOPE_REGS_NO_LOOP \
 	const int32_t volume = s->volume; \
 	const int32_t sampleEnd = s->sampleEnd; \
-	const uint32_t delta = s->drawDelta; \
+	const uint64_t delta = s->drawDelta; \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
-	const uint32_t width = x + w; \
+	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t position = s->position; \
-	uint32_t positionFrac = 0;
+	uint64_t positionFrac = 0;
 
 #define SCOPE_REGS_LOOP \
 	const int32_t volume = s->volume; \
 	const int32_t sampleEnd = s->sampleEnd; \
 	const int32_t loopStart = s->loopStart; \
 	const int32_t loopLength = s->loopLength; \
-	const uint32_t delta = s->drawDelta; \
+	const uint64_t delta = s->drawDelta; \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
-	const uint32_t width = x + w; \
+	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t position = s->position; \
-	uint32_t positionFrac = 0;
+	uint64_t positionFrac = 0;
 
-#define SCOPE_REGS_PINGPONG \
+#define SCOPE_REGS_BIDI \
 	const int32_t volume = s->volume; \
 	const int32_t sampleEnd = s->sampleEnd; \
 	const int32_t loopStart = s->loopStart; \
 	const int32_t loopLength = s->loopLength; \
-	const uint32_t delta = s->drawDelta; \
+	const uint64_t delta = s->drawDelta; \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
-	const uint32_t width = x + w; \
+	uint32_t width = x + w; \
 	int32_t sample; \
-	int32_t position = s->position; \
-	uint32_t positionFrac = 0; \
-	int32_t direction = s->direction;
+	int32_t actualPos, position = s->position; \
+	uint64_t positionFrac = 0; \
+	bool samplingBackwards = s->samplingBackwards;
 
 #define LINED_SCOPE_REGS_NO_LOOP \
-	const int32_t volume = s->volume; \
-	const int32_t sampleEnd = s->sampleEnd; \
-	const uint32_t delta = (uint32_t)(s->delta >> (SCOPE_FRAC_BITS-10)); \
-	const uint32_t width = (x + w) - 1; \
-	int32_t sample, sample2; \
-	int32_t y1, y2; \
-	int32_t position = s->position; \
-	uint32_t positionFrac = 0;
+	SCOPE_REGS_NO_LOOP \
+	int32_t smpY1, smpY2; \
+	width--;
 
 #define LINED_SCOPE_REGS_LOOP \
-	const int32_t volume = s->volume; \
-	const int32_t sampleEnd = s->sampleEnd; \
-	const int32_t loopStart = s->loopStart; \
-	const int32_t loopLength = s->loopLength; \
-	const uint32_t delta = (uint32_t)(s->delta >> (SCOPE_FRAC_BITS-10)); \
-	const uint32_t width = (x + w) - 1; \
-	int32_t sample, sample2; \
-	int32_t y1, y2; \
-	int32_t position = s->position; \
-	uint32_t positionFrac = 0;
+	SCOPE_REGS_LOOP \
+	int32_t smpY1, smpY2; \
+	width--;
 
-#define LINED_SCOPE_REGS_PINGPONG \
-	const int32_t volume = s->volume; \
-	const int32_t sampleEnd = s->sampleEnd; \
-	const int32_t loopStart = s->loopStart; \
-	const int32_t loopLength = s->loopLength; \
-	const uint32_t delta = (uint32_t)(s->delta >> (SCOPE_FRAC_BITS-10)); \
-	const uint32_t width = (x + w) - 1; \
-	int32_t sample, sample2; \
-	int32_t y1, y2; \
-	int32_t position = s->position; \
-	uint32_t positionFrac = 0; \
-	int32_t direction = s->direction;
+#define LINED_SCOPE_REGS_BIDI \
+	SCOPE_REGS_BIDI \
+	int32_t smpY1, smpY2; \
+	width--;
 
-/* Note: Sample data already has a fixed tap samples at the end of the sample,
-** so that an out-of-bounds read is OK and reads the correct interpolation tap.
+/* Note: Sample data already has fixed tap samples at the end of the sample,
+** so that out-of-bounds reads get the correct interpolation tap data.
 */
 
-#define COLLECT_LERP_SAMPLES8 \
-		sample = s->base8[position+0] << 8; \
-		sample2 = s->base8[position+1] << 8;
+#define INTERPOLATE_SMP8(pos, frac) \
+	const int8_t *s8 = s->base8 + pos; \
+	const int16_t *t = scopeGaussianLUT + (((frac) >> (SCOPE_FRAC_BITS-8)) << 2); \
+	sample = ((s8[0] * t[0]) + \
+	          (s8[1] * t[1]) + \
+	          (s8[2] * t[2]) + \
+	          (s8[3] * t[3])) >> (15-8);
 
-#define COLLECT_LERP_SAMPLES16 \
-		sample = s->base16[position+0]; \
-		sample2 = s->base16[position+1];
-
-#define DO_LERP \
-		const int32_t frac = (uint32_t)positionFrac >> 1; /* 0..32767 */ \
-		sample2 -= sample; \
-		sample2 = (sample2 * frac) >> 15; \
-		sample += sample2; \
-
-#define DO_LERP_BIDI \
-		int32_t frac = (uint32_t)positionFrac >> 1; /* 0..32767 */ \
-		if (direction == -1) frac ^= 32767; /* negate frac */ \
-		sample2 -= sample; \
-		sample2 = (sample2 * frac) >> 15; \
-		sample += sample2;
-
-#define GET_LERP_SMP8 \
-		COLLECT_LERP_SAMPLES8 \
-		DO_LERP
-
-#define GET_LERP_SMP16 \
-		COLLECT_LERP_SAMPLES16 \
-		DO_LERP
-
-#define GET_LERP_SMP8_BIDI \
-		COLLECT_LERP_SAMPLES8 \
-		DO_LERP_BIDI
-
-#define GET_LERP_SMP16_BIDI  \
-		COLLECT_LERP_SAMPLES16 \
-		DO_LERP_BIDI
+#define INTERPOLATE_SMP16(pos, frac) \
+	const int16_t *s16 = s->base16 + pos; \
+	const int16_t *t = scopeGaussianLUT + (((frac) >> (SCOPE_FRAC_BITS-8)) << 2); \
+	sample = ((s16[0] * t[0]) + \
+	          (s16[1] * t[1]) + \
+	          (s16[2] * t[2]) + \
+	          (s16[3] * t[3])) >> 15;
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
@@ -130,10 +91,32 @@
 	else \
 		sample = 0;
 
-#define SCOPE_GET_LERP_SMP8 \
+#define SCOPE_GET_SMP8_BIDI \
 	if (s->active) \
 	{ \
-		GET_LERP_SMP8 \
+		GET_BIDI_POSITION \
+		sample = (s->base8[actualPos] * volume) >> 8; \
+	} \
+	else \
+	{ \
+		sample = 0; \
+	}
+
+#define SCOPE_GET_SMP16_BIDI \
+	if (s->active) \
+	{ \
+		GET_BIDI_POSITION \
+		sample = (s->base16[actualPos] * volume) >> 16; \
+	} \
+	else \
+	{ \
+		sample = 0; \
+	}
+
+#define SCOPE_GET_INTERPOLATED_SMP8 \
+	if (s->active) \
+	{ \
+		INTERPOLATE_SMP8(position, (uint32_t)positionFrac) \
 		sample = (sample * volume) >> 16; \
 	} \
 	else \
@@ -141,10 +124,10 @@
 		sample = 0; \
 	}
 
-#define SCOPE_GET_LERP_SMP16 \
+#define SCOPE_GET_INTERPOLATED_SMP16 \
 	if (s->active) \
 	{ \
-		GET_LERP_SMP16 \
+		INTERPOLATE_SMP16(position, (uint32_t)positionFrac) \
 		sample = (sample * volume) >> 16; \
 	} \
 	else \
@@ -152,10 +135,17 @@
 		sample = 0; \
 	}
 
-#define SCOPE_GET_LERP_SMP8_BIDI \
+#define GET_BIDI_POSITION \
+	if (samplingBackwards) \
+		actualPos = (sampleEnd - 1) - (position - loopStart); \
+	else \
+		actualPos = position;
+
+#define SCOPE_GET_INTERPOLATED_SMP8_BIDI \
 	if (s->active) \
 	{ \
-		GET_LERP_SMP8_BIDI \
+		GET_BIDI_POSITION \
+		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : positionFrac) \
 		sample = (sample * volume) >> 16; \
 	} \
 	else \
@@ -163,10 +153,11 @@
 		sample = 0; \
 	}
 
-#define SCOPE_GET_LERP_SMP16_BIDI \
+#define SCOPE_GET_INTERPOLATED_SMP16_BIDI \
 	if (s->active) \
 	{ \
-		GET_LERP_SMP16_BIDI \
+		GET_BIDI_POSITION \
+		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : positionFrac) \
 		sample = (sample * volume) >> 16; \
 	} \
 	else \
@@ -174,43 +165,38 @@
 		sample = 0; \
 	}
 
-#define SCOPE_UPDATE_DRAWPOS \
+#define SCOPE_UPDATE_READPOS \
 	positionFrac += delta; \
-	position += positionFrac >> 16; \
-	positionFrac &= 0xFFFF;
-
-#define SCOPE_UPDATE_DRAWPOS_PINGPONG \
-	positionFrac += delta; \
-	position += (int32_t)(positionFrac >> 16) * direction; \
-	positionFrac &= 0xFFFF;
+	position += positionFrac >> 32; \
+	positionFrac &= UINT32_MAX;
 
 #define SCOPE_DRAW_SMP \
 	video.frameBuffer[((lineY - sample) * SCREEN_W) + x] = color;
 
-#define LINED_SCOPE_PREPARE_LERP_SMP8 \
-	SCOPE_GET_LERP_SMP8 \
-	y1 = lineY - sample; \
-	SCOPE_UPDATE_DRAWPOS
+#define LINED_SCOPE_PREPARE_SMP8 \
+	SCOPE_GET_INTERPOLATED_SMP8 \
+	smpY1 = lineY - sample; \
+	SCOPE_UPDATE_READPOS
 
-#define LINED_SCOPE_PREPARE_LERP_SMP16 \
-	SCOPE_GET_LERP_SMP16 \
-	y1 = lineY - sample; \
-	SCOPE_UPDATE_DRAWPOS
+#define LINED_SCOPE_PREPARE_SMP16 \
+	SCOPE_GET_INTERPOLATED_SMP16 \
+	smpY1 = lineY - sample; \
+	SCOPE_UPDATE_READPOS
 
-#define LINED_SCOPE_PREPARE_LERP_SMP8_BIDI \
-	SCOPE_GET_LERP_SMP8_BIDI \
-	y1 = lineY - sample; \
-	SCOPE_UPDATE_DRAWPOS
+#define LINED_SCOPE_PREPARE_SMP8_BIDI \
+	SCOPE_GET_INTERPOLATED_SMP8_BIDI \
+	smpY1 = lineY - sample; \
+	SCOPE_UPDATE_READPOS
 
-#define LINED_SCOPE_PREPARE_LERP_SMP16_BIDI \
-	SCOPE_GET_LERP_SMP16_BIDI \
-	y1 = lineY - sample; \
-	SCOPE_UPDATE_DRAWPOS
+#define LINED_SCOPE_PREPARE_SMP16_BIDI \
+	SCOPE_GET_INTERPOLATED_SMP16_BIDI \
+	smpY1 = lineY - sample; \
+	SCOPE_UPDATE_READPOS
 
 #define LINED_SCOPE_DRAW_SMP \
-	y2 = lineY - sample; \
-	scopeLine(x, y1, y2); \
-	y1 = y2; \
+	smpY2 = lineY - sample; \
+	scopeLine(x, smpY1, smpY2, color); \
+	smpY1 = smpY2;
 
 #define SCOPE_HANDLE_POS_NO_LOOP \
 	if (position >= sampleEnd) \
@@ -225,22 +211,19 @@
 			position = loopStart; \
 	}
 
-#define SCOPE_HANDLE_POS_PINGPONG \
-	if (direction == -1 && position < loopStart) \
+#define SCOPE_HANDLE_POS_BIDI \
+	if (position >= sampleEnd) \
 	{ \
-		direction = 1; /* change direction to forwards */ \
-		\
 		if (loopLength >= 2) \
-			position = loopStart + ((loopStart - position - 1) % loopLength); \
+		{ \
+			const uint32_t overflow = position - sampleEnd; \
+			const uint32_t cycles = overflow / loopLength; \
+			const uint32_t phase = overflow % loopLength; \
+			position = loopStart + phase; \
+			samplingBackwards ^= !(cycles & 1); \
+		} \
 		else \
+		{ \
 			position = loopStart; \
-	} \
-	else if (position >= sampleEnd) \
-	{ \
-		direction = -1; /* change direction to backwards */ \
-		\
-		if (loopLength >= 2) \
-			position = (sampleEnd - 1) - ((position - sampleEnd) % loopLength); \
-		else \
-			position = sampleEnd - 1; \
+		} \
 	}

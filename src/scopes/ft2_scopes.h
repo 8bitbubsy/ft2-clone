@@ -25,11 +25,10 @@ typedef struct scope_t
 	volatile bool active;
 	const int8_t *base8;
 	const int16_t *base16;
-	bool wasCleared, sample16Bit;
+	bool wasCleared, sample16Bit, samplingBackwards;
 	uint8_t loopType;
-	int32_t volume, direction, loopStart, loopLength, sampleEnd, position;
-	uint32_t drawDelta;
-	uint64_t delta, positionFrac;
+	int32_t volume, loopStart, loopLength, sampleEnd, position;
+	uint64_t delta, drawDelta, positionFrac;
 } scope_t;
 
 typedef struct lastChInstr_t

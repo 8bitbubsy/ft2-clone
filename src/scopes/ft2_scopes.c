@@ -40,14 +40,21 @@ int32_t getSamplePosition(uint8_t ch)
 
 	// cache some stuff
 	volatile bool active = sc->active;
+	volatile bool samplingBackwards = sc->samplingBackwards;
 	volatile int32_t position = sc->position;
+	volatile int32_t loopStart = sc->loopStart;
 	volatile int32_t sampleEnd = sc->sampleEnd;
 
 	if (!active || sampleEnd == 0)
 		return -1;
 
 	if (position >= 0 && position < sampleEnd)
+	{
+		if (samplingBackwards) // get actual bidi pos when in backwards mode
+			position = (sampleEnd - 1) - (position - loopStart);
+
 		return position;
+	}
 
 	return -1; // not active or overflown
 }
@@ -307,7 +314,7 @@ static void scopeTrigger(int32_t ch, const sample_t *s, int32_t playOffset)
 
 	tempState.sample16Bit = sample16Bit;
 	tempState.loopType = loopType;
-	tempState.direction = 1; // forwards
+	tempState.samplingBackwards = false;
 	tempState.sampleEnd = (loopType == LOOP_OFF) ? length : loopEnd;
 	tempState.loopStart = loopStart;
 	tempState.loopLength = loopLength;
@@ -347,52 +354,41 @@ static void updateScopes(void)
 		// scope position update
 
 		s.positionFrac += s.delta;
-		const uint32_t wholeSamples = (uint32_t)(s.positionFrac >> SCOPE_FRAC_BITS);
+		s.position += s.positionFrac >> SCOPE_FRAC_BITS;
 		s.positionFrac &= SCOPE_FRAC_MASK;
 
-		if (s.direction == 1)
-			s.position += wholeSamples; // forwards
-		else
-			s.position -= wholeSamples; // backwards
-
-		// handle loop wrapping or sample end
-		if (s.direction == -1 && s.position < s.loopStart) // sampling backwards (definitely pingpong loop)
+		if (s.position >= s.sampleEnd)
 		{
-			s.direction = 1; // change direction to forwards
-
-			if (s.loopLength >= 2)
-				s.position = s.loopStart + ((s.loopStart - s.position - 1) % s.loopLength);
-			else
-				s.position = s.loopStart;
-
-			assert(s.position >= s.loopStart && s.position < s.sampleEnd);
-		}
-		else if (s.position >= s.sampleEnd)
-		{
-			uint32_t loopOverflowVal;
-
-			if (s.loopLength >= 2)
-				loopOverflowVal = (s.position - s.sampleEnd) % s.loopLength;
-			else
-				loopOverflowVal = 0;
-
-			if (s.loopType == LOOP_DISABLED)
+			if (s.loopType == LOOP_BIDI)
 			{
-				s.active = false;
+				if (s.loopLength >= 2)
+				{
+					// wrap as forward loop (position is inverted if sampling backwards, when needed)
+
+					const uint32_t overflow = s.position - s.sampleEnd;
+					const uint32_t cycles = overflow / s.loopLength;
+					const uint32_t phase = overflow % s.loopLength;
+
+					s.position = s.loopStart + phase;
+					s.samplingBackwards ^= !(cycles & 1);
+				}
+				else
+				{
+					s.position = s.loopStart;
+				}
 			}
 			else if (s.loopType == LOOP_FORWARD)
 			{
-				s.position = s.loopStart + loopOverflowVal;
-				assert(s.position >= s.loopStart && s.position < s.sampleEnd);
+				if (s.loopLength >= 2)
+					s.position = s.loopStart + ((s.position - s.sampleEnd) % s.loopLength);
+				else
+					s.position = s.loopStart;
 			}
-			else // pingpong loop
+			else // no loop
 			{
-				s.direction = -1; // change direction to backwards
-				s.position = (s.sampleEnd - 1) - loopOverflowVal;
-				assert(s.position >= s.loopStart && s.position < s.sampleEnd);
+				s.active = false;
 			}
 		}
-		assert(s.position >= 0);
 
 		*sc = s; // set new scope state
 	}
@@ -432,10 +428,8 @@ void drawScopes(void)
 			// scope is active
 			scope[i].wasCleared = false;
 
-			// get relative voice Hz (in relation to middle-C rate), and scale to 16.16fp
-			const uint32_t relHz16 = (uint32_t)(scope[i].delta * (((double)SCOPE_HZ / SCOPE_FRAC_SCALE) / (C4_FREQ / 65536.0)));
-
-			scope[i].drawDelta = relHz16 << 1; // FT2 does this to the final 16.16fp value
+			// get relative voice Hz (in relation to C4/2 rate)
+			scope[i].drawDelta = (uint64_t)(scope[i].delta * ((double)SCOPE_HZ / ((double)C4_FREQ / 2.0)));
 
 			// clear scope background
 			clearRect(scopeXOffs, scopeYOffs, scopeDrawLen, SCOPE_HEIGHT);
