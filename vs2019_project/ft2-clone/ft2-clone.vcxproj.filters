@@ -7,7 +7,6 @@
     <ClCompile Include="..\..\src\ft2_bmp.c" />
     <ClCompile Include="..\..\src\ft2_checkboxes.c" />
     <ClCompile Include="..\..\src\ft2_config.c" />
-    <ClCompile Include="..\..\src\ft2_diskop.c" />
     <ClCompile Include="..\..\src\ft2_edit.c" />
     <ClCompile Include="..\..\src\ft2_events.c" />
     <ClCompile Include="..\..\src\ft2_gui.c" />
@@ -167,6 +166,10 @@
     <ClCompile Include="..\..\src\modloaders\ft2_load_bem.c">
       <Filter>modloaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\mixer\ft2_gaussian.c">
+      <Filter>mixer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ft2_diskop.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\rtmidi\RtMidi.h">
@@ -289,9 +292,6 @@
     <ClInclude Include="..\..\src\ft2_trim.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\ft2_unicode.h">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\ft2_video.h">
       <Filter>headers</Filter>
     </ClInclude>
@@ -323,6 +323,12 @@
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\mixer\ft2_cubic_spline.h">
+      <Filter>mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ft2_unicode.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mixer\ft2_gaussian.h">
       <Filter>mixer</Filter>
     </ClInclude>
   </ItemGroup>
