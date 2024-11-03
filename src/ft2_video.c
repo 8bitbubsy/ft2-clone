@@ -382,6 +382,11 @@ bool setupSprites(void)
 
 	memset(sprites, 0, sizeof (sprites));
 
+	// hide sprites
+	s = sprites;
+	for (int32_t i = 0; i < SPRITE_NUM; i++, s++)
+		s->x = s->y = INT16_MAX;
+
 	s = &sprites[SPRITE_MOUSE_POINTER];
 	s->data = bmp.mouseCursors;
 	s->w = MOUSE_CURSOR_W;
