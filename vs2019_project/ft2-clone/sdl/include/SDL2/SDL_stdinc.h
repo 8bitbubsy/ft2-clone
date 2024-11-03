@@ -257,7 +257,7 @@ typedef uint64_t Uint64;
 #define SDL_PRIs64 "I64d"
 #elif defined(PRIs64)
 #define SDL_PRIs64 PRIs64
-#elif defined(__LP64__) && !defined(__APPLE__)
+#elif defined(__LP64__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 #define SDL_PRIs64 "ld"
 #else
 #define SDL_PRIs64 "lld"
@@ -377,9 +377,12 @@ typedef uint64_t Uint64;
 
 #ifndef SDL_COMPILE_TIME_ASSERT
 #if defined(__cplusplus)
+/* Keep C++ case alone: Some versions of gcc will define __STDC_VERSION__ even when compiling in C++ mode. */
 #if (__cplusplus >= 201103L)
 #define SDL_COMPILE_TIME_ASSERT(name, x)  static_assert(x, #x)
 #endif
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202311L)
+#define SDL_COMPILE_TIME_ASSERT(name, x)  static_assert(x, #x)
 #elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
 #define SDL_COMPILE_TIME_ASSERT(name, x) _Static_assert(x, #x)
 #endif
