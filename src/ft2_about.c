@@ -8,9 +8,8 @@
 #include "ft2_gfxdata.h"
 #include "ft2_pattern_ed.h" // exitPatternEditorExtended()
 
-#define LOGO_ALPHA_PERCENTAGE 70
-#define STAR_ALPHA_PERCENTAGE 91
-#define STARSHINE_ALPHA_PERCENTAGE 20
+#define LOGO_ALPHA_PERCENTAGE 75
+#define STARSHINE_ALPHA_PERCENTAGE 25
 #define SINUS_PHASES 1024
 #define NUM_STARS 2000
 #define ABOUT_SCREEN_X 3
@@ -37,7 +36,7 @@ static char customText3[256];
 static int16_t customText0X, customText0Y, customText1Y, customText2Y;
 static int16_t customText3Y, customText1X, customText2X, customText3X;
 static int16_t sin16[SINUS_PHASES];
-static uint16_t logoAlpha16, starShineAlpha16, starAlpha16;
+static uint16_t logoAlpha16, starShineAlpha16;
 static uint32_t randSeed, sinp1, sinp2;
 static vector_t starPoints[NUM_STARS], rotation;
 static matrix_t matrix;
@@ -101,7 +100,6 @@ void initAboutScreen(void)
 	sinp2 = SINUS_PHASES/4; // cosine offset
 	logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
 	starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
-	starAlpha16 = (65535 * STAR_ALPHA_PERCENTAGE) / 100;
 }
 
 static uint32_t blendPixels(uint32_t pixelA, uint32_t pixelB, uint16_t alpha)
@@ -184,7 +182,7 @@ static void starfield(void)
 			blendPixelsXY(outX, outY+1, r, g, b, starShineAlpha16);
 
 		// plot center pixel
-		blendPixelsXY(outX, outY, r, g, b, starAlpha16);
+		video.frameBuffer[(outY * SCREEN_W) + outX] = RGB32(r, g, b);
 	}
 }
 
