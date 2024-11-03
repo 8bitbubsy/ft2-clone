@@ -90,7 +90,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 	sample_t *s = &instr[editor.curInstr]->smp[editor.curSmp];
 	bool sample16Bit = !!(s->flags & SAMPLE_16BIT);
 
-	const double dRatio = exp2((int32_t)smpEd_RelReSmp / 12.0);
+	const double dRatio = pow(2.0, (int32_t)smpEd_RelReSmp * (1.0 / 12.0));
 
 	double dNewLen = s->length * dRatio;
 	if (dNewLen > (double)MAX_SAMPLE_LEN)
@@ -207,7 +207,7 @@ static void drawResampleBox(void)
 
 	sample_t *s = &instr[editor.curInstr]->smp[editor.curSmp];
 
-	double dLenMul = exp2(smpEd_RelReSmp * (1.0 / 12.0));
+	double dLenMul = pow(2.0, smpEd_RelReSmp * (1.0 / 12.0));
 
 	double dNewLen = s->length * dLenMul;
 	if (dNewLen > (double)MAX_SAMPLE_LEN)
