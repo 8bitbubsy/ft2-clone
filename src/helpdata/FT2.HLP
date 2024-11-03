@@ -809,13 +809,17 @@ you exit the program.
 >@X040@C001Interpolation:
 >@X060@C002
 Selects what type of resampling interpolation to use.
-If you want to have an authentic FT2 sound, select "linear".
-If you want a good trade-off between quality and muddiness for more lo-fi samples,
-select "Cubic spline".
-However, if you mainly use hi-fi samples (or play XMs with hi-fi samples), then pick
-any of the two sinc options for the most clear sound. Keep in mind that these will
+>For an authentic FT2 sound, select "Linear (FT2)".
+>For a sound that sounds like the Super Nintendo video game console,
+select "Gaussian (SNES)". However, this is a poor interpolator that results in
+filtered sound!
+>For a good trade-off between quality and muddiness for more lo-fi samples,
+you may select "Cubic Hermite".
+>If you mainly use hi-fi samples (or play XMs with hi-fi samples), then pick
+any of the two "Sinc" options for the most clear sound. Keep in mind that these will
 make XMs with lo-fi samples sound very muddy, though! 
-Tip: Play around with the different options...
+>
+>Tip: Play around with the different options...
 
 >@X040@C001Volume ramping:
 >@X060@C002
