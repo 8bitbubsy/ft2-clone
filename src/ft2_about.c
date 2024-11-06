@@ -8,7 +8,7 @@
 #include "ft2_gfxdata.h"
 #include "ft2_pattern_ed.h" // exitPatternEditorExtended()
 
-#define LOGO_ALPHA_PERCENTAGE 75
+#define LOGO_ALPHA_PERCENTAGE 73
 #define STARSHINE_ALPHA_PERCENTAGE 25
 #define SINUS_PHASES 1024
 #define NUM_STARS 2000
@@ -55,16 +55,19 @@ static int32_t random32(void)
 
 static void rotateMatrix(void)
 {
-#define MY_2PI_FLOAT 6.2831853071796f
+#define F_2PI (float)(2.0 * PI)
 
-	const float xsin = sinf(rotation.x * MY_2PI_FLOAT);
-	const float xcos = cosf(rotation.x * MY_2PI_FLOAT);
+	const float rx2p = rotation.x * F_2PI;
+	const float xsin = sinf(rx2p);
+	const float xcos = cosf(rx2p);
 
-	const float ysin = sinf(rotation.y * MY_2PI_FLOAT);
-	const float ycos = cosf(rotation.y * MY_2PI_FLOAT);
+	const float ry2p = rotation.y * F_2PI;
+	const float ysin = sinf(ry2p);
+	const float ycos = cosf(ry2p);
 
-	const float zsin = sinf(rotation.z * MY_2PI_FLOAT);
-	const float zcos = cosf(rotation.z * MY_2PI_FLOAT);
+	const float rz2p = rotation.z * F_2PI;
+	const float zsin = sinf(rz2p);
+	const float zcos = cosf(rz2p);
 
 	// x
 	matrix.x.x = (xcos * zcos) + (zsin * xsin * ysin);
@@ -78,7 +81,7 @@ static void rotateMatrix(void)
 
 	// z
 	matrix.x.z = ycos * zsin;
-	matrix.y.z = -ysin;
+	matrix.y.z = 0.0f - ysin;
 	matrix.z.z = ycos * zcos;
 }
 
@@ -94,7 +97,7 @@ void initAboutScreen(void)
 
 	// pre-calc sinus table
 	for (int32_t i = 0; i < SINUS_PHASES; i++)
-		sin16[i] = (int16_t)round(32767.0 * sin(i * M_PI * 2.0 / SINUS_PHASES));
+		sin16[i] = (int16_t)round(32767.0 * sin(i * PI * 2.0 / SINUS_PHASES));
 
 	sinp1 = 0;
 	sinp2 = SINUS_PHASES/4; // cosine offset
