@@ -383,6 +383,7 @@
     <ClCompile Include="..\..\src\scopes\ft2_scopedraw.c" />
     <ClCompile Include="..\..\src\scopes\ft2_scopes.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_aiff.c" />
+    <ClCompile Include="..\..\src\smploaders\ft2_load_brr.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_flac.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_iff.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_raw.c" />
