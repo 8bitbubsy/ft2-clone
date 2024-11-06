@@ -23,6 +23,7 @@
 #include "ft2_sample_ed.h"
 #include "ft2_diskop.h"
 #include "scopes/ft2_scopes.h"
+#include "scopes/ft2_scopedraw.h"
 #include "ft2_about.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_module_loader.h"
@@ -367,6 +368,7 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	freeTextBoxes();
 	freeMouseCursors();
 	freeBMPs();
+	freeScopeIntrpLUT();
 
 	if (editor.audioDevConfigFileLocationU != NULL)
 	{

@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "ft2_cubic_spline.h"
+#include "ft2_cubic_spline.h" // CUBIC_SPLINE_TAPS, CUBIC_SPLINE_PHASES
 #include "../ft2_video.h" // showErrorMsgBox()
 
 float *fCubicSplineLUT = NULL; // globalized

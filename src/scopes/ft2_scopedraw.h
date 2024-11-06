@@ -6,3 +6,7 @@
 typedef void (*scopeDrawRoutine)(const scope_t *, uint32_t, uint32_t, uint32_t);
 
 extern const scopeDrawRoutine scopeDrawRoutineTable[12]; // ft2_scopedraw.c
+
+bool calcScopeIntrpLUT(void);
+void freeScopeIntrpLUT(void);
+

@@ -544,6 +544,12 @@ bool initScopes(void)
 		return false;
 	}
 
+	if (!calcScopeIntrpLUT())
+	{
+		showErrorMsgBox("Not enough memory!");
+		return false;
+	}
+
 	SDL_DetachThread(scopeThread);
 	return true;
 }

@@ -175,26 +175,44 @@
 // through LUT: mixer/ft2_gaussian.c
 
 /* It may look like we are potentially going out of bounds while looking up the sample points,
-** but the sample data is actually padded on the right side, where correct tap are stored according
-** to loop mode (or no loop).
+** but the sample data is actually padded on both the left (negative) and right side, where correct tap
+** samples are stored according to loop mode (or no loop).
+**
+** There is also a second special case for the left edge (negative taps) after the sample has looped once.
 */
 
 #define GAUSSIAN_INTERPOLATION(s, f, scale) \
 { \
 	const float *t = fGaussianLUT + (((uint32_t)(f) >> GAUSSIAN_FSHIFT) & GAUSSIAN_FMASK); \
-	fSample = ((s[0] * t[0]) + \
-			   (s[1] * t[1]) + \
-			   (s[2] * t[2]) + \
-			   (s[3] * t[3])) * (1.0f / scale); \
+	fSample = ((s[-1] * t[0]) + \
+	           ( s[0] * t[1]) + \
+	           ( s[1] * t[2]) + \
+	           ( s[2] * t[3])) * (1.0f / scale); \
 }
 
 #define RENDER_8BIT_SMP_GINTRP \
-	GAUSSIAN_INTERPOLATION(smpPtr, positionFrac, 128.0f) \
+	GAUSSIAN_INTERPOLATION(smpPtr, positionFrac, 128) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_16BIT_SMP_GINTRP \
-	GAUSSIAN_INTERPOLATION(smpPtr, positionFrac, 32768.0f) \
+	GAUSSIAN_INTERPOLATION(smpPtr, positionFrac, 32768) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+/* Special left-edge case mixers to get proper tap data after one loop cycle.
+** These are only used on looped samples.
+*/
+
+#define RENDER_8BIT_SMP_GINTRP_TAP_FIX  \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
+	GAUSSIAN_INTERPOLATION(smpTapPtr, positionFrac, 128) \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+#define RENDER_16BIT_SMP_GINTRP_TAP_FIX \
+	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
+	GAUSSIAN_INTERPOLATION(smpTapPtr, positionFrac, 32768) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 

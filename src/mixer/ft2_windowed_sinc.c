@@ -9,10 +9,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <math.h>
-#include "ft2_windowed_sinc.h"
+#include "ft2_windowed_sinc.h" // SINCx_TAPS, SINCx_PHASES
+#include "../ft2_header.h" // PI
 #include "../ft2_video.h" // showErrorMsgBox()
-
-#define MY_PI 3.14159265358979323846264338327950288
 
 // globalized
 float *fKaiserSinc_8 = NULL, *fDownSample1_8 = NULL, *fDownSample2_8 = NULL;
@@ -44,7 +43,7 @@ static double besselI0(double z)
 static void generateSincLUT(float *fOutput, uint32_t filterWidth, uint32_t numPhases, const double beta, const double lpCutoff)
 {
 	const double I0Beta = besselI0(beta);
-	const double kPi = MY_PI * lpCutoff;
+	const double kPi = PI * lpCutoff;
 	const double iMul = 1.0 / numPhases;
 	const double xMul = 1.0 / ((filterWidth / 2) * (filterWidth / 2));
 

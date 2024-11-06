@@ -5,6 +5,11 @@
 #include "../ft2_header.h"
 #include "../ft2_audio.h"
 
+#define SCOPE_INTRP_SCALE 32767
+#define SCOPE_INTRP_SCALE_BITS 15 /* ceil(log2(SCOPE_INTRP_SCALE)) */
+#define SCOPE_INTRP_PHASES 1024 /* good enough for the FT2 scopes */
+#define SCOPE_INTRP_PHASES_BITS 10 /* log2(SCOPE_INTRP_PHASES) */
+
 #define SCOPE_HEIGHT 36
 
 #define SCOPE_FRAC_BITS 32

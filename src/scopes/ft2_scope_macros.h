@@ -65,19 +65,43 @@
 
 #define INTERPOLATE_SMP8(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
-	const int16_t *t = scopeGaussianLUT + (((frac) >> (SCOPE_FRAC_BITS-8)) << 2); \
-	sample = ((s8[0] * t[0]) + \
-	          (s8[1] * t[1]) + \
-	          (s8[2] * t[2]) + \
-	          (s8[3] * t[3])) >> (15-8);
+	if (config.interpolation == INTERPOLATION_DISABLED) \
+	{ \
+		sample = s8[0] << 8; \
+	} \
+	else if (config.interpolation == INTERPOLATION_LINEAR) \
+	{ \
+		const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
+		sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
+	} \
+	else \
+	{ \
+		const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << 2); \
+		sample = ((s8[0] * t[0]) + \
+		          (s8[1] * t[1]) + \
+		          (s8[2] * t[2]) + \
+		          (s8[3] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8); \
+	}
 
 #define INTERPOLATE_SMP16(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
-	const int16_t *t = scopeGaussianLUT + (((frac) >> (SCOPE_FRAC_BITS-8)) << 2); \
-	sample = ((s16[0] * t[0]) + \
-	          (s16[1] * t[1]) + \
-	          (s16[2] * t[2]) + \
-	          (s16[3] * t[3])) >> 15;
+	if (config.interpolation == INTERPOLATION_DISABLED) \
+	{ \
+		sample = s16[0]; \
+	} \
+	else if (config.interpolation == INTERPOLATION_LINEAR) \
+	{ \
+		const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
+		sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
+	} \
+	else \
+	{ \
+		const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << 2); \
+		sample = ((s16[0] * t[0]) + \
+		          (s16[1] * t[1]) + \
+		          (s16[2] * t[2]) + \
+		          (s16[3] * t[3])) >> SCOPE_INTRP_SCALE_BITS; \
+	}
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
@@ -145,7 +169,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : positionFrac) \
+		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
 		sample = (sample * volume) >> 16; \
 	} \
 	else \
@@ -157,7 +181,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : positionFrac) \
+		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
 		sample = (sample * volume) >> 16; \
 	} \
 	else \
