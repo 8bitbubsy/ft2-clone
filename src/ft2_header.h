@@ -12,7 +12,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "1.87"
+#define PROG_VER_STR "1.88"
 
 // do NOT change these! It will only mess things up...
 
@@ -45,6 +45,10 @@
 #else
 #define DIR_DELIMITER '\\'
 #define PATH_MAX MAX_PATH
+#endif
+
+#ifndef PI
+#define PI 3.14159265358979323846264338327950288
 #endif
 
 #define SGN(x) (((x) >= 0) ? 1 : -1)
