@@ -39,9 +39,11 @@ target_compile_definitions(ft2-clone
 if(UNIX)
     if(APPLE)
         find_library(COREAUDIO CoreAudio REQUIRED)
+        find_library(COREFOUNDATION CoreFoundation REQUIRED)
         find_library(COREMIDI CoreMIDI REQUIRED)
+        find_library(ICONV iconv REQUIRED)
         target_link_libraries(ft2-clone
-            PRIVATE ${COREAUDIO} ${COREMIDI})
+            PRIVATE ${COREAUDIO} ${COREMIDI} ${COREFOUNDATION} ${ICONV})
         target_compile_definitions(ft2-clone
             PRIVATE __MACOSX_CORE__)
     else()
