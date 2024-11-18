@@ -9,7 +9,7 @@
 >- 12-Point Volume- & Panning Envelope.
 >- Multisamples, up to 16 samples/instrument.
 >- 128 instruments.
->- "Unlimited" sample length. (1GB per sample in this clone)
+>- "Unlimited" sample length.
 >- 8 octaves.
 >- Variable pattern length.
 >- Built in sampler/sample editor.
@@ -41,6 +41,7 @@
 >- WAV files.
 >- Amiga IFF.
 >- Apple AIFF.
+>- Super Nintendo BRR files.
 
 @X040@C001FT2 introduces several new file formats:
 >@X060@C002
