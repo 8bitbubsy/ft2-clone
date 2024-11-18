@@ -9,14 +9,13 @@
 **       (Note: Mixing macros can be found in ft2_mix_macros.h)
 **
 ** Specifications:
-** - Interpolation: None, 2-tap linear, 4-tap "gaussian", 4-tap cubic hermite, 8-tap/16-tap windowed-sinc
+** - Interpolation: None, 2-tap linear, 4-tap "Gaussian", 4-tap cubic Hermite, 8-tap/16-tap windowed-sinc
 ** - FT2-styled linear volume ramping (can be turned off)
 ** - 32.32 fixed-point precision for resampling delta/position
 ** - 32-bit floating-point precision for mixing and interpolation
 **
 ** This file has separate routines for EVERY possible sampling variation:
-** Interpolation none/sinc/linear/cubic, volumeramp on/off, 8-bit, 16-bit, no loop, loop, bidi.
-** (48 mixing routines in total)
+** Interpolation type, volume ramp on/off, 8-bit/16-bit sample, loop type.
 **
 ** Every voice has a function pointer set to the according mixing routine on
 ** sample trigger (from replayer, but set in audio thread), using a function
