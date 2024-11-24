@@ -422,14 +422,14 @@ void drawScopes(void)
 			continue;
 		}
 
-		const scope_t s = scope[i]; // cache scope to lower thread race condition issues
+		scope_t s = scope[i]; // cache scope to lower thread race condition issues
 		if (s.active && s.volume > 0 && !audio.locked)
 		{
 			// scope is active
 			scope[i].wasCleared = false;
 
 			// get relative voice Hz (in relation to C4/2 rate)
-			scope[i].drawDelta = (uint64_t)(scope[i].delta * ((double)SCOPE_HZ / ((double)C4_FREQ / 2.0)));
+			s.drawDelta = (uint64_t)(scope[i].delta * ((double)SCOPE_HZ / ((double)C4_FREQ / 2.0)));
 
 			// clear scope background
 			clearRect(scopeXOffs, scopeYOffs, scopeDrawLen, SCOPE_HEIGHT);
