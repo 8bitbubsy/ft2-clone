@@ -26,19 +26,6 @@ enum
 #pragma warning(disable: 4996)
 #endif
 
-static char *getReasonableAudioDevice(int32_t iscapture) // can and will return NULL
-{
-	int32_t numAudioDevs = SDL_GetNumAudioDevices(iscapture);
-	if (numAudioDevs == 0 || numAudioDevs > 1)
-		return NULL; // we don't know which audio output device is the default device
-
-	const char *devName = SDL_GetAudioDeviceName(0, iscapture);
-	if (devName == NULL)
-		return NULL;
-
-	return strdup(devName);
-}
-
 char *getAudioOutputDeviceFromConfig(void)
 {
 	bool audioDeviceRead = false;
@@ -74,7 +61,7 @@ char *getAudioOutputDeviceFromConfig(void)
 		if (devString != NULL)
 			free(devString);
 
-		devString = getReasonableAudioDevice(OUTPUT_DEVICE);
+		devString = strdup(DEFAULT_AUDIO_DEV_STR);
 	}
 
 	// SDL_OpenAudioDevice() doesn't seem to like an empty audio device string
@@ -123,7 +110,7 @@ char *getAudioInputDeviceFromConfig(void)
 		if (devString != NULL)
 			free(devString);
 
-		devString = getReasonableAudioDevice(INPUT_DEVICE);
+		devString = strdup(DEFAULT_AUDIO_DEV_STR);
 	}
 
 	// SDL_OpenAudioDevice() doesn't seem to like an empty audio device string
@@ -183,8 +170,12 @@ void drawAudioOutputList(void)
 				if (strcmp(audio.currOutputDevice, audio.outputDeviceNames[deviceEntry]) == 0)
 					fillRect(114, y, AUDIO_SELECTORS_BOX_WIDTH, 10, PAL_BOXSLCT); // selection background color
 			}
+			else if (i == 0) // default audio device (always on top)
+			{
+				fillRect(114, y, AUDIO_SELECTORS_BOX_WIDTH, 10, PAL_BOXSLCT); // selection background color
+			}
 
-			char *tmpString = utf8ToCp437(audio.outputDeviceNames[deviceEntry], true);
+			char *tmpString = utf8ToCp850(audio.outputDeviceNames[deviceEntry], true);
 			if (tmpString != NULL)
 			{
 				textOutClipX(114, y, PAL_FORGRND, tmpString, 114 + AUDIO_SELECTORS_BOX_WIDTH);
@@ -219,8 +210,12 @@ void drawAudioInputList(void)
 				if (strcmp(audio.currInputDevice, audio.inputDeviceNames[deviceEntry]) == 0)
 					fillRect(114, y, AUDIO_SELECTORS_BOX_WIDTH, 10, PAL_BOXSLCT); // selection background color
 			}
+			else if (i == 0) // default audio device (always on top)
+			{
+				fillRect(114, y, AUDIO_SELECTORS_BOX_WIDTH, 10, PAL_BOXSLCT); // selection background color
+			}
 
-			char *tmpString = utf8ToCp437(audio.inputDeviceNames[deviceEntry], true);
+			char *tmpString = utf8ToCp850(audio.inputDeviceNames[deviceEntry], true);
 			if (tmpString != NULL)
 			{
 				textOutClipX(114, y, PAL_FORGRND, tmpString, 114 + AUDIO_SELECTORS_BOX_WIDTH);
@@ -406,13 +401,15 @@ void rescanAudioDevices(void)
 
 	// GET AUDIO OUTPUT DEVICES
 
-	audio.outputDeviceNum = SDL_GetNumAudioDevices(false);
+	audio.outputDeviceNum = 1 + SDL_GetNumAudioDevices(false);
 	if (audio.outputDeviceNum > MAX_AUDIO_DEVICES)
 		audio.outputDeviceNum = MAX_AUDIO_DEVICES;
 
-	for (int32_t i = 0; i < audio.outputDeviceNum; i++)
+	audio.outputDeviceNames[0] = strdup(DEFAULT_AUDIO_DEV_STR);
+
+	for (int32_t i = 1; i < audio.outputDeviceNum; i++)
 	{
-		const char *deviceName = SDL_GetAudioDeviceName(i, false);
+		const char *deviceName = SDL_GetAudioDeviceName(i-1, false);
 		if (deviceName == NULL)
 		{
 			audio.outputDeviceNum--; // hide device
@@ -431,13 +428,15 @@ void rescanAudioDevices(void)
 
 	// GET AUDIO INPUT DEVICES
 
-	audio.inputDeviceNum = SDL_GetNumAudioDevices(true);
+	audio.inputDeviceNum = 1 + SDL_GetNumAudioDevices(true);
 	if (audio.inputDeviceNum > MAX_AUDIO_DEVICES)
 		audio.inputDeviceNum = MAX_AUDIO_DEVICES;
 
-	for (int32_t i = 0; i < audio.inputDeviceNum; i++)
+	audio.inputDeviceNames[0] = strdup(DEFAULT_AUDIO_DEV_STR);
+
+	for (int32_t i = 1; i < audio.inputDeviceNum; i++)
 	{
-		const char *deviceName = SDL_GetAudioDeviceName(i, true);
+		const char *deviceName = SDL_GetAudioDeviceName(i-1, true);
 		if (deviceName == NULL)
 		{
 			audio.inputDeviceNum--; // hide device

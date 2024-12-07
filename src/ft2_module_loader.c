@@ -26,9 +26,10 @@
 #include "ft2_structs.h"
 #include "ft2_sysreqs.h"
 
-bool detectBEM(FILE* f);
-bool loadBEM(FILE* f, uint32_t filesize);
+bool detectBEM(FILE *f);
+bool loadBEM(FILE *f, uint32_t filesize);
 
+bool loadIT(FILE *f, uint32_t filesize);
 bool loadDIGI(FILE *f, uint32_t filesize);
 bool loadMOD(FILE *f, uint32_t filesize);
 bool loadS3M(FILE *f, uint32_t filesize);
@@ -45,14 +46,15 @@ enum
 	FORMAT_S3M = 4,
 	FORMAT_STM = 5,
 	FORMAT_DIGI = 6,
-	FORMAT_BEM = 7
+	FORMAT_BEM = 7,
+	FORMAT_IT = 8
 };
 
 // file extensions accepted by Disk Op. in module mode
 char *supportedModExtensions[] =
 {
 	"xm", "ft", "nst", "stk", "mod", "s3m", "stm", "fst",
-	"digi", "bem",
+	"digi", "bem", "it",
 
 	// IMPORTANT: Remember comma after last entry above
 	"END_OF_LIST" // do NOT move, remove or edit this line!
@@ -134,12 +136,9 @@ static int8_t detectModule(FILE *f)
 		return FORMAT_MOD;
 	}
 
-	/* Check if the file is a .it module (Impulse Tracker, not supported).
-	** Some people may attempt to load .IT files in the FT2 clone, so
-	** reject them here instead of accidentally loading them as .STK
-	*/
-	if (!memcmp("IMPM", D, 4) && D[0x16] == 0)
-		return FORMAT_UNKNOWN;
+	// Impulse Tracker and compatible trackers
+	if (!memcmp("IMPM", D, 4) && D[0x1D] == 0)
+		return FORMAT_IT;
 
 	/* Fasttracker II XM and compatible trackers.
 	** Note: This test can falsely be true for STK modules (and non-supported files) where the
@@ -202,6 +201,7 @@ static bool doLoadMusic(bool externalThreadFlag)
 		case FORMAT_POSSIBLY_STK: moduleLoaded = loadSTK(f, filesize); break;
 		case FORMAT_DIGI: moduleLoaded = loadDIGI(f, filesize); break;
 		case FORMAT_BEM: moduleLoaded = loadBEM(f, filesize); break;
+		case FORMAT_IT: moduleLoaded = loadIT(f, filesize); break;
 
 		default:
 			loaderMsgBox("This file is not a supported module!");
@@ -608,7 +608,7 @@ static bool fileIsModule(UNICHAR *pathU)
 	*/
 	if (modFormat == FORMAT_POSSIBLY_STK)
 	{
-		char *path = unicharToCp437(pathU, false);
+		char *path = unicharToCp850(pathU, false);
 		if (path == NULL)
 			return false;
 

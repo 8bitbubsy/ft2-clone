@@ -343,17 +343,42 @@ enum
 // amount of frames to wait
 #define BUTTON_DOWN_DELAY 25
 
-// font #1/#2 special characters (used for buttons)
-#define ARROW_UP_STRING "\x05"
-#define ARROW_DOWN_STRING "\x03"
-#define ARROW_LEFT_STRING "\x1E"
-#define ARROW_RIGHT_STRING "\x1F"
-#define SMALL_1_STRING "\x08"
-#define SMALL_2_STRING "\x09"
-#define SMALL_3_STRING "\x0A"
-#define SMALL_4_STRING "\x0B"
-#define SMALL_5_STRING "\x0C"
-#define SMALL_6_STRING "\x0D"
+// special characters (used for buttons)
+
+#define ARROW_UP_GFX_CHAR 0x01
+#define ARROW_UP_STRING "\x01"
+
+#define ARROW_DOWN_GFX_CHAR 0x02
+#define ARROW_DOWN_STRING "\x02"
+
+#define ARROW_LEFT_GFX_CHAR 0x03
+#define ARROW_LEFT_STRING "\x03"
+
+#define ARROW_RIGHT_GFX_CHAR 0x04
+#define ARROW_RIGHT_STRING "\x04"
+
+#define SMALL_1_GFX_CHAR 0x05
+#define SMALL_1_STRING "\x05"
+
+#define SMALL_2_GFX_CHAR 0x06
+#define SMALL_2_STRING "\x06"
+
+#define SMALL_3_GFX_CHAR 0x07
+#define SMALL_3_STRING "\x07"
+
+#define SMALL_4_GFX_CHAR 0x08
+#define SMALL_4_STRING "\x08"
+
+#define SMALL_5_GFX_CHAR 0x09
+#define SMALL_5_STRING "\x09"
+
+#define SMALL_6_GFX_CHAR 0x0A
+#define SMALL_6_STRING "\x0A"
+
+#define DISKOP_PARENT_GFX_CHAR 0x0B
+#define DISKOP_PARENT_STRING "\x0B"
+
+
 
 typedef struct pushButton_t // DO NOT TOUCH!
 {

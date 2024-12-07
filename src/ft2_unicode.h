@@ -42,12 +42,12 @@ typedef char UNICHAR;
 #define UNICHAR_STRLEN(a) strlen(a)
 #endif
 
-char *cp437ToUtf8(char *src);
-char *utf8ToCp437(char *src, bool removeIllegalChars);
+char *cp850ToUtf8(char *src);
+char *utf8ToCp850(char *src, bool removeIllegalChars);
 #ifdef _WIN32
-UNICHAR *cp437ToUnichar(char *src);
-char *unicharToCp437(UNICHAR *src, bool removeIllegalChars);
+UNICHAR *cp850ToUnichar(char *src);
+char *unicharToCp850(UNICHAR *src, bool removeIllegalChars);
 #else
-#define cp437ToUnichar(a) cp437ToUtf8(a)
-#define unicharToCp437(a, b) utf8ToCp437(a, b)
+#define cp850ToUnichar(a) cp850ToUtf8(a)
+#define unicharToCp850(a, b) utf8ToCp850(a, b)
 #endif

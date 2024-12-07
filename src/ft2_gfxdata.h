@@ -3,7 +3,8 @@
 #include <stdint.h>
 
 // ft2_bmp_fonts.c
-extern const uint8_t font1BMP[3712];
+extern const uint8_t buttonGfxBMP[416];
+extern const uint8_t font1BMP[3272];
 extern const uint8_t font2BMP[10060];
 extern const uint8_t font3BMP[584];
 extern const uint8_t font4BMP[13604];

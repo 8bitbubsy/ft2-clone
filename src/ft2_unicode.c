@@ -18,7 +18,7 @@
 #ifdef _WIN32
 
 // Windows routines
-char *cp437ToUtf8(char *src)
+char *cp850ToUtf8(char *src)
 {
 	int32_t retVal;
 
@@ -29,7 +29,7 @@ char *cp437ToUtf8(char *src)
 	if (srcLen <= 0)
 		return NULL;
 
-	int32_t reqSize = MultiByteToWideChar(437, 0, src, srcLen, 0, 0);
+	int32_t reqSize = MultiByteToWideChar(850, 0, src, srcLen, 0, 0);
 	if (reqSize <= 0)
 		return NULL;
 
@@ -39,7 +39,7 @@ char *cp437ToUtf8(char *src)
 
 	w[reqSize] = 0;
 
-	retVal = MultiByteToWideChar(437, 0, src, srcLen, w, reqSize);
+	retVal = MultiByteToWideChar(850, 0, src, srcLen, w, reqSize);
 	if (!retVal)
 	{
 		free(w);
@@ -78,7 +78,7 @@ char *cp437ToUtf8(char *src)
 	return x;
 }
 
-UNICHAR *cp437ToUnichar(char *src)
+UNICHAR *cp850ToUnichar(char *src)
 {
 	if (src == NULL)
 		return NULL;
@@ -87,7 +87,7 @@ UNICHAR *cp437ToUnichar(char *src)
 	if (srcLen <= 0)
 		return NULL;
 
-	int32_t reqSize = MultiByteToWideChar(437, 0, src, srcLen, 0, 0);
+	int32_t reqSize = MultiByteToWideChar(850, 0, src, srcLen, 0, 0);
 	if (reqSize <= 0)
 		return NULL;
 
@@ -97,7 +97,7 @@ UNICHAR *cp437ToUnichar(char *src)
 
 	w[reqSize] = 0;
 
-	int32_t retVal = MultiByteToWideChar(437, 0, src, srcLen, w, reqSize);
+	int32_t retVal = MultiByteToWideChar(850, 0, src, srcLen, w, reqSize);
 	if (!retVal)
 	{
 		free(w);
@@ -107,7 +107,7 @@ UNICHAR *cp437ToUnichar(char *src)
 	return w;
 }
 
-char *utf8ToCp437(char *src, bool removeIllegalChars)
+char *utf8ToCp850(char *src, bool removeIllegalChars)
 {
 	if (src == NULL)
 		return NULL;
@@ -140,7 +140,7 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 		return NULL;
 	}
 
-	reqSize = WideCharToMultiByte(437, 0, w, srcLen, 0, 0, 0, 0);
+	reqSize = WideCharToMultiByte(850, 0, w, srcLen, 0, 0, 0, 0);
 	if (reqSize <= 0)
 	{
 		free(w);
@@ -156,7 +156,7 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 
 	x[reqSize] = '\0';
 
-	retVal = WideCharToMultiByte(437, 0, w, srcLen, x, reqSize, 0, 0);
+	retVal = WideCharToMultiByte(850, 0, w, srcLen, x, reqSize, 0, 0);
 	free(w);
 
 	if (!retVal)
@@ -171,8 +171,9 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 		for (int32_t i = 0; i < reqSize; i++)
 		{
 			const int8_t ch = (const int8_t)x[i];
-			if (ch < 32 && ch != 0 && ch != -124 && ch != -108 &&
-			    ch != -122 && ch != -114 && ch != -103 && ch != -113)
+			if (ch != '\0' && ch < 32 &&
+			    ch != -124 && ch != -108 && ch != -122 && ch != -114 && ch != -103 &&
+			    ch != -113 && ch != -101 && ch != -99 && ch != -111 && ch != -110)
 			{
 				x[i] = ' '; // character not allowed, turn it into space
 			}
@@ -182,7 +183,7 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 	return x;
 }
 
-char *unicharToCp437(UNICHAR *src, bool removeIllegalChars)
+char *unicharToCp850(UNICHAR *src, bool removeIllegalChars)
 {
 	if (src == NULL)
 		return NULL;
@@ -191,7 +192,7 @@ char *unicharToCp437(UNICHAR *src, bool removeIllegalChars)
 	if (srcLen <= 0)
 		return NULL;
 
-	int32_t reqSize = WideCharToMultiByte(437, 0, src, srcLen, 0, 0, 0, 0);
+	int32_t reqSize = WideCharToMultiByte(850, 0, src, srcLen, 0, 0, 0, 0);
 	if (reqSize <= 0)
 		return NULL;
 
@@ -201,7 +202,7 @@ char *unicharToCp437(UNICHAR *src, bool removeIllegalChars)
 
 	x[reqSize] = '\0';
 
-	int32_t retVal = WideCharToMultiByte(437, 0, src, srcLen, x, reqSize, 0, 0);
+	int32_t retVal = WideCharToMultiByte(850, 0, src, srcLen, x, reqSize, 0, 0);
 	if (!retVal)
 	{
 		free(x);
@@ -214,8 +215,9 @@ char *unicharToCp437(UNICHAR *src, bool removeIllegalChars)
 		for (int32_t i = 0; i < reqSize; i++)
 		{
 			const int8_t ch = (const int8_t)x[i];
-			if (ch < 32 && ch != 0 && ch != -124 && ch != -108 &&
-				ch != -122 && ch != -114 && ch != -103 && ch != -113)
+			if (ch != '\0' && ch < 32 &&
+			    ch != -124 && ch != -108 && ch != -122 && ch != -114 && ch != -103 &&
+			    ch != -113 && ch != -101 && ch != -99 && ch != -111 && ch != -110)
 			{
 				x[i] = ' '; // character not allowed, turn it into space
 			}
@@ -228,7 +230,7 @@ char *unicharToCp437(UNICHAR *src, bool removeIllegalChars)
 #else
 
 // non-Windows routines
-char *cp437ToUtf8(char *src)
+char *cp850ToUtf8(char *src)
 {
 	if (src == NULL)
 		return NULL;
@@ -237,13 +239,13 @@ char *cp437ToUtf8(char *src)
 	if (srcLen <= 0)
 		return NULL;
 
-	iconv_t cd = iconv_open("UTF-8", "437");
+	iconv_t cd = iconv_open("UTF-8", "850");
 	if (cd == (iconv_t)-1)
 		return NULL;
 
-	size_t outLen = srcLen * 2; // should be sufficient
+	size_t outLen = srcLen * 4; // should be sufficient
 
-	char *outBuf = (char *)malloc((outLen + 1) * sizeof (char));
+	char *outBuf = (char *)calloc(outLen + 1, sizeof (char));
 	if (outBuf == NULL)
 		return NULL;
 
@@ -270,7 +272,7 @@ char *cp437ToUtf8(char *src)
 	return outBuf;
 }
 
-char *utf8ToCp437(char *src, bool removeIllegalChars)
+char *utf8ToCp850(char *src, bool removeIllegalChars)
 {
 	if (src == NULL)
 		return NULL;
@@ -280,18 +282,18 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 		return NULL;
 
 #ifdef __APPLE__
-	iconv_t cd = iconv_open("437//TRANSLIT//IGNORE", "UTF-8-MAC");
+	iconv_t cd = iconv_open("850//TRANSLIT//IGNORE", "UTF-8-MAC");
 #elif defined(__NetBSD__) || defined(__sun) || defined(sun)
-	iconv_t cd = iconv_open("437", "UTF-8");
+	iconv_t cd = iconv_open("850", "UTF-8");
 #else
-	iconv_t cd = iconv_open("437//TRANSLIT//IGNORE", "UTF-8");
+	iconv_t cd = iconv_open("850//TRANSLIT//IGNORE", "UTF-8");
 #endif
 	if (cd == (iconv_t)-1)
 		return NULL;
 
-	size_t outLen = srcLen * 2; // should be sufficient
+	size_t outLen = srcLen * 4; // should be sufficient
 
-	char *outBuf = (char *)malloc((outLen + 1) * sizeof (char));
+	char *outBuf = (char *)calloc(outLen + 1, sizeof (char));
 	if (outBuf == NULL)
 		return NULL;
 
@@ -321,8 +323,9 @@ char *utf8ToCp437(char *src, bool removeIllegalChars)
 		for (size_t i = 0; i < outLen; i++)
 		{
 			const int8_t ch = (const int8_t)outBuf[i];
-			if (ch < 32 && ch != 0 && ch != -124 && ch != -108 &&
-				ch != -122 && ch != -114 && ch != -103 && ch != -113)
+			if (ch != '\0' && ch < 32 &&
+			    ch != -124 && ch != -108 && ch != -122 && ch != -114 && ch != -103 &&
+			    ch != -113 && ch != -101 && ch != -99 && ch != -111 && ch != -110)
 			{
 				outBuf[i] = ' '; // character not allowed, turn it into space
 			}

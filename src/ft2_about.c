@@ -8,10 +8,10 @@
 #include "ft2_gfxdata.h"
 #include "ft2_pattern_ed.h" // exitPatternEditorExtended()
 
-#define LOGO_ALPHA_PERCENTAGE 73
+#define LOGO_ALPHA_PERCENTAGE 72
 #define STARSHINE_ALPHA_PERCENTAGE 25
 #define SINUS_PHASES 1024
-#define NUM_STARS 2000
+#define NUM_STARS 1500
 #define ABOUT_SCREEN_X 3
 #define ABOUT_SCREEN_Y 3
 #define ABOUT_SCREEN_W 626
@@ -30,7 +30,7 @@ typedef struct
 } matrix_t;
 
 static char *customText0 = "Original FT2 by Magnus \"Vogue\" H\224gdahl & Fredrik \"Mr.H\" Huss";
-static char *customText1 = "Clone by Olav \"8bitbubsy\" S\025rensen";
+static char *customText1 = "Clone by Olav \"8bitbubsy\" S\233rensen";
 static char *customText2 = "https://16-bits.org";
 static char customText3[256];
 static int16_t customText0X, customText0Y, customText1Y, customText2Y;
@@ -38,8 +38,8 @@ static int16_t customText3Y, customText1X, customText2X, customText3X;
 static int16_t sin16[SINUS_PHASES];
 static uint16_t logoAlpha16, starShineAlpha16;
 static uint32_t randSeed, sinp1, sinp2;
-static vector_t starPoints[NUM_STARS], rotation;
-static matrix_t matrix;
+static vector_t starPoints[NUM_STARS], starRotation;
+static matrix_t starMatrix;
 
 void seedAboutScreenRandom(uint32_t newseed)
 {
@@ -51,38 +51,6 @@ static int32_t random32(void)
 	randSeed *= 134775813;
 	randSeed += 1;
 	return randSeed;
-}
-
-static void rotateMatrix(void)
-{
-#define F_2PI (float)(2.0 * PI)
-
-	const float rx2p = rotation.x * F_2PI;
-	const float xsin = sinf(rx2p);
-	const float xcos = cosf(rx2p);
-
-	const float ry2p = rotation.y * F_2PI;
-	const float ysin = sinf(ry2p);
-	const float ycos = cosf(ry2p);
-
-	const float rz2p = rotation.z * F_2PI;
-	const float zsin = sinf(rz2p);
-	const float zcos = cosf(rz2p);
-
-	// x
-	matrix.x.x = (xcos * zcos) + (zsin * xsin * ysin);
-	matrix.y.x = xsin * ycos;
-	matrix.z.x = (zcos * xsin * ysin) - (xcos * zsin);
-
-	// y
-	matrix.x.y = (zsin * xcos * ysin) - (xsin * zcos);
-	matrix.y.y = xcos * ycos;
-	matrix.z.y = (xsin * zsin) + (zcos * xcos * ysin);
-
-	// z
-	matrix.x.z = ycos * zsin;
-	matrix.y.z = 0.0f - ysin;
-	matrix.z.z = ycos * zcos;
 }
 
 void initAboutScreen(void)
@@ -103,6 +71,16 @@ void initAboutScreen(void)
 	sinp2 = SINUS_PHASES/4; // cosine offset
 	logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
 	starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
+
+	sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
+	customText0X = (SCREEN_W    - textWidth(customText0)) / 2;
+	customText1X = (SCREEN_W    - textWidth(customText1)) / 2;
+	customText2X = (SCREEN_W-8) - textWidth(customText2);
+	customText3X = (SCREEN_W-8) - textWidth(customText3);
+	customText0Y = 157-28;
+	customText1Y = 157-12;
+	customText2Y = 157-12;
+	customText3Y = 157;
 }
 
 static uint32_t blendPixels(uint32_t pixelA, uint32_t pixelB, uint16_t alpha)
@@ -137,16 +115,16 @@ static void starfield(void)
 		if (star->z >= 0.5f)
 			star->z -= 1.0f;
 
-		const float z = (matrix.x.z * star->x) + (matrix.y.z * star->y) + (matrix.z.z * star->z) + 0.5f;
+		const float z = (starMatrix.x.z * star->x) + (starMatrix.y.z * star->y) + (starMatrix.z.z * star->z) + 0.5f;
 		if (z <= 0.0f)
 			continue;
 
-		float y = (((matrix.x.y * star->x) + (matrix.y.y * star->y) + (matrix.z.y * star->z)) / z) * 400.0f;
+		float y = (((starMatrix.x.y * star->x) + (starMatrix.y.y * star->y) + (starMatrix.z.y * star->z)) / z) * 400.0f;
 		const int32_t outY = (ABOUT_SCREEN_Y+(ABOUT_SCREEN_H/2)) + (int32_t)y;
 		if (outY < ABOUT_SCREEN_Y || outY >= ABOUT_SCREEN_Y+ABOUT_SCREEN_H)
 			continue;
 
-		float x = (((matrix.x.x * star->x) + (matrix.y.x * star->y) + (matrix.z.x * star->z)) / z) * 400.0f;
+		float x = (((starMatrix.x.x * star->x) + (starMatrix.y.x * star->y) + (starMatrix.z.x * star->z)) / z) * 400.0f;
 		const int32_t outX = (ABOUT_SCREEN_X+(ABOUT_SCREEN_W/2)) + (int32_t)x;
 		if (outX < ABOUT_SCREEN_X || outX >= ABOUT_SCREEN_X+ABOUT_SCREEN_W)
 			continue;
@@ -189,17 +167,48 @@ static void starfield(void)
 	}
 }
 
+static void rotateStarfieldMatrix(void)
+{
+#define F_2PI (float)(2.0 * PI)
+
+	const float rx2p = starRotation.x * F_2PI;
+	const float xsin = sinf(rx2p);
+	const float xcos = cosf(rx2p);
+
+	const float ry2p = starRotation.y * F_2PI;
+	const float ysin = sinf(ry2p);
+	const float ycos = cosf(ry2p);
+
+	const float rz2p = starRotation.z * F_2PI;
+	const float zsin = sinf(rz2p);
+	const float zcos = cosf(rz2p);
+
+	// x
+	starMatrix.x.x = (xcos * zcos) + (zsin * xsin * ysin);
+	starMatrix.y.x = xsin * ycos;
+	starMatrix.z.x = (zcos * xsin * ysin) - (xcos * zsin);
+
+	// y
+	starMatrix.x.y = (zsin * xcos * ysin) - (xsin * zcos);
+	starMatrix.y.y = xcos * ycos;
+	starMatrix.z.y = (xsin * zsin) + (zcos * xcos * ysin);
+
+	// z
+	starMatrix.x.z = ycos * zsin;
+	starMatrix.y.z = 0.0f - ysin;
+	starMatrix.z.z = ycos * zcos;
+}
+
 void renderAboutScreenFrame(void)
 {
-	// remember the days when you couldn't afford to do this per frame?
 	clearRect(ABOUT_SCREEN_X, ABOUT_SCREEN_Y, ABOUT_SCREEN_W, ABOUT_SCREEN_H);
 
 	// 3D starfield
-	rotateMatrix();
-	rotation.x -= 0.0003f;
-	rotation.y -= 0.0002f;
-	rotation.z += 0.0001f;
 	starfield();
+	starRotation.x -= 0.0003f;
+	starRotation.y -= 0.0002f;
+	starRotation.z += 0.0001f;
+	rotateStarfieldMatrix();
 
 	// waving FT2 logo
 
@@ -223,13 +232,13 @@ void renderAboutScreenFrame(void)
 	sinp1 = (sinp1 + 2) & (SINUS_PHASES-1);
 	sinp2 = (sinp2 + 3) & (SINUS_PHASES-1);
 
-	// static texts
+	// render static texts
 	textOut(customText0X, customText0Y, PAL_FORGRND, customText0);
 	textOut(customText1X, customText1Y, PAL_FORGRND, customText1);
 	textOut(customText2X, customText2Y, PAL_FORGRND, customText2);
 	textOut(customText3X, customText3Y, PAL_FORGRND, customText3);
 
-	showPushButton(PB_EXIT_ABOUT); // yes, we have to redraw the exit button per frame :)
+	showPushButton(PB_EXIT_ABOUT); // yes, we also have to redraw the exit button per frame :)
 }
 
 void showAboutScreen(void) // called once when about screen is opened
@@ -243,16 +252,6 @@ void showAboutScreen(void) // called once when about screen is opened
 	drawFramework(2, 2, 628, 169, FRAMEWORK_TYPE2);
 
 	showPushButton(PB_EXIT_ABOUT);
-
-	sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
-	customText0X = (SCREEN_W    - textWidth(customText0)) / 2;
-	customText1X = (SCREEN_W    - textWidth(customText1)) / 2;
-	customText2X = (SCREEN_W-8) - textWidth(customText2);
-	customText3X = (SCREEN_W-8) - textWidth(customText3);
-	customText0Y = 157-28;
-	customText1Y = 157-12;
-	customText2Y = 157-12;
-	customText3Y = 157;
 
 	ui.aboutScreenShown = true;
 }

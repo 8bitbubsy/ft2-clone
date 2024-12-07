@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_unicode.h"
-#include "mixer/ft2_gaussian.h"
 #include "mixer/ft2_cubic_spline.h"
 #include "mixer/ft2_windowed_sinc.h"
 

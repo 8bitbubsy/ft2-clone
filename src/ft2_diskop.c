@@ -148,7 +148,7 @@ void updateCurrSongFilename(void) // for window title
 	if (modTmpFName == NULL)
 		return;
 
-	modTmpFNameUTF8 = cp437ToUtf8(modTmpFName);
+	modTmpFNameUTF8 = cp850ToUtf8(modTmpFName);
 }
 
 // drive buttons for Windows
@@ -388,7 +388,7 @@ static void removeQuestionmarksFromString(char *s)
 
 bool fileExistsAnsi(char *str)
 {
-	UNICHAR *strU = cp437ToUnichar(str);
+	UNICHAR *strU = cp850ToUnichar(str);
 	if (strU == NULL)
 		return false;
 
@@ -412,7 +412,7 @@ static bool deleteDirRecursive(UNICHAR *strU)
 
 static bool makeDirAnsi(char *str)
 {
-	UNICHAR *strU = cp437ToUnichar(str);
+	UNICHAR *strU = cp850ToUnichar(str);
 	if (strU == NULL)
 		return false;
 
@@ -424,7 +424,7 @@ static bool makeDirAnsi(char *str)
 
 static bool renameAnsi(UNICHAR *oldNameU, char *newName)
 {
-	UNICHAR *newNameU = cp437ToUnichar(newName);
+	UNICHAR *newNameU = cp850ToUnichar(newName);
 	if (newNameU == NULL)
 		return false;
 
@@ -487,7 +487,7 @@ static void openDrive(char *str) // Windows only
 
 bool fileExistsAnsi(char *str)
 {
-	UNICHAR *strU = cp437ToUnichar(str);
+	UNICHAR *strU = cp850ToUnichar(str);
 	if (strU == NULL)
 		return false;
 
@@ -545,7 +545,7 @@ static bool deleteDirRecursive(UNICHAR *strU)
 
 static bool makeDirAnsi(char *str)
 {
-	UNICHAR *strU = cp437ToUnichar(str);
+	UNICHAR *strU = cp850ToUnichar(str);
 	if (strU == NULL)
 		return false;
 
@@ -560,7 +560,7 @@ static bool renameAnsi(UNICHAR *oldNameU, char *newName)
 	int32_t retVal;
 	UNICHAR *newNameU;
 
-	newNameU = cp437ToUnichar(newName);
+	newNameU = cp850ToUnichar(newName);
 	if (newNameU == NULL)
 		return false;
 
@@ -638,7 +638,7 @@ void sanitizeFilename(const char *src)
 
 void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 {
-	char *ansiPath = unicharToCp437(pathU, true);
+	char *ansiPath = unicharToCp850(pathU, true);
 	if (ansiPath == NULL)
 		return;
 
@@ -916,7 +916,7 @@ static void diskOpSave(bool checkOverwrite)
 					return;
 			}
 
-			fileNameU = cp437ToUnichar(FReq_FileName);
+			fileNameU = cp850ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
 				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
@@ -940,7 +940,7 @@ static void diskOpSave(bool checkOverwrite)
 					return;
 			}
 
-			fileNameU = cp437ToUnichar(FReq_FileName);
+			fileNameU = cp850ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
 				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
@@ -969,7 +969,7 @@ static void diskOpSave(bool checkOverwrite)
 					return;
 			}
 
-			fileNameU = cp437ToUnichar(FReq_FileName);
+			fileNameU = cp850ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
 				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
@@ -993,7 +993,7 @@ static void diskOpSave(bool checkOverwrite)
 					return;
 			}
 
-			fileNameU = cp437ToUnichar(FReq_FileName);
+			fileNameU = cp850ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
 				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
@@ -1016,7 +1016,7 @@ static void diskOpSave(bool checkOverwrite)
 					return;
 			}
 
-			fileNameU = cp437ToUnichar(FReq_FileName);
+			fileNameU = cp850ToUnichar(FReq_FileName);
 			if (fileNameU == NULL)
 			{
 				okBox(0, "System message", "General I/O error during saving! Is the file in use?", NULL);
@@ -1073,7 +1073,7 @@ static void fileListPressed(int32_t index)
 		{
 			if (!dirEntry->isDir || UNICHAR_STRCMP(dirEntry->nameU, PARENT_DIR_STR)) // don't handle ".." dir
 			{
-				nameTmp = unicharToCp437(dirEntry->nameU, true);
+				nameTmp = unicharToCp850(dirEntry->nameU, true);
 				if (nameTmp == NULL)
 					break;
 
@@ -1114,7 +1114,7 @@ static void fileListPressed(int32_t index)
 		{
 			if (dirEntry->isDir || UNICHAR_STRCMP(dirEntry->nameU, PARENT_DIR_STR)) // don't handle ".." dir
 			{
-				nameTmp = unicharToCp437(dirEntry->nameU, true);
+				nameTmp = unicharToCp850(dirEntry->nameU, true);
 				if (nameTmp == NULL)
 					break;
 
@@ -1267,7 +1267,7 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 	if (nameU == NULL)
 		return true;
 
-	char *name = unicharToCp437(nameU, false);
+	char *name = unicharToCp850(nameU, false);
 	if (name == NULL)
 		return true;
 	
@@ -1568,7 +1568,7 @@ static char *ach(int32_t rad) // used for sortDirectory()
 {
 	DirRec *dirEntry = &FReq_Buffer[rad];
 
-	char *name = unicharToCp437(dirEntry->nameU, true);
+	char *name = unicharToCp850(dirEntry->nameU, true);
 	if (name == NULL)
 		return NULL;
 
@@ -1750,7 +1750,7 @@ static void displayCurrPath(void)
 	if (pathLen == 0)
 		return;
 
-	char *asciiPath = unicharToCp437(FReq_CurPathU, true);
+	char *asciiPath = unicharToCp850(FReq_CurPathU, true);
 	if (asciiPath == NULL)
 	{
 		okBox(0, "System message", "Not enough memory!", NULL);
@@ -1834,7 +1834,7 @@ void diskOp_DrawFilelist(void)
 			continue;
 
 		// convert unichar name to codepage 437
-		char *readName = unicharToCp437(FReq_Buffer[bufEntry].nameU, true);
+		char *readName = unicharToCp850(FReq_Buffer[bufEntry].nameU, true);
 		if (readName == NULL)
 			continue;
 

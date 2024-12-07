@@ -144,7 +144,7 @@ static int32_t SDLCALL loadSampleThread(void *ptr)
 
 	if (!smpFilenameSet) // if we didn't set a custom sample name in the loader, set it to its filename
 	{
-		char *tmpFilename = unicharToCp437(editor.tmpFilenameU, true);
+		char *tmpFilename = unicharToCp850(editor.tmpFilenameU, true);
 		if (tmpFilename != NULL)
 		{
 			int32_t i = (int32_t)strlen(tmpFilename);

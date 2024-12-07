@@ -29,6 +29,9 @@
 #include "ft2_sample_ed_features.h"
 #include "ft2_palette.h"
 #include "ft2_structs.h"
+#include "ft2_bmp.h"
+
+#define BUTTON_GFX_BMP_WIDTH 90
 
 pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 {
@@ -352,32 +355,32 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 #endif
 
 	// ------ DISK OP. PUSHBUTTONS ------
-	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,       funcOnUp
-	{  70,   2, 58, 16, 0, 0, "Save",            NULL,    NULL,             pbDiskOpSave },
-	{  70,  19, 58, 16, 0, 0, "Delete",          NULL,    NULL,             pbDiskOpDelete },
-	{  70,  36, 58, 16, 0, 0, "Rename",          NULL,    NULL,             pbDiskOpRename },
-	{  70,  53, 58, 16, 0, 0, "Make dir.",       NULL,    NULL,             pbDiskOpMakeDir },
-	{  70,  70, 58, 16, 0, 0, "Refresh",         NULL,    NULL,             pbDiskOpRefresh },
-	{  70,  87, 58, 16, 0, 0, "Set path",        NULL,    NULL,             pbDiskOpSetPath },
-	{  70, 104, 58, 16, 0, 0, "Show all",        NULL,    NULL,             pbDiskOpShowAll },
-	{  70, 121, 58, 19, 0, 0, "Exit",            NULL,    NULL,             pbDiskOpExit },
+	//x,   y,   w,  h,  p, d, text #1,              text #2, funcOnDown,      funcOnUp
+	{  70,   2, 58, 16, 0, 0, "Save",               NULL,    NULL,            pbDiskOpSave },
+	{  70,  19, 58, 16, 0, 0, "Delete",             NULL,    NULL,            pbDiskOpDelete },
+	{  70,  36, 58, 16, 0, 0, "Rename",             NULL,    NULL,            pbDiskOpRename },
+	{  70,  53, 58, 16, 0, 0, "Make dir.",          NULL,    NULL,            pbDiskOpMakeDir },
+	{  70,  70, 58, 16, 0, 0, "Refresh",            NULL,    NULL,            pbDiskOpRefresh },
+	{  70,  87, 58, 16, 0, 0, "Set path",           NULL,    NULL,            pbDiskOpSetPath },
+	{  70, 104, 58, 16, 0, 0, "Show all",           NULL,    NULL,            pbDiskOpShowAll },
+	{  70, 121, 58, 19, 0, 0, "Exit",               NULL,    NULL,            pbDiskOpExit },
 #ifdef _WIN32 // partition letters
-	{ 134,   2, 31, 13, 0, 0, ".\001",           NULL,    NULL,             pbDiskOpParent },
-	{ 134,  16, 31, 12, 0, 0, "\\",              NULL,    NULL,             pbDiskOpRoot },
-	{ 134,  29, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive1 },
-	{ 134,  43, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive2 },
-	{ 134,  57, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive3 },
-	{ 134,  71, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive4 },
-	{ 134,  85, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive5 },
-	{ 134,  99, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive6 },
-	{ 134, 113, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive7 },
-	{ 134, 127, 31, 13, 0, 0, NULL,              NULL,    NULL,             pbDiskOpDrive8 },
+	{ 134,   2, 31, 13, 0, 0, DISKOP_PARENT_STRING, NULL,    NULL,            pbDiskOpParent },
+	{ 134,  16, 31, 12, 0, 0, "\\",                 NULL,    NULL,            pbDiskOpRoot },
+	{ 134,  29, 31, 13, 0, 0, NULL,                 NULL,    NULL,            pbDiskOpDrive1 },
+	{ 134,  43, 31, 13, 0, 0, NULL,                 NULL,    NULL,            pbDiskOpDrive2 },
+	{ 134,  57, 31, 13, 0, 0, NULL,                 NULL,    NULL,            pbDiskOpDrive3 },
+	{ 134,  71, 31, 13, 0, 0, NULL,                 NULL,    NULL,            pbDiskOpDrive4 },
+	{ 134,  85, 31, 13, 0, 0, NULL,                 NULL,    NULL,            pbDiskOpDrive5 },
+	{ 134,  99, 31, 13, 0, 0, NULL,                 NULL,    NULL,            pbDiskOpDrive6 },
+	{ 134, 113, 31, 13, 0, 0, NULL,                 NULL,    NULL,            pbDiskOpDrive7 },
+	{ 134, 127, 31, 13, 0, 0, NULL,                 NULL,    NULL,            pbDiskOpDrive8 },
 #else
-	{ 134,   2, 31, 13, 0, 0, "../",             NULL,    NULL,             pbDiskOpParent },
-	{ 134,  16, 31, 12, 0, 0, "/",               NULL,    NULL,             pbDiskOpRoot },
+	{ 134,   2, 31, 13, 0, 0, "../",               NULL,    NULL,             pbDiskOpParent },
+	{ 134,  16, 31, 12, 0, 0, "/",                 NULL,    NULL,             pbDiskOpRoot },
 #endif
-	{ 335,   2, 18, 13, 1, 3, ARROW_UP_STRING,   NULL,    pbDiskOpListUp,   NULL },
-	{ 335, 158, 18, 13, 1, 3, ARROW_DOWN_STRING, NULL,    pbDiskOpListDown, NULL },
+	{ 335,   2, 18, 13, 1, 3, ARROW_UP_STRING,     NULL,    pbDiskOpListUp,   NULL },
+	{ 335, 158, 18, 13, 1, 3, ARROW_DOWN_STRING,   NULL,    pbDiskOpListDown, NULL },
 
 	// ------ WAV RENDERER PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,           text #2, funcOnDown,         funcOnUp
@@ -450,30 +453,70 @@ void drawPushButton(uint16_t pushButtonID)
 	// render button text(s)
 	if (b->caption != NULL && *b->caption != '\0')
 	{
-		// button text #2
-		if (b->caption2 != NULL && *b->caption2 != '\0')
+		// custom button graphics
+		if ((uint8_t)b->caption[0] < 32 && b->caption[1] == '\0')
 		{
-			textW = textWidth(b->caption2);
+			uint8_t *src8 = &bmp.buttonGfx[(b->caption[0]-1) * 8];
+			const char ch = b->caption[0];
+
+			textW = 8;
+			if (ch == ARROW_UP_GFX_CHAR || ch == ARROW_DOWN_GFX_CHAR)
+				textW = 6;
+			else if (ch == ARROW_LEFT_GFX_CHAR || ch == ARROW_RIGHT_GFX_CHAR)
+				textW = 7;
+			else if (ch >= SMALL_1_GFX_CHAR && ch <= SMALL_6_GFX_CHAR)
+				textW = 5;
+			else if (ch == DISKOP_PARENT_GFX_CHAR)
+				textW = 10;
+
 			textX = x + ((w - textW) / 2);
-			textY = y + 6 + ((h - (FONT1_CHAR_H - 2)) / 2);
+			textY = y + ((h - 8) / 2);
 
 			if (state == PUSHBUTTON_PRESSED)
-				textOut(textX + 1, textY + 1, PAL_BTNTEXT, b->caption2);
-			else
-				textOut(textX, textY, PAL_BTNTEXT, b->caption2);
+			{
+				textX++;
+				textY++;
+			}
 
-			y -= 5; // if two text lines, bias y position of first (upper) text
+			// blit graphics
+
+			uint32_t *dst32 = &video.frameBuffer[(textY * SCREEN_W) + textX];
+			for (y = 0; y < 8; y++, src8 += BUTTON_GFX_BMP_WIDTH, dst32 += SCREEN_W)
+			{
+				for (x = 0; x < textW; x++)
+				{
+					if (src8[x] != 0)
+						dst32[x] = video.palette[PAL_BTNTEXT];
+				}
+			}
 		}
+		else // normal text
+		{
+			// button text #2 (if present)
+			if (b->caption2 != NULL && *b->caption2 != '\0')
+			{
+				textW = textWidth(b->caption2);
+				textX = x + ((w - textW) / 2);
+				textY = y + 6 + ((h - (FONT1_CHAR_H - 2)) / 2);
 
-		// button text #1
-		textW = textWidth(b->caption);
-		textX = x + ((w - textW) / 2);
-		textY = y + ((h - (FONT1_CHAR_H - 2)) / 2);
+				if (state == PUSHBUTTON_PRESSED)
+					textOut(textX + 1, textY + 1, PAL_BTNTEXT, b->caption2);
+				else
+					textOut(textX, textY, PAL_BTNTEXT, b->caption2);
 
-		if (state == PUSHBUTTON_PRESSED)
-			textOut(textX + 1, textY + 1, PAL_BTNTEXT, b->caption);
-		else
-			textOut(textX, textY, PAL_BTNTEXT, b->caption);
+				y -= 5; // if two text lines, bias y position of first (upper) text
+			}
+
+			// button text #1
+			textW = textWidth(b->caption);
+			textX = x + ((w - textW) / 2);
+			textY = y + ((h - (FONT1_CHAR_H - 2)) / 2);
+
+			if (state == PUSHBUTTON_PRESSED)
+				textOut(textX + 1, textY + 1, PAL_BTNTEXT, b->caption);
+			else
+				textOut(textX, textY, PAL_BTNTEXT, b->caption);
+		}
 	}
 }
 

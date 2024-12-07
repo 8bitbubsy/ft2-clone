@@ -349,6 +349,9 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
+	if ((uint8_t)chr > 127+31)
+		chr = ' ';
+
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
@@ -373,6 +376,9 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, char chr)
 {
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+
+	if ((uint8_t)chr > 127+31)
+		chr = ' ';
 
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
@@ -408,6 +414,9 @@ void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t s
 {
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
+	if ((uint8_t)chr > 127+31)
+		chr = ' ';
+
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
@@ -442,6 +451,9 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 	if (xPos > clipX)
 		return;
 
+	if ((uint8_t)chr > 127+31)
+		chr = ' ';
+
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
@@ -471,6 +483,9 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
 
+	if ((uint8_t)chr > 127+31)
+		chr = ' ';
+
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')
 		return;
@@ -495,6 +510,9 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
 	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+
+	if ((uint8_t)chr > 127+31)
+		chr = ' ';
 
 	chr &= 0x7F; // this is important to get the nordic glyphs in the font
 	if (chr == ' ')

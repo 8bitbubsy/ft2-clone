@@ -4,13 +4,13 @@
 
 enum
 {
-	// don't change the order of these! (yes, it looks off)
+	// don't change the order of these! (yes, it looks weird)
 	INTERPOLATION_DISABLED = 0,
-	INTERPOLATION_SINC8 = 1,
-	INTERPOLATION_LINEAR = 2,
-	INTERPOLATION_SINC16 = 3,
-	INTERPOLATION_CUBIC = 4,
-	INTERPOLATION_GAUSSIAN = 5,
+	INTERPOLATION_SINC8    = 1,
+	INTERPOLATION_LINEAR   = 2,
+	INTERPOLATION_SINC16   = 3,
+	INTERPOLATION_CUBIC4   = 4,
+	INTERPOLATION_CUBIC6   = 5,
 	// ------
 
 	NUM_INTERPOLATORS,

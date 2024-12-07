@@ -6,54 +6,43 @@
 #include "../ft2_config.h"
 #include "../ft2_video.h"
 #include "../ft2_palette.h"
-#include "../mixer/ft2_gaussian.h"
 #include "ft2_scopes.h"
 #include "ft2_scopedraw.h"
 #include "ft2_scope_macros.h"
 
-static int16_t *scopeIntrpLUT;
+static float *fScopeIntrpLUT;
 
 static void scopeLine(int32_t x1, int32_t y1, int32_t y2, uint32_t color);
 
 bool calcScopeIntrpLUT(void)
 {
-	scopeIntrpLUT = (int16_t *)malloc(4 * SCOPE_INTRP_PHASES * sizeof (int16_t));
-	if (scopeIntrpLUT == NULL)
+	fScopeIntrpLUT = (float *)malloc(SCOPE_INTRP_TAPS * SCOPE_INTRP_PHASES * sizeof (float));
+	if (fScopeIntrpLUT == NULL)
 		return false;
 
-	int16_t *ptr = scopeIntrpLUT;
+	// 6-point cubic B-spline (No overshoot w/ low filter cut-off. Very suitable for scopes.)
+	float *fPtr = fScopeIntrpLUT;
 	for (int32_t i = 0; i < SCOPE_INTRP_PHASES; i++)
 	{
-#define PI_MULTIPLIER 2.048
+		const double x1 = i * (1.0 / SCOPE_INTRP_PHASES);
+		const double x2 = x1 * x1; // x^2
+		const double x3 = x2 * x1; // x^3
+		const double x4 = x3 * x1; // x^4
+		const double x5 = x4 * x1; // x^5
 
-		const int32_t i1 = SCOPE_INTRP_PHASES + i;
-		const int32_t i2 = i;
-		const int32_t i3 = (SCOPE_INTRP_PHASES-1) - i;
-		const int32_t i4 = ((SCOPE_INTRP_PHASES*2)-1) - i;
+		double t1 = (-(1.0/120.0) * x5) + ( (1.0/24.0) * x4) + (-(1.0/12.0) * x3) + ( (1.0/12.0) * x2) + (-(1.0/24.0) * x1) + ( 1.0/120.0);
+		double t2 = ( (1.0/ 24.0) * x5) + (-(1.0/ 6.0) * x4) + ( (1.0/ 6.0) * x3) + ( (1.0/ 6.0) * x2) + (-(5.0/12.0) * x1) + (13.0/ 60.0);
+		double t3 = (-(1.0/ 12.0) * x5) + ( (1.0/ 4.0) * x4) +                      (-(1.0/ 2.0) * x2)                      + (11.0/ 20.0);
+		double t4 = ( (1.0/ 12.0) * x5) + (-(1.0/ 6.0) * x4) + (-(1.0/ 6.0) * x3) + ( (1.0/ 6.0) * x2) + ( (5.0/12.0) * x1) + (13.0/ 60.0);
+		double t5 = (-(1.0/ 24.0) * x5) + ( (1.0/24.0) * x4) + ( (1.0/12.0) * x3) + ( (1.0/12.0) * x2) + ( (1.0/24.0) * x1) + ( 1.0/120.0);
+		double t6 =   (1.0/120.0) * x5;
 
-		const double x1 = (0.5 + i1) * (1.0 / ((SCOPE_INTRP_PHASES*4)-1));
-		const double x2 = (0.5 + i2) * (1.0 / ((SCOPE_INTRP_PHASES*4)-1));
-		const double x3 = (0.5 + i3) * (1.0 / ((SCOPE_INTRP_PHASES*4)-1));
-		const double x4 = (0.5 + i4) * (1.0 / ((SCOPE_INTRP_PHASES*4)-1));
-
-		// Blackman window
-		const double w1 = (0.42 + (0.50 * cos(2.0 * PI * x1)) + (0.08 * cos(4.0 * PI * x1))) / x1;
-		const double w2 = (0.42 + (0.50 * cos(2.0 * PI * x2)) + (0.08 * cos(4.0 * PI * x2))) / x2;
-		const double w3 = (0.42 + (0.50 * cos(2.0 * PI * x3)) + (0.08 * cos(4.0 * PI * x3))) / x3;
-		const double w4 = (0.42 + (0.50 * cos(2.0 * PI * x4)) + (0.08 * cos(4.0 * PI * x4))) / x4;
-
-		const double t1 = sin(PI_MULTIPLIER * PI * x1) * w1;
-		const double t2 = sin(PI_MULTIPLIER * PI * x2) * w2;
-		const double t3 = sin(PI_MULTIPLIER * PI * x3) * w3;
-		const double t4 = sin(PI_MULTIPLIER * PI * x4) * w4;
-
-		// calculate normalization value (also assures unity gain when summing taps)
-		const double dScale = SCOPE_INTRP_SCALE / (t1 + t2 + t3 + t4);
-
-		*ptr++ = (int16_t)((t1 * dScale) + 0.5);
-		*ptr++ = (int16_t)((t2 * dScale) + 0.5);
-		*ptr++ = (int16_t)((t3 * dScale) + 0.5);
-		*ptr++ = (int16_t)((t4 * dScale) + 0.5);
+		*fPtr++ = (float)t1;
+		*fPtr++ = (float)t2;
+		*fPtr++ = (float)t3;
+		*fPtr++ = (float)t4;
+		*fPtr++ = (float)t5;
+		*fPtr++ = (float)t6;
 	}
 
 	return true;
@@ -61,10 +50,10 @@ bool calcScopeIntrpLUT(void)
 
 void freeScopeIntrpLUT(void)
 {
-	if (scopeIntrpLUT != NULL)
+	if (fScopeIntrpLUT != NULL)
 	{
-		free(scopeIntrpLUT);
-		scopeIntrpLUT = NULL;
+		free(fScopeIntrpLUT);
+		fScopeIntrpLUT = NULL;
 	}
 }
 

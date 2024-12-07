@@ -166,12 +166,12 @@
     <ClCompile Include="..\..\src\modloaders\ft2_load_bem.c">
       <Filter>modloaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\mixer\ft2_gaussian.c">
-      <Filter>mixer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\ft2_diskop.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_brr.c">
       <Filter>smploaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\modloaders\ft2_load_it.c">
+      <Filter>modloaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -330,9 +330,6 @@
     </ClInclude>
     <ClInclude Include="..\..\src\ft2_unicode.h">
       <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\mixer\ft2_gaussian.h">
-      <Filter>mixer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

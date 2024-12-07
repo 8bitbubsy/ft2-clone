@@ -5,10 +5,15 @@
 #include "../ft2_header.h"
 #include "../ft2_audio.h"
 
-#define SCOPE_INTRP_SCALE 32767
-#define SCOPE_INTRP_SCALE_BITS 15 /* ceil(log2(SCOPE_INTRP_SCALE)) */
-#define SCOPE_INTRP_PHASES 1024 /* good enough for the FT2 scopes */
-#define SCOPE_INTRP_PHASES_BITS 10 /* log2(SCOPE_INTRP_PHASES) */
+/* Scopes must be clocked slightly higher than the nominal vblank rate
+** to prevent update/draw racing issues. Setting it too high will
+** cause more issues!
+*/
+#define SCOPE_HZ 64
+
+#define SCOPE_INTRP_TAPS 6
+#define SCOPE_INTRP_PHASES 512 /* plentiful for a small scope window */
+#define SCOPE_INTRP_PHASES_BITS 9 /* log2(SCOPE_INTRP_PHASES) */
 
 #define SCOPE_HEIGHT 36
 

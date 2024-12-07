@@ -88,10 +88,10 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 	//x,   y,   w,   group,                               funcOnUp
 	{ 390,  90, 108, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpDisabled },
 	{ 390, 104,  90, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpLinear },
-	{ 390, 118, 115, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpGaussian },
-	{ 390, 132,  95, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpCubic },
-	{ 390, 146,  94, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrp8PointSinc },
-	{ 390, 160, 101, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrp16PointSinc },
+	{ 390, 118, 101, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpCubic4 },
+	{ 390, 132, 101, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpCubic6 },
+	{ 390, 146,  94, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpSinc8 },
+	{ 390, 160, 101, RB_GROUP_CONFIG_AUDIO_INTERPOLATION, rbConfigAudioIntrpSinc16 },
 
 	// audio output frequency
 	//x,   y,  w,  group,                      funcOnUp

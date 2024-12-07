@@ -34,6 +34,10 @@
 >- Scream Tracker 2 modules. (STM)
 >- DIGI Booster (non-Pro) modules. (DIGI)
 
+@X040@C001Abysmal (super broken) module support:
+>@X060@C002
+>- Impulse Tracker
+
 @X040@C001Samples:
 >@X060@C002
 >- Gravis Ultrasound Patches, PAT.
@@ -810,15 +814,20 @@ you exit the program.
 >@X040@C001Interpolation:
 >@X060@C002
 Selects what type of resampling interpolation to use.
->For an authentic FT2 sound, select "Linear (FT2)".
->For a sound that sounds like the Super Nintendo video game console,
-select "Gaussian (SNES)". However, this is a poor interpolator that results in
-filtered sound!
->For a good trade-off between quality and muddiness for more lo-fi samples,
-you may select "Cubic Hermite".
+>
+>For an authentic FT2 sound, select "Linear (FT2)". This is a quite bad interpolator,
+so be prepared for low fidelity.
+>
+>For a good trade-off between quality and "fun listening" for lo-fi samples,
+you may select "Cubic (4 point)". Or select "Cubic (6 point)" if you want just
+a tad bit more treble, but with slightly more filtered lo-fi samples as a trade-off.
+>
 >If you mainly use hi-fi samples (or play XMs with hi-fi samples), then pick
 any of the two "Sinc" options for the most clear sound. Keep in mind that these will
-make XMs with lo-fi samples sound very muddy, though! 
+make XMs with lo-fi samples sound very muddy, though!
+>
+>Sinc (16 point) is the best option in terms of clarity, as long as you use high-quality
+samples (sampled at 44.1kHz, for example).
 >
 >Tip: Play around with the different options...
 

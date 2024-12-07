@@ -284,7 +284,7 @@ static LONG WINAPI exceptionHandler(EXCEPTION_POINTERS *ptr)
 
 			if (i != BACKUP_FILES_TO_TRY)
 			{
-				UNICHAR *fileNameU = cp437ToUnichar(fileName);
+				UNICHAR *fileNameU = cp850ToUnichar(fileName);
 				if (fileNameU != NULL)
 				{
 					saveXM(fileNameU);
@@ -326,7 +326,7 @@ static void exceptionHandler(int32_t signal)
 
 			if (i != BACKUP_FILES_TO_TRY)
 			{
-				UNICHAR *fileNameU = cp437ToUnichar(fileName);
+				UNICHAR *fileNameU = cp850ToUnichar(fileName);
 				if (fileNameU != NULL)
 				{
 					saveXM(fileNameU);
@@ -433,7 +433,7 @@ static void handleSDLEvents(void)
 					continue;
 				}
 
-				char *inputText = utf8ToCp437(event.text.text, false);
+				char *inputText = utf8ToCp850(event.text.text, false);
 				if (inputText != NULL)
 				{
 					if (inputText[0] != '\0')

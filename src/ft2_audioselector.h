@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#define DEFAULT_AUDIO_DEV_STR "(Default Audio Device)"
 #define AUDIO_SELECTORS_BOX_WIDTH 247
 
 void setToDefaultAudioOutputDevice(void);

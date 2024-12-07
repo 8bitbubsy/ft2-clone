@@ -282,14 +282,13 @@ bool loadS3M(FILE *f, uint32_t filesize)
 						{
 							case 1: // A
 							{
-								tmpNote.efx = 0xF;
-								if (tmpNote.efxData == 0)
+								if (tmpNote.efxData == 0) // A00 does nothing in ST3
 								{
-									tmpNote.efx = 0;
-									tmpNote.efxData = 0;
+									tmpNote.efx = tmpNote.efxData = 0;
 								}
 								else if (tmpNote.efxData > 0x1F)
 								{
+									tmpNote.efx = 0xF;
 									tmpNote.efxData = 0x1F;
 								}
 							}
@@ -390,8 +389,8 @@ bool loadS3M(FILE *f, uint32_t filesize)
 							}
 							break;
 
-							case 8: tmpNote.efx = 0x04; break; // H
-							case 9: tmpNote.efx = 0x1D; break; // I
+							case 8:  tmpNote.efx = 0x04; break; // H
+							case 9:  tmpNote.efx = 0x1D; break; // I
 							case 10: tmpNote.efx = 0x00; break; // J
 							case 12: tmpNote.efx = 0x05; break; // L
 							case 15: tmpNote.efx = 0x09; break; // O
@@ -408,7 +407,11 @@ bool loadS3M(FILE *f, uint32_t filesize)
 								else if (tmp == 0x2) tmpNote.efxData |= 0x50;
 								else if (tmp == 0x3) tmpNote.efxData |= 0x40;
 								else if (tmp == 0x4) tmpNote.efxData |= 0x70;
-								// ignore S8x becuase it's not compatible with FT2 panning
+								else if (tmp == 0x8)
+								{
+									tmpNote.efx = 8;
+									tmpNote.efxData = ((tmpNote.efxData & 0x0F) << 4) | (tmpNote.efxData & 0x0F);
+								}
 								else if (tmp == 0xB) tmpNote.efxData |= 0x60;
 								else if (tmp == 0xC) // Note Cut
 								{
@@ -416,8 +419,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 									if (tmpNote.efxData == 0xC0)
 									{
 										// EC0 does nothing in ST3 but cuts voice in FT2, remove effect
-										tmpNote.efx = 0;
-										tmpNote.efxData = 0;
+										tmpNote.efx = tmpNote.efxData = 0;
 									}
 								}
 								else if (tmp == 0xD) // Note Delay
@@ -426,8 +428,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 									if (tmpNote.note == 0 || tmpNote.note == NOTE_OFF)
 									{
 										// EDx without a note does nothing in ST3 but retrigs in FT2, remove effect
-										tmpNote.efx = 0;
-										tmpNote.efxData = 0;
+										tmpNote.efx = tmpNote.efxData = 0;
 									}
 									else if (tmpNote.efxData == 0xD0)
 									{
@@ -443,8 +444,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 								else if (tmp == 0xF) tmpNote.efxData |= 0xF0;
 								else
 								{
-									tmpNote.efx = 0;
-									tmpNote.efxData = 0;
+									tmpNote.efx = tmpNote.efxData = 0;
 								}
 							}
 							break;
@@ -462,21 +462,34 @@ bool loadS3M(FILE *f, uint32_t filesize)
 
 							case 22: // V
 							{
-								tmpNote.efx = 0x10;
-								if (tmpNote.efxData > 0x40)
+								if (tmpNote.efxData > 0x40) // Vxx > 0x40 does nothing in ST3
+									tmpNote.efx = tmpNote.efxData = 0;
+								else
+									tmpNote.efx = 0x10;
+							}
+							break;
+
+							case 24: // X (set 7-bit panning + surround)
+							{
+								if (tmpNote.efxData > 0x80)
 								{
-									// Vxx > 0x40 does nothing in ST3
-									tmpNote.efx = 0;
-									tmpNote.efxData = 0;
+									tmpNote.efx = tmpNote.efxData = 0;
+								}
+								else
+								{
+									tmpNote.efx = 8;
+
+									int32_t pan = tmpNote.efxData * 2;
+									if (pan > 255)
+										pan = 255;
+
+									tmpNote.efxData = (uint8_t)pan;
 								}
 							}
 							break;
 
 							default:
-							{
-								tmpNote.efx = 0;
-								tmpNote.efxData = 0;
-							}
+								tmpNote.efx = tmpNote.efxData = 0;
 							break;
 						}
 					}

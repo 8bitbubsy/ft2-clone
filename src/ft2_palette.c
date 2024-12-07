@@ -28,7 +28,7 @@ void setCustomPalColor(uint32_t color)
 
 void setPal16(pal16 *p, bool redrawScreen)
 {
-#define LOOP_PIN_COL_SUB 110
+#define LOOP_PIN_COL_SUB 96
 #define TEXT_MARK_COLOR 0x0078D7
 #define BOX_SELECT_COLOR 0x7F7F7F
 

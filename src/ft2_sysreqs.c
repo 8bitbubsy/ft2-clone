@@ -519,7 +519,7 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 						continue;
 					}
 
-					char *inputText = utf8ToCp437(inputEvent.text.text, false);
+					char *inputText = utf8ToCp850(inputEvent.text.text, false);
 					if (inputText != NULL)
 					{
 						if (inputText[0] != '\0')

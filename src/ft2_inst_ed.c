@@ -475,19 +475,34 @@ static void drawPanning(void)
 
 void drawC4Rate(void)
 {
-	fillRect(465, 299, 71, 8, PAL_DESKTOP);
+	fillRect(472, 299, 64, 8, PAL_DESKTOP);
 
-	int32_t C4Hz = 0;
+	double dC4Hz = 0.0;
 	if (editor.curInstr != 0)
 	{
 		instr_t *ins = instr[editor.curInstr];
 		if (ins != NULL)
-			C4Hz = (int32_t)(getSampleC4Rate(&ins->smp[editor.curSmp]) + 0.5); // rounded
+			dC4Hz = getSampleC4Rate(&ins->smp[editor.curSmp]);
 	}
 
-	char str[64];
-	sprintf(str, "%dHz", C4Hz);
-	textOut(465, 299, PAL_FORGRND, str);
+	if (dC4Hz <= 0.0) // can happen in several cases
+	{
+		textOut(472, 299, PAL_FORGRND, "0Hz");
+		return;
+	}
+
+	// display rate with as many digits as we can fit
+	char str[32];
+	if (dC4Hz < 1000.0)
+		sprintf(str, "%.3fHz", dC4Hz);
+	else if (dC4Hz < 10000.0)
+		sprintf(str, "%.2fHz", dC4Hz);
+	else if (dC4Hz < 100000.0)
+		sprintf(str, "%.1fHz", dC4Hz);
+	else
+		sprintf(str, "%dHz", (int32_t)(dC4Hz + 0.5)); // rounded
+
+	textOut(472, 299, PAL_FORGRND, str);
 }
 
 static void drawFineTune(void)
@@ -2302,7 +2317,7 @@ void showInstEditor(void)
 	textOutShadow(442, 236, PAL_FORGRND, PAL_DSKTOP2, "Vib.speed");
 	textOutShadow(442, 250, PAL_FORGRND, PAL_DSKTOP2, "Vib.depth");
 	textOutShadow(442, 264, PAL_FORGRND, PAL_DSKTOP2, "Vib.sweep");
-	textOutShadow(442, 299, PAL_FORGRND, PAL_DSKTOP2, "C4=");
+	textOutShadow(442, 299, PAL_FORGRND, PAL_DSKTOP2, "C-4=");
 	textOutShadow(537, 299, PAL_FORGRND, PAL_DSKTOP2, "Rel. note");
 
 	showScrollBar(SB_INST_VOL);

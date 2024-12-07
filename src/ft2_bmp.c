@@ -71,6 +71,7 @@ bool loadBMPs(void)
 	memset(&bmp, 0, sizeof (bmp));
 
 	bmp.ft2AboutLogo = loadBMPTo32Bit(ft2AboutLogoBMP);
+	bmp.buttonGfx = loadBMPTo1Bit(buttonGfxBMP);
 	bmp.font1 = loadBMPTo1Bit(font1BMP);
 	bmp.font2 = loadBMPTo1Bit(font2BMP);
 	bmp.font3 = loadBMPTo1Bit(font3BMP);
@@ -95,7 +96,7 @@ bool loadBMPs(void)
 	bmp.radiobuttonGfx = loadBMPTo4BitPal(radiobuttonGfxBMP);
 	bmp.checkboxGfx = loadBMPTo4BitPal(checkboxGfxBMP);
 
-	if (bmp.ft2AboutLogo == NULL || bmp.font1 == NULL || bmp.font2 == NULL ||
+	if (bmp.ft2AboutLogo == NULL || bmp.buttonGfx == NULL || bmp.font1 == NULL || bmp.font2 == NULL ||
 		bmp.font3 == NULL || bmp.font4 == NULL || bmp.font6 == NULL || bmp.font7 == NULL ||
 		bmp.font8 == NULL || bmp.ft2LogoBadges == NULL || bmp.ft2ByBadges == NULL ||
 		bmp.midiLogo == NULL || bmp.nibblesLogo == NULL || bmp.nibblesStages == NULL ||
@@ -114,6 +115,7 @@ bool loadBMPs(void)
 void freeBMPs(void)
 {
 	if (bmp.ft2AboutLogo != NULL) { free(bmp.ft2AboutLogo); bmp.ft2AboutLogo = NULL; }
+	if (bmp.buttonGfx != NULL) { free(bmp.buttonGfx); bmp.buttonGfx = NULL; }
 	if (bmp.font1 != NULL) { free(bmp.font1); bmp.font1 = NULL; }
 	if (bmp.font2 != NULL) { free(bmp.font2); bmp.font2 = NULL; }
 	if (bmp.font3 != NULL) { free(bmp.font3); bmp.font3 = NULL; }

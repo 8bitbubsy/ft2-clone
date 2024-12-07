@@ -27,7 +27,6 @@
 #include "ft2_sample_loader.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
-#include "mixer/ft2_gaussian.h"
 #include "mixer/ft2_cubic_spline.h"
 #include "mixer/ft2_windowed_sinc.h"
 
@@ -2790,8 +2789,7 @@ void closeReplayer(void)
 		instr[131] = NULL;
 	}
 
-	freeGaussianTable();
-	freeCubicSplineTable();
+	freeCubicSplineTables();
 	freeWindowedSincTables();
 }
 

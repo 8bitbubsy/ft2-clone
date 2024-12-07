@@ -76,11 +76,18 @@
 	} \
 	else \
 	{ \
-		const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << 2); \
-		sample = ((s8[0] * t[0]) + \
-		          (s8[1] * t[1]) + \
-		          (s8[2] * t[2]) + \
-		          (s8[3] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8); \
+		const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
+		\
+		/* This has a delay of 2 samples, but that's acceptable for a tracker scope. */ \
+		/* Not having to look-up previous samples significantly reduces the */ \
+		/* logic needed in the scopes. */ \
+		float fSample = (s8[0] * t[0]) + \
+		                (s8[1] * t[1]) + \
+		                (s8[2] * t[2]) + \
+		                (s8[3] * t[3]) + \
+		                (s8[4] * t[4]) + \
+		                (s8[5] * t[5]); \
+		sample = (int32_t)(fSample * 256.0f); \
 	}
 
 #define INTERPOLATE_SMP16(pos, frac) \
@@ -96,13 +103,19 @@
 	} \
 	else \
 	{ \
-		const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << 2); \
-		sample = ((s16[0] * t[0]) + \
-		          (s16[1] * t[1]) + \
-		          (s16[2] * t[2]) + \
-		          (s16[3] * t[3])) >> SCOPE_INTRP_SCALE_BITS; \
+		const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
+		\
+		/* This has a delay of 2 samples, but that's acceptable for a tracker scope. */ \
+		/* Not having to look-up previous samples significantly reduces the */ \
+		/* logic needed in the scopes. */ \
+		float fSample = (s16[0] * t[0]) + \
+		                (s16[1] * t[1]) + \
+		                (s16[2] * t[2]) + \
+		                (s16[3] * t[3]) + \
+		                (s16[4] * t[4]) + \
+		                (s16[5] * t[5]); \
+		sample = (int32_t)fSample; \
 	}
-
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
 		sample = (s->base8[position] * volume) >> 8; \

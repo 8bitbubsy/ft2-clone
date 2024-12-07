@@ -1862,7 +1862,7 @@ void saveRange(void)
 		default: case SMP_SAVE_MODE_WAV: changeFilenameExt(smpEd_SysReqText, ".wav", sizeof (smpEd_SysReqText) - 1); break;
 	}
 
-	UNICHAR *filenameU = cp437ToUnichar(smpEd_SysReqText);
+	UNICHAR *filenameU = cp850ToUnichar(smpEd_SysReqText);
 	if (filenameU == NULL)
 	{
 		okBox(0, "System message", "Not enough memory!", NULL);

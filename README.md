@@ -14,7 +14,7 @@ Linux binaries can be found [here](https://repology.org/project/fasttracker2/ver
 If these don't work for you, you'll have to compile the code manually.
 
 # Improvements over original DOS version
-- The channel resampler/mixer uses floating-point arithmetics for less errors, and has extra interpolation options (4-point "Gaussian" (SNES), 4-point cubic Hermite spline, 8-point/16-point windowed-sinc)
+- The channel resampler/mixer uses floating-point arithmetics for less errors, and has extra interpolation options (4-point/6-point cubic Hermite spline, 8-point/16-point windowed-sinc)
 - The sample loader supports FLAC/AIFF/BRR (SNES) samples and more WAV types than original FT2. It will also attempt to tune the sample (finetune and rel. note) to its playback frequency on load.
 - It contains a new "Trim" feature, which will remove unused stuff to potentially make the module smaller
 - Drag n' drop of modules/samples
@@ -22,6 +22,7 @@ If these don't work for you, you'll have to compile the code manually.
 - Text boxes has a text marking option, where you can cut/copy/paste
 - MOD/STM/S3M import has been slightly improved (S3M import is still not ideal, as it's not compatible with XM)
 - Supports loading DIGI Booster (non-Pro) modules
+- Supports loading Impulse Tracker modules (Awful support! Don't use this for playback)
 - It supports loading XMs with stereo samples, uneven amount of channels, more than 32 channels, more than 16 samples per instrument, more than 128 patterns etc. The unsupported data will be mixed to mono/truncated.
 - It has some small additions to make life easier (C4/middle-C Hz display in Instr. Ed., envelope point coordinate display, etc).
 

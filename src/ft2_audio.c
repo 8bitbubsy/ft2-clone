@@ -14,6 +14,7 @@
 #include "ft2_wav_renderer.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
+#include "ft2_audioselector.h"
 #include "mixer/ft2_mix.h"
 #include "mixer/ft2_silence_mix.h"
 
@@ -961,13 +962,28 @@ bool setupAudio(bool showErrorMsg)
 	want.callback = audioCallback;
 	want.samples  = configAudioBufSize;
 
-	audio.dev = SDL_OpenAudioDevice(audio.currOutputDevice, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+	char *device = audio.currOutputDevice;
+	if (device != NULL && strcmp(device, DEFAULT_AUDIO_DEV_STR) == 0)
+		device = NULL; // force default device
+
+	audio.dev = SDL_OpenAudioDevice(device, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
 	if (audio.dev == 0)
 	{
-		if (showErrorMsg)
-			showErrorMsgBox("Couldn't open audio device:\n\"%s\"\n\nDo you have an audio device enabled and plugged in?", SDL_GetError());
+		audio.dev = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+		if (audio.currOutputDevice != NULL)
+		{
+			free(audio.currOutputDevice);
+			audio.currOutputDevice = NULL;
+		}
+		audio.currOutputDevice = strdup(DEFAULT_AUDIO_DEV_STR);
 
-		return false;
+		if (audio.dev == 0)
+		{
+			if (showErrorMsg)
+				showErrorMsgBox("Couldn't open audio device:\n\"%s\"\n\nDo you have an audio device enabled and plugged in?", SDL_GetError());
+
+			return false;
+		}
 	}
 
 	// test if the received audio format is compatible
@@ -991,6 +1007,7 @@ bool setupAudio(bool showErrorMsg)
 		return false;
 	}
 
+	/*
 	if (have.freq != 44100 && have.freq != 48000 && have.freq != 96000)
 	{
 		if (showErrorMsg)
@@ -999,6 +1016,7 @@ bool setupAudio(bool showErrorMsg)
 		closeAudio();
 		return false;
 	}
+	*/
 
 	if (!setupAudioBuffers())
 	{

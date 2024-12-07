@@ -233,7 +233,7 @@ static void copyMarkedText(textBox_t *t)
 	const char oldChar = t->textPtr[end];
 	t->textPtr[end] = '\0';
 
-	char *utf8Text = cp437ToUtf8(&t->textPtr[start]);
+	char *utf8Text = cp850ToUtf8(&t->textPtr[start]);
 	if (utf8Text != NULL)
 	{
 		SDL_SetClipboardText(utf8Text);
@@ -280,7 +280,7 @@ static void pasteText(textBox_t *t)
  
 	char *copiedTextUtf8 = SDL_GetClipboardText();
 
-	char *copiedText = utf8ToCp437(copiedTextUtf8, true);
+	char *copiedText = utf8ToCp850(copiedTextUtf8, true);
 	if (copiedText == NULL)
 		return;
 
@@ -1117,8 +1117,12 @@ void handleTextEditInputChar(char textChar)
 		return;
 
 	const int8_t ch = (const int8_t)textChar;
-	if (ch < 32 && ch != -124 && ch != -108 && ch != -122 && ch != -114 && ch != -103 && ch != -113)
-		return; // allow certain codepage 437 nordic characters
+	if (ch < 32 &&
+		ch != -124 && ch != -108 && ch != -122 && ch != -114 && ch != -103 &&
+		ch != -113 && ch != -101 && ch != -99 && ch != -111 && ch != -110)
+	{
+		return; // only allow certain codepage 850 nordic characters
+	}
 
 	if (textIsMarked())
 	{

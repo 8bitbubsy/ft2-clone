@@ -426,7 +426,7 @@ void drawMidiInputList(void)
 					fillRect(114, y, 365, 10, PAL_BOXSLCT); // selection background color
 			}
 
-			char *tmpString = utf8ToCp437(midi.inputDeviceNames[deviceEntry], true);
+			char *tmpString = utf8ToCp850(midi.inputDeviceNames[deviceEntry], true);
 			if (tmpString != NULL)
 			{
 				textOutClipX(114, y, PAL_FORGRND, tmpString, 479);
