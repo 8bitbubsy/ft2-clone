@@ -16,6 +16,9 @@
 #else
 #include <unistd.h>
 #endif
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include <SDL2/SDL.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -163,7 +166,20 @@ void hpc_Wait(hpc_t *hpc)
 
 		int32_t microSecsLeft = (int32_t)((timeLeft32 * hpcFreq.dFreqMulMicro) + 0.5); // rounded
 		if (microSecsLeft > 0)
+#ifdef __EMSCRIPTEN__
+			if (true)
+			{
+				// The right way
+				emscripten_sleep(microSecsLeft / 1000);
+			}
+			else
+			{
+				// Just using emscripten_sleep() to yield to the main thread
+				emscripten_sleep(1);
+			}
+#else
 			usleep(microSecsLeft);
+#endif
 	}
 
 	// set next end time
