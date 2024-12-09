@@ -1582,15 +1582,15 @@ static void pianoNumberOut(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint
 	const uint32_t fg = video.palette[fgPalette];
 	const uint32_t bg = video.palette[bgPalette];
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	const uint8_t *srcPtr = &bmp.font8[val * 5];
+	const uint8_t *srcPtr = &bmp.font8[val * FONT8_CHAR_W];
 
-	for (int32_t y = 0; y < 7; y++)
+	for (int32_t y = 0; y < FONT8_CHAR_H; y++)
 	{
-		for (int32_t x = 0; x < 5; x++)
+		for (int32_t x = 0; x < FONT8_CHAR_W; x++)
 			dstPtr[x] = srcPtr[x] ? fg : bg;
 
 		dstPtr += SCREEN_W;
-		srcPtr += 80;
+		srcPtr += FONT8_WIDTH;
 	}
 }
 

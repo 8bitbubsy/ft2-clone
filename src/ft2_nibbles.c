@@ -44,7 +44,6 @@ typedef struct
 static const char nibblesCheatCode1[] = "skip", nibblesCheatCode2[] = "triton";
 static char nibblesCheatBuffer[16];
 
-static const char convHexTable2[10] = { 7, 8, 9, 10, 11, 12, 13, 16, 17, 18 };
 static const uint8_t NI_Speeds[4] = { 12, 8, 6, 4 };
 static bool NI_EternalLives;
 static uint8_t NI_CheatIndex, NI_CurSpeed, NI_CurTick60Hz, NI_CurSpeed60Hz, NI_Screen[51][23], NI_Level;
@@ -101,6 +100,24 @@ static bool wallColorsAreCloseToBlack(void)
 // ------------------------------------------------------------------------
 // ------------------------------------------------------------------------
 
+static void drawNibblesFoodNumber(int32_t xOut, int32_t yOut, int32_t number)
+{
+	if (number > 9)
+		return;
+
+	uint32_t *dstPtr = &video.frameBuffer[(yOut * SCREEN_W) + xOut];
+	uint8_t *srcPtr = &bmp.font8[number * FONT8_CHAR_W];
+
+	for (int32_t y = 0; y < FONT8_CHAR_H; y++, srcPtr += FONT8_WIDTH, dstPtr += SCREEN_W)
+	{
+		for (int32_t x = 0; x < FONT8_CHAR_W; x++)
+		{
+			if (srcPtr[x] != 0)
+				dstPtr[x] = video.palette[PAL_FORGRND];
+		}
+	}
+}
+
 static void redrawNibblesScreen(void)
 {
 	if (!editor.NI_Play)
@@ -128,7 +145,7 @@ static void redrawNibblesScreen(void)
 			}
 			else
 			{
-				charOut(xs + 2, ys, PAL_FORGRND, convHexTable2[NI_Number]);
+				drawNibblesFoodNumber(xs+2, ys, NI_Number);
 			}
 		}
 	}
@@ -340,8 +357,8 @@ static void nibblesGenNewNumber(void)
 {
 	while (true)
 	{
-		const int16_t x = rand() % 51;
-		const int16_t y = rand() % 23;
+		int16_t x = rand() % 51;
+		int16_t y = rand() % 23;
 
 		bool blockIsSuitable;
 
@@ -370,7 +387,8 @@ static void nibblesGenNewNumber(void)
 				fillRect(xs, ys, 8, 7, PAL_BCKGRND);
 			}
 
-			charOut((x * 8) + 154, (y * 7) + 7, PAL_FORGRND, convHexTable2[NI_Number]);
+			drawNibblesFoodNumber((x * 8) + 154, (y * 7) + 7, NI_Number);
+
 			break;
 		}
 	}
