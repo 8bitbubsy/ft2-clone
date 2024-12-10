@@ -6,13 +6,13 @@
 
 void silenceMixRoutine(voice_t *v, int32_t numSamples)
 {
-	assert((uint32_t)numSamples <= UINT16_MAX);
+	const uint64_t samplesToMix = (uint64_t)v->delta * (uint32_t)numSamples; // fixed-point
 
-	const uint32_t samplesInt = (uint32_t)(v->delta >> MIXER_FRAC_BITS) * (uint32_t)numSamples;
-	const uint64_t samplesFrac = (uint64_t)(v->delta & MIXER_FRAC_SCALE) * (uint32_t)numSamples;
+	const uint32_t samples = (uint32_t)(samplesToMix >> MIXER_FRAC_BITS);
+	const uint64_t samplesFrac = (samplesToMix & MIXER_FRAC_MASK) + v->positionFrac;
 
-	uint32_t position = v->position + samplesInt + (uint32_t)(samplesFrac >> MIXER_FRAC_BITS);
-	uint32_t positionFrac = samplesFrac & MIXER_FRAC_MASK;
+	uint32_t position = v->position + samples + (uint32_t)(samplesFrac >> MIXER_FRAC_BITS);
+	uint64_t positionFrac = samplesFrac & MIXER_FRAC_MASK;
 
 	if (position < (uint32_t)v->sampleEnd) // we haven't reached the sample's end yet
 	{
