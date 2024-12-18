@@ -1,11 +1,10 @@
 ---- Guide on how to compile the FT2 clone for Windows/macOS/Linux ---
-
-LINUX NOTE: This code is NOT big-endian compatible!
+  LINUX NOTE: The program source code is NOT big-endian compatible!
 
 Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
 
 
-== COMPILING ON LINUX (little-endian only!) ==
+== COMPILING ON LINUX ==
  1. Install the following packages:
     Ubuntu/Debian and similar: build-essential libsdl2-dev
     Fedora: gcc gcc-c++ alsa-lib-devel SDL2-devel
@@ -25,7 +24,7 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
                all... I have no idea why, it works really well on Windows/maCOS.
 
 == COMPILING ON WINDOWS 7 SP1 OR NEWER ==
- 1. Download Visual Studio Community 2019 (it's free)
+ 1. Download Visual Studio Community 2019 (it's free) EDIT: Hard to find now!
  2. Start the installer and select the "Desktop development with C++" package
  3. Install and wait for it to finish...
  4. Open "ft2-clone\vs2019_project\ft2-clone.sln"
