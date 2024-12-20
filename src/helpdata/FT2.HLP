@@ -797,10 +797,11 @@ draw your waveforms manually.
 >
 >@X040@C001Imprecise BPM (FT2):
 >@X060@C002
-The BPM precision in original FT2 is not exact. Tick this box to use
-the same (poor) BPM precision that original FT2 uses. It will be
-a fraction off, but the WAV output will be the same length as from FT2.
-This settings only affects WAV export, and not tracker playback.
+The song BPM precision in original FT2 is not exact. Tick this box
+to use the same imprecise BPM as original FT2. It will be a fraction
+off, but the WAV output will have the same length as the output
+from FT2. This setting only affects WAV export, and not tracker
+playback.
 
 @X020@C001Configuration:
 >
