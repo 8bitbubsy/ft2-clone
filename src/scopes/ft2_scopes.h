@@ -35,9 +35,9 @@ typedef struct scope_t
 	volatile bool active;
 	const int8_t *base8;
 	const int16_t *base16;
-	bool wasCleared, sample16Bit, samplingBackwards;
+	bool wasCleared, sample16Bit, samplingBackwards, hasLooped;
 	uint8_t loopType;
-	int32_t volume, loopStart, loopLength, sampleEnd, position;
+	int32_t volume, loopStart, loopLength, loopEnd, sampleEnd, position;
 	uint64_t delta, drawDelta, positionFrac;
 } scope_t;
 

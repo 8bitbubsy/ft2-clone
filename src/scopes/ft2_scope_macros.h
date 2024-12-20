@@ -10,7 +10,7 @@
 /* ----------------------------------------------------------------------- */
 
 #define SCOPE_REGS_NO_LOOP \
-	const int32_t volume = s->volume; \
+	const int32_t volume = s->volume * SCOPE_HEIGHT; \
 	const int32_t sampleEnd = s->sampleEnd; \
 	const uint64_t delta = s->drawDelta; \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
@@ -20,7 +20,7 @@
 	uint64_t positionFrac = 0;
 
 #define SCOPE_REGS_LOOP \
-	const int32_t volume = s->volume; \
+	const int32_t volume = s->volume * SCOPE_HEIGHT; \
 	const int32_t sampleEnd = s->sampleEnd; \
 	const int32_t loopStart = s->loopStart; \
 	const int32_t loopLength = s->loopLength; \
@@ -32,7 +32,7 @@
 	uint64_t positionFrac = 0;
 
 #define SCOPE_REGS_BIDI \
-	const int32_t volume = s->volume; \
+	const int32_t volume = s->volume * SCOPE_HEIGHT; \
 	const int32_t sampleEnd = s->sampleEnd; \
 	const int32_t loopStart = s->loopStart; \
 	const int32_t loopLength = s->loopLength; \
@@ -74,19 +74,38 @@
 		const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
 		sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
 	} \
-	else \
+	else /* interpolate scopes using 6-tap cubic B-spline */ \
 	{ \
 		const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
 		\
-		/* This has a delay of 2 samples, but that's acceptable for a tracker scope. */ \
-		/* Not having to look-up previous samples significantly reduces the */ \
-		/* logic needed in the scopes. */ \
-		float fSample = (s8[0] * t[0]) + \
-		                (s8[1] * t[1]) + \
-		                (s8[2] * t[2]) + \
-		                (s8[3] * t[3]) + \
-		                (s8[4] * t[4]) + \
-		                (s8[5] * t[5]); \
+		/* get correct negative tap sample points */ \
+		int32_t p1 = pos - 2; \
+		int32_t p2 = pos - 1; \
+		float fSample; \
+		if (s->loopType != LOOP_DISABLED && s->hasLooped && (int32_t)pos-2 < (int32_t)s->loopStart) \
+		{ \
+			const int32_t overflow1 = (int32_t)s->loopStart - p1; \
+			const int32_t overflow2 = (int32_t)s->loopStart - p2; \
+			if (s->loopType == LOOP_BIDI) /* direction is always backwards at this point */ \
+			{ \
+				p1 = s->loopStart + overflow1; \
+				if (overflow2 > 0) \
+					p2 = s->loopStart + overflow2; \
+			} \
+			else \
+			{ \
+				p1 = s->loopEnd - overflow1; \
+				if (overflow2 > 0) \
+					p2 = s->loopEnd - overflow2; \
+			} \
+		} \
+		\
+		fSample = (s->base8[p1] * t[0]) + \
+		          (s->base8[p2] * t[1]) + \
+		          (       s8[0] * t[2]) + \
+		          (       s8[1] * t[3]) + \
+		          (       s8[2] * t[4]) + \
+		          (       s8[3] * t[5]); \
 		sample = (int32_t)(fSample * 256.0f); \
 	}
 
@@ -101,30 +120,50 @@
 		const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
 		sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
 	} \
-	else \
+	else /* interpolate scopes using 6-tap cubic B-spline */ \
 	{ \
 		const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
 		\
-		/* This has a delay of 2 samples, but that's acceptable for a tracker scope. */ \
-		/* Not having to look-up previous samples significantly reduces the */ \
-		/* logic needed in the scopes. */ \
-		float fSample = (s16[0] * t[0]) + \
-		                (s16[1] * t[1]) + \
-		                (s16[2] * t[2]) + \
-		                (s16[3] * t[3]) + \
-		                (s16[4] * t[4]) + \
-		                (s16[5] * t[5]); \
+		/* get correct negative tap sample points */ \
+		int32_t p1 = pos - 2; \
+		int32_t p2 = pos - 1; \
+		float fSample; \
+		if (s->loopType != LOOP_DISABLED && s->hasLooped && (int32_t)pos-2 < (int32_t)s->loopStart) \
+		{ \
+			const int32_t overflow1 = (int32_t)s->loopStart - p1; \
+			const int32_t overflow2 = (int32_t)s->loopStart - p2; \
+			if (s->loopType == LOOP_BIDI) /* direction is always backwards at this point */ \
+			{ \
+				p1 = s->loopStart + overflow1; \
+				if (overflow2 > 0) \
+					p2 = s->loopStart + overflow2; \
+			} \
+			else \
+			{ \
+				p1 = s->loopEnd - overflow1; \
+				if (overflow2 > 0) \
+					p2 = s->loopEnd - overflow2; \
+			} \
+		} \
+		\
+		fSample = (s->base16[p1] * t[0]) + \
+		          (s->base16[p2] * t[1]) + \
+		          (       s16[0] * t[2]) + \
+		          (       s16[1] * t[3]) + \
+		          (       s16[2] * t[4]) + \
+		          (       s16[3] * t[5]); \
+		\
 		sample = (int32_t)fSample; \
 	}
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
-		sample = (s->base8[position] * volume) >> 8; \
+		sample = (s->base8[position] * volume) >> (8+7); \
 	else \
 		sample = 0;
 
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
-		sample = (s->base16[position] * volume) >> 16; \
+		sample = (s->base16[position] * volume) >> (16+7); \
 	else \
 		sample = 0;
 
@@ -132,7 +171,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (s->base8[actualPos] * volume) >> 8; \
+		sample = (s->base8[actualPos] * volume) >> (8+7); \
 	} \
 	else \
 	{ \
@@ -143,7 +182,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (s->base16[actualPos] * volume) >> 16; \
+		sample = (s->base16[actualPos] * volume) >> (16+7); \
 	} \
 	else \
 	{ \
@@ -154,7 +193,7 @@
 	if (s->active) \
 	{ \
 		INTERPOLATE_SMP8(position, (uint32_t)positionFrac) \
-		sample = (sample * volume) >> 16; \
+		sample = (sample * volume) >> (16+7); \
 	} \
 	else \
 	{ \
@@ -165,7 +204,7 @@
 	if (s->active) \
 	{ \
 		INTERPOLATE_SMP16(position, (uint32_t)positionFrac) \
-		sample = (sample * volume) >> 16; \
+		sample = (sample * volume) >> (16+7); \
 	} \
 	else \
 	{ \
@@ -183,7 +222,7 @@
 	{ \
 		GET_BIDI_POSITION \
 		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
-		sample = (sample * volume) >> 16; \
+		sample = (sample * volume) >> (16+7); \
 	} \
 	else \
 	{ \
@@ -195,7 +234,7 @@
 	{ \
 		GET_BIDI_POSITION \
 		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
-		sample = (sample * volume) >> 16; \
+		sample = (sample * volume) >> (16+7); \
 	} \
 	else \
 	{ \
@@ -246,6 +285,8 @@
 			position = loopStart + ((position - sampleEnd) % loopLength); \
 		else \
 			position = loopStart; \
+		\
+		s->hasLooped = true; \
 	}
 
 #define SCOPE_HANDLE_POS_BIDI \
@@ -263,4 +304,6 @@
 		{ \
 			position = loopStart; \
 		} \
+		\
+		s->hasLooped = true; \
 	}

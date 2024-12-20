@@ -314,10 +314,12 @@ static void scopeTrigger(int32_t ch, const sample_t *s, int32_t playOffset)
 
 	tempState.sample16Bit = sample16Bit;
 	tempState.loopType = loopType;
+	tempState.hasLooped = false;
 	tempState.samplingBackwards = false;
 	tempState.sampleEnd = (loopType == LOOP_OFF) ? length : loopEnd;
 	tempState.loopStart = loopStart;
 	tempState.loopLength = loopLength;
+	tempState.loopEnd = loopEnd;
 	tempState.position = playOffset;
 	tempState.positionFrac = 0;
 	
@@ -376,6 +378,8 @@ static void updateScopes(void)
 				{
 					s.position = s.loopStart;
 				}
+
+				s.hasLooped = true;
 			}
 			else if (s.loopType == LOOP_FORWARD)
 			{
@@ -383,6 +387,8 @@ static void updateScopes(void)
 					s.position = s.loopStart + ((s.position - s.sampleEnd) % s.loopLength);
 				else
 					s.position = s.loopStart;
+
+				s.hasLooped = true;
 			}
 			else // no loop
 			{

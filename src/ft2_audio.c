@@ -380,8 +380,8 @@ void updateVoices(void)
 		{
 			v->fVolume = ch->fFinalVol;
 
-			// set scope volume
-			const int32_t scopeVolume = (int32_t)((SCOPE_HEIGHT * ch->fFinalVol) + 0.5f); // rounded
+			// scale volume for scopes (0..128)
+			const int32_t scopeVolume = (int32_t)((ch->fFinalVol * 128.0f) + 0.5f); // rounded
 			v->scopeVolume = (uint8_t)scopeVolume;
 		}
 
