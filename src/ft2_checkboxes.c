@@ -104,7 +104,7 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 212, 108, 143, 12, cbRecKeyOff },
 	{ 212, 121,  89, 12, cbQuantization },
 	{ 212, 134, 180, 25, cbChangePattLenInsDel },
-	{ 212, 159, 187, 12, cbMIDIAllowPC },
+	{ 212, 159, 182, 12, cbUseOldAboutScreen },
 	{ 411,  93,  83, 12, cbMIDIEnable },
 	{ 530, 106,  29, 12, cbMIDIRecAllChn },
 	{ 411, 119, 121, 12, cbMIDIRecTransp },

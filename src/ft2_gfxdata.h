@@ -13,6 +13,7 @@ extern const uint8_t font7BMP[472];
 extern const uint8_t font8BMP[368]; // small font for piano key and Nibbles (snake food number)
 
 // ft2_bmp_logo.c
+extern const uint8_t ft2OldAboutLogoBMP[16112];
 extern const uint8_t ft2AboutLogoBMP[23172];
 extern const uint8_t ft2ByBadgesBMP[1916];
 extern const uint8_t ft2LogoBadgesBMP[6260];

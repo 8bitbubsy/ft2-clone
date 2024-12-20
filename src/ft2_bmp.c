@@ -50,7 +50,7 @@ bmp_t bmp; // globalized
 static const uint32_t bmpCustomPalette[NUM_CUSTOM_PALS] =
 { // 0xC0FFEE = spacers
 	0x000000, 0x5397FF, 0x000067, 0x4BFFFF, 0xAB7787,
-	0xFFFFFF, 0x7F7F7F, 0xC0FFEE, 0x733747, 0xF7CBDB,
+	0xFFFFFF, 0x7F7F7F, 0xABCDEF, 0x733747, 0xF7CBDB,
 	0x434343, 0xD3D3D3, 0xFFFF00, 0xC0FFEE, 0xC0FFEE,
 	0xC0FFEE, 0xFF0000 // last value = loop pin line
 };
@@ -70,6 +70,7 @@ bool loadBMPs(void)
 {
 	memset(&bmp, 0, sizeof (bmp));
 
+	bmp.ft2OldAboutLogo = loadBMPTo4BitPal(ft2OldAboutLogoBMP);
 	bmp.ft2AboutLogo = loadBMPTo32Bit(ft2AboutLogoBMP);
 	bmp.buttonGfx = loadBMPTo1Bit(buttonGfxBMP);
 	bmp.font1 = loadBMPTo1Bit(font1BMP);
@@ -96,7 +97,7 @@ bool loadBMPs(void)
 	bmp.radiobuttonGfx = loadBMPTo4BitPal(radiobuttonGfxBMP);
 	bmp.checkboxGfx = loadBMPTo4BitPal(checkboxGfxBMP);
 
-	if (bmp.ft2AboutLogo == NULL || bmp.buttonGfx == NULL || bmp.font1 == NULL || bmp.font2 == NULL ||
+	if (bmp.ft2OldAboutLogo == NULL || bmp.ft2AboutLogo == NULL || bmp.buttonGfx == NULL || bmp.font1 == NULL || bmp.font2 == NULL ||
 		bmp.font3 == NULL || bmp.font4 == NULL || bmp.font6 == NULL || bmp.font7 == NULL ||
 		bmp.font8 == NULL || bmp.ft2LogoBadges == NULL || bmp.ft2ByBadges == NULL ||
 		bmp.midiLogo == NULL || bmp.nibblesLogo == NULL || bmp.nibblesStages == NULL ||
@@ -114,6 +115,7 @@ bool loadBMPs(void)
 
 void freeBMPs(void)
 {
+	if (bmp.ft2OldAboutLogo != NULL) { free(bmp.ft2OldAboutLogo); bmp.ft2OldAboutLogo = NULL; }
 	if (bmp.ft2AboutLogo != NULL) { free(bmp.ft2AboutLogo); bmp.ft2AboutLogo = NULL; }
 	if (bmp.buttonGfx != NULL) { free(bmp.buttonGfx); bmp.buttonGfx = NULL; }
 	if (bmp.font1 != NULL) { free(bmp.font1); bmp.font1 = NULL; }

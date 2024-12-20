@@ -124,7 +124,7 @@ typedef struct config_t // exact FT2.CFG layout (with some modifications)
 	int16_t recMIDITranspVal;
 	uint8_t recMIDIVelocity, recMIDIAftert;
 	int16_t recMIDIVolSens;
-	uint8_t recMIDIAllowPC, smpCutToBuffer, ptnCutToBuffer, killNotesOnStopPlay;
+	uint8_t useNewAboutScreen, smpCutToBuffer, ptnCutToBuffer, killNotesOnStopPlay;
 	uint8_t specialFlags; // was lo-byte of "ptnDefaultLen" (never used in FT2)
 	uint8_t windowFlags; // was hi-byte of "ptnDefaultLen" (never used in FT2)
 	uint8_t modulesPathLen;
@@ -262,7 +262,7 @@ void cbMultiChanEdit(void);
 void cbRecKeyOff(void);
 void cbQuantization(void);
 void cbChangePattLenInsDel(void);
-void cbMIDIAllowPC(void);
+void cbUseOldAboutScreen(void);
 void cbMIDIEnable(void);
 void cbMIDIRecTransp(void);
 void cbMIDIRecAllChn(void);

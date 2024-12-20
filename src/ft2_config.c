@@ -1023,7 +1023,7 @@ static void setConfigMiscCheckButtonStates(void)
 	checkBoxes[CB_CONF_REC_KEYOFF].checked = config.recRelease;
 	checkBoxes[CB_CONF_QUANTIZATION].checked = config.recQuant;
 	checkBoxes[CB_CONF_CHANGE_PATTLEN_INS_DEL].checked = config.recTrueInsert;
-	checkBoxes[CB_CONF_MIDI_ALLOW_PC].checked = config.recMIDIAllowPC;
+	checkBoxes[CB_CONF_USE_OLD_ABOUT_SCREEN].checked = !config.useNewAboutScreen;
 #ifdef HAS_MIDI
 	checkBoxes[CB_CONF_MIDI_ENABLE].checked = midi.enable;
 #else
@@ -1048,7 +1048,7 @@ static void setConfigMiscCheckButtonStates(void)
 	showCheckBox(CB_CONF_REC_KEYOFF);
 	showCheckBox(CB_CONF_QUANTIZATION);
 	showCheckBox(CB_CONF_CHANGE_PATTLEN_INS_DEL);
-	showCheckBox(CB_CONF_MIDI_ALLOW_PC);
+	showCheckBox(CB_CONF_USE_OLD_ABOUT_SCREEN);
 	showCheckBox(CB_CONF_MIDI_ENABLE);
 	showCheckBox(CB_CONF_MIDI_REC_ALL);
 	showCheckBox(CB_CONF_MIDI_REC_TRANS);
@@ -1340,7 +1340,7 @@ void showConfigScreen(void)
 			textOutShadow(338, 123, PAL_FORGRND, PAL_DSKTOP2, "1/");
 			textOutShadow(228, 136, PAL_FORGRND, PAL_DSKTOP2, "Change pattern length when");
 			textOutShadow(228, 147, PAL_FORGRND, PAL_DSKTOP2, "inserting/deleting line.");
-			textOutShadow(228, 161, PAL_FORGRND, PAL_DSKTOP2, "Allow MIDI-in program change");
+			textOutShadow(228, 161, PAL_FORGRND, PAL_DSKTOP2, "Original FT2 \"about screen\"");
 
 			textOutShadow(428,  95, PAL_FORGRND, PAL_DSKTOP2, "Enable MIDI");
 			textOutShadow(412, 108, PAL_FORGRND, PAL_DSKTOP2, "Record MIDI chn.");
@@ -1495,7 +1495,7 @@ void hideConfigScreen(void)
 	hideCheckBox(CB_CONF_REC_KEYOFF);
 	hideCheckBox(CB_CONF_QUANTIZATION);
 	hideCheckBox(CB_CONF_CHANGE_PATTLEN_INS_DEL);
-	hideCheckBox(CB_CONF_MIDI_ALLOW_PC);
+	hideCheckBox(CB_CONF_USE_OLD_ABOUT_SCREEN);
 	hideCheckBox(CB_CONF_MIDI_ENABLE);
 	hideCheckBox(CB_CONF_MIDI_REC_ALL);
 	hideCheckBox(CB_CONF_MIDI_REC_TRANS);
@@ -2078,9 +2078,9 @@ void cbChangePattLenInsDel(void)
 	config.recTrueInsert ^= 1;
 }
 
-void cbMIDIAllowPC(void)
+void cbUseOldAboutScreen(void)
 {
-	config.recMIDIAllowPC ^= 1;
+	config.useNewAboutScreen ^= 1;
 }
 
 void cbMIDIEnable(void)
