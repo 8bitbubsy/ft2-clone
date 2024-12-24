@@ -17,7 +17,11 @@
 #else
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fts.h> // for fts_open() and stuff in recursiveDelete()
+#include <sys/wait.h>
+#include <errno.h>
+#ifndef __EMSCRIPTEN__
+#include <fts.h> // for recursiveDelete()
+#endif
 #include <unistd.h>
 #include <dirent.h>
 #endif
@@ -123,7 +127,7 @@ int32_t getFileSize(UNICHAR *fileNameU) // returning -1 = filesize over 2GB
 
 	if (fSize > INT32_MAX)
 		return -1; // -1 = ">2GB" flag
-	
+
 	return (int32_t)fSize;
 }
 
@@ -499,6 +503,36 @@ bool fileExistsAnsi(char *str)
 
 static bool deleteDirRecursive(UNICHAR *strU)
 {
+#ifdef __EMSCRIPTEN__
+	bool ret = false;
+	pid_t child;
+
+	child = fork();
+	if (child == 0) {
+		// child
+		static const char *EXEC_RM = "/bin/rm";
+		const char *argv[] = { "-rf", "--", (const char*)strU, NULL };
+
+		close(STDIN_FILENO);
+		close(STDOUT_FILENO);
+		execv(EXEC_RM, (char *const*)argv);
+
+		perror(EXEC_RM);
+		exit(errno == ENOENT ? 126 : 127);
+	}
+	else if (child > 0) {
+		// parent
+		int wstatus;
+
+		waitpid(child, &wstatus, 0);
+		ret = WIFEXITED(wstatus) && WEXITSTATUS(wstatus) == 0;
+	}
+	else {
+		// error
+	}
+
+	return ret;
+#else
 	FTSENT *curr;
 	char *files[] = { (char *)(strU), NULL };
 
@@ -541,6 +575,7 @@ static bool deleteDirRecursive(UNICHAR *strU)
 		fts_close(ftsp);
 
 	return ret;
+#endif
 }
 
 static bool makeDirAnsi(char *str)
@@ -1270,7 +1305,7 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 	char *name = unicharToCp850(nameU, false);
 	if (name == NULL)
 		return true;
-	
+
 	if (name[0] == '\0')
 		goto skipEntry;
 
@@ -1694,7 +1729,7 @@ static uint8_t numDigits32(uint32_t x)
 	if (x >=       1000) return  4;
 	if (x >=        100) return  3;
 	if (x >=         10) return  2;
-	
+
 	return 1;
 }
 
