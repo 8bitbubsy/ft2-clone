@@ -282,13 +282,13 @@ bool loadS3M(FILE *f, uint32_t filesize)
 						{
 							case 1: // A
 							{
+								tmpNote.efx = 0xF;
 								if (tmpNote.efxData == 0) // A00 does nothing in ST3
 								{
 									tmpNote.efx = tmpNote.efxData = 0;
 								}
 								else if (tmpNote.efxData > 0x1F)
 								{
-									tmpNote.efx = 0xF;
 									tmpNote.efxData = 0x1F;
 								}
 							}
