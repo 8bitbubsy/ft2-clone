@@ -152,6 +152,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 	bool oldFormat = (itHdr.cmwt < 0x200);
 	bool songUsesInstruments = !!(itHdr.flags & 4);
 	bool oldEffects = !!(itHdr.flags & 16);
+	bool compatGxx = !!(itHdr.flags & 32);
 
 	// read order list
 	for (int32_t i = 0; i < MAX_ORDERS; i++)
@@ -664,16 +665,21 @@ bool loadIT(FILE *f, uint32_t filesize)
 	songTmp.numChannels = MIN((numChannels + 1) & ~1, MAX_CHANNELS);
 
 	// convert pattern data
-	
+
+	uint8_t lastInstr[MAX_CHANNELS], lastGInstr[MAX_CHANNELS];
 	uint8_t lastDxy[MAX_CHANNELS], lastExy[MAX_CHANNELS], lastFxy[MAX_CHANNELS];
 	uint8_t lastJxy[MAX_CHANNELS], lastKxy[MAX_CHANNELS], lastLxy[MAX_CHANNELS];
+	uint8_t lastOxx[MAX_CHANNELS];
 
+	memset(lastInstr, 0, sizeof (lastInstr));
+	memset(lastGInstr, 0, sizeof (lastGInstr));
 	memset(lastDxy, 0, sizeof (lastDxy));
 	memset(lastExy, 0, sizeof (lastExy));
 	memset(lastFxy, 0, sizeof (lastFxy));
 	memset(lastJxy, 0, sizeof (lastJxy));
 	memset(lastKxy, 0, sizeof (lastKxy));
 	memset(lastLxy, 0, sizeof (lastLxy));
+	memset(lastOxx, 0, sizeof (lastOxx));
 
 	for (int32_t i = 0; i < songTmp.pattNum; i++)
 	{
@@ -685,6 +691,9 @@ bool loadIT(FILE *f, uint32_t filesize)
 		{
 			for (int32_t ch = 0; ch < songTmp.numChannels; ch++, p++)
 			{
+				if (p->instr > 0)
+					lastInstr[ch] = p->instr;
+
 				// effect
 				if (p->efx != 0)
 				{
@@ -803,7 +812,15 @@ bool loadIT(FILE *f, uint32_t filesize)
 						}
 						break;
 
-						case 'G': p->efx = 3; break; // tone portamento
+						case 'G': // tone portamento
+						{
+							p->efx = 3;
+
+							// remove illegal slides (this is not quite right, but good enough)
+							if (!compatGxx && p->instr != 0 && p->instr != lastGInstr[ch])
+								p->efx = p->efxData = 0;
+						}
+						break;
 
 						case 'H': // vibrato
 						{
@@ -912,7 +929,46 @@ bool loadIT(FILE *f, uint32_t filesize)
 						}
 						break;
 
-						case 'O': p->efx = 0x9; break; // set sample offset
+						case 'O': // set sample offset
+						{
+							p->efx = 0x9;
+
+							if (p->efxData > 0)
+								lastOxx[ch] = p->efxData;
+
+							// handle cases where the sample offset is after the end of the sample
+							if (lastInstr[ch] > 0 && lastOxx[ch] > 0 && p->note > 0 && p->note <= 96)
+							{
+								instr_t *ins = instrTmp[lastInstr[ch]];
+								if (ins != NULL)
+								{
+									const uint8_t sample = ins->note2SampleLUT[p->note-1];
+									if (sample < MAX_SMP_PER_INST)
+									{
+										sample_t *s = &ins->smp[sample];
+										if (s->length > 0)
+										{
+											const bool loopEnabled = (GET_LOOPTYPE(s->flags) != LOOP_DISABLED);
+											const uint32_t sampleEnd = loopEnabled ? s->loopStart+s->loopLength : s->length;
+
+											if (lastOxx[ch]*256UL >= sampleEnd)
+											{
+												if (oldEffects)
+												{
+													if (loopEnabled)
+														p->efxData = (uint8_t)(sampleEnd >> 8);
+												}
+												else
+												{
+													p->efx = p->efxData = 0;
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+						break;
 
 						case 'P': // panning slide
 						{
@@ -1043,6 +1099,9 @@ bool loadIT(FILE *f, uint32_t filesize)
 				{
 					p->efxData = 0;
 				}
+
+				if (p->instr != 0 && p->efx != 0x3)
+					lastGInstr[ch] = p->instr;
 
 				// volume column
 				if (p->vol > 0)
