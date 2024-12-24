@@ -330,7 +330,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 
 									tmpNote.efxData &= 0x0F;
 
-									if (tmpNote.efx == 0x05)
+									if (tmpNote.efx == 5)
 										tmpNote.efxData |= 0x20;
 									else
 										tmpNote.efxData |= 0x10;
@@ -352,7 +352,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 
 							case 7: // G
 							{
-								tmpNote.efx = 0x03;
+								tmpNote.efx = 3;
 
 								// fix illegal slides (to new instruments)
 								if (tmpNote.instr != 0 && tmpNote.instr != s3mLastGInstr[ii])
@@ -382,7 +382,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 								}
 								else
 								{
-									tmpNote.efx = 0x6;
+									tmpNote.efx = 6;
 									if (tmpNote.efxData & 0x0F) // on D/K, last nybble has first priority in ST3
 										tmpNote.efxData &= 0x0F;
 								}
@@ -451,7 +451,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 
 							case 20: // T
 							{
-								tmpNote.efx = 0x0F;
+								tmpNote.efx = 0xF;
 								if (tmpNote.efxData < 0x21) // Txx with a value lower than 33 (0x21) does nothing in ST3, remove effect
 								{
 									tmpNote.efx = 0;
@@ -494,7 +494,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 						}
 					}
 
-					if (tmpNote.instr != 0 && tmpNote.efx != 0x3)
+					if (tmpNote.instr != 0 && tmpNote.efx != 3)
 						s3mLastGInstr[ii] = tmpNote.instr;
 
 					patternTmp[i][(kk * MAX_CHANNELS) + ii] = tmpNote;
