@@ -403,7 +403,7 @@ void calcReplayerVars(int32_t audioFreq)
 
 	audio.dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
 	audio.quickVolRampSamples = (uint32_t)round(audioFreq / (1000.0 / FT2_QUICK_VOLRAMP_MILLISECONDS));
-	audio.fQuickVolRampSamplesMul = (float)(1.0 / (double)audio.quickVolRampSamples);
+	audio.fQuickVolRampSamplesMul = (float)(1.0 / audio.quickVolRampSamples);
 
 	for (int32_t bpm = MIN_BPM; bpm <= MAX_BPM; bpm++)
 	{
@@ -3131,7 +3131,6 @@ void stopVoices(void)
 	editor.curPlaySmp = 255;
 
 	stopAllScopes();
-	resetCachedMixerVars();
 
 	// wait for scope thread to finish, making sure pointers aren't illegal
 	while (editor.scopeThreadBusy);

@@ -11,17 +11,19 @@
 */
 #define SCOPE_HZ 64
 
-#define SCOPE_INTRP_TAPS 6
-#define SCOPE_INTRP_PHASES 512 /* plentiful for a small scope window */
-#define SCOPE_INTRP_PHASES_BITS 9 /* log2(SCOPE_INTRP_PHASES) */
-
 #define SCOPE_HEIGHT 36
 
 #define SCOPE_FRAC_BITS 32
 #define SCOPE_FRAC_SCALE ((int64_t)1 << SCOPE_FRAC_BITS)
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
 
-int32_t getSamplePosition(uint8_t ch);
+#define SCOPE_INTRP_TAPS 6
+#define SCOPE_INTRP_SCALE 32768
+#define SCOPE_INTRP_SCALE_BITS 15 /* log2(SCOPE_INTRP_SCALE) */
+#define SCOPE_INTRP_PHASES 512 /* plentiful for FT2-styled scopes */
+#define SCOPE_INTRP_PHASES_BITS 9 /* log2(SCOPE_INTRP_PHASES) */
+
+int32_t getSamplePositionFromScopes(uint8_t ch);
 void stopAllScopes(void);
 void refreshScopes(void);
 bool testScopesMouseDown(void);
@@ -39,6 +41,10 @@ typedef struct scope_t
 	uint8_t loopType;
 	int32_t volume, loopStart, loopLength, loopEnd, sampleEnd, position;
 	uint64_t delta, drawDelta, positionFrac;
+
+	// if (loopEnabled && hasLooped && samplingPos <= loopStart+MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
+	const int8_t *leftEdgeTaps8;
+	const int16_t *leftEdgeTaps16;
 } scope_t;
 
 typedef struct lastChInstr_t

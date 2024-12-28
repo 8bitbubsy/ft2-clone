@@ -64,7 +64,7 @@ typedef struct
 	uint8_t mixFuncOffset, panning, loopType, scopeVolume;
 	int32_t position, sampleEnd, loopStart, loopLength, oldPeriod;
 	uint32_t volumeRampLength;
-	uint64_t positionFrac, delta, oldDelta, scopeDelta;
+	uint64_t positionFrac, delta, scopeDelta;
 
 	// if (loopEnabled && hasLooped && samplingPos <= loopStart+MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;
@@ -109,7 +109,6 @@ typedef struct chSync_t
 	chSyncData_t data[SYNC_QUEUE_LEN+1];
 } chSync_t;
 
-void resetCachedMixerVars(void);
 int32_t pattQueueReadSize(void);
 int32_t pattQueueWriteSize(void);
 bool pattQueuePush(pattSyncData_t t);

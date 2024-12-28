@@ -2,41 +2,20 @@
 
 #include <stdint.h>
 #include "../ft2_header.h"
-#include "../mixer/ft2_windowed_sinc.h"
 #include "ft2_scopes.h"
 
 /* ----------------------------------------------------------------------- */
 /*                          SCOPE DRAWING MACROS                           */
 /* ----------------------------------------------------------------------- */
 
-#define SCOPE_REGS_NO_LOOP \
-	const int32_t volume = s->volume * SCOPE_HEIGHT; \
-	const int32_t sampleEnd = s->sampleEnd; \
-	const uint64_t delta = s->drawDelta; \
+#define SCOPE_INIT \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t position = s->position; \
 	uint64_t positionFrac = 0;
 
-#define SCOPE_REGS_LOOP \
-	const int32_t volume = s->volume * SCOPE_HEIGHT; \
-	const int32_t sampleEnd = s->sampleEnd; \
-	const int32_t loopStart = s->loopStart; \
-	const int32_t loopLength = s->loopLength; \
-	const uint64_t delta = s->drawDelta; \
-	const uint32_t color = video.palette[PAL_PATTEXT]; \
-	uint32_t width = x + w; \
-	int32_t sample; \
-	int32_t position = s->position; \
-	uint64_t positionFrac = 0;
-
-#define SCOPE_REGS_BIDI \
-	const int32_t volume = s->volume * SCOPE_HEIGHT; \
-	const int32_t sampleEnd = s->sampleEnd; \
-	const int32_t loopStart = s->loopStart; \
-	const int32_t loopLength = s->loopLength; \
-	const uint64_t delta = s->drawDelta; \
+#define SCOPE_INIT_BIDI \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
 	int32_t sample; \
@@ -44,18 +23,13 @@
 	uint64_t positionFrac = 0; \
 	bool samplingBackwards = s->samplingBackwards;
 
-#define LINED_SCOPE_REGS_NO_LOOP \
-	SCOPE_REGS_NO_LOOP \
+#define LINED_SCOPE_INIT \
+	SCOPE_INIT \
 	int32_t smpY1, smpY2; \
 	width--;
 
-#define LINED_SCOPE_REGS_LOOP \
-	SCOPE_REGS_LOOP \
-	int32_t smpY1, smpY2; \
-	width--;
-
-#define LINED_SCOPE_REGS_BIDI \
-	SCOPE_REGS_BIDI \
+#define LINED_SCOPE_INIT_BIDI \
+	SCOPE_INIT_BIDI \
 	int32_t smpY1, smpY2; \
 	width--;
 
@@ -63,107 +37,123 @@
 ** so that out-of-bounds reads get the correct interpolation tap data.
 */
 
+#define NEAREST_NEIGHGBOR8 \
+{ \
+	sample = s8[0] << 8; \
+} \
+
+#define LINEAR_INTERPOLATION8(frac) \
+{ \
+	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
+	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
+} \
+
+#define NEAREST_NEIGHGBOR16 \
+{ \
+	sample = s16[0]; \
+} \
+
+#define LINEAR_INTERPOLATION16(frac) \
+{ \
+	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
+	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
+} \
+
+#define CUBIC_SMP8(frac) \
+	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
+	\
+	sample = ((s8[-2] * t[0]) + \
+	          (s8[-1] * t[1]) + \
+	          ( s8[0] * t[2]) + \
+	          ( s8[1] * t[3]) + \
+	          ( s8[2] * t[4]) + \
+	          ( s8[3] * t[5])) >> (SCOPE_INTRP_SCALE_BITS-8);
+
+#define CUBIC_SMP16(frac) \
+	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
+	\
+	sample = ((s16[-2] * t[0]) + \
+	          (s16[-1] * t[1]) + \
+	          ( s16[0] * t[2]) + \
+	          ( s16[1] * t[3]) + \
+	          ( s16[2] * t[4]) + \
+	          ( s16[3] * t[5])) >> SCOPE_INTRP_SCALE_BITS;
+
+#define CUBIC_INTERPOLATION8(frac) \
+{ \
+	CUBIC_SMP8(frac) \
+} \
+
+#define CUBIC_INTERPOLATION16(frac) \
+{ \
+	CUBIC_SMP16(frac) \
+} \
+
+#define CUBIC_INTERPOLATION8_LOOP(pos, frac) \
+{ \
+	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
+		s8 = s->leftEdgeTaps8 + (pos - s->loopStart); \
+	\
+	CUBIC_SMP8(frac) \
+} \
+
+#define CUBIC_INTERPOLATION16_LOOP(pos, frac) \
+{ \
+	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
+		s16 = s->leftEdgeTaps16 + (pos - s->loopStart); \
+	\
+	CUBIC_SMP16(frac) \
+} \
+
 #define INTERPOLATE_SMP8(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
-	{ \
-		sample = s8[0] << 8; \
-	} \
+		NEAREST_NEIGHGBOR8 \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
-	{ \
-		const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
-		sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
-	} \
-	else /* interpolate scopes using 6-tap cubic B-spline */ \
-	{ \
-		const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
-		\
-		/* get correct negative tap sample points */ \
-		int32_t p1 = pos - 2; \
-		int32_t p2 = pos - 1; \
-		float fSample; \
-		if (s->loopType != LOOP_DISABLED && s->hasLooped && (int32_t)pos-2 < (int32_t)s->loopStart) \
-		{ \
-			const int32_t overflow1 = (int32_t)s->loopStart - p1; \
-			const int32_t overflow2 = (int32_t)s->loopStart - p2; \
-			if (s->loopType == LOOP_BIDI) /* direction is always backwards at this point */ \
-			{ \
-				p1 = s->loopStart + overflow1; \
-				if (overflow2 > 0) \
-					p2 = s->loopStart + overflow2; \
-			} \
-			else \
-			{ \
-				p1 = s->loopEnd - overflow1; \
-				if (overflow2 > 0) \
-					p2 = s->loopEnd - overflow2; \
-			} \
-		} \
-		\
-		fSample = (s->base8[p1] * t[0]) + \
-		          (s->base8[p2] * t[1]) + \
-		          (       s8[0] * t[2]) + \
-		          (       s8[1] * t[3]) + \
-		          (       s8[2] * t[4]) + \
-		          (       s8[3] * t[5]); \
-		sample = (int32_t)(fSample * 256.0f); \
-	}
+		LINEAR_INTERPOLATION8(frac) \
+	else \
+		CUBIC_INTERPOLATION8(frac) \
+	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
-	{ \
-		sample = s16[0]; \
-	} \
+		NEAREST_NEIGHGBOR16 \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
-	{ \
-		const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
-		sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
-	} \
-	else /* interpolate scopes using 6-tap cubic B-spline */ \
-	{ \
-		const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
-		\
-		/* get correct negative tap sample points */ \
-		int32_t p1 = pos - 2; \
-		int32_t p2 = pos - 1; \
-		float fSample; \
-		if (s->loopType != LOOP_DISABLED && s->hasLooped && (int32_t)pos-2 < (int32_t)s->loopStart) \
-		{ \
-			const int32_t overflow1 = (int32_t)s->loopStart - p1; \
-			const int32_t overflow2 = (int32_t)s->loopStart - p2; \
-			if (s->loopType == LOOP_BIDI) /* direction is always backwards at this point */ \
-			{ \
-				p1 = s->loopStart + overflow1; \
-				if (overflow2 > 0) \
-					p2 = s->loopStart + overflow2; \
-			} \
-			else \
-			{ \
-				p1 = s->loopEnd - overflow1; \
-				if (overflow2 > 0) \
-					p2 = s->loopEnd - overflow2; \
-			} \
-		} \
-		\
-		fSample = (s->base16[p1] * t[0]) + \
-		          (s->base16[p2] * t[1]) + \
-		          (       s16[0] * t[2]) + \
-		          (       s16[1] * t[3]) + \
-		          (       s16[2] * t[4]) + \
-		          (       s16[3] * t[5]); \
-		\
-		sample = (int32_t)fSample; \
-	}
+		LINEAR_INTERPOLATION16(frac) \
+	else \
+		CUBIC_INTERPOLATION16(frac) \
+	sample = (sample * s->volume) >> (16+2);
+
+#define INTERPOLATE_SMP8_LOOP(pos, frac) \
+	const int8_t *s8 = s->base8 + pos; \
+	if (config.interpolation == INTERPOLATION_DISABLED) \
+		NEAREST_NEIGHGBOR8 \
+	else if (config.interpolation == INTERPOLATION_LINEAR) \
+		LINEAR_INTERPOLATION8(frac) \
+	else \
+		CUBIC_INTERPOLATION8_LOOP(pos, frac) \
+	sample = (sample * s->volume) >> (16+2);
+
+#define INTERPOLATE_SMP16_LOOP(pos, frac) \
+	const int16_t *s16 = s->base16 + pos; \
+	if (config.interpolation == INTERPOLATION_DISABLED) \
+		NEAREST_NEIGHGBOR16 \
+	else if (config.interpolation == INTERPOLATION_LINEAR) \
+		LINEAR_INTERPOLATION16(frac) \
+	else \
+		CUBIC_INTERPOLATION16_LOOP(pos, frac) \
+	sample = (sample * s->volume) >> (16+2);
+
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
-		sample = (s->base8[position] * volume) >> (8+7); \
+		sample = (s->base8[position] * s->volume) >> (8+2); \
 	else \
 		sample = 0;
 
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
-		sample = (s->base16[position] * volume) >> (16+7); \
+		sample = (s->base16[position] * s->volume) >> (16+2); \
 	else \
 		sample = 0;
 
@@ -171,7 +161,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (s->base8[actualPos] * volume) >> (8+7); \
+		sample = (s->base8[actualPos] * s->volume) >> (8+2); \
 	} \
 	else \
 	{ \
@@ -182,7 +172,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (s->base16[actualPos] * volume) >> (16+7); \
+		sample = (s->base16[actualPos] * s->volume) >> (16+2); \
 	} \
 	else \
 	{ \
@@ -193,7 +183,6 @@
 	if (s->active) \
 	{ \
 		INTERPOLATE_SMP8(position, (uint32_t)positionFrac) \
-		sample = (sample * volume) >> (16+7); \
 	} \
 	else \
 	{ \
@@ -204,7 +193,26 @@
 	if (s->active) \
 	{ \
 		INTERPOLATE_SMP16(position, (uint32_t)positionFrac) \
-		sample = (sample * volume) >> (16+7); \
+	} \
+	else \
+	{ \
+		sample = 0; \
+	}
+
+#define SCOPE_GET_INTERPOLATED_SMP8_LOOP \
+	if (s->active) \
+	{ \
+		INTERPOLATE_SMP8_LOOP(position, (uint32_t)positionFrac) \
+	} \
+	else \
+	{ \
+		sample = 0; \
+	}
+
+#define SCOPE_GET_INTERPOLATED_SMP16_LOOP \
+	if (s->active) \
+	{ \
+		INTERPOLATE_SMP16_LOOP(position, (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -213,7 +221,7 @@
 
 #define GET_BIDI_POSITION \
 	if (samplingBackwards) \
-		actualPos = (sampleEnd - 1) - (position - loopStart); \
+		actualPos = (s->sampleEnd - 1) - (position - s->loopStart); \
 	else \
 		actualPos = position;
 
@@ -221,8 +229,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
-		sample = (sample * volume) >> (16+7); \
+		INTERPOLATE_SMP8_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -233,8 +240,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
-		sample = (sample * volume) >> (16+7); \
+		INTERPOLATE_SMP16_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -242,7 +248,7 @@
 	}
 
 #define SCOPE_UPDATE_READPOS \
-	positionFrac += delta; \
+	positionFrac += s->drawDelta; \
 	position += positionFrac >> 32; \
 	positionFrac &= UINT32_MAX;
 
@@ -256,6 +262,16 @@
 
 #define LINED_SCOPE_PREPARE_SMP16 \
 	SCOPE_GET_INTERPOLATED_SMP16 \
+	smpY1 = lineY - sample; \
+	SCOPE_UPDATE_READPOS
+
+#define LINED_SCOPE_PREPARE_SMP8_LOOP \
+	SCOPE_GET_INTERPOLATED_SMP8_LOOP \
+	smpY1 = lineY - sample; \
+	SCOPE_UPDATE_READPOS
+
+#define LINED_SCOPE_PREPARE_SMP16_LOOP \
+	SCOPE_GET_INTERPOLATED_SMP16_LOOP \
 	smpY1 = lineY - sample; \
 	SCOPE_UPDATE_READPOS
 
@@ -275,34 +291,35 @@
 	smpY1 = smpY2;
 
 #define SCOPE_HANDLE_POS_NO_LOOP \
-	if (position >= sampleEnd) \
+	if (position >= s->sampleEnd) \
 		s->active = false;
 
 #define SCOPE_HANDLE_POS_LOOP \
-	if (position >= sampleEnd) \
+	if (position >= s->sampleEnd) \
 	{ \
-		if (loopLength >= 2) \
-			position = loopStart + ((position - sampleEnd) % loopLength); \
+		if (s->loopLength >= 2) \
+			position = s->loopStart + ((uint32_t)(position - s->sampleEnd) % (uint32_t)s->loopLength); \
 		else \
-			position = loopStart; \
+			position = s->loopStart; \
 		\
 		s->hasLooped = true; \
 	}
 
 #define SCOPE_HANDLE_POS_BIDI \
-	if (position >= sampleEnd) \
+	if (position >= s->sampleEnd) \
 	{ \
-		if (loopLength >= 2) \
+		if (s->loopLength >= 2) \
 		{ \
-			const uint32_t overflow = position - sampleEnd; \
-			const uint32_t cycles = overflow / loopLength; \
-			const uint32_t phase = overflow % loopLength; \
-			position = loopStart + phase; \
+			const uint32_t overflow = position - s->sampleEnd; \
+			const uint32_t cycles = overflow / (uint32_t)s->loopLength; \
+			const uint32_t phase = overflow % (uint32_t)s->loopLength; \
+			\
+			position = s->loopStart + phase; \
 			samplingBackwards ^= !(cycles & 1); \
 		} \
 		else \
 		{ \
-			position = loopStart; \
+			position = s->loopStart; \
 		} \
 		\
 		s->hasLooped = true; \

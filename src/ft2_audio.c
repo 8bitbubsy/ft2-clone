@@ -37,17 +37,6 @@ chSync_t chSync;
 pattSync_t pattSync;
 volatile bool pattQueueClearing, chQueueClearing;
 
-void resetCachedMixerVars(void)
-{
-	channel_t *ch = channel;
-	for (int32_t i = 0; i < MAX_CHANNELS; i++, ch++)
-		ch->oldFinalPeriod = -1;
-
-	voice_t *v = voice;
-	for (int32_t i = 0; i < MAX_CHANNELS*2; i++, v++)
-		v->oldDelta = 0;
-}
-
 void stopVoice(int32_t i)
 {
 	voice_t *v;
@@ -332,7 +321,7 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 		v->leftEdgeTaps8 = s->leftEdgeTapSamples8 + MAX_LEFT_TAPS;
 	}
 
-	v->hasLooped = false; // for sinc interpolation special case
+	v->hasLooped = false; // for cubic/sinc interpolation special case
 	v->samplingBackwards = false;
 	v->loopType = loopType;
 	v->sampleEnd = (loopType == LOOP_OFF) ? length : loopEnd;
@@ -380,8 +369,8 @@ void updateVoices(void)
 		{
 			v->fVolume = ch->fFinalVol;
 
-			// scale volume for scopes (0..128)
-			const int32_t scopeVolume = (int32_t)((ch->fFinalVol * 128.0f) + 0.5f); // rounded
+			// set scope volume (scaled)
+			const int32_t scopeVolume = (int32_t)((ch->fFinalVol * (SCOPE_HEIGHT*(1<<2))) + 0.5f); // rounded
 			v->scopeVolume = (uint8_t)scopeVolume;
 		}
 
@@ -393,32 +382,25 @@ void updateVoices(void)
 
 		if (status & IS_Period)
 		{
-			// use cached values when possible
-			if (ch->finalPeriod != ch->oldFinalPeriod)
+			const double dVoiceHz = dPeriod2Hz(ch->finalPeriod);
+
+			// set voice delta
+			v->delta = (int64_t)((dVoiceHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
+
+			// set scope delta
+			const double dHz2ScopeDeltaMul = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
+			v->scopeDelta = (int64_t)((dVoiceHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
+
+			if (audio.sincInterpolation)
 			{
-				ch->oldFinalPeriod = ch->finalPeriod;
-
-				const double dHz = dPeriod2Hz(ch->finalPeriod);
-
-				// set voice delta
-				const uint64_t delta = v->oldDelta = (int64_t)((dHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
-
-				if (audio.sincInterpolation) // decide which sinc LUT to use according to the resampling ratio
-				{
-					if (delta <= sincDownsample1Ratio)
-						v->fSincLUT = fKaiserSinc;
-					else if (delta <= sincDownsample2Ratio)
-						v->fSincLUT = fDownSample1;
-					else
-						v->fSincLUT = fDownSample2;
-				}
-
-				// set scope delta
-				const double dHz2ScopeDeltaMul = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-				v->scopeDelta = (int64_t)((dHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
+				// decide which sinc LUT to use according to the resampling ratio
+				if (v->delta <= sincDownsample1Ratio)
+					v->fSincLUT = fKaiserSinc;
+				else if (v->delta <= sincDownsample2Ratio)
+					v->fSincLUT = fDownSample1;
+				else
+					v->fSincLUT = fDownSample2;
 			}
-
-			v->delta = v->oldDelta;
 		}
 
 		if (status & IS_Trigger)
@@ -431,8 +413,6 @@ static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 	int16_t *streamPtr16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
-		// TODO: This could use dithering (a proper implementation, that is...)
-
 		int32_t L = (int32_t)(audio.fMixBufferL[i] * fAudioNormalizeMul);
 		int32_t R = (int32_t)(audio.fMixBufferR[i] * fAudioNormalizeMul);
 
@@ -443,8 +423,7 @@ static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 		*streamPtr16++ = (int16_t)R;
 
 		// clear what we read from the mixing buffer
-		audio.fMixBufferL[i] = 0.0f;
-		audio.fMixBufferR[i] = 0.0f;
+		audio.fMixBufferL[i] = audio.fMixBufferR[i] = 0.0f;
 	}
 }
 
@@ -460,8 +439,7 @@ static void sendSamples32BitFloatStereo(void *stream, uint32_t sampleBlockLength
 		*fStreamPtr32++ = CLAMP(fR, -1.0f, 1.0f);
 
 		// clear what we read from the mixing buffer
-		audio.fMixBufferL[i] = 0.0f;
-		audio.fMixBufferR[i] = 0.0f;
+		audio.fMixBufferL[i] = audio.fMixBufferR[i] = 0.0f;
 	}
 }
 

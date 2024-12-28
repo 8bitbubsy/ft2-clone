@@ -3068,7 +3068,7 @@ static void writeSamplePosLine(void)
 
 	if (editor.curInstr == ins && editor.curSmp == smp)
 	{
-		const int32_t smpPos = getSamplePosition(editor.curSmpChannel);
+		const int32_t smpPos = getSamplePositionFromScopes(editor.curSmpChannel);
 		if (smpPos != -1)
 		{
 			// convert sample position to screen position

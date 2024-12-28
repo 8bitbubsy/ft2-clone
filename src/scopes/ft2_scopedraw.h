@@ -9,4 +9,3 @@ extern const scopeDrawRoutine scopeDrawRoutineTable[12]; // ft2_scopedraw.c
 
 bool calcScopeIntrpLUT(void);
 void freeScopeIntrpLUT(void);
-

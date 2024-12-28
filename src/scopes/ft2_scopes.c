@@ -31,29 +31,22 @@ static SDL_Thread *scopeThread;
 
 lastChInstr_t lastChInstr[MAX_CHANNELS]; // global
 
-int32_t getSamplePosition(uint8_t ch)
+int32_t getSamplePositionFromScopes(uint8_t ch)
 {
 	if (ch >= song.numChannels)
 		return -1;
 
-	volatile scope_t *sc = &scope[ch];
+	volatile scope_t sc = scope[ch]; // cache it
 
-	// cache some stuff
-	volatile bool active = sc->active;
-	volatile bool samplingBackwards = sc->samplingBackwards;
-	volatile int32_t position = sc->position;
-	volatile int32_t loopStart = sc->loopStart;
-	volatile int32_t sampleEnd = sc->sampleEnd;
-
-	if (!active || sampleEnd == 0)
+	if (!sc.active || sc.sampleEnd == 0)
 		return -1;
 
-	if (position >= 0 && position < sampleEnd)
+	if (sc.position >= 0 && sc.position < sc.sampleEnd)
 	{
-		if (samplingBackwards) // get actual bidi pos when in backwards mode
-			position = (sampleEnd - 1) - (position - loopStart);
+		if (sc.samplingBackwards) // get actual bidi pos when in backwards mode
+			sc.position = (sc.sampleEnd - 1) - (sc.position - sc.loopStart);
 
-		return position;
+		return sc.position;
 	}
 
 	return -1; // not active or overflown
@@ -308,9 +301,15 @@ static void scopeTrigger(int32_t ch, const sample_t *s, int32_t playOffset)
 		loopType = 0;
 
 	if (sample16Bit)
+	{
 		tempState.base16 = (const int16_t *)s->dataPtr;
+		tempState.leftEdgeTaps16 = s->leftEdgeTapSamples16 + MAX_LEFT_TAPS;
+	}
 	else
+	{
 		tempState.base8 = s->dataPtr;
+		tempState.leftEdgeTaps8 = s->leftEdgeTapSamples8 + MAX_LEFT_TAPS;
+	}
 
 	tempState.sample16Bit = sample16Bit;
 	tempState.loopType = loopType;
@@ -428,7 +427,7 @@ void drawScopes(void)
 			continue;
 		}
 
-		scope_t s = scope[i]; // cache scope to lower thread race condition issues
+		volatile scope_t s = scope[i]; // cache scope to lower thread race condition issues
 		if (s.active && s.volume > 0 && !audio.locked)
 		{
 			// scope is active
@@ -442,7 +441,7 @@ void drawScopes(void)
 
 			// draw scope
 			bool linedScopesFlag = !!(config.specialFlags & LINED_SCOPES);
-			scopeDrawRoutineTable[(linedScopesFlag * 6) + (s.sample16Bit * 3) + s.loopType](&s, scopeXOffs, scopeLineY, scopeDrawLen);
+			scopeDrawRoutineTable[(linedScopesFlag * 6) + (s.sample16Bit * 3) + s.loopType]((const scope_t *)&s, scopeXOffs, scopeLineY, scopeDrawLen);
 		}
 		else
 		{

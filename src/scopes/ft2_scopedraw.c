@@ -10,18 +10,25 @@
 #include "ft2_scopedraw.h"
 #include "ft2_scope_macros.h"
 
-static float *fScopeIntrpLUT;
+static int16_t *scopeIntrpLUT;
 
-static void scopeLine(int32_t x1, int32_t y1, int32_t y2, uint32_t color);
+static void scopeLine(int32_t x1, int32_t y1, int32_t y2, const uint32_t color);
 
 bool calcScopeIntrpLUT(void)
 {
-	fScopeIntrpLUT = (float *)malloc(SCOPE_INTRP_TAPS * SCOPE_INTRP_PHASES * sizeof (float));
-	if (fScopeIntrpLUT == NULL)
+	scopeIntrpLUT = (int16_t *)malloc(SCOPE_INTRP_TAPS * SCOPE_INTRP_PHASES * sizeof (int16_t));
+	if (scopeIntrpLUT == NULL)
 		return false;
 
-	// 6-point cubic B-spline (No overshoot w/ low filter cut-off. Very suitable for scopes.)
-	float *fPtr = fScopeIntrpLUT;
+	/* Several tests have been done to figure out what interpolation method is most suitable
+	** for the tracker scopes. After testing linear, cubic, Gaussian and windowed-sinc
+	** interpolation, I have come to the conclusion that 6-point cubic B-spline is the best.
+	** This interpolation method also has no overshoot.
+	*/
+
+	// 6-point cubic B-spline (no overshoot)
+
+	int16_t *ptr16 = scopeIntrpLUT;
 	for (int32_t i = 0; i < SCOPE_INTRP_PHASES; i++)
 	{
 		const double x1 = i * (1.0 / SCOPE_INTRP_PHASES);
@@ -37,12 +44,13 @@ bool calcScopeIntrpLUT(void)
 		double t5 = (-(1.0/ 24.0) * x5) + ( (1.0/24.0) * x4) + ( (1.0/12.0) * x3) + ( (1.0/12.0) * x2) + ( (1.0/24.0) * x1) + ( 1.0/120.0);
 		double t6 =   (1.0/120.0) * x5;
 
-		*fPtr++ = (float)t1;
-		*fPtr++ = (float)t2;
-		*fPtr++ = (float)t3;
-		*fPtr++ = (float)t4;
-		*fPtr++ = (float)t5;
-		*fPtr++ = (float)t6;
+		// important: truncate, do not round (would cause scope overflow)
+		*ptr16++ = (int16_t)(t1 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)(t2 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)(t3 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)(t4 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)(t5 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)(t6 * SCOPE_INTRP_SCALE);
 	}
 
 	return true;
@@ -50,20 +58,20 @@ bool calcScopeIntrpLUT(void)
 
 void freeScopeIntrpLUT(void)
 {
-	if (fScopeIntrpLUT != NULL)
+	if (scopeIntrpLUT != NULL)
 	{
-		free(fScopeIntrpLUT);
-		fScopeIntrpLUT = NULL;
+		free(scopeIntrpLUT);
+		scopeIntrpLUT = NULL;
 	}
 }
 
 /* ----------------------------------------------------------------------- */
-/*                         SCOPE DRAWING ROUTINES                          */
+/*                    NON-LINED SCOPE DRAWING ROUTINES                     */
 /* ----------------------------------------------------------------------- */
 
 static void scopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS_NO_LOOP
+	SCOPE_INIT
 
 	for (; x < width; x++)
 	{
@@ -76,7 +84,7 @@ static void scopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_
 
 static void scopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS_LOOP
+	SCOPE_INIT
 
 	for (; x < width; x++)
 	{
@@ -87,9 +95,9 @@ static void scopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t 
 	}
 }
 
-static void scopeDrawPingPong_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawBidiLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS_BIDI
+	SCOPE_INIT_BIDI
 
 	for (; x < width; x++)
 	{
@@ -102,7 +110,7 @@ static void scopeDrawPingPong_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint3
 
 static void scopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS_NO_LOOP
+	SCOPE_INIT
 
 	for (; x < width; x++)
 	{
@@ -115,7 +123,7 @@ static void scopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32
 
 static void scopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS_LOOP
+	SCOPE_INIT
 
 	for (; x < width; x++)
 	{
@@ -126,9 +134,9 @@ static void scopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t
 	}
 }
 
-static void scopeDrawPingPong_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawBidiLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_REGS_BIDI
+	SCOPE_INIT_BIDI
 
 	for (; x < width; x++)
 	{
@@ -140,12 +148,12 @@ static void scopeDrawPingPong_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint
 }
 
 /* ----------------------------------------------------------------------- */
-/*                   INTERPOLATED SCOPE DRAWING ROUTINES                   */
+/*                       LINED SCOPE DRAWING ROUTINES                      */
 /* ----------------------------------------------------------------------- */
 
 static void linedScopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS_NO_LOOP
+	LINED_SCOPE_INIT
 	LINED_SCOPE_PREPARE_SMP8
 	SCOPE_HANDLE_POS_NO_LOOP
 
@@ -160,22 +168,22 @@ static void linedScopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, ui
 
 static void linedScopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS_LOOP
-	LINED_SCOPE_PREPARE_SMP8
+	LINED_SCOPE_INIT
+	LINED_SCOPE_PREPARE_SMP8_LOOP
 	SCOPE_HANDLE_POS_LOOP
 
 	for (; x < width; x++)
 	{
-		SCOPE_GET_INTERPOLATED_SMP8
+		SCOPE_GET_INTERPOLATED_SMP8_LOOP
 		LINED_SCOPE_DRAW_SMP
 		SCOPE_UPDATE_READPOS
 		SCOPE_HANDLE_POS_LOOP
 	}
 }
 
-static void linedScopeDrawPingPong_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawBidiLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS_BIDI
+	LINED_SCOPE_INIT_BIDI
 	LINED_SCOPE_PREPARE_SMP8_BIDI
 	SCOPE_HANDLE_POS_BIDI
 
@@ -190,7 +198,7 @@ static void linedScopeDrawPingPong_8bit(scope_t *s, uint32_t x, uint32_t lineY, 
 
 static void linedScopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS_NO_LOOP
+	LINED_SCOPE_INIT
 	LINED_SCOPE_PREPARE_SMP16
 	SCOPE_HANDLE_POS_NO_LOOP
 
@@ -205,22 +213,22 @@ static void linedScopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, u
 
 static void linedScopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS_LOOP
-	LINED_SCOPE_PREPARE_SMP16
+	LINED_SCOPE_INIT
+	LINED_SCOPE_PREPARE_SMP16_LOOP
 	SCOPE_HANDLE_POS_LOOP
 
 	for (; x < width; x++)
 	{
-		SCOPE_GET_INTERPOLATED_SMP16
+		SCOPE_GET_INTERPOLATED_SMP16_LOOP
 		LINED_SCOPE_DRAW_SMP
 		SCOPE_UPDATE_READPOS
 		SCOPE_HANDLE_POS_LOOP
 	}
 }
 
-static void linedScopeDrawPingPong_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawBidiLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_REGS_BIDI
+	LINED_SCOPE_INIT_BIDI
 	LINED_SCOPE_PREPARE_SMP16_BIDI
 	SCOPE_HANDLE_POS_BIDI
 
@@ -235,42 +243,60 @@ static void linedScopeDrawPingPong_16bit(scope_t *s, uint32_t x, uint32_t lineY,
 
 // -----------------------------------------------------------------------
 
-static void scopeLine(int32_t x1, int32_t y1, int32_t y2, uint32_t color)
+static void scopeLine(int32_t x1, int32_t y1, int32_t y2, const uint32_t color)
 {
-	const int32_t dy = y2 - y1;
-	const int32_t sy = SGN(dy);
-	const int32_t pitch = sy * SCREEN_W;
+#ifdef _DEBUG
+	if (x1 < 0 || x1 >= SCREEN_W || y1 < 0 || y1 >= SCREEN_H || y2 < 0 || y2 >= SCREEN_H)
+		return;
+#endif
 
 	uint32_t *dst32 = &video.frameBuffer[(y1 * SCREEN_W) + x1];
 
 	*dst32 = color; // set first pixel
 
-	int32_t ay = ABS(dy);
-	if (ay <= 1)
+	const int32_t dy = y2 - y1;
+	if (dy == 0) // y1 == y2
 	{
-		if (ay != 0)
-			dst32 += pitch;
-
-		*++dst32 = color;
+		dst32[1] = color;
 		return;
 	}
 
+	uint32_t ay = ABS(dy);
 	int32_t d = 1 - ay;
 
 	ay <<= 1;
-	while (y1 != y2)
+
+	if (y1 > y2)
 	{
-		if (d >= 0)
+		for (; y1 != y2; y1--)
 		{
-			d -= ay;
-			dst32++;
+			if (d >= 0)
+			{
+				d -= ay;
+				dst32++;
+			}
+
+			d += 2;
+
+			dst32 -= SCREEN_W;
+			*dst32 = color;
 		}
+	}
+	else
+	{
+		for (; y1 != y2; y1++)
+		{
+			if (d >= 0)
+			{
+				d -= ay;
+				dst32++;
+			}
 
-		y1 += sy;
-		d += 2;
+			d += 2;
 
-		dst32 += pitch;
-		*dst32 = color;
+			dst32 += SCREEN_W;
+			*dst32 = color;
+		}
 	}
 }
 
@@ -280,14 +306,14 @@ const scopeDrawRoutine scopeDrawRoutineTable[12] =
 {
 	(scopeDrawRoutine)scopeDrawNoLoop_8bit,
 	(scopeDrawRoutine)scopeDrawLoop_8bit,
-	(scopeDrawRoutine)scopeDrawPingPong_8bit,
+	(scopeDrawRoutine)scopeDrawBidiLoop_8bit,
 	(scopeDrawRoutine)scopeDrawNoLoop_16bit,
 	(scopeDrawRoutine)scopeDrawLoop_16bit,
-	(scopeDrawRoutine)scopeDrawPingPong_16bit,
+	(scopeDrawRoutine)scopeDrawBidiLoop_16bit,
 	(scopeDrawRoutine)linedScopeDrawNoLoop_8bit,
 	(scopeDrawRoutine)linedScopeDrawLoop_8bit,
-	(scopeDrawRoutine)linedScopeDrawPingPong_8bit,
+	(scopeDrawRoutine)linedScopeDrawBidiLoop_8bit,
 	(scopeDrawRoutine)linedScopeDrawNoLoop_16bit,
 	(scopeDrawRoutine)linedScopeDrawLoop_16bit,
-	(scopeDrawRoutine)linedScopeDrawPingPong_16bit
+	(scopeDrawRoutine)linedScopeDrawBidiLoop_16bit
 };
