@@ -408,9 +408,9 @@ void renderAboutScreenFrame(void)
 	}
 	else // old FT2 about screen
 	{
-		star_a.x += 3*64;
-		star_a.y += 2*64;
-		star_a.z -= 1*64;
+		star_a.x += SCALE_VBLANK_DELTA(3*64); // 70Hz delta -> 60Hz delta
+		star_a.y += SCALE_VBLANK_DELTA(2*64);
+		star_a.z -= SCALE_VBLANK_DELTA(1*64);
 
 		fixaMatris(star_a, &starmat);
 		realStars();
