@@ -848,9 +848,9 @@ void nibblesPlay(void)
 	assert(config.NI_Speed < 4);
 	NI_CurSpeed = NI_Speeds[config.NI_Speed];
 
-	// adjust for 70Hz -> 60Hz frames (this is not exact, but we don't want fractional numbers aka. frame skipping)
-	NI_CurSpeed60Hz = (uint8_t)SCALE_VBLANK_DELTA(NI_CurSpeed);
-	NI_CurTick60Hz = (uint8_t)SCALE_VBLANK_DELTA(NI_Speeds[2]);
+	// adjust for 70Hz -> 60Hz countdown frames (this is not exact, but we don't want fractional numbers aka. frame skipping)
+	NI_CurSpeed60Hz = (uint8_t)SCALE_VBLANK_DELTA_REV(NI_CurSpeed);
+	NI_CurTick60Hz = (uint8_t)SCALE_VBLANK_DELTA_REV(NI_Speeds[2]);
 
 	editor.NI_Play = true;
 	NI_P1Score = 0;

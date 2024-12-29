@@ -22,7 +22,8 @@
 #define VBLANK_HZ 60
 
 // 70Hz (FT2 vblank) delta -> 60Hz vblank delta (rounded)
-#define SCALE_VBLANK_DELTA(x) (int32_t)(((x) * ((double)VBLANK_HZ / FT2_VBLANK_HZ)) + 0.5)
+#define SCALE_VBLANK_DELTA(x) (int32_t)(((x) * (FT2_VBLANK_HZ / (double)VBLANK_HZ)) + 0.5)
+#define SCALE_VBLANK_DELTA_REV(x) (int32_t)(((x) * (VBLANK_HZ / (double)FT2_VBLANK_HZ)) + 0.5)
 
 /* Amount of extra bytes to allocate for every instrument sample,
 ** this is used for a hack for resampling interpolation to be
