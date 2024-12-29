@@ -1539,7 +1539,7 @@ void sampPlayNoteDown(void)
 
 void scrollSampleDataLeft(void)
 {
-	int32_t scrollAmount, sampleLen;
+	int32_t sampleLen;
 
 	if (instr[editor.curInstr] == NULL)
 		sampleLen = 0;
@@ -1549,11 +1549,7 @@ void scrollSampleDataLeft(void)
 	if (smpEd_ViewSize == 0 || smpEd_ViewSize == sampleLen)
 		return;
 
-	if (mouse.rightButtonPressed)
-		scrollAmount = smpEd_ViewSize / SCALE_VBLANK_DELTA(16);
-	else
-		scrollAmount = smpEd_ViewSize / SCALE_VBLANK_DELTA(32);
-
+	int32_t scrollAmount = (uint32_t)smpEd_ViewSize / 32;
 	if (scrollAmount < 1)
 		scrollAmount = 1;
 
@@ -1566,7 +1562,7 @@ void scrollSampleDataLeft(void)
 
 void scrollSampleDataRight(void)
 {
-	int32_t scrollAmount, sampleLen;
+	int32_t sampleLen;
 
 	if (instr[editor.curInstr] == NULL)
 		sampleLen = 0;
@@ -1576,11 +1572,7 @@ void scrollSampleDataRight(void)
 	if (smpEd_ViewSize == 0 || smpEd_ViewSize == sampleLen)
 		return;
 
-	if (mouse.rightButtonPressed)
-		scrollAmount = smpEd_ViewSize / SCALE_VBLANK_DELTA(16);
-	else
-		scrollAmount = smpEd_ViewSize / SCALE_VBLANK_DELTA(32);
-
+	int32_t scrollAmount = (uint32_t)smpEd_ViewSize / 32;
 	if (scrollAmount < 1)
 		scrollAmount = 1;
 
