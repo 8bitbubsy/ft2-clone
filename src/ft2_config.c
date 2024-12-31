@@ -741,7 +741,7 @@ static void drawQuantValue(void)
 {
 	char str[8];
 	sprintf(str, "%02d", config.recQuantRes);
-	textOutFixed(354, 123, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(354, 122, PAL_FORGRND, PAL_DESKTOP, str);
 }
 
 static void drawMIDIChanValue(void)
@@ -1291,10 +1291,12 @@ void showConfigScreen(void)
 			drawFramework(408,   0, 224,  91, FRAMEWORK_TYPE1);
 
 			drawFramework(110,  43,  99,  57, FRAMEWORK_TYPE1);
-			drawFramework(209,  55, 199, 118, FRAMEWORK_TYPE1);
+			drawFramework(209,  55, 199, 118-16, FRAMEWORK_TYPE1);
 			drawFramework(408,  91, 224,  82, FRAMEWORK_TYPE1);
 
 			drawFramework(110, 100,  99,  73, FRAMEWORK_TYPE1);
+
+			drawFramework(209, 157,  199, 16, FRAMEWORK_TYPE1);
 
 			// text boxes
 			drawFramework(485,  15, 145,  14, FRAMEWORK_TYPE2);
@@ -1331,16 +1333,16 @@ void showConfigScreen(void)
 			textOutShadow(130, 143, PAL_FORGRND, PAL_DSKTOP2, "Stretched");
 			textOutShadow(130, 156, PAL_FORGRND, PAL_DSKTOP2, "Pixel filter");
 
-			textOutShadow(213,  58, PAL_FORGRND, PAL_DSKTOP2, "Rec./Edit/Play:");
-			textOutShadow(228,  71, PAL_FORGRND, PAL_DSKTOP2, "Multichannel record");
-			textOutShadow(228,  84, PAL_FORGRND, PAL_DSKTOP2, "Multichannel \"key jazz\"");
-			textOutShadow(228,  97, PAL_FORGRND, PAL_DSKTOP2, "Multichannel edit");
-			textOutShadow(228, 110, PAL_FORGRND, PAL_DSKTOP2, "Record key-off notes");
-			textOutShadow(228, 123, PAL_FORGRND, PAL_DSKTOP2, "Quantization");
-			textOutShadow(338, 123, PAL_FORGRND, PAL_DSKTOP2, "1/");
-			textOutShadow(228, 136, PAL_FORGRND, PAL_DSKTOP2, "Change pattern length when");
-			textOutShadow(228, 147, PAL_FORGRND, PAL_DSKTOP2, "inserting/deleting line.");
-			textOutShadow(228, 161, PAL_FORGRND, PAL_DSKTOP2, "Original FT2 \"about screen\"");
+			textOutShadow(213,  57, PAL_FORGRND, PAL_DSKTOP2, "Rec./Edit/Play:");
+			textOutShadow(228,  70, PAL_FORGRND, PAL_DSKTOP2, "Multichannel record");
+			textOutShadow(228,  83, PAL_FORGRND, PAL_DSKTOP2, "Multichannel \"key jazz\"");
+			textOutShadow(228,  96, PAL_FORGRND, PAL_DSKTOP2, "Multichannel edit");
+			textOutShadow(228, 109, PAL_FORGRND, PAL_DSKTOP2, "Record key-off notes");
+			textOutShadow(228, 122, PAL_FORGRND, PAL_DSKTOP2, "Quantization");
+			textOutShadow(338, 122, PAL_FORGRND, PAL_DSKTOP2, "1/");
+			textOutShadow(228, 135, PAL_FORGRND, PAL_DSKTOP2, "Change pattern length when");
+			textOutShadow(228, 146, PAL_FORGRND, PAL_DSKTOP2, "inserting/deleting line.");
+			textOutShadow(228, 161, PAL_FORGRND, PAL_DSKTOP2, "Original FT2 About screen");
 
 			textOutShadow(428,  95, PAL_FORGRND, PAL_DSKTOP2, "Enable MIDI");
 			textOutShadow(412, 108, PAL_FORGRND, PAL_DSKTOP2, "Record MIDI chn.");

@@ -338,8 +338,8 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 
 	// ------ CONFIG MISCELLANEOUS PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,            text #2, funcOnDown,          funcOnUp
-	{ 370, 121, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    configQuantizeUp,    NULL },
-	{ 387, 121, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    configQuantizeDown,  NULL },
+	{ 370, 120, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    configQuantizeUp,    NULL },
+	{ 387, 120, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    configQuantizeDown,  NULL },
 	{ 594, 106, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    configMIDIChnUp,     NULL },
 	{ 611, 106, 18, 13, 1, 4, ARROW_DOWN_STRING,  NULL,    configMIDIChnDown,   NULL },
 	{ 594, 120, 18, 13, 1, 4, ARROW_UP_STRING,    NULL,    configMIDITransUp,   NULL },
