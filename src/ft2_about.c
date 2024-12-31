@@ -117,12 +117,12 @@ static void blendPixelsXY(uint32_t x, uint32_t y, uint32_t pixelB_r, uint32_t pi
 static void oldRotateStarfieldMatrix(void)
 {
 	// original code used a cos/sin table, but this only runs once per frame, no need...
-	const int16_t sa = (int16_t)round(32767.0 * sin(oldStarRotation.x * (2.0 * M_PI / 65536.0)));
-	const int16_t ca = (int16_t)round(32767.0 * cos(oldStarRotation.x * (2.0 * M_PI / 65536.0)));
-	const int16_t sb = (int16_t)round(32767.0 * sin(oldStarRotation.y * (2.0 * M_PI / 65536.0)));
-	const int16_t cb = (int16_t)round(32767.0 * cos(oldStarRotation.y * (2.0 * M_PI / 65536.0)));
-	const int16_t sc = (int16_t)round(32767.0 * sin(oldStarRotation.z * (2.0 * M_PI / 65536.0)));
-	const int16_t cc = (int16_t)round(32767.0 * cos(oldStarRotation.z * (2.0 * M_PI / 65536.0)));
+	const int16_t sa = (int16_t)round(32767.0 * sin(oldStarRotation.x * (2.0 * PI / 65536.0)));
+	const int16_t ca = (int16_t)round(32767.0 * cos(oldStarRotation.x * (2.0 * PI / 65536.0)));
+	const int16_t sb = (int16_t)round(32767.0 * sin(oldStarRotation.y * (2.0 * PI / 65536.0)));
+	const int16_t cb = (int16_t)round(32767.0 * cos(oldStarRotation.y * (2.0 * PI / 65536.0)));
+	const int16_t sc = (int16_t)round(32767.0 * sin(oldStarRotation.z * (2.0 * PI / 65536.0)));
+	const int16_t cc = (int16_t)round(32767.0 * cos(oldStarRotation.z * (2.0 * PI / 65536.0)));
 
 	oldStarMatrix.x.x = ((ca * cc) >> 16) + (((sc * ((sa * sb) >> 16)) >> 16) << 1);
 	oldStarMatrix.y.x = (sa * cb) >> 16;
@@ -401,7 +401,7 @@ void showAboutScreen(void) // called once when about screen is opened
 						int32_t r = pascalRandom(30000);
 						int32_t n = pascalRandom(5);
 						int32_t w = ((2 * pascalRandom(2)) - 1) * sqr(pascalRandom(1000));
-						double ww = (((M_PI * 2.0) / 5.0) * n) + (r / 12000.0) + (w / 3000000.0);
+						double ww = (((PI * 2.0) / 5.0) * n) + (r / 12000.0) + (w / 3000000.0);
 						int32_t h = ((sqr(r) / 30000) * (pascalRandom(10000) - 5000)) / 12000;
 
 						s->x = (int16_t)(r * cos(ww));
@@ -422,9 +422,9 @@ void showAboutScreen(void) // called once when about screen is opened
 					int32_t w = pascalRandom(3000);
 					double ww = ((w * 8) + r) / 16.0;
 
-					const int16_t z =  (int16_t)round(32767.0 * cos(w  * (2.0 * M_PI / 1024.0)));
-					const int16_t y =  (int16_t)round(32767.0 * sin(w  * (2.0 * M_PI / 1024.0)));
-					const int16_t x = ((int16_t)round(32767.0 * cos(ww * (2.0 * M_PI / 1024.0)))) / 4;
+					const int16_t z =  (int16_t)round(32767.0 * cos(w  * (2.0 * PI / 1024.0)));
+					const int16_t y =  (int16_t)round(32767.0 * sin(w  * (2.0 * PI / 1024.0)));
+					const int16_t x = ((int16_t)round(32767.0 * cos(ww * (2.0 * PI / 1024.0)))) / 4;
 
 					s->z = (int16_t)((z * (w + r)) / 3500);
 					s->y = (int16_t)((y * (w + r)) / 3500);
