@@ -1495,7 +1495,11 @@ void updateSampleEditor(void)
 
 	// draw sample play note
 
-	const uint8_t note = (editor.smpEd_NoteNr - 1) % 12;
+	const uint32_t noteNr = editor.smpEd_NoteNr - 1;
+
+	const uint32_t note   = noteNr % 12;
+	const uint32_t octave = noteNr / 12;
+
 	if (config.ptnAcc == 0)
 	{
 		noteChar1 = sharpNote1Char[note];
@@ -1507,11 +1511,9 @@ void updateSampleEditor(void)
 		noteChar2 = flatNote2Char[note];
 	}
 
-	char octaChar = '0' + ((editor.smpEd_NoteNr - 1) / 12);
-
 	charOutBg(7,  369, PAL_FORGRND, PAL_BCKGRND, noteChar1);
 	charOutBg(15, 369, PAL_FORGRND, PAL_BCKGRND, noteChar2);
-	charOutBg(23, 369, PAL_FORGRND, PAL_BCKGRND, octaChar);
+	charOutBg(23, 369, PAL_FORGRND, PAL_BCKGRND, (char)('0' + octave));
 
 	// draw sample display/length
 
