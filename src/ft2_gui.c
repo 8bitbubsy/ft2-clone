@@ -4,7 +4,6 @@
 #endif
 
 #include <stdint.h>
-#include <time.h>
 #include "ft2_header.h"
 #include "ft2_config.h"
 #include "ft2_about.h"
@@ -203,7 +202,7 @@ bool setupGUI(void)
 	}
 
 	setPal16(palTable[config.cfg_StdPalNum], false);
-	seedAboutScreenRandom((uint32_t)time(NULL));
+	initAboutScreen();
 	setupInitialTextBoxPointers();
 	setInitialTrimFlags();
 	initializeScrollBars();

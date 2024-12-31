@@ -55,40 +55,24 @@ static int16_t customText0X, customText0Y, customText1Y, customText2Y;
 static int16_t customText3Y, customText1X, customText2X, customText3X;
 static int16_t sin16[SINUS_PHASES], zSpeed;
 static int32_t lastStarScreenPos[OLD_NUM_STARS];
-static uint16_t logoAlpha16, starShineAlpha16;
-static uint32_t randSeed, sinp1, sinp2;
+static const uint16_t logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
+static const uint16_t starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
+static uint32_t sinp1, sinp2;
 static oldVector_t oldStarPoints[OLD_NUM_STARS];
 static oldRotate_t oldStarRotation;
 static oldMatrix_t oldStarMatrix;
 static vector_t starPoints[NUM_STARS], starRotation;
 static matrix_t starMatrix;
 
-void seedAboutScreenRandom(uint32_t newseed)
+// exact Turbo Pascal Random() implementation
+static int32_t Random(int32_t limit)
 {
-	randSeed = newseed;
-}
-
-static inline int32_t random32(void)
-{
-	randSeed *= 134775813;
-	randSeed += 1;
-	return randSeed;
-}
-
-static inline int32_t pascalRandom(int32_t l) // Turbo Pascal Random() implementation
-{
-	int32_t r;
+	static uint32_t randSeed; // seed is 0 in Turbo Pascal unless Randomize() is called
 
 	randSeed *= 134775813;
-	randSeed += 1;
+	randSeed++;
 
-	r = ((int64_t)randSeed * l) >> 32;
-	return r;
-}
-
-static inline int32_t sqr(int32_t x)
-{
-	return x * x;
+	return ((int64_t)randSeed * limit) >> 32;
 }
 
 static uint32_t blendPixels(uint32_t pixelA, uint32_t pixelB, uint16_t alpha)
@@ -312,17 +296,25 @@ void renderAboutScreenFrame(void)
 		textOut(customText1X, customText1Y, PAL_FORGRND, customText1);
 		textOut(customText2X, customText2Y, PAL_FORGRND, customText2);
 		textOut(customText3X, customText3Y, PAL_FORGRND, customText3);
+
+		showPushButton(PB_EXIT_ABOUT); // yes, we also have to redraw the exit button per frame :)
 	}
-	else // old FT2 about screen
+	else
 	{
+		// original FT2 about screen
+
 		oldStarRotation.x += SCALE_VBLANK_DELTA(3*64); // 70Hz speed -> 60Hz speed
 		oldStarRotation.y += SCALE_VBLANK_DELTA(2*64);
 		oldStarRotation.z -= SCALE_VBLANK_DELTA(1*64);
 		oldRotateStarfieldMatrix();
+
 		oldStarfield();
 	}
+}
 
-	showPushButton(PB_EXIT_ABOUT); // yes, we also have to redraw the exit button per frame :)
+static inline int32_t Sqr(int32_t x)
+{
+	return x * x;
 }
 
 void showAboutScreen(void) // called once when about screen is opened
@@ -337,54 +329,27 @@ void showAboutScreen(void) // called once when about screen is opened
 
 	showPushButton(PB_EXIT_ABOUT);
 
-	if (config.useNewAboutScreen)
-	{
-		vector_t *s = starPoints;
-		for (int32_t i = 0; i < NUM_STARS; i++, s++)
-		{
-			s->x = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
-			s->y = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
-			s->z = (float)(random32() * (1.0 / (UINT32_MAX+1.0)));
-		}
-
-		// pre-calc sinus table
-		for (int32_t i = 0; i < SINUS_PHASES; i++)
-			sin16[i] = (int16_t)round(32767.0 * sin(i * PI * 2.0 / SINUS_PHASES));
-
-		sinp1 = 0;
-		sinp2 = SINUS_PHASES/4; // cosine offset
-		logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
-		starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
-
-		sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
-		customText0X = (SCREEN_W    - textWidth(customText0)) / 2;
-		customText1X = (SCREEN_W    - textWidth(customText1)) / 2;
-		customText2X = (SCREEN_W-8) - textWidth(customText2);
-		customText3X = (SCREEN_W-8) - textWidth(customText3);
-		customText0Y = 157-28;
-		customText1Y = 157-12;
-		customText2Y = 157-12;
-		customText3Y = 157;
-	}
-	else
+	if (!config.useNewAboutScreen)
 	{
 		oldVector_t *s = oldStarPoints;
 
-		const uint8_t type = (uint8_t)pascalRandom(4);
+		const int32_t type = Random(4);
 		switch (type)
 		{
+			// classic "space stars"
 			case 0:
 			{
 				zSpeed = 309;
 				for (int32_t i = 0; i < OLD_NUM_STARS; i++, s++)
 				{
-					s->z = (int16_t)pascalRandom(0xFFFF) - 0x8000;
-					s->y = (int16_t)pascalRandom(0xFFFF) - 0x8000;
-					s->x = (int16_t)pascalRandom(0xFFFF) - 0x8000;
+					s->z = (int16_t)Random(0xFFFF) - 0x8000;
+					s->y = (int16_t)Random(0xFFFF) - 0x8000;
+					s->x = (int16_t)Random(0xFFFF) - 0x8000;
 				}
 			}
 			break;
 
+			// galaxy
 			case 1:
 			{
 				zSpeed = 0;
@@ -392,17 +357,17 @@ void showAboutScreen(void) // called once when about screen is opened
 				{
 					if (i < OLD_NUM_STARS/4)
 					{
-						s->z = (int16_t)pascalRandom(0xFFFF) - 0x8000;
-						s->y = (int16_t)pascalRandom(0xFFFF) - 0x8000;
-						s->x = (int16_t)pascalRandom(0xFFFF) - 0x8000;
+						s->z = (int16_t)Random(0xFFFF) - 0x8000;
+						s->y = (int16_t)Random(0xFFFF) - 0x8000;
+						s->x = (int16_t)Random(0xFFFF) - 0x8000;
 					}
 					else
 					{
-						int32_t r = pascalRandom(30000);
-						int32_t n = pascalRandom(5);
-						int32_t w = ((2 * pascalRandom(2)) - 1) * sqr(pascalRandom(1000));
-						double ww = (((PI * 2.0) / 5.0) * n) + (r / 12000.0) + (w / 3000000.0);
-						int32_t h = ((sqr(r) / 30000) * (pascalRandom(10000) - 5000)) / 12000;
+						int32_t r = Random(30000);
+						int32_t n = Random(5);
+						int32_t w = ((2 * Random(2)) - 1) * Sqr(Random(1000));
+						double ww = (((PI * 2.0) / 5.0) * n) + (r * (1.0 / 12000.0)) + (w * (1.0 / 3000000.0));
+						int32_t h = ((Sqr(r) / 30000) * (Random(10000) - 5000)) / 12000;
 
 						s->x = (int16_t)(r * cos(ww));
 						s->y = (int16_t)(r * sin(ww));
@@ -412,15 +377,16 @@ void showAboutScreen(void) // called once when about screen is opened
 			}
 			break;
 
+			// spiral
 			case 2:
 			case 3:
 			{
 				zSpeed = 0;
 				for (int32_t i = 0; i < OLD_NUM_STARS; i++, s++)
 				{
-					int32_t r = (int32_t)round(sqrt(pascalRandom(500) * 500));
-					int32_t w = pascalRandom(3000);
-					double ww = ((w * 8) + r) / 16.0;
+					int32_t r = (int32_t)round(sqrt(Random(500) * 500));
+					int32_t w = Random(3000);
+					double ww = ((w * 8) + r) * (1.0 / 16.0);
 
 					const int16_t z =  (int16_t)round(32767.0 * cos(w  * (2.0 * PI / 1024.0)));
 					const int16_t y =  (int16_t)round(32767.0 * sin(w  * (2.0 * PI / 1024.0)));
@@ -441,13 +407,41 @@ void showAboutScreen(void) // called once when about screen is opened
 		oldStarRotation.y = 748;
 		oldStarRotation.z = 200;
 
-		for (int32_t i = 0; i < 1000; i++)
+		for (int32_t i = 0; i < OLD_NUM_STARS; i++)
 			lastStarScreenPos[i] = -1;
 
 		blit(91, 31, bmp.ft2OldAboutLogo, 449, 111);
 	}
 
 	ui.aboutScreenShown = true;
+}
+
+void initAboutScreen(void)
+{
+	vector_t *s = starPoints;
+	for (int32_t i = 0; i < NUM_STARS; i++, s++)
+	{
+		s->x = (float)((Random(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
+		s->y = (float)((Random(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
+		s->z = (float)((Random(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
+	}
+
+	sinp1 = 0;
+	sinp2 = SINUS_PHASES / 4; // cosine offset
+
+	// pre-calc sinus table
+	for (int32_t i = 0; i < SINUS_PHASES; i++)
+		sin16[i] = (int16_t)round(32767.0 * sin(i * PI * 2.0 / SINUS_PHASES));
+
+	sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
+	customText0X = (SCREEN_W    - textWidth(customText0)) / 2;
+	customText1X = (SCREEN_W    - textWidth(customText1)) / 2;
+	customText2X = (SCREEN_W-8) - textWidth(customText2);
+	customText3X = (SCREEN_W-8) - textWidth(customText3);
+	customText0Y = 157-28;
+	customText1Y = 157-12;
+	customText2Y = 157-12;
+	customText3Y = 157;
 }
 
 void hideAboutScreen(void)
