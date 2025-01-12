@@ -10,7 +10,7 @@
 
 float *f4PointCubicSplineLUT = NULL, *f6PointCubicSplineLUT = NULL; // globalized
 
-bool calcCubicSplineTables(void)
+bool setupCubicSplineTables(void)
 {
 	float *fPtr;
 

@@ -191,17 +191,17 @@ void audioSetInterpolationType(uint8_t interpolationType)
 	// set sinc LUT pointers
 	if (config.interpolation == INTERPOLATION_SINC8)
 	{
-		fKaiserSinc = fKaiserSinc_8;
-		fDownSample1 = fDownSample1_8;
-		fDownSample2 = fDownSample2_8;
+		fSinc_1 = fSinc8_1;
+		fSinc_2 = fSinc8_2;
+		fSinc_3 = fSinc8_3;
 
 		audio.sincInterpolation = true;
 	}
 	else if (config.interpolation == INTERPOLATION_SINC16)
 	{
-		fKaiserSinc = fKaiserSinc_16;
-		fDownSample1 = fDownSample1_16;
-		fDownSample2 = fDownSample2_16;
+		fSinc_1 = fSinc16_1;
+		fSinc_2 = fSinc16_2;
+		fSinc_3 = fSinc16_3;
 
 		audio.sincInterpolation = true;
 	}
@@ -394,12 +394,12 @@ void updateVoices(void)
 			if (audio.sincInterpolation)
 			{
 				// decide which sinc LUT to use according to the resampling ratio
-				if (v->delta <= sincDownsample1Ratio)
-					v->fSincLUT = fKaiserSinc;
-				else if (v->delta <= sincDownsample2Ratio)
-					v->fSincLUT = fDownSample1;
+				if (v->delta <= sincRatio1)
+					v->fSincLUT = fSinc_1;
+				else if (v->delta <= sincRatio2)
+					v->fSincLUT = fSinc_2;
 				else
-					v->fSincLUT = fDownSample2;
+					v->fSincLUT = fSinc_3;
 			}
 		}
 

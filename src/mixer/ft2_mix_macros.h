@@ -133,7 +133,7 @@
 
 #define CUBIC4P_SPLINE_INTERPOLATION(s, f, scale) \
 { \
-	const float *t = f4PointCubicSplineLUT + (((uint32_t)(f) >> CUBIC4P_SPLINE_FSHIFT) & CUBIC4P_SPLINE_FMASK); \
+	const float *t = f4PointCubicSplineLUT + (((uint32_t)(f) >> CUBIC4P_SPLINE_FRACSHIFT) & CUBIC4P_SPLINE_FRACMASK); \
 	fSample = ((s[-1] * t[0]) + \
 	           ( s[0] * t[1]) + \
 	           ( s[1] * t[2]) + \
@@ -142,7 +142,7 @@
 
 #define CUBIC6P_SPLINE_INTERPOLATION(s, f, scale) \
 { \
-	const float *t = f6PointCubicSplineLUT + (((uint32_t)(f) >> CUBIC6P_SPLINE_FSHIFT) * 6); \
+	const float *t = f6PointCubicSplineLUT + (((uint32_t)(f) >> CUBIC6P_SPLINE_FRACSHIFT) * CUBIC6P_SPLINE_WIDTH); \
 	fSample = ((s[-2] * t[0]) + \
 	           (s[-1] * t[1]) + \
 	           ( s[0] * t[2]) + \
@@ -215,7 +215,7 @@
 
 #define WINDOWED_SINC8_INTERPOLATION(s, f, scale) \
 { \
-	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC8_FSHIFT) & SINC8_FMASK); \
+	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC1_FRACSHIFT) & SINC1_FRACMASK); \
 	fSample = ((s[-3] * t[0]) + \
 	           (s[-2] * t[1]) + \
 	           (s[-1] * t[2]) + \
@@ -228,7 +228,7 @@
 
 #define WINDOWED_SINC16_INTERPOLATION(s, f, scale) \
 { \
-	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC16_FSHIFT) & SINC16_FMASK); \
+	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC2_FRACSHIFT) & SINC2_FRACMASK); \
 	fSample = (( s[-7] * t[0]) + \
 	           ( s[-6] * t[1]) + \
 	           ( s[-5] * t[2]) + \

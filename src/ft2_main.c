@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 #ifdef __APPLE__
 	osxSetDirToProgramDirFromArgs(argv);
 #endif
-	if (!setupExecutablePath() || !loadBMPs() || !calcCubicSplineTables() || !calcWindowedSincTables())
+	if (!setupExecutablePath() || !loadBMPs() || !setupCubicSplineTables() || !setupWindowedSincTables())
 	{
 		cleanUpAndExit();
 		return 1;

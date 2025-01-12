@@ -1,30 +1,25 @@
 /*
-** Windowed-sinc (Kaiser window) w/ low-pass interpolation LUT generator
-**
-** This was originally based on OpenMPT's source code,
-** but it has been heavily modified.
+** Windowed-sinc LUT generator
 */
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <math.h>
-#include "ft2_windowed_sinc.h" // SINCx_TAPS, SINCx_PHASES
+#include "ft2_windowed_sinc.h" // SINCx_WIDTH, SINCx_PHASES
 #include "../ft2_header.h" // PI
 #include "../ft2_video.h" // showErrorMsgBox()
 
 // globalized
-float *fKaiserSinc_8 = NULL, *fDownSample1_8 = NULL, *fDownSample2_8 = NULL;
-float *fKaiserSinc_16 = NULL, *fDownSample1_16 = NULL, *fDownSample2_16 = NULL;
-uint64_t sincDownsample1Ratio, sincDownsample2Ratio;
-
-// set based on selected sinc interpolator (8 point or 16 point)
-float *fKaiserSinc = NULL, *fDownSample1 = NULL, *fDownSample2 = NULL;
+float *fSinc8_1 = NULL, *fSinc8_2 = NULL, *fSinc8_3 = NULL;
+float *fSinc16_1 = NULL, *fSinc16_2 = NULL, *fSinc16_3 = NULL;
+float *fSinc_1 = NULL, *fSinc_2 = NULL, *fSinc_3 = NULL;
+uint64_t sincRatio1, sincRatio2;
 
 // zeroth-order modified Bessel function of the first kind (series approximation)
-static double besselI0(double z)
+static inline double besselI0(double z)
 {
-#define EPSILON (1E-15)
+#define EPSILON (1E-15) /* lower than this gives no accuracy benefits (verified), just slower compute time */
 
 	double s = 1.0, ds = 1.0, d = 2.0;
 	const double zz = z * z;
@@ -40,148 +35,122 @@ static double besselI0(double z)
 	return s;
 }
 
-static void generateSincLUT(float *fOutput, uint32_t filterWidth, uint32_t numPhases, const double beta, const double lpCutoff)
+static inline double sinc(double x, const double cutoff)
 {
-	const double I0Beta = besselI0(beta);
-	const double kPi = PI * lpCutoff;
-	const double iMul = 1.0 / numPhases;
-	const double xMul = 1.0 / ((filterWidth / 2) * (filterWidth / 2));
-
-	const uint32_t length = filterWidth * numPhases;
-	const uint32_t tapBits = (uint32_t)log2(filterWidth);
-	const uint32_t phasesBits = (uint32_t)log2(numPhases);
-	const uint32_t tapsMinus1 = filterWidth - 1;
-	const int32_t midPoint = (filterWidth / 2) * numPhases;
-
-	for (uint32_t i = 0; i < length; i++)
+	if (x == 0.0)
 	{
-		const int32_t ix = ((tapsMinus1 - (i & tapsMinus1)) << phasesBits) + (i >> tapBits);
-
-		double dSinc = 1.0;
-		if (ix != midPoint)
-		{
-			const double x = (ix - midPoint) * iMul;
-			const double xPi = x * kPi;
-
-			// Kaiser window
-			dSinc = (sin(xPi) * besselI0(beta * sqrt(1.0 - (x * x * xMul)))) / (I0Beta * xPi);
-		}
-
-		fOutput[i] = (float)(dSinc * lpCutoff);
+		return cutoff;
+	}
+	else
+	{
+		x *= cutoff * PI;
+		return (sin(x) / x) * cutoff;
 	}
 }
 
-static double decibelsToKaiserBeta(double dB)
+static void generateWindowedSinc(float *fOutput, const int32_t filterWidth, const int32_t filterPhases, const double beta, const double cutoff)
 {
-	if (dB < 21.0)
-		return 0.0;
-	else if (dB <= 50.0)
-		return 0.5842 * pow(dB - 21.0, 0.4) + 0.07886 * (dB - 21.0);
-	else
-		return 0.1102 * (dB - 8.7);
+	const int32_t tapBits = (int32_t)log2(filterWidth);
+	const int32_t tapMask = filterWidth - 1;
+	const int32_t tapCenter = (filterWidth / 2) - 1;
+	const double besselI0Beta = 1.0 / besselI0(beta);
+	const double phaseMul = 1.0 / filterPhases;
+	const double xMul = 1.0 / (filterWidth / 2);
+
+	for (int32_t i = 0; i < filterWidth * filterPhases; i++)
+	{
+		const double x = ((i & tapMask) - tapCenter) - ((i >> tapBits) * phaseMul);
+
+		// Kaiser-Bessel window
+		const double n = x * xMul;
+		const double window = besselI0(beta * sqrt(1.0 - n * n)) * besselI0Beta;
+
+		fOutput[i] = (float)(sinc(x, cutoff) * window);
+	}
 }
 
-static double rippleToDecibels(double ripple)
+bool setupWindowedSincTables(void)
 {
-	return 20.0 * log10(ripple);
-}
+	fSinc8_1  = (float *)malloc(SINC1_WIDTH*SINC1_PHASES * sizeof (float));
+	fSinc8_2  = (float *)malloc(SINC1_WIDTH*SINC1_PHASES * sizeof (float));
+	fSinc8_3  = (float *)malloc(SINC1_WIDTH*SINC1_PHASES * sizeof (float));
+	fSinc16_1 = (float *)malloc(SINC2_WIDTH*SINC2_PHASES * sizeof (float));
+	fSinc16_2 = (float *)malloc(SINC2_WIDTH*SINC2_PHASES * sizeof (float));
+	fSinc16_3 = (float *)malloc(SINC2_WIDTH*SINC2_PHASES * sizeof (float));
 
-bool calcWindowedSincTables(void)
-{
-	fKaiserSinc_8   = (float *)malloc(SINC1_TAPS*SINC1_PHASES * sizeof (float));
-	fDownSample1_8  = (float *)malloc(SINC1_TAPS*SINC1_PHASES * sizeof (float));
-	fDownSample2_8  = (float *)malloc(SINC1_TAPS*SINC1_PHASES * sizeof (float));
-	fKaiserSinc_16  = (float *)malloc(SINC2_TAPS*SINC2_PHASES * sizeof (float));
-	fDownSample1_16 = (float *)malloc(SINC2_TAPS*SINC2_PHASES * sizeof (float));
-	fDownSample2_16 = (float *)malloc(SINC2_TAPS*SINC2_PHASES * sizeof (float));
-
-	if (fKaiserSinc_8  == NULL || fDownSample1_8  == NULL || fDownSample2_8  == NULL ||
-		fKaiserSinc_16 == NULL || fDownSample1_16 == NULL || fDownSample2_16 == NULL)
+	if (fSinc8_1  == NULL || fSinc8_2  == NULL || fSinc8_3  == NULL ||
+		fSinc16_1 == NULL || fSinc16_2 == NULL || fSinc16_3 == NULL)
 	{
 		showErrorMsgBox("Not enough memory!");
 		return false;
 	}
 
-	// resampling ratios for picking suitable downsample LUT
-	const double ratio1 = 1.1875; // fKaiserSinc if <=
-	const double ratio2 = 1.5; // fDownSample1 if <=, fDownSample2 if >
+	// LUT-select resampling ratios
+	const double ratio1 = 1.1875; // fSinc_1 if <=
+	const double ratio2 = 1.5; // fSinc_2 if <=, fSinc_3 if >
 
-	sincDownsample1Ratio = (uint64_t)(ratio1 * MIXER_FRAC_SCALE);
-	sincDownsample2Ratio = (uint64_t)(ratio2 * MIXER_FRAC_SCALE);
+	// calculate mixer delta limits for LUT-selector
+	sincRatio1 = (uint64_t)(ratio1 * MIXER_FRAC_SCALE);
+	sincRatio2 = (uint64_t)(ratio2 * MIXER_FRAC_SCALE);
 
-	/* Max ripple (to be converted into Kaiser beta parameter)
-	**
-	** NOTE:
-	**  These may not be the correct values. Proper calculation
-	**  is needed, but is beyond my knowledge.
-	*/
-	const double maxRipple1 = 1 << 16;
-	const double maxRipple2 = 1 << 14;
-	const double maxRipple3 = 1 << 12;
+	// Kaiser-Bessel (window) beta (could maybe use some further tweaking)
+	const double b1 = 9.6;
+	const double b2 = 8.5;
+	const double b3 = 7.0;
 
-	// convert max ripple into sidelode attenuation (dB)
-	double db1 = rippleToDecibels(maxRipple1);
-	double db2 = rippleToDecibels(maxRipple2);
-	double db3 = rippleToDecibels(maxRipple3);
-
-	// convert sidelobe attenuation (dB) into Kaiser beta
-	const double b1 = decibelsToKaiserBeta(db1);
-	const double b2 = decibelsToKaiserBeta(db2);
-	const double b3 = decibelsToKaiserBeta(db3);
-
-	// low-pass cutoffs (could maybe use some further tweaking)
+	// sinc low-pass cutoff (could maybe use some further tweaking)
 	const double c1 = 1.000;
 	const double c2 = 0.500;
 	const double c3 = 0.425;
 
 	// 8 point
-	generateSincLUT(fKaiserSinc_8,   SINC1_TAPS, SINC1_PHASES, b1, c1);
-	generateSincLUT(fDownSample1_8,  SINC1_TAPS, SINC1_PHASES, b2, c2);
-	generateSincLUT(fDownSample2_8,  SINC1_TAPS, SINC1_PHASES, b3, c3);
+	generateWindowedSinc(fSinc8_1,  SINC1_WIDTH, SINC1_PHASES, b1, c1);
+	generateWindowedSinc(fSinc8_2,  SINC1_WIDTH, SINC1_PHASES, b2, c2);
+	generateWindowedSinc(fSinc8_3,  SINC1_WIDTH, SINC1_PHASES, b3, c3);
 
 	// 16 point
-	generateSincLUT(fKaiserSinc_16,  SINC2_TAPS, SINC2_PHASES, b1, c1);
-	generateSincLUT(fDownSample1_16, SINC2_TAPS, SINC2_PHASES, b2, c2);
-	generateSincLUT(fDownSample2_16, SINC2_TAPS, SINC2_PHASES, b3, c3);
+	generateWindowedSinc(fSinc16_1, SINC2_WIDTH, SINC2_PHASES, b1, c1);
+	generateWindowedSinc(fSinc16_2, SINC2_WIDTH, SINC2_PHASES, b2, c2);
+	generateWindowedSinc(fSinc16_3, SINC2_WIDTH, SINC2_PHASES, b3, c3);
 
 	return true;
 }
 
 void freeWindowedSincTables(void)
 {
-	if (fKaiserSinc_8 != NULL)
+	if (fSinc8_1 != NULL)
 	{
-		free(fKaiserSinc_8);
-		fKaiserSinc_8 = NULL;
+		free(fSinc8_1);
+		fSinc8_1 = NULL;
 	}
 
-	if (fDownSample1_8 != NULL)
+	if (fSinc8_2 != NULL)
 	{
-		free(fDownSample1_8);
-		fDownSample1_8 = NULL;
+		free(fSinc8_2);
+		fSinc8_2 = NULL;
 	}
 
-	if (fDownSample2_8 != NULL)
+	if (fSinc8_3 != NULL)
 	{
-		free(fDownSample2_8);
-		fDownSample2_8 = NULL;
+		free(fSinc8_3);
+		fSinc8_3 = NULL;
 	}
 
-	if (fKaiserSinc_16 != NULL)
+	if (fSinc16_1 != NULL)
 	{
-		free(fKaiserSinc_16);
-		fKaiserSinc_16 = NULL;
+		free(fSinc16_1);
+		fSinc16_1 = NULL;
 	}
 
-	if (fDownSample1_16 != NULL)
+	if (fSinc16_2 != NULL)
 	{
-		free(fDownSample1_16);
-		fDownSample1_16 = NULL;
+		free(fSinc16_2);
+		fSinc16_2 = NULL;
 	}
 
-	if (fDownSample2_16 != NULL)
+	if (fSinc16_3 != NULL)
 	{
-		free(fDownSample2_16);
-		fDownSample2_16 = NULL;
+		free(fSinc16_3);
+		fSinc16_3 = NULL;
 	}
 }
