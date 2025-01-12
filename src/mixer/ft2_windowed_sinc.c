@@ -1,5 +1,5 @@
 /*
-** Windowed-sinc LUT generator
+** Windowed-sinc interpolation LUT generator
 */
 
 #include <stdint.h>
