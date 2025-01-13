@@ -50,16 +50,16 @@ static inline double sinc(double x, const double cutoff)
 
 static void generateWindowedSinc(float *fOutput, const int32_t filterWidth, const int32_t filterPhases, const double beta, const double cutoff)
 {
-	const int32_t tapBits = (int32_t)log2(filterWidth);
-	const int32_t tapMask = filterWidth - 1;
-	const int32_t tapCenter = (filterWidth / 2) - 1;
+	const int32_t filterWidthBits = (int32_t)log2(filterWidth);
+	const int32_t filterWidthMask = filterWidth - 1;
+	const int32_t filterCenter = (filterWidth / 2) - 1;
 	const double besselI0Beta = 1.0 / besselI0(beta);
 	const double phaseMul = 1.0 / filterPhases;
 	const double xMul = 1.0 / (filterWidth / 2);
 
-	for (int32_t i = 0; i < filterWidth * filterPhases; i++)
+	for (int32_t i = 0; i < filterPhases * filterWidth; i++)
 	{
-		const double x = ((i & tapMask) - tapCenter) - ((i >> tapBits) * phaseMul);
+		const double x = ((i & filterWidthMask) - filterCenter) - ((i >> filterWidthBits) * phaseMul);
 
 		// Kaiser-Bessel window
 		const double n = x * xMul;
