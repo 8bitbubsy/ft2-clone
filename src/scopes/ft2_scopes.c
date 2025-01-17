@@ -492,7 +492,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 			sc->volume = ch->scopeVolume;
 
 		if (status & IS_Period)
-			sc->delta = ch->scopeDelta;
+			sc->delta = (uint64_t)(dPeriod2Hz(ch->period) * (SCOPE_FRAC_SCALE / (double)SCOPE_HZ));
 
 		if (status & IS_Trigger)
 		{

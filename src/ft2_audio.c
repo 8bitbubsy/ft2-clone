@@ -386,11 +386,6 @@ void updateVoices(void)
 
 			// set voice delta
 			v->delta = (int64_t)((dVoiceHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
-
-			// set scope delta
-			const double dHz2ScopeDeltaMul = SCOPE_FRAC_SCALE / (double)SCOPE_HZ;
-			v->scopeDelta = (int64_t)((dVoiceHz * dHz2ScopeDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
-
 			if (audio.sincInterpolation)
 			{
 				// decide which sinc LUT to use according to the resampling ratio
@@ -771,14 +766,14 @@ static void fillVisualsSyncBuffer(void)
 	for (int32_t i = 0; i < song.numChannels; i++, c++, s++, v++)
 	{
 		c->scopeVolume = v->scopeVolume;
-		c->scopeDelta = v->scopeDelta;
+		c->period = s->finalPeriod;
 		c->instrNum = s->instrNum;
 		c->smpNum = s->smpNum;
 		c->status = s->tmpStatus;
 		c->smpStartPos = s->smpStartPos;
 
 		c->pianoNoteNum = 255; // no piano key
-		if (songPlaying && (c->status & IS_Period) && !s->keyOff)
+		if (songPlaying && ui.instEditorShown && (c->status & IS_Period) && !s->keyOff)
 		{
 			const int32_t note = getPianoKey(s->finalPeriod, s->finetune, s->relativeNote);
 			if (note >= 0 && note <= 95)

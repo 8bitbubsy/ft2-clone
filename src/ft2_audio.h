@@ -62,7 +62,7 @@ typedef struct
 	const int16_t *base16, *revBase16;
 	bool active, samplingBackwards, isFadeOutVoice, hasLooped;
 	uint8_t mixFuncOffset, panning, loopType, scopeVolume;
-	int32_t position, sampleEnd, loopStart, loopLength, oldPeriod;
+	int32_t position, sampleEnd, loopStart, loopLength;
 	uint32_t volumeRampLength;
 	uint64_t positionFrac, delta, scopeDelta;
 
