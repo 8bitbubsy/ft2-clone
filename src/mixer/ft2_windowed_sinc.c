@@ -94,9 +94,9 @@ bool setupWindowedSincTables(void)
 	sincRatio2 = (uint64_t)(ratio2 * MIXER_FRAC_SCALE);
 
 	// Kaiser-Bessel (window) beta (could maybe use some further tweaking)
-	const double b1 = 9.6;
+	const double b1 = 9.4;
 	const double b2 = 8.5;
-	const double b3 = 7.3;
+	const double b3 = 7.0;
 
 	// sinc low-pass cutoff (could maybe use some further tweaking)
 	const double c1 = 1.000;
