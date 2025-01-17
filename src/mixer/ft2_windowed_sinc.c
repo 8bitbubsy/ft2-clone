@@ -19,7 +19,7 @@ uint64_t sincRatio1, sincRatio2;
 // zeroth-order modified Bessel function of the first kind (series approximation)
 static inline double besselI0(double z)
 {
-#define EPSILON (1E-15) /* lower than this gives no accuracy benefits (verified), just slower compute time */
+#define EPSILON (1E-15) /* lower than this gives no accuracy benefits (verified) */
 
 	double s = 1.0, ds = 1.0, d = 2.0;
 	const double zz = z * z;
@@ -96,7 +96,7 @@ bool setupWindowedSincTables(void)
 	// Kaiser-Bessel (window) beta (could maybe use some further tweaking)
 	const double b1 = 9.6;
 	const double b2 = 8.5;
-	const double b3 = 7.0;
+	const double b3 = 7.3;
 
 	// sinc low-pass cutoff (could maybe use some further tweaking)
 	const double c1 = 1.000;
