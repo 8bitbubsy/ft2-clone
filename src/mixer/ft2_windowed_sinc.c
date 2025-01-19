@@ -43,8 +43,8 @@ static inline double sinc(double x, const double cutoff)
 	}
 	else
 	{
-		x *= cutoff * PI;
-		return (sin(x) / x) * cutoff;
+		x *= PI;
+		return sin(cutoff * x) / x;
 	}
 }
 
