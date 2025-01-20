@@ -19,7 +19,7 @@ uint64_t sincRatio1, sincRatio2;
 // zeroth-order modified Bessel function of the first kind (series approximation)
 static inline double besselI0(double z)
 {
-#define EPSILON (1E-15) /* lower than this gives no accuracy benefits (verified) */
+#define EPSILON (1E-12) /* verified: lower than this makes no change when LUT output is single-precision float */
 
 	double s = 1.0, ds = 1.0, d = 2.0;
 	const double zz = z * z;
@@ -35,7 +35,20 @@ static inline double besselI0(double z)
 	return s;
 }
 
-static inline double sinc(double x, const double cutoff)
+static inline double sinc(double x)
+{
+	if (x == 0.0)
+	{
+		return 1.0;
+	}
+	else
+	{
+		x *= PI;
+		return sin(x) / x;
+	}
+}
+
+static inline double sincWithCutoff(double x, const double cutoff)
 {
 	if (x == 0.0)
 	{
@@ -57,15 +70,33 @@ static void generateWindowedSinc(float *fOutput, const int32_t filterWidth, cons
 	const double phaseMul = 1.0 / filterPhases;
 	const double xMul = 1.0 / (filterWidth / 2);
 
-	for (int32_t i = 0; i < filterPhases * filterWidth; i++)
+	if (cutoff < 1.0)
 	{
-		const double x = ((i & filterWidthMask) - filterCenter) - ((i >> filterWidthBits) * phaseMul);
+		// windowed-sinc with frequency cutoff
+		for (int32_t i = 0; i < filterPhases * filterWidth; i++)
+		{
+			const double x = ((i & filterWidthMask) - filterCenter) - ((i >> filterWidthBits) * phaseMul);
 
-		// Kaiser-Bessel window
-		const double n = x * xMul;
-		const double window = besselI0(beta * sqrt(1.0 - n * n)) * besselI0Beta;
+			// Kaiser-Bessel window
+			const double n = x * xMul;
+			const double window = besselI0(beta * sqrt(1.0 - n * n)) * besselI0Beta;
 
-		fOutput[i] = (float)(sinc(x, cutoff) * window);
+			fOutput[i] = (float)(sincWithCutoff(x, cutoff) * window);
+		}
+	}
+	else
+	{
+		// windowed-sinc with no frequency cutoff
+		for (int32_t i = 0; i < filterPhases * filterWidth; i++)
+		{
+			const double x = ((i & filterWidthMask) - filterCenter) - ((i >> filterWidthBits) * phaseMul);
+
+			// Kaiser-Bessel window
+			const double n = x * xMul;
+			const double window = besselI0(beta * sqrt(1.0 - n * n)) * besselI0Beta;
+
+			fOutput[i] = (float)(sinc(x) * window);
+		}
 	}
 }
 
@@ -93,10 +124,17 @@ bool setupWindowedSincTables(void)
 	sincRatio1 = (uint64_t)(ratio1 * MIXER_FRAC_SCALE);
 	sincRatio2 = (uint64_t)(ratio2 * MIXER_FRAC_SCALE);
 
-	// Kaiser-Bessel (window) beta (could maybe use some further tweaking)
-	const double b1 = 9.4;
+	/* Kaiser-Bessel beta parameter
+	**
+	** Basically;
+	** Lower beta = less treble cut off, but more aliasing (shorter main lobe, more side lobe ripple)
+	** Higher beta = more treble cut off, but less aliasing (wider main lobe, less side lobe ripple)
+	**
+	** There simply isn't any optimal value here, it has to be tweaked to personal preference.
+	*/
+	const double b1 = 3.0 * M_PI; // alpha = 3.00 (beta = ~9.425)
 	const double b2 = 8.5;
-	const double b3 = 7.0;
+	const double b3 = 7.3;
 
 	// sinc low-pass cutoff (could maybe use some further tweaking)
 	const double c1 = 1.000;
