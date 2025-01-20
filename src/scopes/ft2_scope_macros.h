@@ -60,7 +60,7 @@
 } \
 
 #define CUBIC_SMP8(frac) \
-	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
+	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_WIDTH); \
 	\
 	sample = ((s8[-2] * t[0]) + \
 	          (s8[-1] * t[1]) + \
@@ -70,7 +70,7 @@
 	          ( s8[3] * t[5])) >> (SCOPE_INTRP_SCALE_BITS-8);
 
 #define CUBIC_SMP16(frac) \
-	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_TAPS); \
+	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) * SCOPE_INTRP_WIDTH); \
 	\
 	sample = ((s16[-2] * t[0]) + \
 	          (s16[-1] * t[1]) + \

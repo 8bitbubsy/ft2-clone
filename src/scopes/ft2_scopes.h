@@ -17,7 +17,7 @@
 #define SCOPE_FRAC_SCALE ((int64_t)1 << SCOPE_FRAC_BITS)
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
 
-#define SCOPE_INTRP_TAPS 6
+#define SCOPE_INTRP_WIDTH 6
 #define SCOPE_INTRP_SCALE 32768
 #define SCOPE_INTRP_SCALE_BITS 15 /* log2(SCOPE_INTRP_SCALE) */
 #define SCOPE_INTRP_PHASES 512 /* plentiful for FT2-styled scopes */

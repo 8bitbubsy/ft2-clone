@@ -16,7 +16,7 @@ static void scopeLine(int32_t x1, int32_t y1, int32_t y2, const uint32_t color);
 
 bool calcScopeIntrpLUT(void)
 {
-	scopeIntrpLUT = (int16_t *)malloc(SCOPE_INTRP_TAPS * SCOPE_INTRP_PHASES * sizeof (int16_t));
+	scopeIntrpLUT = (int16_t *)malloc(SCOPE_INTRP_WIDTH * SCOPE_INTRP_PHASES * sizeof (int16_t));
 	if (scopeIntrpLUT == NULL)
 		return false;
 
