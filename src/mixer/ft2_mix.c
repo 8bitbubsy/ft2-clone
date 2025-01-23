@@ -9,7 +9,7 @@
 **       (Note: Mixing macros can be found in ft2_mix_macros.h)
 **
 ** Specifications:
-** - Interpolation: None, 2-tap linear, 4-tap/6-tap cubic Hermite, 8-tap/16-tap windowed-sinc
+** - Interpolation: None, 2-tap linear, 4-tap/6-tap cubic spline, 8-tap/16-tap windowed-sinc
 ** - FT2-styled linear volume ramping (can be turned off)
 ** - 32.32 fixed-point precision for resampling delta/position
 ** - 32-bit floating-point precision for mixing and interpolation
