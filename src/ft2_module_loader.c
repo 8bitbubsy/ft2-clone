@@ -213,6 +213,14 @@ static bool doLoadMusic(bool externalThreadFlag)
 		goto loadError;
 
 	moduleLoaded = true;
+
+  switch (format)
+  {
+    case FORMAT_XM: editor.moduleSaveMode = MOD_SAVE_MODE_XM; break;
+    case FORMAT_MOD: editor.moduleSaveMode = MOD_SAVE_MODE_MOD; break;
+    default: editor.moduleSaveMode = MOD_SAVE_MODE_WAV; break;
+  }
+
 	return true;
 
 loadError:
