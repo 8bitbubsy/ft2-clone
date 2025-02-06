@@ -867,11 +867,15 @@ void readMouseXY(void)
 		mouse.absX = mx;
 		mouse.absY = my;
 
+#ifndef __EMSCRIPTEN__
+		// On Emscripten, SDL_GetWindowPosition() returns something different
+
 		// convert desktop coords to window coords
 		SDL_GetWindowPosition(video.window, &windowX, &windowY);
 
 		mx -= windowX;
 		my -= windowY;
+#endif
 	}
 
 	mouse.rawX = mx;
