@@ -60,6 +60,20 @@ of them. In the output html file, add something like this:
 where `"pink_noise.xm"` is the file you embeded in the module and want ft2-clone
 to load and play on init.
 
+### Using the launcher
+Copy [/emscripten/launcher/dropin.js](/emscripten/launcher/dropin.js) to the
+same directory as the ft2-clone.html. Then add the following anywhere in the
+body tag.
+
+```html
+<script src="dropin.js"></script>
+```
+
+The script will parse `ft2c_load_url` and `ft2c_load_filename` in the query
+string and pass the file as a command line argument. See
+[/emscripten/launcher/launcher.html](/emscripten/launcher/launcher.html) for
+detail.
+
 ## Hosting files (header issue)
 In order to support SDL threads, pthread option is used. The caveat is that
 Emscripten uses SharedArrayBuffer to have a shared memory space for the
