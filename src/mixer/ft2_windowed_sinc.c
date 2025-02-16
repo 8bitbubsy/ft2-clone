@@ -1,6 +1,4 @@
-/*
-** Windowed-sinc interpolation LUT generator
-*/
+// 8-point/16-point windowed-sinc interpolation LUT generator
 
 #include <stdint.h>
 #include <stdbool.h>
