@@ -813,24 +813,46 @@ you exit the program.
 @X020@C001Configuration, Audio:
 >
 >@X040@C001Interpolation:
->@X060@C002
-Selects what type of resampling interpolation to use.
+>@X060@C002Selects what type of resampling interpolation to use. I recommend
+playing around with these, as a better interpolator isn't always the
+right choice. For modules with lo-fi samples, the better the filter the
+more dull it sounds. In such cases, a worse interpolator may allow
+for more "fun" listening by allowing some aliasing.
 >
->For an authentic FT2 sound, select "Linear (FT2)". This is a quite bad interpolator,
-so be prepared for low fidelity.
+>@X052@C001No interpolation:
+>@X060@C002Also known as "nearest neighbor". The absolute worst option, but
+may be preferred by some people when playing chiptune styled
+tunes. Be prepared for a ton of aliasing (distortion).
+
+>@X052@C001Linear (FT2):
+>@X060@C002Same interpolator as original Fasttracker II. Not a particularly good
+option, but may be nostalgic to a lot of people, including those that
+used a Gravis Ultrasound sound card.
+
+>@X052@C001Quadratic spline:
+>@X060@C0023-point quadratic spline interpolation. If you prefer the soft sound
+of linear interpolation, but want just a tad bit more treble, then this
+may be a good option. Like linear interpolation, this one isn't too
+harsh on lo-fi samples.
+
+>@X052@C001Cubic spline:
+>@X060@C0024-point cubic Hermite spline interpolation. A good trade-off between
+sharpness and "fun listening" for lo-fi samples.
+>A pretty solid option if you play a wide selection of mixed modules.
+
+>@X052@C001Sinc (8 point):
+>@X060@C0028-point sinc interpolation with a Kaiser-Bessel window. If you mainly
+use hi-fi samples (or play XMs with hi-fi samples), then this may be
+a good option. It's a high quality interpolator. However, it may kill
+the fun of listening to lo-fi modules, as they may sound very dull
+and colored.
 >
->For a good trade-off between quality and "fun listening" for lo-fi samples,
-you may select "Cubic (4 point)". Or select "Cubic (6 point)" if you want just
-a tad bit more treble, but with slightly more filtered lo-fi samples as a trade-off.
+>@X052@C001Sinc (16 point):
+>@X060@C002Same as above, but with 16 points (better quality). This means less
+aliasing and more sharpness, but even more filtered/dull sound on
+lo-fi samples. if you only use (or play modules with) hi-fi samples,
+then this is going to give the best quality and sharpness.
 >
->If you mainly use hi-fi samples (or play XMs with hi-fi samples), then pick
-any of the two "Sinc" options for the most clear sound. Keep in mind that these will
-make XMs with lo-fi samples sound very muddy, though!
->
->Sinc (16 point) is the best option in terms of clarity, as long as you use high-quality
-samples (sampled at 44.1kHz, for example).
->
->Tip: Play around with the different options...
 
 >@X040@C001Volume ramping:
 >@X060@C002
