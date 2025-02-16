@@ -17,7 +17,8 @@
 #define SCOPE_FRAC_SCALE ((int64_t)1 << SCOPE_FRAC_BITS)
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
 
-#define SCOPE_INTRP_WIDTH 6
+#define SCOPE_INTRP_WIDTH 4
+#define SCOPE_INTRP_WIDTH_BITS 2 /* log2(SCOPE_INTRP_WIDTH) */
 #define SCOPE_INTRP_SCALE 32768
 #define SCOPE_INTRP_SCALE_BITS 15 /* log2(SCOPE_INTRP_SCALE) */
 #define SCOPE_INTRP_PHASES 512 /* plentiful for FT2-styled scopes */
@@ -39,8 +40,9 @@ typedef struct scope_t
 	const int16_t *base16;
 	bool wasCleared, sample16Bit, samplingBackwards, hasLooped;
 	uint8_t loopType;
-	int32_t volume, loopStart, loopLength, loopEnd, sampleEnd, position;
+	int32_t loopStart, loopLength, loopEnd, sampleEnd, position;
 	uint64_t delta, drawDelta, positionFrac;
+	float fVolume;
 
 	// if (loopEnabled && hasLooped && samplingPos <= loopStart+MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;

@@ -22,11 +22,11 @@ bool calcScopeIntrpLUT(void)
 
 	/* Several tests have been done to figure out what interpolation method is most suitable
 	** for the tracker scopes. After testing linear, cubic, Gaussian and windowed-sinc
-	** interpolation, I have come to the conclusion that 6-point cubic B-spline is the best.
+	** interpolation, I have come to the conclusion that 4-point cubic B-spline is the best.
 	** This interpolation method also has no overshoot.
 	*/
 
-	// 6-point cubic B-spline (no overshoot)
+	// 4-point cubic B-spline (no overshoot)
 
 	int16_t *ptr16 = scopeIntrpLUT;
 	for (int32_t i = 0; i < SCOPE_INTRP_PHASES; i++)
@@ -34,23 +34,17 @@ bool calcScopeIntrpLUT(void)
 		const double x1 = i * (1.0 / SCOPE_INTRP_PHASES);
 		const double x2 = x1 * x1; // x^2
 		const double x3 = x2 * x1; // x^3
-		const double x4 = x3 * x1; // x^4
-		const double x5 = x4 * x1; // x^5
 
-		double t1 = (-(1.0/120.0) * x5) + ( (1.0/24.0) * x4) + (-(1.0/12.0) * x3) + ( (1.0/12.0) * x2) + (-(1.0/24.0) * x1) + ( 1.0/120.0);
-		double t2 = ( (1.0/ 24.0) * x5) + (-(1.0/ 6.0) * x4) + ( (1.0/ 6.0) * x3) + ( (1.0/ 6.0) * x2) + (-(5.0/12.0) * x1) + (13.0/ 60.0);
-		double t3 = (-(1.0/ 12.0) * x5) + ( (1.0/ 4.0) * x4) +                      (-(1.0/ 2.0) * x2)                      + (11.0/ 20.0);
-		double t4 = ( (1.0/ 12.0) * x5) + (-(1.0/ 6.0) * x4) + (-(1.0/ 6.0) * x3) + ( (1.0/ 6.0) * x2) + ( (5.0/12.0) * x1) + (13.0/ 60.0);
-		double t5 = (-(1.0/ 24.0) * x5) + ( (1.0/24.0) * x4) + ( (1.0/12.0) * x3) + ( (1.0/12.0) * x2) + ( (1.0/24.0) * x1) + ( 1.0/120.0);
-		double t6 =   (1.0/120.0) * x5;
+		double t1 = (-(1.0/6.0) * x3) + ( (1.0/2.0) * x2) + (-(1.0/2.0) * x1) + (1.0/6.0);
+		double t2 = ( (1.0/2.0) * x3) + (     -1.0  * x2)                     + (2.0/3.0);
+		double t3 = (-(1.0/2.0) * x3) + ( (1.0/2.0) * x2) + ( (1.0/2.0) * x1) + (1.0/6.0);
+		double t4 =   (1.0/6.0) * x3;
 
-		// important: truncate, do not round (would cause scope overflow)
-		*ptr16++ = (int16_t)(t1 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)(t2 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)(t3 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)(t4 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)(t5 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)(t6 * SCOPE_INTRP_SCALE);
+		// rounding here would make the scopes clip, but we clamp the scopes for another reason anyway
+		*ptr16++ = (int16_t)round(t1 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)round(t2 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)round(t3 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)round(t4 * SCOPE_INTRP_SCALE);
 	}
 
 	return true;

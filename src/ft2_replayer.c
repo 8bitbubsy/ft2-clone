@@ -2789,7 +2789,8 @@ void closeReplayer(void)
 		instr[131] = NULL;
 	}
 
-	freeCubicSplineTables();
+	freeQuadraticSplineTable();
+	freeCubicSplineTable();
 	freeWindowedSincTables();
 }
 

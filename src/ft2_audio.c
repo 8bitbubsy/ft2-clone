@@ -367,11 +367,8 @@ void updateVoices(void)
 
 		if (status & IS_Vol)
 		{
-			v->fVolume = ch->fFinalVol;
-
-			// set scope volume (scaled)
-			const int32_t scopeVolume = (int32_t)((ch->fFinalVol * (SCOPE_HEIGHT*(1<<2))) + 0.5f); // rounded
-			v->scopeVolume = (uint8_t)scopeVolume;
+			v->fVolume = ch->fFinalVol; // 0.0f .. 1.0f
+			v->scopeVolume = (uint8_t)((ch->fFinalVol * 255.0f) + 0.5f); // 0..255, rounded
 		}
 
 		if (status & IS_Pan)

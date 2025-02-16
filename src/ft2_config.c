@@ -835,10 +835,10 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 		tmpID = RB_CONFIG_AUDIO_INTRP_LINEAR;
 	else if (config.interpolation == INTERPOLATION_SINC16)
 		tmpID = RB_CONFIG_AUDIO_INTRP_SINC16;
-	else if (config.interpolation == INTERPOLATION_CUBIC4)
-		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC4;
-	else if (config.interpolation == INTERPOLATION_CUBIC6)
-		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC6;
+	else if (config.interpolation == INTERPOLATION_CUBIC)
+		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC;
+	else if (config.interpolation == INTERPOLATION_QUADRATIC)
+		tmpID = RB_CONFIG_AUDIO_INTRP_QUADRATIC;
 	else
 		tmpID = RB_CONFIG_AUDIO_INTRP_SINC8; // default case
 
@@ -1173,8 +1173,8 @@ void showConfigScreen(void)
 
 			textOutShadow(405,  91, PAL_FORGRND, PAL_DSKTOP2, "No interpolation");
 			textOutShadow(405, 105, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
-			textOutShadow(405, 119, PAL_FORGRND, PAL_DSKTOP2, "Cubic (4 point)");
-			textOutShadow(405, 133, PAL_FORGRND, PAL_DSKTOP2, "Cubic (6 point)");
+			textOutShadow(405, 119, PAL_FORGRND, PAL_DSKTOP2, "Quadratic spline");
+			textOutShadow(405, 133, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
 			textOutShadow(405, 147, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
 			textOutShadow(405, 161, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
 
@@ -1629,18 +1629,18 @@ void rbConfigAudioIntrpLinear(void)
 	audioSetInterpolationType(config.interpolation);
 	checkRadioButton(RB_CONFIG_AUDIO_INTRP_LINEAR);
 }
-void rbConfigAudioIntrpCubic4(void)
+void rbConfigAudioIntrpCubic(void)
 {
-	config.interpolation = INTERPOLATION_CUBIC4;
+	config.interpolation = INTERPOLATION_CUBIC;
 	audioSetInterpolationType(config.interpolation);
-	checkRadioButton(RB_CONFIG_AUDIO_INTRP_CUBIC4);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_CUBIC);
 }
 
-void rbConfigAudioIntrpCubic6(void)
+void rbConfigAudioIntrpQuadratic(void)
 {
-	config.interpolation = INTERPOLATION_CUBIC6;
+	config.interpolation = INTERPOLATION_QUADRATIC;
 	audioSetInterpolationType(config.interpolation);
-	checkRadioButton(RB_CONFIG_AUDIO_INTRP_CUBIC6);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_QUADRATIC);
 }
 
 void rbConfigAudioIntrpSinc8(void)
