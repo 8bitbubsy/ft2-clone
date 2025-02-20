@@ -918,10 +918,10 @@ bool setupWindow(void)
 
 	SDL_GetDesktopDisplayMode(di, &dm);
 	video.dMonitorRefreshRate = (double)dm.refresh_rate;
-
+#ifdef __EMSCRIPTEN__
 	if (dm.refresh_rate >= 59 && dm.refresh_rate <= 61)
 		video.vsync60HzPresent = true;
-
+#endif
 	if (config.windowFlags & FORCE_VSYNC_OFF)
 		video.vsync60HzPresent = false;
 
