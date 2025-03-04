@@ -35,6 +35,7 @@
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
 #include "ft2_hpc.h"
+#include "ft2_smpfx.h"
 
 static void initializeVars(void);
 static void cleanUpAndExit(void); // never call this inside the main loop
@@ -362,6 +363,7 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	freeSprites();
 	freeDiskOp();
 	clearCopyBuffer();
+	clearSampleUndo();
 	freeAudioDeviceSelectorBuffers();
 	windUpFTHelp();
 	freeTextBoxes();

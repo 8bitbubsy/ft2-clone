@@ -10,6 +10,7 @@
 #include "ft2_sysreqs.h"
 #include "ft2_structs.h"
 #include "ft2_events.h"
+#include "ft2_smpfx.h"
 
 #define SYSTEM_REQUEST_H 67
 #define SYSTEM_REQUEST_Y 249
@@ -21,7 +22,7 @@ void (*loaderMsgBox)(const char *, ...);
 int16_t (*loaderSysReq)(int16_t, const char *, const char *, void (*)(void));
 // ----------------
 
-#define NUM_SYSREQ_TYPES 6
+#define NUM_SYSREQ_TYPES 7
 
 static char *buttonText[NUM_SYSREQ_TYPES][5] =
 {
@@ -33,7 +34,8 @@ static char *buttonText[NUM_SYSREQ_TYPES][5] =
 	// custom dialogs
 	{ "All", "Song", "Instruments", "Cancel", "" },   // "song clear" dialog
 	{ "Read left", "Read right", "Convert", "", "" }, // "stereo sample loader" dialog
-	{ "Mono", "Stereo", "Cancel", "","" }             // "audio sampling" dialog
+	{ "Mono", "Stereo", "Cancel", "","" },            // "audio sampling" dialog
+	{ "OK", "Preview", "Cancel", "","" }              // sample editor effects filters
 };
 
 static SDL_Keycode shortCut[NUM_SYSREQ_TYPES][5] =
@@ -47,6 +49,7 @@ static SDL_Keycode shortCut[NUM_SYSREQ_TYPES][5] =
 	{ SDLK_a, SDLK_s, SDLK_i, SDLK_c, 0 }, // "song clear" dialog
 	{ SDLK_l, SDLK_r, SDLK_c, 0,      0 }, // "stereo sample loader" dialog 
 	{ SDLK_m, SDLK_s, SDLK_c, 0,      0 }, // "audio sampling" dialog
+	{ SDLK_o, SDLK_p, SDLK_c, 0,      0 }  // sample editor effects filters
 };
 
 typedef struct quitType_t
@@ -191,7 +194,10 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 	SDL_Event inputEvent;
 
 	if (editor.editTextFlag)
+	{
 		exitTextEditing();
+		keyb.ignoreCurrKeyUp = false; // don't handle key-up kludge here
+	}
 
 	// revert "delete/rename" mouse modes (disk op.)
 	if (mouse.mode != MOUSE_MODE_NORMAL)
@@ -396,7 +402,10 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 	SDL_Event inputEvent;
 
 	if (editor.editTextFlag)
+	{
 		exitTextEditing();
+		keyb.ignoreCurrKeyUp = false; // don't handle key-up kludge here
+	}
 
 	// revert "delete/rename" mouse modes (disk op.)
 	if (mouse.mode != MOUSE_MODE_NORMAL)
@@ -553,10 +562,19 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 					{
 						if (shortCut[1][i] == inputEvent.key.keysym.sym)
 						{
-							returnVal = i + 1;
-							ui.sysReqShown = false;
-							keyb.ignoreCurrKeyUp = true; // don't handle key up event for any keys that were pressed
-							break;
+							if (type == 6 && returnVal == 2)
+							{
+								// special case for filters in sample editor "effects"
+								if (edText[0] != '\0')
+									sfxPreviewFilter(atoi(edText));
+							}
+							else
+							{
+								returnVal = i + 1;
+								ui.sysReqShown = false;
+								keyb.ignoreCurrKeyUp = true; // don't handle key up event for any keys that were pressed
+								break;
+							}
 						}
 					}
 				}
@@ -567,7 +585,17 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 				{
 					returnVal = testPushButtonMouseRelease(false) + 1;
 					if (returnVal > 0)
-						ui.sysReqShown = false;
+					{
+						if (type == 6 && returnVal == 2)
+						{
+							if (edText[0] != '\0')
+								sfxPreviewFilter(atoi(edText)); // special case for filters in sample editor "effects"
+						}
+						else
+						{
+							ui.sysReqShown = false;
+						}
+					}
 
 					mouse.lastUsedObjectID = OBJECT_ID_NONE;
 					mouse.lastUsedObjectType = OBJECT_NONE;

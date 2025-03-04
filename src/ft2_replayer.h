@@ -295,6 +295,8 @@ double dAmigaPeriod2Hz(int32_t period);
 double dPeriod2Hz(int32_t period);
 
 int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
+void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch);
+void updateVolPanAutoVib(channel_t *ch);
 
 bool allocateInstr(int16_t insNum);
 void freeInstr(int32_t insNum);
@@ -324,6 +326,8 @@ void delta2Samp(int8_t *p, int32_t length, uint8_t smpFlags);
 void samp2Delta(int8_t *p, int32_t length, uint8_t smpFlags);
 void setPatternLen(uint16_t pattNum, int16_t numRows);
 void setLinearPeriods(bool linearPeriodsFlag);
+void resetVolumes(channel_t *ch);
+void triggerInstrument(channel_t *ch);
 void tickReplayer(void); // periodically called from audio callback
 void resetChannels(void);
 bool patternEmpty(uint16_t pattNum);
@@ -347,7 +351,7 @@ void pbRecPtn(void);
 extern int8_t playMode;
 extern bool songPlaying, audioPaused, musicPaused;
 extern volatile bool replayerBusy;
-extern const uint16_t *note2Period;
+extern const uint16_t *note2PeriodLUT;
 extern int16_t patternNumRows[MAX_PATTERNS];
 extern channel_t channel[MAX_CHANNELS];
 extern song_t song;

@@ -613,6 +613,7 @@ void patternEditorExtended(void)
 	ui._instEditorShown = ui.instEditorShown;
 	ui._instEditorExtShown = ui.instEditorExtShown;
 	ui._sampleEditorExtShown = ui.sampleEditorExtShown;
+	ui._sampleEditorEffectsShown = ui.sampleEditorEffectsShown;
 	ui._patternEditorShown = ui.patternEditorShown;
 	ui._sampleEditorShown = ui.sampleEditorShown;
 	ui._advEditShown= ui.advEditShown;
@@ -703,6 +704,7 @@ void exitPatternEditorExtended(void)
 	ui.instEditorShown = ui._instEditorShown;
 	ui.instEditorExtShown = ui._instEditorExtShown;
 	ui.sampleEditorExtShown = ui._sampleEditorExtShown;
+	ui.sampleEditorEffectsShown = ui._sampleEditorEffectsShown;
 	ui.patternEditorShown = ui._patternEditorShown;
 	ui.sampleEditorShown = ui._sampleEditorShown;
 	ui.advEditShown = ui._advEditShown;

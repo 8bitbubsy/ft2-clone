@@ -8,6 +8,7 @@
 #include "ft2_gfxdata.h"
 #include "ft2_pattern_ed.h" // exitPatternEditorExtended()
 #include "ft2_config.h"
+#include "ft2_random.h"
 
 #define OLD_NUM_STARS 1000
 #define NUM_STARS 1500
@@ -63,17 +64,6 @@ static oldRotate_t oldStarRotation;
 static oldMatrix_t oldStarMatrix;
 static vector_t starPoints[NUM_STARS], starRotation;
 static matrix_t starMatrix;
-
-// exact Turbo Pascal Random() implementation
-static int32_t Random(int32_t limit)
-{
-	static uint32_t randSeed; // seed is 0 in Turbo Pascal unless Randomize() is called
-
-	randSeed *= 134775813;
-	randSeed++;
-
-	return ((int64_t)randSeed * limit) >> 32;
-}
 
 static uint32_t blendPixels(uint32_t pixelA, uint32_t pixelB, uint16_t alpha)
 {
@@ -333,7 +323,7 @@ void showAboutScreen(void) // called once when about screen is opened
 	{
 		oldVector_t *s = oldStarPoints;
 
-		const int32_t type = Random(4);
+		const int32_t type = randoml(4);
 		switch (type)
 		{
 			// classic "space stars"
@@ -342,9 +332,9 @@ void showAboutScreen(void) // called once when about screen is opened
 				zSpeed = 309;
 				for (int32_t i = 0; i < OLD_NUM_STARS; i++, s++)
 				{
-					s->z = (int16_t)Random(0xFFFF) - 0x8000;
-					s->y = (int16_t)Random(0xFFFF) - 0x8000;
-					s->x = (int16_t)Random(0xFFFF) - 0x8000;
+					s->z = (int16_t)randoml(0xFFFF) - 0x8000;
+					s->y = (int16_t)randoml(0xFFFF) - 0x8000;
+					s->x = (int16_t)randoml(0xFFFF) - 0x8000;
 				}
 			}
 			break;
@@ -357,17 +347,17 @@ void showAboutScreen(void) // called once when about screen is opened
 				{
 					if (i < OLD_NUM_STARS/4)
 					{
-						s->z = (int16_t)Random(0xFFFF) - 0x8000;
-						s->y = (int16_t)Random(0xFFFF) - 0x8000;
-						s->x = (int16_t)Random(0xFFFF) - 0x8000;
+						s->z = (int16_t)randoml(0xFFFF) - 0x8000;
+						s->y = (int16_t)randoml(0xFFFF) - 0x8000;
+						s->x = (int16_t)randoml(0xFFFF) - 0x8000;
 					}
 					else
 					{
-						int32_t r = Random(30000);
-						int32_t n = Random(5);
-						int32_t w = ((2 * Random(2)) - 1) * Sqr(Random(1000));
+						int32_t r = randoml(30000);
+						int32_t n = randoml(5);
+						int32_t w = ((2 * randoml(2)) - 1) * Sqr(randoml(1000));
 						double ww = (((PI * 2.0) / 5.0) * n) + (r * (1.0 / 12000.0)) + (w * (1.0 / 3000000.0));
-						int32_t h = ((Sqr(r) / 30000) * (Random(10000) - 5000)) / 12000;
+						int32_t h = ((Sqr(r) / 30000) * (randoml(10000) - 5000)) / 12000;
 
 						s->x = (int16_t)(r * cos(ww));
 						s->y = (int16_t)(r * sin(ww));
@@ -384,8 +374,8 @@ void showAboutScreen(void) // called once when about screen is opened
 				zSpeed = 0;
 				for (int32_t i = 0; i < OLD_NUM_STARS; i++, s++)
 				{
-					int32_t r = (int32_t)round(sqrt(Random(500) * 500));
-					int32_t w = Random(3000);
+					int32_t r = (int32_t)round(sqrt(randoml(500) * 500));
+					int32_t w = randoml(3000);
 					double ww = ((w * 8) + r) * (1.0 / 16.0);
 
 					const int16_t z =  (int16_t)round(32767.0 * cos(w  * (2.0 * PI / 1024.0)));
@@ -421,9 +411,9 @@ void initAboutScreen(void)
 	vector_t *s = starPoints;
 	for (int32_t i = 0; i < NUM_STARS; i++, s++)
 	{
-		s->x = (float)((Random(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
-		s->y = (float)((Random(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
-		s->z = (float)((Random(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
+		s->x = (float)((randoml(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
+		s->y = (float)((randoml(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
+		s->z = (float)((randoml(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
 	}
 
 	sinp1 = 0;

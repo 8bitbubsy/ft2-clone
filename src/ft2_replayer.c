@@ -42,7 +42,7 @@ typedef void (*efxRoutine)(channel_t *ch, uint8_t param);
 int8_t playMode = 0;
 bool songPlaying = false, audioPaused = false, musicPaused = false;
 volatile bool replayerBusy = false;
-const uint16_t *note2Period = NULL;
+const uint16_t *note2PeriodLUT = NULL;
 int16_t patternNumRows[MAX_PATTERNS];
 channel_t channel[MAX_CHANNELS];
 song_t song;
@@ -120,7 +120,7 @@ void resetChannels(void)
 		ch->outPan = 128;
 		ch->finalPan = 128;
 
-		ch->channelOff = !editor.chnMode[i]; // set channel mute flag from global mute flag
+		ch->channelOff = editor.channelMuted[i]; // set channel mute flag from global mute flag
 	}
 
 	if (audioWasntLocked)
@@ -274,7 +274,7 @@ double getSampleC4Rate(sample_t *s)
 
 	const int32_t C4Period = (note << 4) + (((int8_t)s->finetune >> 3) + 16);
 
-	const int32_t period = audio.linearPeriodsFlag ? linearPeriods[C4Period] : amigaPeriods[C4Period];
+	const int32_t period = audio.linearPeriodsFlag ? linearPeriodLUT[C4Period] : amigaPeriodLUT[C4Period];
 	return dPeriod2Hz(period);
 }
 
@@ -285,9 +285,9 @@ void setLinearPeriods(bool linearPeriodsFlag)
 	audio.linearPeriodsFlag = linearPeriodsFlag;
 
 	if (audio.linearPeriodsFlag)
-		note2Period = linearPeriods;
+		note2PeriodLUT = linearPeriodLUT;
 	else
-		note2Period = amigaPeriods;
+		note2PeriodLUT = amigaPeriodLUT;
 
 	resumeAudio();
 
@@ -302,7 +302,7 @@ void setLinearPeriods(bool linearPeriodsFlag)
 		drawC4Rate();
 }
 
-static void resetVolumes(channel_t *ch)
+void resetVolumes(channel_t *ch)
 {
 	ch->realVol = ch->oldVol;
 	ch->outVol = ch->oldVol;
@@ -311,7 +311,7 @@ static void resetVolumes(channel_t *ch)
 	ch->status |= IS_Vol + IS_Pan + IS_QuickVol;
 }
 
-static void triggerInstrument(channel_t *ch)
+void triggerInstrument(channel_t *ch)
 {
 	if (!(ch->vibTremCtrl & 0x04)) ch->vibratoPos = 0;
 	if (!(ch->vibTremCtrl & 0x40)) ch->tremoloPos = 0;
@@ -430,8 +430,8 @@ void calcReplayerVars(int32_t audioFreq)
 // for piano in Instr. Ed. (values outside 0..95 can happen)
 int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote)
 {
-	assert(note2Period != NULL);
-	if (period > note2Period[0])
+	assert(note2PeriodLUT != NULL);
+	if (period > note2PeriodLUT[0])
 		return -1; // outside left piano edge
 
 	finetune = ((int8_t)finetune >> 3) + 16; // -128..127 -> 0..31
@@ -447,7 +447,7 @@ int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote)
 		if (lookUp < 0)
 			lookUp = 0;
 
-		if (period >= note2Period[lookUp])
+		if (period >= note2PeriodLUT[lookUp])
 			hiPeriod = (tmpPeriod - finetune) & ~15;
 		else
 			loPeriod = (tmpPeriod - finetune) & ~15;
@@ -456,7 +456,7 @@ int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote)
 	return (loPeriod >> 4) - relativeNote;
 }
 
-static void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
+void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 {
 	if (note == NOTE_OFF)
 	{
@@ -507,8 +507,8 @@ static void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *c
 	{
 		const uint16_t noteIndex = ((note-1) * 16) + (((int8_t)ch->finetune >> 3) + 16); // 0..1920
 
-		assert(note2Period != NULL);
-		ch->outPeriod = ch->realPeriod = note2Period[noteIndex];
+		assert(note2PeriodLUT != NULL);
+		ch->outPeriod = ch->realPeriod = note2PeriodLUT[noteIndex];
 	}
 
 	ch->status |= IS_Period + IS_Vol + IS_Pan + IS_Trigger + IS_QuickVol;
@@ -1237,8 +1237,8 @@ static void preparePortamento(channel_t *ch, const note_t *p, uint8_t inst)
 			const uint16_t note = (((p->note-1) + ch->relativeNote) * 16) + (((int8_t)ch->finetune >> 3) + 16);
 			if (note < MAX_NOTES)
 			{
-				assert(note2Period != NULL);
-				ch->portamentoTargetPeriod = note2Period[note];
+				assert(note2PeriodLUT != NULL);
+				ch->portamentoTargetPeriod = note2PeriodLUT[note];
 
 				if (ch->portamentoTargetPeriod == ch->realPeriod)
 					ch->portamentoDirection = 0;
@@ -1366,7 +1366,7 @@ static void getNewNote(channel_t *ch, const note_t *p)
 	handleEffects_TickZero(ch);
 }
 
-static void updateVolPanAutoVib(channel_t *ch)
+void updateVolPanAutoVib(channel_t *ch)
 {
 	bool envInterpolateFlag, envDidInterpolate;
 	uint8_t envPos;
@@ -1708,7 +1708,7 @@ static uint16_t adjustPeriodFromNote(uint16_t period, uint8_t arpNote, channel_t
 		if (lookUp < 0)
 			lookUp = 0; // safety fix (C-0 w/ f.tune <= -65). This seems to result in 0 in FT2 (TODO: verify)
 
-		if (period >= note2Period[lookUp])
+		if (period >= note2PeriodLUT[lookUp])
 			hiPeriod = (tmpPeriod - fineTune) & ~15;
 		else
 			loPeriod = (tmpPeriod - fineTune) & ~15;
@@ -1718,7 +1718,7 @@ static uint16_t adjustPeriodFromNote(uint16_t period, uint8_t arpNote, channel_t
 	if (tmpPeriod >= (8*12*16+15)-1) // FT2 bug, should've been 10*12*16+16 (also notice the +2 difference)
 		tmpPeriod = (8*12*16+16)-1;
 
-	return note2Period[tmpPeriod];
+	return note2PeriodLUT[tmpPeriod];
 }
 
 static void doVibrato(channel_t *ch)
@@ -2804,7 +2804,7 @@ bool setupReplayer(void)
 
 	// unmute all channels (must be done before resetChannels() call)
 	for (int32_t i = 0; i < MAX_CHANNELS; i++)
-		editor.chnMode[i] = 1;
+		editor.channelMuted[i] = false;
 
 	resetChannels();
 
@@ -2814,7 +2814,7 @@ bool setupReplayer(void)
 	editor.speed = song.initialSpeed = song.speed = 6;
 	editor.globalVolume = song.globalVolume = 64;
 	audio.linearPeriodsFlag = true;
-	note2Period = linearPeriods;
+	note2PeriodLUT = linearPeriodLUT;
 
 	calcPanningTable();
 

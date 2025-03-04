@@ -369,7 +369,7 @@ void recordNote(uint8_t noteNum, int8_t vol) // directly ported from the origina
 			time = INT32_MAX;
 			for (i = 0; i < song.numChannels; i++)
 			{
-				if (editor.chnMode[i] && config.multiRecChn[i] && editor.keyOffTime[i] < time && editor.keyOnTab[i] == 0)
+				if (!editor.channelMuted[i] && config.multiRecChn[i] && editor.keyOffTime[i] < time && editor.keyOnTab[i] == 0)
 				{
 					c = i;
 					time = editor.keyOffTime[i];

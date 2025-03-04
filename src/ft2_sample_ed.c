@@ -27,7 +27,9 @@
 #include "ft2_diskop.h"
 #include "ft2_keyboard.h"
 #include "ft2_structs.h"
+#include "ft2_random.h"
 #include "ft2_replayer.h"
+#include "ft2_smpfx.h"
 #include "mixer/ft2_windowed_sinc.h" // SINC_TAPS, SINC_NEGATIVE_TAPS
 
 static const char sharpNote1Char[12] = { 'C', 'C', 'D', 'D', 'E', 'F', 'F', 'G', 'G', 'A', 'A', 'B' };
@@ -1436,8 +1438,7 @@ static void setSampleRange(int32_t start, int32_t end)
 
 void updateSampleEditorSample(void)
 {
-	smpEd_Rx1 = 0;
-	smpEd_Rx2 = 0;
+	smpEd_Rx1 = smpEd_Rx2 = 0;
 
 	smpEd_ScrPos = 0;
 	updateScrPos();
@@ -1493,27 +1494,30 @@ void updateSampleEditor(void)
 
 	showRadioButtonGroup(RB_GROUP_SAMPLE_LOOP);
 
-	// draw sample play note
-
-	const uint32_t noteNr = editor.smpEd_NoteNr - 1;
-
-	const uint32_t note   = noteNr % 12;
-	const uint32_t octave = noteNr / 12;
-
-	if (config.ptnAcc == 0)
+	if (!ui.sampleEditorEffectsShown)
 	{
-		noteChar1 = sharpNote1Char[note];
-		noteChar2 = sharpNote2Char[note];
-	}
-	else
-	{
-		noteChar1 = flatNote1Char[note];
-		noteChar2 = flatNote2Char[note];
-	}
+		// draw sample play note
 
-	charOutBg(7,  369, PAL_FORGRND, PAL_BCKGRND, noteChar1);
-	charOutBg(15, 369, PAL_FORGRND, PAL_BCKGRND, noteChar2);
-	charOutBg(23, 369, PAL_FORGRND, PAL_BCKGRND, (char)('0' + octave));
+		const uint32_t noteNr = editor.smpEd_NoteNr - 1;
+
+		const uint32_t note   = noteNr % 12;
+		const uint32_t octave = noteNr / 12;
+
+		if (config.ptnAcc == 0)
+		{
+			noteChar1 = sharpNote1Char[note];
+			noteChar2 = sharpNote2Char[note];
+		}
+		else
+		{
+			noteChar1 = flatNote1Char[note];
+			noteChar2 = flatNote2Char[note];
+		}
+
+		charOutBg(7,  369, PAL_FORGRND, PAL_BCKGRND, noteChar1);
+		charOutBg(15, 369, PAL_FORGRND, PAL_BCKGRND, noteChar2);
+		charOutBg(23, 369, PAL_FORGRND, PAL_BCKGRND, (char)('0' + octave));
+	}
 
 	// draw sample display/length
 
@@ -2898,6 +2902,8 @@ void sampReplenDown(void)
 
 void hideSampleEditor(void)
 {
+	hideSampleEffectsScreen();
+
 	hidePushButton(PB_SAMP_SCROLL_LEFT);
 	hidePushButton(PB_SAMP_SCROLL_RIGHT);
 	hidePushButton(PB_SAMP_PNOTE_UP);
@@ -2917,7 +2923,7 @@ void hideSampleEditor(void)
 	hidePushButton(PB_SAMP_PASTE);
 	hidePushButton(PB_SAMP_CROP);
 	hidePushButton(PB_SAMP_VOLUME);
-	hidePushButton(PB_SAMP_XFADE);
+	hidePushButton(PB_SAMP_EFFECTS);
 	hidePushButton(PB_SAMP_EXIT);
 	hidePushButton(PB_SAMP_CLEAR);
 	hidePushButton(PB_SAMP_MIN);
@@ -2995,7 +3001,7 @@ void showSampleEditor(void)
 	showPushButton(PB_SAMP_PASTE);
 	showPushButton(PB_SAMP_CROP);
 	showPushButton(PB_SAMP_VOLUME);
-	showPushButton(PB_SAMP_XFADE);
+	showPushButton(PB_SAMP_EFFECTS);
 	showPushButton(PB_SAMP_EXIT);
 	showPushButton(PB_SAMP_CLEAR);
 	showPushButton(PB_SAMP_MIN);
@@ -3015,6 +3021,9 @@ void showSampleEditor(void)
 
 	updateSampleEditor();
 	writeSample(true);
+
+	if (ui.sampleEditorEffectsShown)
+		pbEffects();
 }
 
 void toggleSampleEditor(void)

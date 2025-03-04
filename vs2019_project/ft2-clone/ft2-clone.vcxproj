@@ -319,6 +319,7 @@
     <ClCompile Include="..\..\src\ft2_pattern_draw.c" />
     <ClCompile Include="..\..\src\ft2_pushbuttons.c" />
     <ClCompile Include="..\..\src\ft2_radiobuttons.c" />
+    <ClCompile Include="..\..\src\ft2_random.c" />
     <ClCompile Include="..\..\src\ft2_sample_ed_features.c" />
     <ClCompile Include="..\..\src\ft2_sampling.c" />
     <ClCompile Include="..\..\src\ft2_replayer.c" />
@@ -326,6 +327,7 @@
     <ClCompile Include="..\..\src\ft2_sample_loader.c" />
     <ClCompile Include="..\..\src\ft2_sample_saver.c" />
     <ClCompile Include="..\..\src\ft2_scrollbars.c" />
+    <ClCompile Include="..\..\src\ft2_smpfx.c" />
     <ClCompile Include="..\..\src\ft2_structs.c" />
     <ClCompile Include="..\..\src\ft2_sysreqs.c" />
     <ClCompile Include="..\..\src\ft2_tables.c" />
@@ -417,6 +419,7 @@
     <ClInclude Include="..\..\src\ft2_pattern_draw.h" />
     <ClInclude Include="..\..\src\ft2_pushbuttons.h" />
     <ClInclude Include="..\..\src\ft2_radiobuttons.h" />
+    <ClInclude Include="..\..\src\ft2_random.h" />
     <ClInclude Include="..\..\src\ft2_sample_ed_features.h" />
     <ClInclude Include="..\..\src\ft2_sampling.h" />
     <ClInclude Include="..\..\src\ft2_replayer.h" />
@@ -425,6 +428,7 @@
     <ClInclude Include="..\..\src\ft2_sample_saver.h" />
     <ClInclude Include="..\..\src\ft2_scopedraw.h" />
     <ClInclude Include="..\..\src\ft2_scrollbars.h" />
+    <ClInclude Include="..\..\src\ft2_smpfx.h" />
     <ClInclude Include="..\..\src\ft2_structs.h" />
     <ClInclude Include="..\..\src\ft2_sysreqs.h" />
     <ClInclude Include="..\..\src\ft2_tables.h" />

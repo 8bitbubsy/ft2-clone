@@ -27,6 +27,7 @@
 #include "ft2_mouse.h"
 #include "ft2_edit.h"
 #include "ft2_sample_ed_features.h"
+#include "ft2_smpfx.h"
 #include "ft2_palette.h"
 #include "ft2_structs.h"
 #include "ft2_bmp.h"
@@ -218,7 +219,7 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 251, 382, 43, 16, 0, 0, "Paste",            NULL,    NULL,                  sampPaste },
 	{ 300, 348, 50, 16, 0, 0, "Crop",             NULL,    NULL,                  sampCrop },
 	{ 300, 365, 50, 16, 0, 0, "Volume",           NULL,    NULL,                  pbSampleVolume },
-	{ 300, 382, 50, 16, 0, 0, "X-Fade",           NULL,    NULL,                  sampXFade },
+	{ 300, 382, 50, 16, 0, 0, "Effects",          NULL,    NULL,                  pbEffects },
 	{ 430, 348, 54, 16, 0, 0, "Exit",             NULL,    NULL,                  exitSampleEditor },
 	{ 594, 348, 35, 13, 0, 0, "Clr S.",           NULL,    NULL,                  clearSample },
 	{ 594, 360, 35, 13, 0, 0, "Min.",             NULL,    NULL,                  sampMinimize },
@@ -227,13 +228,34 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 594, 385, 18, 13, 2, 4, ARROW_UP_STRING,    NULL,    sampReplenUp,          NULL },
 	{ 611, 385, 18, 13, 2, 4, ARROW_DOWN_STRING,  NULL,    sampReplenDown,        NULL },
 
+	// ------ SAMPLE EDITOR EFFECTS PUSHBUTTONS ------
+	//x,   y,   w,  h,  p, d, text #1,              text #2, funcOnDown,      funcOnUp
+	{  78, 350, 18, 13, 2, 2, ARROW_UP_STRING,      NULL,    pbSfxCyclesUp,   NULL },
+	{  95, 350, 18, 13, 2, 2, ARROW_DOWN_STRING,    NULL,    pbSfxCyclesDown, NULL },
+	{   3, 365, 54, 16, 0, 0, "Triangle",           NULL,    NULL,            pbSfxTriangle },
+	{  59, 365, 54, 16, 0, 0, "Saw",                NULL,    NULL,            pbSfxSaw },
+	{   3, 382, 54, 16, 0, 0, "Sine",               NULL,    NULL,            pbSfxSine },
+	{  59, 382, 54, 16, 0, 0, "Square",             NULL,    NULL,            pbSfxSquare },
+	{ 192, 350, 18, 13, 1, 2, ARROW_UP_STRING,      NULL,    pbSfxResoUp,     NULL },
+	{ 209, 350, 18, 13, 1, 2, ARROW_DOWN_STRING,    NULL,    pbSfxResoDown,   NULL },
+	{ 119, 365, 53, 16, 0, 0, "lp filter",          NULL,    NULL,            pbSfxLowPass },
+	{ 174, 365, 53, 16, 0, 0, "hp filter",          NULL,    NULL,            pbSfxHighPass },
+	{ 269, 350, 13, 13, 0, 0, "-",                  NULL,    NULL,            pbSfxSubBass },
+	{ 281, 350, 13, 13, 0, 0, "+",                  NULL,    NULL,            pbSfxAddBass },
+	{ 269, 367, 13, 13, 0, 0, "-",                  NULL,    NULL,            pbSfxSubTreble },
+	{ 281, 367, 13, 13, 0, 0, "+",                  NULL,    NULL,            pbSfxAddTreble },
+	{ 233, 382, 61, 16, 0, 0, "Amplitude",          NULL,    NULL,            pbSfxSetAmp },
+	{ 300, 348, 50, 16, 0, 0, "Undo",               NULL,    NULL,            pbSfxUndo },
+	{ 300, 365, 50, 16, 0, 0, "X-Fade",             NULL,    NULL,            sampXFade },
+	{ 300, 382, 50, 16, 0, 0, "Back...",            NULL,    NULL,            hideSampleEffectsScreen },
+
 	// ------ SAMPLE EDITOR EXTENSION PUSHBUTTONS ------
 	//x,   y,   w,  h,  p, d, text #1,     text #2, funcOnDown, funcOnUp
 	{   3, 138, 52, 16, 0, 0, "Clr. c.bf", NULL,    NULL,       clearCopyBuffer },
 	{  56, 138, 49, 16, 0, 0, "Sign",      NULL,    NULL,       sampleChangeSign },
 	{ 106, 138, 49, 16, 0, 0, "Echo",      NULL,    NULL,       pbSampleEcho },
 	{   3, 155, 52, 16, 0, 0, "Backw.",    NULL,    NULL,       sampleBackwards },
-	{  56, 155, 49, 16, 0, 0, "B. swap",    NULL,    NULL,      sampleByteSwap },
+	{  56, 155, 49, 16, 0, 0, "B. swap",   NULL,    NULL,       sampleByteSwap },
 	{ 106, 155, 49, 16, 0, 0, "Fix DC",    NULL,    NULL,       fixDC },
 	{ 161, 121, 60, 16, 0, 0, "Copy ins.", NULL,    NULL,       copyInstr },
 	{ 222, 121, 66, 16, 0, 0, "Copy smp.", NULL,    NULL,       copySmp },

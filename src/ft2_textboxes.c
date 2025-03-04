@@ -722,7 +722,10 @@ bool testTextBoxMouseDown(void)
 
 	// if we were editing text and we clicked outside of a text box, exit text editing
 	if (editor.editTextFlag)
+	{
 		exitTextEditing();
+		keyb.ignoreCurrKeyUp = false; // if we exited with mouse, don't handle key-up kludge
+	}
 
 	return false;
 }

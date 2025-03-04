@@ -220,7 +220,7 @@ void recordMIDIEffect(uint8_t efx, uint8_t efxData)
 		note_t *p = &pattern[editor.editPattern][editor.row * MAX_CHANNELS];
 		for (int32_t i = 0; i < song.numChannels; i++, p++)
 		{
-			if (config.multiRecChn[i] && editor.chnMode[i])
+			if (config.multiRecChn[i] && !editor.channelMuted[i])
 			{
 				if (!allocatePattern(editor.editPattern))
 					return;

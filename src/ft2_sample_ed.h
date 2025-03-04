@@ -18,7 +18,6 @@ bool reallocateSmpDataPtr(smpPtr_t *sp, int32_t length, bool sample16Bit);
 void setSmpDataPtr(sample_t *s, smpPtr_t *sp);
 void freeSmpDataPtr(smpPtr_t *sp);
 void freeSmpData(sample_t *s);
-
 bool cloneSample(sample_t *src, sample_t *dst);
 sample_t *getCurSample(void);
 void sanitizeSample(sample_t *s);

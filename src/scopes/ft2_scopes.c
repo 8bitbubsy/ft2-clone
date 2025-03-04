@@ -66,11 +66,11 @@ void stopAllScopes(void)
 }
 
 // toggle mute
-static void setChannel(int32_t chNr, bool on)
+static void setChannelMute(int32_t chNr, bool off)
 {
 	channel_t *ch = &channel[chNr];
 
-	ch->channelOff = !on;
+	ch->channelOff = off;
 	if (ch->channelOff)
 	{
 		ch->efx = 0;
@@ -104,8 +104,8 @@ static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t ch
 		}
 		else
 		{
-			charOutOutlined(scopeXOffs, scopeYOffs, PAL_MOUSEPT, chDecTab1[chNr]);
-			charOutOutlined(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, chDecTab2[chNr]);
+			charOutOutlined(scopeXOffs, scopeYOffs, PAL_MOUSEPT, '0' + (chNr / 10));
+			charOutOutlined(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, '0' + (chNr % 10));
 		}
 	}
 	else
@@ -116,8 +116,8 @@ static void drawScopeNumber(uint16_t scopeXOffs, uint16_t scopeYOffs, uint8_t ch
 		}
 		else
 		{
-			charOut(scopeXOffs, scopeYOffs, PAL_MOUSEPT, chDecTab1[chNr]);
-			charOut(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, chDecTab2[chNr]);
+			charOut(scopeXOffs, scopeYOffs, PAL_MOUSEPT, '0' + (chNr / 10));
+			charOut(scopeXOffs + 7, scopeYOffs, PAL_MOUSEPT, '0' + (chNr % 10));
 		}
 	}
 }
@@ -157,7 +157,7 @@ static void redrawScope(int32_t ch)
 	drawFramework(x, y, scopeLen + 2, 38, FRAMEWORK_TYPE2);
 
 	// draw mute graphics if channel is muted
-	if (!editor.chnMode[i])
+	if (editor.channelMuted[i])
 	{
 		const uint16_t muteGfxLen = scopeMuteBMP_Widths[chanLookup];
 		const uint16_t muteGfxX = x + ((scopeLen - muteGfxLen) >> 1);
@@ -191,41 +191,41 @@ static void channelMode(int32_t chn)
 		bool test = false;
 		for (i = 0; i < song.numChannels; i++)
 		{
-			if (i != chn && !editor.chnMode[i])
+			if (i != chn && editor.channelMuted[i])
 				test = true;
 		}
 
 		if (test)
 		{
 			for (i = 0; i < song.numChannels; i++)
-				editor.chnMode[i] = true;
+				editor.channelMuted[i] = false;
 		}
 		else
 		{
 			for (i = 0; i < song.numChannels; i++)
-				editor.chnMode[i] = (i == chn);
+				editor.channelMuted[i] = !(i == chn);
 		}
 	}
 	else if (m)
 	{
-		editor.chnMode[chn] ^= 1;
+		editor.channelMuted[chn] ^= 1;
 	}
 	else
 	{
-		if (editor.chnMode[chn])
+		if (!editor.channelMuted[chn])
 		{
 			config.multiRecChn[chn] ^= 1;
 		}
 		else
 		{
 			config.multiRecChn[chn] = true;
-			editor.chnMode[chn] = true;
+			editor.channelMuted[chn] = false;
 			m = true;
 		}
 	}
 
 	for (i = 0; i < song.numChannels; i++)
-		setChannel(i, editor.chnMode[i]);
+		setChannelMute(i, editor.channelMuted[i]);
 
 	if (m2)
 	{
@@ -421,7 +421,7 @@ void drawScopes(void)
 		}
 
 		const uint16_t scopeDrawLen = scopeLens[i];
-		if (!editor.chnMode[i]) // scope muted (mute graphics blit()'ed elsewhere)
+		if (editor.channelMuted[i]) // scope muted (mute graphics blit()'ed elsewhere)
 		{
 			scopeXOffs += scopeDrawLen+3; // align x to next scope
 			continue;

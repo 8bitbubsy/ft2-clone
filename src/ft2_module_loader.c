@@ -19,6 +19,7 @@
 #include "ft2_gui.h"
 #include "ft2_diskop.h"
 #include "ft2_sample_loader.h"
+#include "ft2_smpfx.h"
 #include "ft2_mouse.h"
 #include "ft2_midi.h"
 #include "ft2_events.h"
@@ -498,6 +499,7 @@ static void setupLoadedModule(void)
 	updateChanNums();
 	resetWavRenderer();
 	clearPattMark();
+	clearSampleUndo();
 	resetTrimSizes();
 	resetPlaybackTime();
 

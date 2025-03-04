@@ -300,7 +300,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 static void drawChannelNumbering(uint16_t yPos)
 {
 	uint16_t xPos = 30;
-	int32_t ch = ui.channelOffset + 1;
+	uint8_t ch = ui.channelOffset + 1;
 
 	for (uint8_t i = 0; i < ui.numChannelsShown; i++)
 	{
@@ -310,8 +310,8 @@ static void drawChannelNumbering(uint16_t yPos)
 		}
 		else
 		{
-			charOutOutlined(xPos, yPos, PAL_MOUSEPT, chDecTab1[ch]);
-			charOutOutlined(xPos + (FONT1_CHAR_W + 1), yPos, PAL_MOUSEPT, chDecTab2[ch]);
+			charOutOutlined(xPos, yPos, PAL_MOUSEPT, '0' + (ch / 10));
+			charOutOutlined(xPos + (FONT1_CHAR_W + 1), yPos, PAL_MOUSEPT, '0' + (ch % 10));
 		}
 
 		ch++;

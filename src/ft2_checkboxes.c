@@ -15,6 +15,7 @@
 #include "ft2_edit.h"
 #include "ft2_bmp.h"
 #include "ft2_wav_renderer.h"
+#include "ft2_smpfx.h"
 #include "ft2_structs.h"
 
 checkBox_t checkBoxes[NUM_CHECKBOXES] =
@@ -69,6 +70,10 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	//x,   y,   w,   h,  funcOnUp
 	{   3, 112, 148, 12, cbInstMidiEnable },
 	{ 172, 112, 103, 12, cbInstMuteComputer },
+
+	// ------ SAMPLE EDITOR EFFECTS CHECKBOXES ------
+	//x,   y,   w,   h,  funcOnUp
+	{ 119, 384,  95, 12, cbSfxNormalization },
 
 	// ------ TRIM SCREEN CHECKBOXES ------
 	//x,   y,   w,   h,  funcOnUp

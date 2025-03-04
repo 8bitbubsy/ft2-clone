@@ -79,7 +79,7 @@ const uint16_t modPeriods[8 * 12] = // used for .MOD loading/saving
 	  53,   50,   47,   45,   42,   40,   37,   35,   33,   31,   30,   28
 };
 
-const uint16_t linearPeriods[1936] = // bit-exact to FT2 table
+const uint16_t linearPeriodLUT[1936] = // bit-exact to FT2 table
 {
 	7744, 7740, 7736, 7732, 7728, 7724, 7720, 7716, 7712, 7708, 7704, 7700, 7696, 7692, 7688, 7684,
 	7680, 7676, 7672, 7668, 7664, 7660, 7656, 7652, 7648, 7644, 7640, 7636, 7632, 7628, 7624, 7620,
@@ -204,7 +204,7 @@ const uint16_t linearPeriods[1936] = // bit-exact to FT2 table
 	  64,   60,   56,   52,   48,   44,   40,   36,   32,   28,   24,   20,   16,   12,    8,    4
 };
 
-const uint16_t amigaPeriods[1936] = // bit-exact to FT2 table
+const uint16_t amigaPeriodLUT[1936] = // bit-exact to FT2 table
 {
 	29024, 28912, 28800, 28704, 28608, 28496, 28384, 28288, 28192, 28096, 28000, 27888, 27776, 27680, 27584, 27488,
 	27392, 27296, 27200, 27104, 27008, 26912, 26816, 26720, 26624, 26528, 26432, 26336, 26240, 26144, 26048, 25952,
@@ -710,23 +710,6 @@ const uint8_t pattCursorWTab[2 * 4 * 8] =
 	24,  8,  8,  8,  8,  8,  8,  8, //  6 columns visible
 	24,  4,  4,  4,  4,  4,  4,  4, //  8 columns visible
 	24,  4,  4,  4,  4,  4,  4,  4  // 12 columns visible
-};
-
-// these two are for channel numbering on pattern data/scopes
-const char chDecTab1[MAX_CHANNELS+1] = 
-{
-	'0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
-	'1', '1', '1', '1', '1', '1', '1', '1', '1', '1',
-	'2', '2', '2', '2', '2', '2', '2', '2', '2', '2',
-	'3', '3', '3'
-};
-
-const char chDecTab2[MAX_CHANNELS+1] = 
-{
-	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-	'0', '1', '2'
 };
 
 const SDL_Keycode key2VolTab[16] = 
