@@ -315,15 +315,11 @@ void pbSfxSine(void)
 		return;
 	}
 
-	const double delta = 2.0 * M_PI / lastWaveLength;
-	double phase = 0.0;
+	const double dMul = (2.0 * M_PI) / lastWaveLength;
 
 	int16_t *ptr16 = (int16_t *)s->dataPtr;
 	for (int32_t i = 0; i < newLength; i++)
-	{
-		*ptr16++ = (int16_t)(INT16_MAX * sin(phase));
-		phase += delta;
-	}
+		*ptr16++ = (int16_t)(INT16_MAX * sin(i * dMul));
 
 	s->loopLength = newLength;
 	s->flags |= LOOP_FORWARD;
