@@ -2,13 +2,35 @@ cmake_minimum_required(VERSION 3.7)
 
 project(ft2-clone)
 
+if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
+    set(SYS_EM 1)
+    add_compile_options(
+        -pthread
+        --use-port=sdl2
+    )
+    add_link_options(
+        -pthread
+        # -sUSE_WEBGL2
+        -sASYNCIFY
+        -sUSE_SDL=2
+        -sUSE_PTHREADS=1
+        -sPTHREAD_POOL_SIZE=4
+        -sALLOW_MEMORY_GROWTH
+        -sINCLUDE_FULL_LIBRARY
+        # -sMALLOC=mimalloc
+    )
+    SET(CMAKE_EXECUTABLE_SUFFIX .html)
+endif()
+
+include(CMakeDependentOption)
 option(EXTERNAL_LIBFLAC "use external(system) flac library" OFF)
+cmake_dependent_option(ENABLE_RTMIDI "enable MIDI support" ON SYS_EM OFF)
 
 find_package(SDL2 REQUIRED)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ft2-clone_SOURCE_DIR}/release/other/")
+string(TOLOWER ${CMAKE_BUILD_TYPE} ft2-clone_buildtype)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ft2-clone_SOURCE_DIR}/${ft2-clone_buildtype}/other/")
 
 file(GLOB ft2-clone_SRC
-    "${ft2-clone_SOURCE_DIR}/src/rtmidi/*.cpp"
     "${ft2-clone_SOURCE_DIR}/src/*.c"
     "${ft2-clone_SOURCE_DIR}/src/gfxdata/*.c"
     "${ft2-clone_SOURCE_DIR}/src/mixer/*.c"
@@ -33,7 +55,6 @@ target_link_libraries(ft2-clone
     PRIVATE m Threads::Threads ${SDL2_LIBRARIES})
 
 target_compile_definitions(ft2-clone
-    PRIVATE HAS_MIDI
     PRIVATE HAS_LIBFLAC)
 
 if(UNIX)
@@ -47,11 +68,20 @@ if(UNIX)
         target_compile_definitions(ft2-clone
             PRIVATE __MACOSX_CORE__)
     else()
-        target_link_libraries(ft2-clone
-            PRIVATE asound)
-        target_compile_definitions(ft2-clone
-            PRIVATE __LINUX_ALSA__)
+        if(ENABLE_RTMIDI)
+            target_link_libraries(ft2-clone
+                PRIVATE asound)
+            target_compile_definitions(ft2-clone
+                PRIVATE __LINUX_ALSA__)
+        endif()
     endif()
+endif()
+
+if(ENABLE_RTMIDI)
+    file(GLOB ft2-rtmidi_SRCS
+        "${ft2-clone_SOURCE_DIR}/src/rtmidi/*.cpp")
+    target_sources(ft2-clone PRIVATE ${ft2-rtmidi_SRCS})
+    target_compile_definitions(ft2-clone PRIVATE HAS_MIDI)
 endif()
 
 if(EXTERNAL_LIBFLAC)
