@@ -427,33 +427,42 @@ void calcReplayerVars(int32_t audioFreq)
 	}
 }
 
-// for piano in Instr. Ed. (values outside 0..95 can happen)
-int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote)
+// for piano in Instr. Ed. (values outside 0..95 can and will happen)
+int32_t getPianoKey(int32_t period, int8_t finetune, int8_t relativeNote)
 {
-	assert(note2PeriodLUT != NULL);
-	if (period > note2PeriodLUT[0])
-		return -1; // outside left piano edge
-
-	finetune = ((int8_t)finetune >> 3) + 16; // -128..127 -> 0..31
-
-	int32_t hiPeriod = 10*12*16;
-	int32_t loPeriod = 0;
-
-	for (int32_t i = 0; i < 7; i++)
+	if (audio.linearPeriodsFlag)
 	{
-		const int32_t tmpPeriod = (((loPeriod + hiPeriod) >> 1) & ~15) + finetune;
+		period >>= 2;
+		period += (int8_t)finetune >> 3;
 
-		int32_t lookUp = tmpPeriod - 16;
-		if (lookUp < 0)
-			lookUp = 0;
-
-		if (period >= note2PeriodLUT[lookUp])
-			hiPeriod = (tmpPeriod - finetune) & ~15;
-		else
-			loPeriod = (tmpPeriod - finetune) & ~15;
+		return (((10*12*16) - period) >> 4) - relativeNote;
 	}
+	else
+	{
+		// amiga periods, requires slower method (binary search in amiga period LUT)
 
-	return (loPeriod >> 4) - relativeNote;
+		if (period > amigaPeriodLUT[0])
+			return -1; // outside left piano edge
+
+		int32_t hiPeriod = 10*12*16;
+		int32_t loPeriod = 0;
+
+		for (int32_t i = 0; i < 7; i++)
+		{
+			const int32_t tmpPeriod = (((loPeriod + hiPeriod) >> 1) & ~15) + finetune;
+
+			int32_t lookUp = tmpPeriod - 16;
+			if (lookUp < 0)
+				lookUp = 0;
+
+			if (period >= amigaPeriodLUT[lookUp])
+				hiPeriod = (tmpPeriod - finetune) & ~15;
+			else
+				loPeriod = (tmpPeriod - finetune) & ~15;
+		}
+
+		return (loPeriod >> 4) - relativeNote;
+	}
 }
 
 void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)

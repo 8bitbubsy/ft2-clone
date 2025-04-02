@@ -294,7 +294,7 @@ double dLinearPeriod2Hz(int32_t period);
 double dAmigaPeriod2Hz(int32_t period);
 double dPeriod2Hz(int32_t period);
 
-int32_t getPianoKey(uint16_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
+int32_t getPianoKey(int32_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
 void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch);
 void updateVolPanAutoVib(channel_t *ch);
 
