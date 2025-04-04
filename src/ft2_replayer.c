@@ -444,6 +444,8 @@ int32_t getPianoKey(int32_t period, int8_t finetune, int8_t relativeNote)
 		if (period > amigaPeriodLUT[0])
 			return -1; // outside left piano edge
 
+		finetune = ((int8_t)finetune >> 3) + 16; // -128..127 -> 0..31
+
 		int32_t hiPeriod = 10*12*16;
 		int32_t loPeriod = 0;
 
