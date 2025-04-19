@@ -919,6 +919,13 @@ bool setupWindow(void)
 	SDL_GetDesktopDisplayMode(di, &dm);
 	video.dMonitorRefreshRate = (double)dm.refresh_rate;
 
+#ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
+/* older SDL2 versions don't define this, don't fail the build for it */
+#define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
+#endif
+	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+
+
 	if (dm.refresh_rate >= 59 && dm.refresh_rate <= 61)
 		video.vsync60HzPresent = true;
 
@@ -1140,7 +1147,7 @@ static void drawReplayerData(void)
 				ui.drawBPMFlag = false;
 				drawSongBPM(editor.BPM);
 			}
-			
+
 			if (ui.drawSpeedFlag)
 			{
 				ui.drawSpeedFlag = false;
