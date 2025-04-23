@@ -1542,6 +1542,8 @@ void pbPosEdDel(void)
 
 	lockMixerCallback();
 
+	const uint8_t oldPattern = song.orders[song.songPos];
+
 	if (song.songPos < 254)
 	{
 		for (uint16_t i = 0; i < 254-song.songPos; i++)
@@ -1553,16 +1555,19 @@ void pbPosEdDel(void)
 		song.songLoopStart = song.songLength - 1;
 
 	if (song.songPos > song.songLength-1)
-	{
 		editor.songPos = song.songPos = song.songLength-1;
+
+	if (song.orders[song.songPos] != oldPattern)
+	{
 		setPos(song.songPos, -1, false);
+		ui.updatePatternEditor = true;
 	}
+
+	unlockMixerCallback();
 
 	ui.updatePosSections = true;
 	ui.updatePosEdScrollBar = true;
 	setSongModifiedFlag();
-
-	unlockMixerCallback();
 }
 
 void pbPosEdPattUp(void)
