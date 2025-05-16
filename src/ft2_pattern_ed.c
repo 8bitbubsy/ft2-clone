@@ -53,7 +53,7 @@ bool allocatePattern(uint16_t pattNum) // for tracker use only, not in loader!
 	if (pattern[pattNum] == NULL)
 	{
 		/* Original FT2 allocates only the amount of rows needed, but we don't
-		** do that to avoid out of bondary row look-up between out-of-sync replayer
+		** do that to avoid out of boundary row look-up between out-of-sync replayer
 		** state and tracker state (yes it used to happen, rarely). We're not wasting
 		** too much RAM for a modern computer anyway. Worst case: 256 allocated
 		** patterns would be ~10MB.

@@ -293,7 +293,7 @@ static bool saveMOD(UNICHAR *filenameU)
 	// Commented out. This one was probably confusing to many people...
 	/*
 	if (audio.linearPeriodsFlag)
-		okBoxThreadSafe(0, "System message", "Warning: \"Frequency slides\" is not set to Amiga!");
+		okBoxThreadSafe(0, "System message", "Warning: \"Frequency slides\" is not set to Amiga!", NULL);
 	*/
 
 	int32_t songLength = song.songLength;
