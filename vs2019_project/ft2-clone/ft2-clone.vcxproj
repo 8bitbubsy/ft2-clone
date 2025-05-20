@@ -426,7 +426,6 @@
     <ClInclude Include="..\..\src\ft2_sample_ed.h" />
     <ClInclude Include="..\..\src\ft2_sample_loader.h" />
     <ClInclude Include="..\..\src\ft2_sample_saver.h" />
-    <ClInclude Include="..\..\src\ft2_scopedraw.h" />
     <ClInclude Include="..\..\src\ft2_scrollbars.h" />
     <ClInclude Include="..\..\src\ft2_smpfx.h" />
     <ClInclude Include="..\..\src\ft2_structs.h" />

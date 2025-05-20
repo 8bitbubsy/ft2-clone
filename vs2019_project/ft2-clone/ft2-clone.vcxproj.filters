@@ -279,9 +279,6 @@
     <ClInclude Include="..\..\src\ft2_sampling.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\ft2_scopedraw.h">
-      <Filter>headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\ft2_scrollbars.h">
       <Filter>headers</Filter>
     </ClInclude>
