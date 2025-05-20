@@ -79,6 +79,9 @@ const uint16_t modPeriods[8 * 12] = // used for .MOD loading/saving
 	  53,   50,   47,   45,   42,   40,   37,   35,   33,   31,   30,   28
 };
 
+// Formula:
+//  for (i = 0 to 1935) x = (1936 - i) * 4
+//
 const uint16_t linearPeriodLUT[1936] = // bit-exact to FT2 table
 {
 	7744, 7740, 7736, 7732, 7728, 7724, 7720, 7716, 7712, 7708, 7704, 7700, 7696, 7692, 7688, 7684,
@@ -204,6 +207,9 @@ const uint16_t linearPeriodLUT[1936] = // bit-exact to FT2 table
 	  64,   60,   56,   52,   48,   44,   40,   36,   32,   28,   24,   20,   16,   12,    8,    4
 };
 
+// The original formula is over-engineered and buggy. A simpler (and more accurate) formula would be:
+//  for (i = 0 to 1935) x = round[(1712*4*16) / 2^((368+i) / (12*16))]
+//
 const uint16_t amigaPeriodLUT[1936] = // bit-exact to FT2 table
 {
 	29024, 28912, 28800, 28704, 28608, 28496, 28384, 28288, 28192, 28096, 28000, 27888, 27776, 27680, 27584, 27488,
