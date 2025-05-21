@@ -10,14 +10,14 @@
 #define KEY2EFX_ENTRIES (signed)(sizeof (key2EfxTab) / sizeof (SDL_Keycode))
 #define KEY2HEX_ENTRIES (signed)(sizeof (key2HexTab) / sizeof (SDL_Keycode))
 
-extern const uint16_t ptPeriods[3 * 12];
-
-extern const uint8_t arpeggioTab[256];
+extern const uint8_t arpeggioTab[32];
 extern const int8_t autoVibSineTab[256];
 extern const uint8_t vibratoTab[32];
-extern const uint16_t modPeriods[8 * 12];
 extern const uint16_t linearPeriodLUT[1936];
 extern const uint16_t amigaPeriodLUT[1936];
+extern const uint16_t ptPeriods[3 * 12];
+extern const uint16_t modPeriods[8 * 12];
+extern const uint32_t songTickDuration35fp[(MAX_BPM-MIN_BPM)+1];
 
 extern const char *dec2StrTab[100];
 extern const char *dec3StrTab[256];
@@ -46,5 +46,3 @@ extern const uint16_t scopeMuteBMP_Offs[16];
 extern const uint16_t scopeLenTab[16][32];
 
 extern const uint8_t defConfigData[CONFIG_FILE_SIZE];
-
-extern const uint64_t musicTimeTab52[(MAX_BPM-MIN_BPM)+1];

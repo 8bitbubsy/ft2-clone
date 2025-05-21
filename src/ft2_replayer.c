@@ -1769,7 +1769,7 @@ static void arpeggio(channel_t *ch, uint8_t param)
 {
 	uint8_t note;
 
-	const uint8_t tick = arpeggioTab[song.tick & 255];
+	const uint8_t tick = arpeggioTab[song.tick & 31];
 	if (tick == 0)
 	{
 		ch->outPeriod = ch->realPeriod;
@@ -2272,12 +2272,12 @@ void tickReplayer(void) // periodically called from audio callback
 	}
 
 	// for song playback counter (hh:mm:ss)
-	if (song.BPM >= MIN_BPM && song.BPM <= MAX_BPM)
+	if (song.BPM >= MIN_BPM && song.BPM <= MAX_BPM) // just in case
 	{
-		song.playbackSecondsFrac += musicTimeTab52[song.BPM-MIN_BPM];
-		if (song.playbackSecondsFrac >= 1ULL << 52)
+		song.playbackSecondsFrac += songTickDuration35fp[song.BPM-MIN_BPM];
+		if (song.playbackSecondsFrac >= 1ULL << 35)
 		{
-			song.playbackSecondsFrac &= (1ULL << 52)-1;
+			song.playbackSecondsFrac &= (1ULL << 35)-1;
 			song.playbackSeconds++;
 		}
 	}
