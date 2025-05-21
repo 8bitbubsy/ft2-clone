@@ -109,8 +109,7 @@
 		LINEAR_INTERPOLATION8(frac) \
 	else \
 		CUBIC_INTERPOLATION8(frac) \
-	sample = (int32_t)roundf((float)sample * s->fVolume); \
-	if (sample > (SCOPE_HEIGHT/2)-1) sample = (SCOPE_HEIGHT/2)-1; /* upper-clamp needed */
+	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -120,8 +119,7 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		CUBIC_INTERPOLATION16(frac) \
-	sample = (int32_t)roundf((float)sample * s->fVolume); \
-	if (sample > (SCOPE_HEIGHT/2)-1) sample = (SCOPE_HEIGHT/2)-1; /* upper-clamp needed */
+	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP8_LOOP(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
@@ -131,8 +129,7 @@
 		LINEAR_INTERPOLATION8(frac) \
 	else \
 		CUBIC_INTERPOLATION8_LOOP(pos, frac) \
-	sample = (int32_t)roundf((float)sample * s->fVolume); \
-	if (sample > (SCOPE_HEIGHT/2)-1) sample = (SCOPE_HEIGHT/2)-1; /* upper-clamp needed */
+	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16_LOOP(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -142,37 +139,25 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		CUBIC_INTERPOLATION16_LOOP(pos, frac) \
-	sample = (int32_t)roundf((float)sample * s->fVolume); \
-	if (sample > (SCOPE_HEIGHT/2)-1) sample = (SCOPE_HEIGHT/2)-1; /* upper-clamp needed */
+	sample = (sample * s->volume) >> (16+2);
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
-	{ \
-		sample = (int32_t)roundf((float)(s->base8[position] << 8) * s->fVolume); \
-		if (sample > (SCOPE_HEIGHT/2)-1) sample = (SCOPE_HEIGHT/2)-1; /* upper-clamp needed */ \
-	} \
+		sample = (s->base8[position] * s->volume) >> (8+2); \
 	else \
-	{ \
-		sample = 0; \
-	}
+		sample = 0;
 
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
-	{ \
-		sample = (int32_t)roundf((float)s->base16[position] * s->fVolume); \
-		if (sample > (SCOPE_HEIGHT/2)-1) sample = (SCOPE_HEIGHT/2)-1; /* upper-clamp needed */ \
-	} \
+		sample = (s->base16[position] * s->volume) >> (16+2); \
 	else \
-	{ \
-		sample = 0; \
-	}
+		sample = 0;
 
 #define SCOPE_GET_SMP8_BIDI \
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (int32_t)roundf((float)(s->base8[actualPos] << 8) * s->fVolume); \
-		if (sample > (SCOPE_HEIGHT/2)-1) sample = (SCOPE_HEIGHT/2)-1; /* upper-clamp needed */ \
+		sample = (s->base8[actualPos] * s->volume) >> (8+2); \
 	} \
 	else \
 	{ \
@@ -183,8 +168,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (int32_t)roundf((float)s->base16[actualPos] * s->fVolume); \
-		if (sample > (SCOPE_HEIGHT/2)-1) sample = (SCOPE_HEIGHT/2)-1; /* upper-clamp needed */ \
+		sample = (s->base16[actualPos] * s->volume) >> (16+2); \
 	} \
 	else \
 	{ \

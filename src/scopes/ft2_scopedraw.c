@@ -40,11 +40,11 @@ bool calcScopeIntrpLUT(void)
 		double t3 = (-(1.0/2.0) * x3) + ( (1.0/2.0) * x2) + ( (1.0/2.0) * x1) + (1.0/6.0);
 		double t4 =   (1.0/6.0) * x3;
 
-		// rounding here would make the scopes clip, but we clamp the scopes for another reason anyway
-		*ptr16++ = (int16_t)round(t1 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)round(t2 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)round(t3 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)round(t4 * SCOPE_INTRP_SCALE);
+		// truncate, do not round!
+		*ptr16++ = (int16_t)(t1 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)(t2 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)(t3 * SCOPE_INTRP_SCALE);
+		*ptr16++ = (int16_t)(t4 * SCOPE_INTRP_SCALE);
 	}
 
 	return true;

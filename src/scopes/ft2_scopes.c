@@ -428,7 +428,7 @@ void drawScopes(void)
 		}
 
 		volatile scope_t s = scope[i]; // cache scope to lower thread race condition issues
-		if (s.active && s.fVolume > 0.0f && !audio.locked)
+		if (s.active && s.volume > 0 && !audio.locked)
 		{
 			// scope is active
 			scope[i].wasCleared = false;
@@ -489,7 +489,7 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 		const uint8_t status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
-			sc->fVolume = ch->scopeVolume * (1.0f / (255.0f / (SCOPE_HEIGHT/2) * 32768.0f));
+			sc->volume = ch->scopeVolume;
 
 		if (status & IS_Period)
 			sc->delta = (uint64_t)(dPeriod2Hz(ch->period) * (SCOPE_FRAC_SCALE / (double)SCOPE_HZ));
