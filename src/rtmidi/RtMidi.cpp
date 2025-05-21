@@ -40,12 +40,15 @@
 #include "RtMidi.h"
 #include <sstream>
 
+// 8bb: removed as it bugs out compilation on macOS Sequoia 15.5
+/*
 #if defined(__MACOSX_CORE__)
   #if defined(TARGET_OS_IPHONE)
     #define AudioGetCurrentHostTime CAHostTimeBase::GetCurrentTime
     #define AudioConvertHostTimeToNanos CAHostTimeBase::ConvertToNanos
   #endif
 #endif
+*/
 
 // Default for Windows is to add an identifier to the port names; this
 // flag can be defined (e.g. in your project file) to disable this behaviour.
