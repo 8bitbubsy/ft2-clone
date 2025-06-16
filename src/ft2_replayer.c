@@ -663,22 +663,22 @@ static void patternDelay(channel_t *ch, uint8_t param)
 
 static const efxRoutine EJumpTab_TickZero[16] =
 {
-	dummy,			// 0
+	dummy,				// 0
 	finePitchSlideUp,	// 1
 	finePitchSlideDown,	// 2
 	setPortamentoCtrl,	// 3
 	setVibratoCtrl,		// 4
-	dummy,			// 5
+	dummy,				// 5
 	patternLoop,		// 6
 	setTremoloCtrl,		// 7
-	dummy,			// 8
-	dummy,			// 9
+	dummy,				// 8
+	dummy,				// 9
 	fineVolSlideUp,		// A
 	fineVolFineDown,	// B
-	noteCut0,		// C
-	dummy,			// D
+	noteCut0,			// C
+	dummy,				// D
 	patternDelay,		// E
-	dummy			// F
+	dummy				// F
 };
 
 static void E_Effects_TickZero(channel_t *ch, uint8_t param)
@@ -688,8 +688,10 @@ static void E_Effects_TickZero(channel_t *ch, uint8_t param)
 
 	if (ch->channelOff) // channel is muted, only handle certain E effects
 	{
-		     if (efx == 0x6) patternLoop(ch, param);
-		else if (efx == 0xE) patternDelay(ch, param);
+		if (efx == 0x6)
+			patternLoop(ch, param);
+		else if (efx == 0xE)
+			patternDelay(ch, param);
 
 		return;
 	}
@@ -907,42 +909,42 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 
 static const efxRoutine JumpTab_TickZero[36] =
 {
-	dummy,			// 0
-	dummy,			// 1
-	dummy,			// 2
-	dummy,			// 3
-	dummy,			// 4
-	dummy,			// 5
-	dummy,			// 6
-	dummy,			// 7
-	dummy,			// 8
-	dummy,			// 9
-	dummy,			// A
+	dummy,				// 0
+	dummy,				// 1
+	dummy,				// 2
+	dummy,				// 3
+	dummy,				// 4
+	dummy,				// 5
+	dummy,				// 6
+	dummy,				// 7
+	dummy,				// 8
+	dummy,				// 9
+	dummy,				// A
 	positionJump,		// B
-	dummy,			// C
+	dummy,				// C
 	patternBreak,		// D
 	E_Effects_TickZero,	// E
-	setSpeed,		// F
+	setSpeed,			// F
 	setGlobalVolume,	// G
-	dummy,			// H
-	dummy,			// I
-	dummy,			// J
-	dummy,			// K
+	dummy,				// H
+	dummy,				// I
+	dummy,				// J
+	dummy,				// K
 	setEnvelopePos,		// L
-	dummy,			// M
-	dummy,			// N
-	dummy,			// O
-	dummy,			// P
-	dummy,			// Q
-	dummy,			// R
-	dummy,			// S
-	dummy,			// T
-	dummy,			// U
-	dummy,			// V
-	dummy,			// W
-	dummy,			// X
-	dummy,			// Y
-	dummy 			// Z
+	dummy,				// M
+	dummy,				// N
+	dummy,				// O
+	dummy,				// P
+	dummy,				// Q
+	dummy,				// R
+	dummy,				// S
+	dummy,				// T
+	dummy,				// U
+	dummy,				// V
+	dummy,				// W
+	dummy,				// X
+	dummy,				// Y
+	dummy 				// Z
 };
 
 static void handleMoreEffects_TickZero(channel_t *ch) // called even if channel is muted!

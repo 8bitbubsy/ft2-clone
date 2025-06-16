@@ -23,13 +23,13 @@ bool setupQuadraticSplineTable(void)
 		const double x1 = i * (1.0 / QUADRATIC_SPLINE_PHASES);
 		const double x2 = x1 * x1; // x^2
 
-		double t1 = ( 0.5 * x2) + (-1.5 * x1) + 1.0;
-		double t2 = (-1.0 * x2) + ( 2.0 * x1);
-		double t3 = ( 0.5 * x2) + (-0.5 * x1);
+		const double t1 = (x1 * -1.5) + (x2 *  0.5) + 1.0;
+		const double t2 = (x1 *  2.0) + (x2 * -1.0);
+		const double t3 = (x1 * -0.5) + (x2 *  0.5);
 
-		*fPtr++ = (float)t1;
-		*fPtr++ = (float)t2;
-		*fPtr++ = (float)t3;
+		*fPtr++ = (float)t1; // tap #1 at sample offset 0 (center)
+		*fPtr++ = (float)t2; // tap #2 at sample offset 1
+		*fPtr++ = (float)t3; // tap #3 at sample offset 2
 	}
 
 	return true;
