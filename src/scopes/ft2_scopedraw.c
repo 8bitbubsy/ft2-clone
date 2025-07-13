@@ -10,14 +10,14 @@
 #include "ft2_scopedraw.h"
 #include "ft2_scope_macros.h"
 
-static int16_t *scopeIntrpLUT;
+static float *fScopeIntrpLUT;
 
 static void scopeLine(int32_t x1, int32_t y1, int32_t y2, const uint32_t color);
 
 bool calcScopeIntrpLUT(void)
 {
-	scopeIntrpLUT = (int16_t *)malloc(SCOPE_INTRP_WIDTH * SCOPE_INTRP_PHASES * sizeof (int16_t));
-	if (scopeIntrpLUT == NULL)
+	fScopeIntrpLUT = (float *)malloc(SCOPE_INTRP_WIDTH * SCOPE_INTRP_PHASES * sizeof (float));
+	if (fScopeIntrpLUT == NULL)
 		return false;
 
 	/* Several tests have been done to figure out what interpolation method is most suitable
@@ -27,24 +27,22 @@ bool calcScopeIntrpLUT(void)
 	*/
 
 	// 4-point cubic B-spline (no overshoot)
-
-	int16_t *ptr16 = scopeIntrpLUT;
+	float *fPtr = fScopeIntrpLUT;
 	for (int32_t i = 0; i < SCOPE_INTRP_PHASES; i++)
 	{
 		const double x1 = i * (1.0 / SCOPE_INTRP_PHASES);
 		const double x2 = x1 * x1; // x^2
 		const double x3 = x2 * x1; // x^3
 
-		double t1 = (-(1.0/6.0) * x3) + ( (1.0/2.0) * x2) + (-(1.0/2.0) * x1) + (1.0/6.0);
-		double t2 = ( (1.0/2.0) * x3) + (     -1.0  * x2)                     + (2.0/3.0);
-		double t3 = (-(1.0/2.0) * x3) + ( (1.0/2.0) * x2) + ( (1.0/2.0) * x1) + (1.0/6.0);
-		double t4 =   (1.0/6.0) * x3;
+		const double t1 = (x1 * -(1.0/2.0)) + (x2 * (1.0/2.0)) + (x3 * -(1.0/6.0)) + (1.0/6.0);
+		const double t2 =                     (x2 *     -1.0 ) + (x3 *  (1.0/2.0)) + (2.0/3.0);
+		const double t3 = (x1 *  (1.0/2.0)) + (x2 * (1.0/2.0)) + (x3 * -(1.0/2.0)) + (1.0/6.0);
+		const double t4 =                                         x3 *  (1.0/6.0);
 
-		// truncate, do not round!
-		*ptr16++ = (int16_t)(t1 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)(t2 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)(t3 * SCOPE_INTRP_SCALE);
-		*ptr16++ = (int16_t)(t4 * SCOPE_INTRP_SCALE);
+		*fPtr++ = (float)t1;
+		*fPtr++ = (float)t2;
+		*fPtr++ = (float)t3;
+		*fPtr++ = (float)t4;
 	}
 
 	return true;
@@ -52,10 +50,10 @@ bool calcScopeIntrpLUT(void)
 
 void freeScopeIntrpLUT(void)
 {
-	if (scopeIntrpLUT != NULL)
+	if (fScopeIntrpLUT != NULL)
 	{
-		free(scopeIntrpLUT);
-		scopeIntrpLUT = NULL;
+		free(fScopeIntrpLUT);
+		fScopeIntrpLUT = NULL;
 	}
 }
 

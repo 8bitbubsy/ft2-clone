@@ -19,10 +19,8 @@
 
 #define SCOPE_INTRP_WIDTH 4
 #define SCOPE_INTRP_WIDTH_BITS 2 /* log2(SCOPE_INTRP_WIDTH) */
-#define SCOPE_INTRP_SCALE 32768
-#define SCOPE_INTRP_SCALE_BITS 15 /* log2(SCOPE_INTRP_SCALE) */
-#define SCOPE_INTRP_PHASES 256 /* enough for the scopes */
-#define SCOPE_INTRP_PHASES_BITS 8 /* log2(SCOPE_INTRP_PHASES) */
+#define SCOPE_INTRP_PHASES 512 /* enough for the scopes */
+#define SCOPE_INTRP_PHASES_BITS 9 /* log2(SCOPE_INTRP_PHASES) */
 
 int32_t getSamplePositionFromScopes(uint8_t ch);
 void stopAllScopes(void);
@@ -40,9 +38,9 @@ typedef struct scope_t
 	const int16_t *base16;
 	bool wasCleared, sample16Bit, samplingBackwards, hasLooped;
 	uint8_t loopType;
-	int16_t volume;
 	int32_t loopStart, loopLength, loopEnd, sampleEnd, position;
 	uint64_t delta, drawDelta, positionFrac;
+	float fVolume8, fVolume16;
 
 	// if (loopEnabled && hasLooped && samplingPos <= loopStart+MAX_LEFT_TAPS) readFixedTapsFromThisPointer();
 	const int8_t *leftEdgeTaps8;

@@ -428,13 +428,10 @@ void drawScopes(void)
 		}
 
 		volatile scope_t s = scope[i]; // cache scope to lower thread race condition issues
-		if (s.active && s.volume > 0 && !audio.locked)
+		if (s.active && s.fVolume16 > 0.0f && !audio.locked)
 		{
 			// scope is active
 			scope[i].wasCleared = false;
-
-			// get relative voice Hz (in relation to C4/2 rate)
-			s.drawDelta = (uint64_t)(scope[i].delta * ((double)SCOPE_HZ / ((double)C4_FREQ / 2.0)));
 
 			// clear scope background
 			clearRect(scopeXOffs, scopeYOffs, scopeDrawLen, SCOPE_HEIGHT);
@@ -489,10 +486,18 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 		const uint8_t status = scopeUpdateStatus[i];
 
 		if (status & IS_Vol)
-			sc->volume = ch->scopeVolume;
+		{
+			sc->fVolume8  = ch->scopeVolume * (((SCOPE_HEIGHT/2.0f) / 255.0f) /   128.0f);
+			sc->fVolume16 = ch->scopeVolume * (((SCOPE_HEIGHT/2.0f) / 255.0f) / 32768.0f);
+		}
 
 		if (status & IS_Period)
-			sc->delta = (uint64_t)(dPeriod2Hz(ch->period) * (SCOPE_FRAC_SCALE / (double)SCOPE_HZ));
+		{
+			const double dHz = dPeriod2Hz(ch->period);
+
+			sc->delta = (uint64_t)(dHz * (SCOPE_FRAC_SCALE / (double)SCOPE_HZ));
+			sc->drawDelta = (uint64_t)(dHz * (SCOPE_FRAC_SCALE / ((double)C4_FREQ/2.0)));
+		}
 
 		if (status & IS_Trigger)
 		{

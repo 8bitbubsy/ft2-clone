@@ -13,23 +13,25 @@
 	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t position = s->position; \
-	uint64_t positionFrac = 0;
+	uint64_t positionFrac = s->positionFrac;
 
 #define SCOPE_INIT_BIDI \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t actualPos, position = s->position; \
-	uint64_t positionFrac = 0; \
+	uint64_t positionFrac = s->positionFrac; \
 	bool samplingBackwards = s->samplingBackwards;
 
 #define LINED_SCOPE_INIT \
 	SCOPE_INIT \
+	float fSample; \
 	int32_t smpY1, smpY2; \
 	width--;
 
 #define LINED_SCOPE_INIT_BIDI \
 	SCOPE_INIT_BIDI \
+	float fSample; \
 	int32_t smpY1, smpY2; \
 	width--;
 
@@ -39,41 +41,41 @@
 
 #define NEAREST_NEIGHGBOR8 \
 { \
-	sample = s8[0] << 8; \
+	fSample = s8[0]; \
 } \
 
 #define LINEAR_INTERPOLATION8(frac) \
 { \
-	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
-	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
+	const float f = (frac) * (1.0f / SCOPE_FRAC_SCALE); \
+	fSample = s8[0] + ((s8[1] - s8[0]) * f); \
 } \
 
 #define NEAREST_NEIGHGBOR16 \
 { \
-	sample = s16[0]; \
+	fSample = s16[0]; \
 } \
 
 #define LINEAR_INTERPOLATION16(frac) \
 { \
-	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
-	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
+	const float f = (frac) * (1.0f / SCOPE_FRAC_SCALE); \
+	fSample = s16[0] + ((s16[1] - s16[0]) * f); \
 } \
 
 #define CUBIC_SMP8(frac) \
-	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+	const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
 	\
-	sample = ((s8[-1] * t[0]) + \
+	fSample = (s8[-1] * t[0]) + \
 	          ( s8[0] * t[1]) + \
 	          ( s8[1] * t[2]) + \
-	          ( s8[2] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8);
+	          ( s8[2] * t[3]);
 
 #define CUBIC_SMP16(frac) \
-	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+	const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
 	\
-	sample = ((s16[-1] * t[0]) + \
+	fSample = (s16[-1] * t[0]) + \
 	          ( s16[0] * t[1]) + \
 	          ( s16[1] * t[2]) + \
-	          ( s16[2] * t[3])) >> SCOPE_INTRP_SCALE_BITS;
+	          ( s16[2] * t[3]);
 
 #define CUBIC_INTERPOLATION8(frac) \
 { \
@@ -109,7 +111,7 @@
 		LINEAR_INTERPOLATION8(frac) \
 	else \
 		CUBIC_INTERPOLATION8(frac) \
-	sample = (sample * s->volume) >> (16+2);
+	sample = (int32_t)((fSample * s->fVolume8) - 0.5f);
 
 #define INTERPOLATE_SMP16(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -119,7 +121,7 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		CUBIC_INTERPOLATION16(frac) \
-	sample = (sample * s->volume) >> (16+2);
+	sample = (int32_t)((fSample * s->fVolume16) - 0.5f);
 
 #define INTERPOLATE_SMP8_LOOP(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
@@ -129,7 +131,7 @@
 		LINEAR_INTERPOLATION8(frac) \
 	else \
 		CUBIC_INTERPOLATION8_LOOP(pos, frac) \
-	sample = (sample * s->volume) >> (16+2);
+	sample = (int32_t)((fSample * s->fVolume8) - 0.5f);
 
 #define INTERPOLATE_SMP16_LOOP(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -139,17 +141,17 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		CUBIC_INTERPOLATION16_LOOP(pos, frac) \
-	sample = (sample * s->volume) >> (16+2);
+	sample = (int32_t)((fSample * s->fVolume16) - 0.5f);
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
-		sample = (s->base8[position] * s->volume) >> (8+2); \
+		sample = (int32_t)((s->base8[position] * s->fVolume8) - 0.5f); \
 	else \
 		sample = 0;
 
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
-		sample = (s->base16[position] * s->volume) >> (16+2); \
+		sample = (int32_t)((s->base16[position] * s->fVolume16) - 0.5f); \
 	else \
 		sample = 0;
 
@@ -157,7 +159,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (s->base8[actualPos] * s->volume) >> (8+2); \
+		sample = (int32_t)((s->base8[actualPos] * s->fVolume8) - 0.5f); \
 	} \
 	else \
 	{ \
@@ -168,7 +170,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (s->base16[actualPos] * s->volume) >> (16+2); \
+		sample = (int32_t)((s->base16[actualPos] * s->fVolume16) - 0.5f); \
 	} \
 	else \
 	{ \
