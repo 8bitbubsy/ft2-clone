@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <math.h>
 #include "../ft2_config.h"
 #include "../ft2_video.h"
 #include "../ft2_palette.h"
@@ -39,10 +38,10 @@ bool calcScopeIntrpLUT(void)
 		const double t3 = (x1 *  (1.0/2.0)) + (x2 * (1.0/2.0)) + (x3 * -(1.0/2.0)) + (1.0/6.0);
 		const double t4 =                                         x3 *  (1.0/6.0);
 
-		*fPtr++ = (float)t1;
-		*fPtr++ = (float)t2;
-		*fPtr++ = (float)t3;
-		*fPtr++ = (float)t4;
+		*fPtr++ = (float)t1; // tap #1 at sample offset -1
+		*fPtr++ = (float)t2; // tap #2 at sample offset  0 (center)
+		*fPtr++ = (float)t3; // tap #3 at sample offset  1
+		*fPtr++ = (float)t4; // tap #4 at sample offset  2
 	}
 
 	return true;
