@@ -78,4 +78,4 @@ echo Done. The executable can be found in \'${RELEASE_MACOS_DIR}\' if everything
 #
 # Cleanup
 #
-rm src/rtmidi/*.o src/gfxdata/*.o src/*.o &> /dev/null
+rm src/rtmidi/*.o src/gfxdata/*.o src/mixer/*.o src/scopes/*.o src/modloaders/*.o src/smploaders/*.o src/libflac/*.o src/*.o &> /dev/null
