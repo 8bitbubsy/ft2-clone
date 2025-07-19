@@ -26,8 +26,6 @@ int main(int argc, char *argv[])
 	uint32_t textLen, fileSize, currLine, totalCharLen;
 	FILE *fIn, *fOut;
 
-	printf("ft2hlp_to_h - by 8bitbubsy\n");
-
 #ifndef _DEBUG
 	if (argc != 2)
 	{
@@ -81,7 +79,7 @@ int main(int argc, char *argv[])
 	{
 		if (!strncmp(textPtr, "END", 3) && totalCharLen >= fileSize-(3+2))
 		{
-			/* we reached the final END */
+			// we reached the final END
 			fputc(3, fOut);
 			fprintf(fOut, "END");
 			break;
