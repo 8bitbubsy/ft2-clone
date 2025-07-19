@@ -33,6 +33,7 @@
 >- Scream Tracker 3 modules. (S3M)
 >- Scream Tracker 2 modules. (STM)
 >- DIGI Booster (non-Pro) modules. (DIGI)
+>- MikMod "UN05" XM modules. (BEM)
 
 @X040@C001Abysmal (super broken) module support:
 >@X060@C002
@@ -45,6 +46,7 @@
 >- WAV files.
 >- Amiga IFF.
 >- Apple AIFF.
+>- FLAC files.
 >- Super Nintendo BRR files.
 
 @X040@C001FT2 introduces several new file formats:
