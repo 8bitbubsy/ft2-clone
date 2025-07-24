@@ -47,6 +47,11 @@ if(UNIX)
         target_compile_definitions(ft2-clone
             PRIVATE __MACOSX_CORE__)
     else()
+        # musl systems need musl-fts installed, others have it with glibc
+        find_library(FTS fts)
+        if (FTS)
+            target_link_libraries(ft2-clone PRIVATE fts)
+        endif()
         target_link_libraries(ft2-clone
             PRIVATE asound)
         target_compile_definitions(ft2-clone
