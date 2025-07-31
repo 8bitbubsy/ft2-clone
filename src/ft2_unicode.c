@@ -3,6 +3,23 @@
 #include <crtdbg.h>
 #endif
 
+// for detecting if musl or glibc is used
+#ifndef _WIN32
+	#ifndef _GNU_SOURCE
+		#define _GNU_SOURCE
+	  #include <features.h>
+	  #ifndef __USE_GNU
+	      #define __MUSL__
+	  #endif
+	  #undef _GNU_SOURCE /* don't contaminate other includes unnecessarily */
+	#else
+	  #include <features.h>
+	  #ifndef __USE_GNU
+	      #define __MUSL__
+	  #endif
+	#endif
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -285,6 +302,8 @@ char *utf8ToCp850(char *src, bool removeIllegalChars)
 	iconv_t cd = iconv_open("850//TRANSLIT//IGNORE", "UTF-8-MAC");
 #elif defined(__NetBSD__) || defined(__sun) || defined(sun)
 	iconv_t cd = iconv_open("850", "UTF-8");
+#elif defined(__MUSL__)
+	iconv_t cd = iconv_open("cp850", "UTF-8");
 #else
 	iconv_t cd = iconv_open("850//TRANSLIT//IGNORE", "UTF-8");
 #endif

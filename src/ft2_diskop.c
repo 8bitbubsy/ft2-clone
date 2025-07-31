@@ -20,6 +20,7 @@
 #include <fts.h> // for fts_open() and stuff in recursiveDelete()
 #include <unistd.h>
 #include <dirent.h>
+#include <errno.h>
 #endif
 #include <wchar.h>
 #include <sys/stat.h>
@@ -1753,7 +1754,7 @@ static void displayCurrPath(void)
 	char *asciiPath = unicharToCp850(FReq_CurPathU, true);
 	if (asciiPath == NULL)
 	{
-		okBox(0, "System message", "Not enough memory!", NULL);
+		okBox(0, "System message", "Could not get CWD!", NULL);
 		return;
 	}
 
