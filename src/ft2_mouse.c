@@ -202,10 +202,17 @@ bool createMouseCursors(void) // creates scaled SDL surfaces for current mouse p
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 	{
-		     if (mouse.mode == MOUSE_MODE_NORMAL) setSystemCursor(cursors[0]);
-		else if (mouse.mode == MOUSE_MODE_DELETE) setSystemCursor(cursors[1]);
-		else if (mouse.mode == MOUSE_MODE_RENAME) setSystemCursor(cursors[2]);
-
+		switch (mouse.mode) {
+			case MOUSE_MODE_NORMAL:
+				setSystemCursor(cursors[0]);
+				break;
+			case MOUSE_MODE_DELETE:
+				setSystemCursor(cursors[1]);
+				break;
+			case MOUSE_MODE_RENAME:
+				setSystemCursor(cursors[2]);
+				break;
+		}
 		SDL_ShowCursor(SDL_TRUE);
 	}
 	else
@@ -313,9 +320,17 @@ void setMouseShape(int16_t shape)
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 	{
-		     if (mouse.mode == MOUSE_MODE_NORMAL) setSystemCursor(cursors[0]);
-		else if (mouse.mode == MOUSE_MODE_DELETE) setSystemCursor(cursors[1]);
-		else if (mouse.mode == MOUSE_MODE_RENAME) setSystemCursor(cursors[2]);
+		switch (mouse.mode) {
+			case MOUSE_MODE_NORMAL:
+				setSystemCursor(cursors[0]);
+				break;
+			case MOUSE_MODE_DELETE:
+				setSystemCursor(cursors[1]);
+				break;
+			case MOUSE_MODE_RENAME:
+				setSystemCursor(cursors[2]);
+				break;
+		}
 	}
 }
 
@@ -834,12 +849,6 @@ void handleLastGUIObjectDown(void)
 	}
 }
 
-void updateMouseScaling(void)
-{
-	if (video.renderW > 0) video.dMouseXMul = (double)SCREEN_W / video.renderW;
-	if (video.renderH > 0) video.dMouseYMul = (double)SCREEN_H / video.renderH;
-}
-
 void readMouseXY(void)
 {
 	int32_t mx, my, windowX, windowY;
@@ -853,27 +862,9 @@ void readMouseXY(void)
 		return;
 	}
 
-	if (video.fullscreen)
-	{
-		mouse.buttonState = SDL_GetMouseState(&mx, &my);
-
-		mouse.absX = mx;
-		mouse.absY = my;
-	}
-	else
-	{
-		mouse.buttonState = SDL_GetGlobalMouseState(&mx, &my);
-
-		mouse.absX = mx;
-		mouse.absY = my;
-
-		// convert desktop coords to window coords
-		SDL_GetWindowPosition(video.window, &windowX, &windowY);
-
-		mx -= windowX;
-		my -= windowY;
-	}
-
+	mouse.buttonState = SDL_GetMouseState(&mx, &my);
+	mouse.absX = mx;
+	mouse.absY = my;
 	mouse.rawX = mx;
 	mouse.rawY = my;
 
@@ -919,9 +910,9 @@ void readMouseXY(void)
 	if (mx == -1) mx = 0;
 	if (my == -1) my = 0;
 
-	// multiply coords by video upscaling factors
-	mouse.x = (int32_t)floor(mx * video.dMouseXMul);
-	mouse.y = (int32_t)floor(my * video.dMouseYMul);
+	// multiply coords by video upscaling factors to get correct position
+	mouse.x = (int32_t)floor(mx * video.widthRatio);
+	mouse.y = (int32_t)floor(my * video.heightRatio);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 	{

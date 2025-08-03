@@ -20,9 +20,8 @@
 #include <fts.h> // for fts_open() and stuff in recursiveDelete()
 #include <unistd.h>
 #include <dirent.h>
-#include <errno.h>
 #endif
-#include <wchar.h>
+// #include <wchar.h>
 #include <sys/stat.h>
 #include "ft2_header.h"
 #include "ft2_unicode.h"

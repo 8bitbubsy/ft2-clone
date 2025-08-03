@@ -1,4 +1,5 @@
 // for finding memory leaks in debug mode with Visual Studio
+#include "ft2_replayer.h"
 #if defined _DEBUG && defined _MSC_VER
 #include <crtdbg.h>
 #endif
@@ -7,18 +8,21 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#include <unistd.h> // usleep()
+
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
 #include <windows.h>
+#include <SDL2/SDL_render.h>
 #include <SDL2/SDL_syswm.h>
 #else
-#include <unistd.h> // usleep()
+
 #endif
 #include "ft2_header.h"
 #include "ft2_config.h"
 #include "ft2_gui.h"
 #include "ft2_video.h"
-#include "ft2_events.h"
+// #include "ft2_events.h"
 #include "ft2_mouse.h"
 #include "scopes/ft2_scopes.h"
 #include "ft2_pattern_ed.h"
@@ -28,12 +32,13 @@
 #include "ft2_inst_ed.h"
 #include "ft2_diskop.h"
 #include "ft2_about.h"
-#include "ft2_trim.h"
-#include "ft2_sampling.h"
-#include "ft2_module_loader.h"
-#include "ft2_midi.h"
+// #include "ft2_trim.h"
+// #include "ft2_sampling.h"
+// #include "ft2_module_loader.h"
+// #include "ft2_midi.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+// #include "ft2_wav_renderer.h"
 
 static const uint8_t textCursorData[12] =
 {
@@ -136,9 +141,9 @@ static void drawFPSCounter(void)
 	             audio.haveSamples, audio.wantSamples,
 	             video.renderW, video.renderH, video.renderX, video.renderY,
 	             video.displayW, video.displayH, video.windowW, video.windowH,
-	             (double)video.renderW / SCREEN_W, (double)video.renderH / SCREEN_H,
+	             video.widthRatio, video.heightRatio,
 	             video.dDpiZoomFactorX, video.dDpiZoomFactorY,
-	             video.dMouseXMul, video.dMouseYMul,
+	             video.widthRatio, video.heightRatio,
 	             mouse.x, mouse.y,
 	             mouse.absX, mouse.absY);
 
@@ -184,6 +189,38 @@ void endFPSCounter(void)
 
 		dRunningFrameDuration += (int32_t)frameTimeDiff64 * hpcFreq.dFreqMulMs;
 	}
+}
+
+void updateDisplayIndex()
+{
+	SDL_DisplayMode dm;
+	video.vsync60HzPresent = false;
+
+	int32_t di = SDL_GetWindowDisplayIndex(video.window);
+	if (di < 0)
+		di = 0; // return display index 0 (default) on error
+	video.displayIndex = di;
+
+	SDL_GetDesktopDisplayMode(di, &dm);
+	video.dMonitorRefreshRate = (double)dm.refresh_rate;
+
+	if (dm.refresh_rate >= 59 && dm.refresh_rate <= 61)
+		video.vsync60HzPresent = true;
+
+	if (config.windowFlags & FORCE_VSYNC_OFF)
+		video.vsync60HzPresent = false;
+}
+
+void resizeWindow(uint32_t w, uint32_t h)
+{
+	SDL_SetWindowSize(video.window, w, h);
+	// TODO: Set windowpos to be relative to wherever the window is
+	SDL_SetWindowPosition(
+    video.window,
+    SDL_WINDOWPOS_CENTERED_DISPLAY(video.displayIndex),
+    SDL_WINDOWPOS_CENTERED_DISPLAY(video.displayIndex)
+  );
+	updateWindowRenderSize();
 }
 
 void flipFrame(void)
@@ -267,72 +304,91 @@ void showErrorMsgBox(const char *fmt, ...)
 #endif
 }
 
-static void updateRenderSizeVars(void)
+void updateWindowRenderSize()
 {
+	#define MAX_UPSCALE_FACTOR 16 // 10112x6400 - ought to be good enough for many years to come
 	int32_t widthInPixels, heightInPixels;
 	SDL_DisplayMode dm;
 
 	int32_t di = SDL_GetWindowDisplayIndex(video.window);
 	if (di < 0)
 		di = 0; // return display index 0 (default) on error
+	video.displayIndex = di;
 
-	SDL_GetDesktopDisplayMode(di, &dm);
-	video.displayW = dm.w;
-	video.displayH = dm.h;
+	if (SDL_GetDesktopDisplayMode(video.displayIndex, &dm) == 0)
+	{
+		video.displayW = dm.w;
+		video.displayH = dm.h;
+	} else
+	{
+		video.displayW = SCREEN_W;
+		video.displayH = SCREEN_H;
+	}
 
 	SDL_GetWindowSize(video.window, &video.windowW, &video.windowH);
-	video.renderX = 0;
-	video.renderY = 0;
 
 	video.useCustomRenderRect = false;
+	uint8_t oldUpscaleFactor = video.windowModeUpscaleFactor;
 
-	if (video.fullscreen)
+	if (config.specialFlags2 & STRETCH_IMAGE)
 	{
-		if (config.specialFlags2 & STRETCH_IMAGE)
-		{
-			// "streched out" windowed fullscreen
-
-			video.renderW = video.windowW;
-			video.renderH = video.windowH;
-
-			// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
-			SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
-			video.dDpiZoomFactorX = (double)widthInPixels / video.windowW;
-			video.dDpiZoomFactorY = (double)heightInPixels / video.windowH;
-		}
-		else
-		{
-			// centered windowed fullscreen, with pixel-perfect integer upscaling
-
-			const int32_t maxUpscaleFactor = MIN(video.windowW / SCREEN_W, video.windowH / SCREEN_H);
-			video.renderW = SCREEN_W * maxUpscaleFactor;
-			video.renderH = SCREEN_H * maxUpscaleFactor;
-			video.renderX = (video.windowW - video.renderW) / 2;
-			video.renderY = (video.windowH - video.renderH) / 2;
-
-			// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
-			SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
-			video.dDpiZoomFactorX = (double)widthInPixels / video.windowW;
-			video.dDpiZoomFactorY = (double)heightInPixels / video.windowH;
-
-			video.renderRect.x = (int32_t)floor(video.renderX * video.dDpiZoomFactorX);
-			video.renderRect.y = (int32_t)floor(video.renderY * video.dDpiZoomFactorY);
-			video.renderRect.w = (int32_t)floor(video.renderW * video.dDpiZoomFactorX);
-			video.renderRect.h = (int32_t)floor(video.renderH * video.dDpiZoomFactorY);
-			video.useCustomRenderRect = true; // use the destination coordinates above in SDL_RenderCopy()
-		}
+		// "streched out" windowed fullscreen
+		video.renderW = video.windowW;
+		video.renderH = video.windowH;
 	}
 	else
 	{
-		// windowed mode
+		uint8_t i = MAX_UPSCALE_FACTOR;
+		// centered windowed fullscreen, with pixel-perfect integer upscaling
+		if (config.windowFlags & WINSIZE_AUTO) {
+			// find out which upscaling factor is the biggest to fit on screen
+			for (; i >= 1; i--)
+			{
+				// height test is slightly taller because of window title, window borders and taskbar/menu/dock
+				if (dm.w >= SCREEN_W*i && dm.h >= (SCREEN_H+64)*i)
+				{
+					video.windowModeUpscaleFactor = i;
+					break;
+				}
+			}
 
-		SDL_GetWindowSize(video.window, &video.renderW, &video.renderH);
+			if (i == 0)
+				video.windowModeUpscaleFactor = 1; // 1x is not going to fit, but use 1x anyways...
+		}
+		else if (config.windowFlags & WINSIZE_1X) {
+			video.windowModeUpscaleFactor = 1;
+		}
+		else if (config.windowFlags & WINSIZE_2X) {
+			video.windowModeUpscaleFactor = 2;
+		}
+		else if (config.windowFlags & WINSIZE_3X) {
+			video.windowModeUpscaleFactor = 3;
+		}
+		else if (config.windowFlags & WINSIZE_4X) {
+			video.windowModeUpscaleFactor = 4;
+		}
 
-		// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
-		SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
-		video.dDpiZoomFactorX = (double)widthInPixels / video.windowW;
-		video.dDpiZoomFactorY = (double)heightInPixels / video.windowH;
+		video.renderW = SCREEN_W * video.windowModeUpscaleFactor;
+		video.renderH = SCREEN_H * video.windowModeUpscaleFactor;
+		video.renderX = (video.windowW - video.renderW) / 2;
+		video.renderY = (video.windowH - video.renderH) / 2;
+
+		video.renderRect.x = (int32_t)floor(video.renderX * video.dDpiZoomFactorX);
+		video.renderRect.y = (int32_t)floor(video.renderY * video.dDpiZoomFactorY);
+		video.renderRect.w = (int32_t)floor(video.renderW * video.dDpiZoomFactorX);
+		video.renderRect.h = (int32_t)floor(video.renderH * video.dDpiZoomFactorY);
+		video.useCustomRenderRect = true; // use the destination coordinates above in SDL_RenderCopy()
 	}
+
+	// get DPI zoom factors (Macs with Retina, etc... returns 1.0 if no zoom)
+	SDL_GL_GetDrawableSize(video.window, &widthInPixels, &heightInPixels);
+	video.dDpiZoomFactorX = (double)widthInPixels / video.windowW;
+	video.dDpiZoomFactorY = (double)heightInPixels / video.windowH;
+
+	if (video.renderW > 0)
+		video.widthRatio = (double)SCREEN_W / video.renderW;
+	if (video.renderH > 0)
+		video.heightRatio = (double)SCREEN_H / video.renderH;
 
 	// "hardware mouse" calculations
 	video.mouseCursorUpscaleFactor = MIN(video.renderW / SCREEN_W, video.renderH / SCREEN_H);
@@ -344,8 +400,7 @@ void enterFullscreen(void)
 	SDL_SetWindowFullscreen(video.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	SDL_Delay(15); // fixes possible issues
 
-	updateRenderSizeVars();
-	updateMouseScaling();
+	updateWindowRenderSize();
 	setMousePosToCenter();
 }
 
@@ -354,16 +409,11 @@ void leaveFullscreen(void)
 	SDL_SetWindowFullscreen(video.window, 0);
 	SDL_Delay(15); // fixes possible issues
 
-	setWindowSizeFromConfig(false); // false = do not change actual window size, only update variables
-	SDL_SetWindowSize(video.window, SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
-
-	updateRenderSizeVars();
-	updateMouseScaling();
 	setMousePosToCenter();
 
-#ifdef __unix__ // can be required on Linux... (or else the window keeps moving down every time you leave fullscreen)
-	SDL_SetWindowPosition(video.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-#endif
+	#ifdef __unix__ // can be required on Linux... (or else the window keeps moving down every time you leave fullscreen)
+	 SDL_SetWindowPosition(video.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+	#endif
 }
 
 void toggleFullscreen(void)
@@ -792,60 +842,6 @@ void closeVideo(void)
 	}
 }
 
-void setWindowSizeFromConfig(bool updateRenderer)
-{
-#define MAX_UPSCALE_FACTOR 16 // 10112x6400 - ought to be good enough for many years to come
-
-	uint8_t i;
-	SDL_DisplayMode dm;
-
-	uint8_t oldUpscaleFactor = video.windowModeUpscaleFactor;
-	if (config.windowFlags & WINSIZE_AUTO)
-	{
-		int32_t di = SDL_GetWindowDisplayIndex(video.window);
-		if (di < 0)
-			di = 0; // return display index 0 (default) on error
-
-		// find out which upscaling factor is the biggest to fit on screen
-		if (SDL_GetDesktopDisplayMode(di, &dm) == 0)
-		{
-			for (i = MAX_UPSCALE_FACTOR; i >= 1; i--)
-			{
-				// height test is slightly taller because of window title, window borders and taskbar/menu/dock
-				if (dm.w >= SCREEN_W*i && dm.h >= (SCREEN_H+64)*i)
-				{
-					video.windowModeUpscaleFactor = i;
-					break;
-				}
-			}
-
-			if (i == 0)
-				video.windowModeUpscaleFactor = 1; // 1x is not going to fit, but use 1x anyways...
-		}
-		else
-		{
-			// couldn't get screen resolution, set to 1x
-			video.windowModeUpscaleFactor = 1;
-		}
-	}
-	else if (config.windowFlags & WINSIZE_1X) video.windowModeUpscaleFactor = 1;
-	else if (config.windowFlags & WINSIZE_2X) video.windowModeUpscaleFactor = 2;
-	else if (config.windowFlags & WINSIZE_3X) video.windowModeUpscaleFactor = 3;
-	else if (config.windowFlags & WINSIZE_4X) video.windowModeUpscaleFactor = 4;
-
-	if (updateRenderer)
-	{
-		SDL_SetWindowSize(video.window, SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
-
-		if (oldUpscaleFactor != video.windowModeUpscaleFactor)
-			SDL_SetWindowPosition(video.window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-
-		updateRenderSizeVars();
-		updateMouseScaling();
-		setMousePosToCenter();
-	}
-}
-
 void updateWindowTitle(bool forceUpdate)
 {
 	if (!forceUpdate && songIsModified == song.isModified)
@@ -899,25 +895,12 @@ bool recreateTexture(void)
 	return true;
 }
 
-bool setupWindow(void)
+bool initWindow(void)
 {
-	SDL_DisplayMode dm;
-
-	video.vsync60HzPresent = false;
-
 	uint32_t windowFlags = SDL_WINDOW_ALLOW_HIGHDPI;
 #if defined (__APPLE__) || defined (_WIN32) // yet another quirk!
 	windowFlags |= SDL_WINDOW_HIDDEN;
 #endif
-
-	setWindowSizeFromConfig(false);
-
-	int32_t di = SDL_GetWindowDisplayIndex(video.window);
-	if (di < 0)
-		di = 0; // return display index 0 (default) on error
-
-	SDL_GetDesktopDisplayMode(di, &dm);
-	video.dMonitorRefreshRate = (double)dm.refresh_rate;
 
 #ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
 /* older SDL2 versions don't define this, don't fail the build for it */
@@ -925,16 +908,17 @@ bool setupWindow(void)
 #endif
 	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 
-
-	if (dm.refresh_rate >= 59 && dm.refresh_rate <= 61)
-		video.vsync60HzPresent = true;
-
-	if (config.windowFlags & FORCE_VSYNC_OFF)
-		video.vsync60HzPresent = false;
-
-	video.window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-		SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor,
-		windowFlags);
+	updateWindowRenderSize();
+	if (video.window == NULL) {
+		video.window = SDL_CreateWindow(
+			"",
+      SDL_WINDOWPOS_CENTERED,
+		  SDL_WINDOWPOS_CENTERED,
+			SCREEN_W * video.windowModeUpscaleFactor,
+			SCREEN_H * video.windowModeUpscaleFactor,
+			windowFlags
+		);
+	}
 
 	if (video.window == NULL)
 	{
@@ -997,8 +981,7 @@ bool setupRenderer(void)
 	if (!setupSprites())
 		return false;
 
-	updateRenderSizeVars();
-	updateMouseScaling();
+	updateWindowRenderSize();
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 		SDL_ShowCursor(SDL_TRUE);
@@ -1045,10 +1028,20 @@ void handleRedrawing(void)
 					// draw current mode text
 
 					const char *str = NULL;
-					     if (playMode == PLAYMODE_PATT)    str = "> Play ptn. <";
-					else if (playMode == PLAYMODE_EDIT)    str = "> Editing <";
-					else if (playMode == PLAYMODE_RECSONG) str = "> Rec. sng. <";
-					else if (playMode == PLAYMODE_RECPATT) str = "> Rec. ptn. <";
+					switch (playMode) {
+						case PLAYMODE_PATT:
+							str = "> Play ptn. <";
+							break;
+						case PLAYMODE_EDIT:
+							str = "> Editing <";
+							break;
+						case PLAYMODE_RECSONG:
+							str = "> Rec. sng. <";
+							break;
+						case PLAYMODE_RECPATT:
+							str = "> Rec. ptn. <";
+							break;
+					}
 
 					uint16_t areaWidth = 102;
 					uint16_t maxStrWidth = 76; // wide enough
