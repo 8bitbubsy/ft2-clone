@@ -16,7 +16,7 @@ void handleThreadEvents(void);
 void readInput(void);
 void handleEvents(void);
 void setupCrashHandler(void);
-void handleWaitVblQuirk(SDL_Event *event);
+void handleWindowEvent(SDL_Event *event);
 #ifdef _WIN32
 bool handleSingleInstancing(int32_t argc, char **argv);
 void closeSingleInstancing(void);

@@ -259,7 +259,7 @@ void resetConfig(void)
 	showTopScreen(false);
 	showBottomScreen();
 
-	setWindowSizeFromConfig(true);
+	updateWindowRenderSize();
 	updateImageStretchAndPixelFilter(oldWindowFlags, oldSpecialFlags2);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
@@ -369,7 +369,7 @@ void loadConfig2(void) // called by "Load config" button
 	showTopScreen(false);
 	showBottomScreen();
 
-	setWindowSizeFromConfig(true);
+	updateWindowRenderSize();
 	updateImageStretchAndPixelFilter(oldWindowFlags, oldSpecialFlags2);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
@@ -1962,71 +1962,46 @@ void rbFileSortName(void)
 
 void rbWinSizeAuto(void)
 {
-	if (video.fullscreen)
-	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
-		return;
-	}
-
 	config.windowFlags &= ~(WINSIZE_1X + WINSIZE_2X + WINSIZE_3X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_AUTO;
-	setWindowSizeFromConfig(true);
+	updateWindowRenderSize();
+	resizeWindow(SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_AUTO);
 }
 
 void rbWinSize1x(void)
 {
-	if (video.fullscreen)
-	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
-		return;
-	}
-
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_2X + WINSIZE_3X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_1X;
-	setWindowSizeFromConfig(true);
+	updateWindowRenderSize();
+	resizeWindow(SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_1X);
 }
 
 void rbWinSize2x(void)
 {
-	if (video.fullscreen)
-	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
-		return;
-	}
-
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_1X + WINSIZE_3X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_2X;
-	setWindowSizeFromConfig(true);
+	updateWindowRenderSize();
+	resizeWindow(SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_2X);
 }
 
 void rbWinSize3x(void)
 {
-	if (video.fullscreen)
-	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
-		return;
-	}
-
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_1X + WINSIZE_2X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_3X;
-	setWindowSizeFromConfig(true);
+	updateWindowRenderSize();
+	resizeWindow(SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_3X);
 }
 
 void rbWinSize4x(void)
 {
-	if (video.fullscreen)
-	{
-		okBox(0, "System message", "You can't change the window size while in fullscreen mode!", NULL);
-		return;
-	}
-
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_1X + WINSIZE_2X + WINSIZE_3X);
 	config.windowFlags |= WINSIZE_4X;
-	setWindowSizeFromConfig(true);
+	updateWindowRenderSize();
+	resizeWindow(SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_4X);
 }
 
@@ -2128,32 +2103,20 @@ void cbVsyncOff(void)
 void cbFullScreen(void)
 {
 	config.windowFlags ^= START_IN_FULLSCR;
-
-	if (!(config.dontShowAgainFlags & DONT_SHOW_NOT_YET_APPLIED_WARNING_FLAG))
-		okBox(0, "System message", "This setting is not applied until you close and reopen the program.", configToggleNotYetAppliedWarning);
+	toggleFullscreen();
 }
 
 void cbPixelFilter(void)
 {
 	config.windowFlags ^= PIXEL_FILTER;
-
 	recreateTexture();
-	if (video.fullscreen)
-	{
-		leaveFullscreen();
-		enterFullscreen();
-	}
 }
 
 void cbStretchImage(void)
 {
 	config.specialFlags2 ^= STRETCH_IMAGE;
-
-	if (video.fullscreen)
-	{
-		leaveFullscreen();
-		enterFullscreen();
-	}
+	updateWindowRenderSize();
+	resizeWindow(video.windowW, video.windowH);
 }
 
 void configQuantizeUp(void)

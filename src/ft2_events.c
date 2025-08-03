@@ -1,4 +1,6 @@
 // for finding memory leaks in debug mode with Visual Studio
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_video.h>
 #if defined _DEBUG && defined _MSC_VER
 #include <crtdbg.h>
 #endif
@@ -8,7 +10,7 @@
 #include <windows.h>
 #include <SDL2/SDL_syswm.h>
 #else
-#include <limits.h>
+// #include <limits.h>
 #include <signal.h>
 #include <unistd.h> // chdir()
 #endif
@@ -29,7 +31,7 @@
 #include "ft2_textboxes.h"
 #include "ft2_sysreqs.h"
 #include "ft2_keyboard.h"
-#include "ft2_sample_ed.h"
+// #include "ft2_sample_ed.h"
 #include "ft2_sample_ed_features.h"
 #include "ft2_structs.h"
 
@@ -363,18 +365,69 @@ void setupCrashHandler(void)
 #endif
 }
 
-void handleWaitVblQuirk(SDL_Event *event)
-{
-	if (event->type == SDL_WINDOWEVENT)
-	{
-		if (event->window.event == SDL_WINDOWEVENT_HIDDEN)
-			video.windowHidden = true;
-		else if (event->window.event == SDL_WINDOWEVENT_SHOWN)
-			video.windowHidden = false;
+void quit(void) {
+	if (editor.editTextFlag)
+		exitTextEditing();
 
-		// reset vblank end time if we minimize window
-		if (event->window.event == SDL_WINDOWEVENT_MINIMIZED || event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
-			hpc_ResetCounters(&video.vblankHpc);
+	if (!song.isModified)
+	{
+		editor.throwExit = true;
+	}
+	else
+	{
+		if (!video.fullscreen)
+		{
+			// de-minimize window and set focus so that the user sees the message box
+			if (SDL_GetWindowFlags(video.window) & SDL_WINDOW_MINIMIZED)
+				SDL_RestoreWindow(video.window);
+
+			SDL_RaiseWindow(video.window);
+		}
+
+		if (quitBox(true) == 1)
+			editor.throwExit = true;
+	}
+}
+
+void handleWindowEvent(SDL_Event *event)
+{
+	if (event->type == SDL_WINDOWEVENT) {
+			switch (event->window.event) {
+				case SDL_WINDOWEVENT_HIDDEN:
+					video.windowHidden = true;
+					break;
+				case SDL_WINDOWEVENT_SHOWN:
+					video.windowHidden = false;
+					break;
+				case SDL_WINDOWEVENT_RESIZED:
+				case SDL_WINDOWEVENT_SIZE_CHANGED:
+					resizeWindow(event->window.data1, event->window.data2);
+					break;
+				case SDL_WINDOWEVENT_MAXIMIZED:
+					// printf("maximize event\n");
+					enterFullscreen();
+					break;
+				// reset vblank end time if we minimize window
+				case SDL_WINDOWEVENT_MINIMIZED:
+					hpc_ResetCounters(&video.vblankHpc);
+					break;
+				case SDL_WINDOWEVENT_FOCUS_LOST:
+					hpc_ResetCounters(&video.vblankHpc);
+					break;
+				case SDL_WINDOWEVENT_DISPLAY_CHANGED:
+					updateWindowRenderSize();
+					resizeWindow(video.renderW, video.renderH);
+					break;
+				case SDL_WINDOWEVENT_MOVED:
+					updateWindowRenderSize();
+					break;
+				case SDL_WINDOWEVENT_CLOSE:
+					quit();
+					break;
+				default:
+					// printf("event %u\n", event->window.event);
+					break;
+			}
 	}
 }
 
@@ -387,7 +440,7 @@ static void handleSDLEvents(void)
 
 	while (SDL_PollEvent(&event))
 	{
-		handleWaitVblQuirk(&event);
+		handleWindowEvent(&event);
 
 		if (editor.busy)
 		{
@@ -418,105 +471,78 @@ static void handleSDLEvents(void)
 			continue; // another thread is busy with something, drop input
 		}
 
+		switch (event.type) {
 #ifdef _WIN32
-		if (event.type == SDL_SYSWMEVENT)
-			handleSysMsg(event);
+			case SDL_SYSWMEVENT:
+				handleSysMsg(event);
+				break;
 #endif
 		// text input when editing texts
-		if (event.type == SDL_TEXTINPUT)
-		{
-			if (editor.editTextFlag)
-			{
-				if (keyb.ignoreTextEditKey)
+			case SDL_TEXTINPUT:
+				if (editor.editTextFlag)
 				{
-					keyb.ignoreTextEditKey = false;
-					continue;
+					if (keyb.ignoreTextEditKey)
+					{
+						keyb.ignoreTextEditKey = false;
+						continue;
+					}
+
+					char *inputText = utf8ToCp850(event.text.text, false);
+					if (inputText != NULL)
+					{
+						if (inputText[0] != '\0')
+							handleTextEditInputChar(inputText[0]);
+
+						free(inputText);
+					}
 				}
+				break;
+			case SDL_MOUSEWHEEL:
+				if (event.wheel.y > 0)
+					mouseWheelHandler(MOUSE_WHEEL_UP);
+				else if (event.wheel.y < 0)
+					mouseWheelHandler(MOUSE_WHEEL_DOWN);
+				break;
+			case SDL_DROPFILE:
+				editor.autoPlayOnDrop = false;
 
-				char *inputText = utf8ToCp850(event.text.text, false);
-				if (inputText != NULL)
-				{
-					if (inputText[0] != '\0')
-						handleTextEditInputChar(inputText[0]);
-
-					free(inputText);
-				}
-			}
-		}
-		else if (event.type == SDL_MOUSEWHEEL)
-		{
-			if (event.wheel.y > 0)
-				mouseWheelHandler(MOUSE_WHEEL_UP);
-			else if (event.wheel.y < 0)
-				mouseWheelHandler(MOUSE_WHEEL_DOWN);
-		}
-		else if (event.type == SDL_DROPFILE)
-		{
-			editor.autoPlayOnDrop = false;
-
-			if (!video.fullscreen)
-			{
-				if (SDL_GetWindowFlags(video.window) & SDL_WINDOW_MINIMIZED)
-					SDL_RestoreWindow(video.window);
-
-				SDL_RaiseWindow(video.window);
-			}
-
-			loadDroppedFile(event.drop.file, true);
-			SDL_free(event.drop.file);
-		}
-		else if (event.type == SDL_QUIT)
-		{
-			if (ui.sysReqShown)
-				continue;
-
-			if (editor.editTextFlag)
-				exitTextEditing();
-
-			if (!song.isModified)
-			{
-				editor.throwExit = true;
-			}
-			else
-			{
 				if (!video.fullscreen)
 				{
-					// de-minimize window and set focus so that the user sees the message box
 					if (SDL_GetWindowFlags(video.window) & SDL_WINDOW_MINIMIZED)
 						SDL_RestoreWindow(video.window);
 
 					SDL_RaiseWindow(video.window);
 				}
 
-				if (quitBox(true) == 1)
-					editor.throwExit = true;
-			}
-		}
-		else if (event.type == SDL_KEYUP)
-		{
-			keyUpHandler(event.key.keysym.scancode, event.key.keysym.sym);
-		}
-		else if (event.type == SDL_KEYDOWN)
-		{
-			keyDownHandler(event.key.keysym.scancode, event.key.keysym.sym, event.key.repeat);
-		}
-		else if (event.type == SDL_MOUSEBUTTONUP)
-		{
-			mouseButtonUpHandler(event.button.button);
+				loadDroppedFile(event.drop.file, true);
+				SDL_free(event.drop.file);
+				break;
+			case SDL_QUIT:
+				if (ui.sysReqShown)
+					continue;
+				quit();
+				break;
+			case SDL_KEYUP:
+				keyUpHandler(event.key.keysym.scancode, event.key.keysym.sym);
+				break;
+			case SDL_KEYDOWN:
+				keyDownHandler(event.key.keysym.scancode, event.key.keysym.sym, event.key.repeat);
+				break;
+			case SDL_MOUSEBUTTONUP:
+				mouseButtonUpHandler(event.button.button);
 #if defined __APPLE__ && defined __aarch64__
-			armMacGhostMouseCursorFix();
+				armMacGhostMouseCursorFix();
+#endif
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				mouseButtonDownHandler(event.button.button);
+			break;
+#if defined __APPLE__ && defined __aarch64__
+			case SDL_MOUSEMOTION:
+				armMacGhostMouseCursorFix();
+				break;
 #endif
 		}
-		else if (event.type == SDL_MOUSEBUTTONDOWN)
-		{
-			mouseButtonDownHandler(event.button.button);
-		}
-#if defined __APPLE__ && defined __aarch64__
-		else if (event.type == SDL_MOUSEMOTION)
-		{
-			armMacGhostMouseCursorFix();
-		}
-#endif
 
 		if (editor.throwExit)
 			editor.programRunning = false;

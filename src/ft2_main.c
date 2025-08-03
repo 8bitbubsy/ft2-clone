@@ -3,15 +3,15 @@
 #include <crtdbg.h>
 #endif
 
-#include <stdio.h>
+// #include <stdio.h>
 #include <stdint.h>
-#include <math.h> // modf()
+// #include <math.h> // modf()
+#include <unistd.h> // chdir()
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
 #include <windows.h>
 #include <SDL2/SDL_syswm.h>
 #else
-#include <unistd.h> // chdir()
 #endif
 #include "ft2_header.h"
 #include "ft2_gui.h"
@@ -24,10 +24,10 @@
 #include "ft2_diskop.h"
 #include "scopes/ft2_scopes.h"
 #include "scopes/ft2_scopedraw.h"
-#include "ft2_about.h"
+// #include "ft2_about.h"
 #include "ft2_pattern_ed.h"
 #include "ft2_module_loader.h"
-#include "ft2_sampling.h"
+// #include "ft2_sampling.h"
 #include "ft2_audioselector.h"
 #include "ft2_help.h"
 #include "ft2_midi.h"
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
 
 	loadConfigOrSetDefaults(); // config must be loaded at this exact point
 
-	if (!setupWindow() || !setupRenderer())
+	if (!initWindow() || !setupRenderer())
 	{
 		// error message was shown in the functions above
 		cleanUpAndExit();

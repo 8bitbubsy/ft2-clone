@@ -21,9 +21,9 @@ typedef struct video_t
 {
 	bool fullscreen, showFPSCounter, useCustomRenderRect, vsync60HzPresent, windowHidden;
 	uint8_t windowModeUpscaleFactor;
-	int32_t renderX, renderY, renderW, renderH, displayW, displayH, windowW, windowH;
+	int32_t renderX, renderY, renderW, renderH, displayW, displayH, windowW, windowH, displayIndex;
 	uint32_t mouseCursorUpscaleFactor, *frameBuffer, palette[PAL_NUM];
-	double dMonitorRefreshRate, dDpiZoomFactorX, dDpiZoomFactorY, dMouseXMul, dMouseYMul;
+	double dMonitorRefreshRate, dDpiZoomFactorX, dDpiZoomFactorY, widthRatio, heightRatio;
 #ifdef _WIN32
 	HWND hWnd;
 #endif
@@ -53,7 +53,9 @@ void flipFrame(void);
 void showErrorMsgBox(const char *fmt, ...);
 void updateWindowTitle(bool forceUpdate);
 void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatus);
-bool setupWindow(void);
+bool initWindow(void);
+void resizeWindow(uint32_t w, uint32_t h);
+void updateWindowRenderSize(void);
 bool setupRenderer(void);
 void closeVideo(void);
 void setLeftLoopPinState(bool clicked);
@@ -70,6 +72,5 @@ void hideSprite(int32_t sprite);
 void handleRedrawing(void);
 void enterFullscreen(void);
 void leaveFullscreen(void);
-void setWindowSizeFromConfig(bool updateRenderer);
 bool recreateTexture(void);
 void toggleFullscreen(void);

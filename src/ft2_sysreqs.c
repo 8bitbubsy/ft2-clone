@@ -291,7 +291,7 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 
 		while (SDL_PollEvent(&inputEvent))
 		{
-			handleWaitVblQuirk(&inputEvent);
+			handleWindowEvent(&inputEvent);
 
 			if (inputEvent.type == SDL_KEYDOWN)
 			{
@@ -516,7 +516,7 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 
 		while (SDL_PollEvent(&inputEvent))
 		{
-			handleWaitVblQuirk(&inputEvent);
+			handleWindowEvent(&inputEvent);
 
 			if (inputEvent.type == SDL_TEXTINPUT)
 			{
