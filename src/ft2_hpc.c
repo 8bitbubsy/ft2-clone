@@ -1,5 +1,5 @@
 /*
-** Hardware Performance Counter delay routines by 8bitbubsy.
+** Hardware Performance Counter delay routines.
 **
 ** These are by no means well written, and are made for specific
 ** usage cases. There may be some hackish design choices here.
