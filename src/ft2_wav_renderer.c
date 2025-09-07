@@ -201,7 +201,10 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 	if (wavRenderBuffer == NULL)
 		return false;
 
+	// wait for main audio callback to catch WAV render flag
 	editor.wavIsRendering = true;
+	while (audio.callbackOngoing)
+		SDL_Delay(5);
 
 	setPos(songPos, 0, true);
 	playMode = PLAYMODE_SONG;

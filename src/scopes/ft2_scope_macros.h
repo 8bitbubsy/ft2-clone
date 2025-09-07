@@ -25,13 +25,11 @@
 
 #define LINED_SCOPE_INIT \
 	SCOPE_INIT \
-	float fSample; \
 	int32_t smpY1, smpY2; \
 	width--;
 
 #define LINED_SCOPE_INIT_BIDI \
 	SCOPE_INIT_BIDI \
-	float fSample; \
 	int32_t smpY1, smpY2; \
 	width--;
 
@@ -41,41 +39,41 @@
 
 #define NEAREST_NEIGHGBOR8 \
 { \
-	fSample = s8[0]; \
+	sample = s8[0] << 8; \
 } \
 
 #define LINEAR_INTERPOLATION8(frac) \
 { \
-	const float f = (frac) * (1.0f / SCOPE_FRAC_SCALE); \
-	fSample = s8[0] + ((s8[1] - s8[0]) * f); \
+	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
+	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
 } \
 
 #define NEAREST_NEIGHGBOR16 \
 { \
-	fSample = s16[0]; \
+	sample = s16[0]; \
 } \
 
 #define LINEAR_INTERPOLATION16(frac) \
 { \
-	const float f = (frac) * (1.0f / SCOPE_FRAC_SCALE); \
-	fSample = s16[0] + ((s16[1] - s16[0]) * f); \
+	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
+	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
 } \
 
 #define CUBIC_SMP8(frac) \
-	const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
 	\
-	fSample = (s8[-1] * t[0]) + \
+	sample = ((s8[-1] * t[0]) + \
 	          ( s8[0] * t[1]) + \
 	          ( s8[1] * t[2]) + \
-	          ( s8[2] * t[3]);
+	          ( s8[2] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8);
 
 #define CUBIC_SMP16(frac) \
-	const float *t = fScopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
 	\
-	fSample = (s16[-1] * t[0]) + \
+	sample = ((s16[-1] * t[0]) + \
 	          ( s16[0] * t[1]) + \
 	          ( s16[1] * t[2]) + \
-	          ( s16[2] * t[3]);
+	          ( s16[2] * t[3])) >> SCOPE_INTRP_SCALE_BITS;
 
 #define CUBIC_INTERPOLATION8(frac) \
 { \
@@ -111,7 +109,7 @@
 		LINEAR_INTERPOLATION8(frac) \
 	else \
 		CUBIC_INTERPOLATION8(frac) \
-	sample = (int32_t)((fSample * s->fVolume8) - 0.5f);
+	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -121,7 +119,7 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		CUBIC_INTERPOLATION16(frac) \
-	sample = (int32_t)((fSample * s->fVolume16) - 0.5f);
+	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP8_LOOP(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
@@ -131,7 +129,7 @@
 		LINEAR_INTERPOLATION8(frac) \
 	else \
 		CUBIC_INTERPOLATION8_LOOP(pos, frac) \
-	sample = (int32_t)((fSample * s->fVolume8) - 0.5f);
+	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16_LOOP(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -141,17 +139,17 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		CUBIC_INTERPOLATION16_LOOP(pos, frac) \
-	sample = (int32_t)((fSample * s->fVolume16) - 0.5f);
+	sample = (sample * s->volume) >> (16+2);
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
-		sample = (int32_t)((s->base8[position] * s->fVolume8) - 0.5f); \
+		sample = (s->base8[position] * s->volume) >> (8+2); \
 	else \
 		sample = 0;
 
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
-		sample = (int32_t)((s->base16[position] * s->fVolume16) - 0.5f); \
+		sample = (s->base16[position] * s->volume) >> (16+2); \
 	else \
 		sample = 0;
 
@@ -159,7 +157,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (int32_t)((s->base8[actualPos] * s->fVolume8) - 0.5f); \
+		sample = (s->base8[actualPos] * s->volume) >> (8+2); \
 	} \
 	else \
 	{ \
@@ -170,7 +168,7 @@
 	if (s->active) \
 	{ \
 		GET_BIDI_POSITION \
-		sample = (int32_t)((s->base16[actualPos] * s->fVolume16) - 0.5f); \
+		sample = (s->base16[actualPos] * s->volume) >> (16+2); \
 	} \
 	else \
 	{ \

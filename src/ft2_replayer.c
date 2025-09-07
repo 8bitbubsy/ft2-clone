@@ -3145,6 +3145,7 @@ void stopVoices(void)
 	editor.curPlaySmp = 255;
 
 	stopAllScopes();
+	resetAudioDither();
 
 	// wait for scope thread to finish, making sure pointers aren't illegal
 	while (editor.scopeThreadBusy);

@@ -23,10 +23,13 @@
 #pragma warning(disable: 4996)
 #endif
 
+#define INITIAL_DITHER_SEED 0x12345000
+
 static int32_t smpShiftValue;
-static uint32_t oldAudioFreq, tickTimeLenInt;
+static uint32_t oldAudioFreq, tickTimeLenInt, randSeed = INITIAL_DITHER_SEED;
 static uint64_t tickTimeLenFrac;
-static float fAudioNormalizeMul, fSqrtPanningTable[256+1];
+static float fSqrtPanningTable[256+1];
+static double dAudioNormalizeMul, dPrngStateL, dPrngStateR;
 static voice_t voice[MAX_CHANNELS * 2];
 
 // globalized
@@ -104,7 +107,7 @@ void setAudioAmp(int16_t amp, int16_t masterVol, bool bitDepth32Flag)
 	if (!bitDepth32Flag)
 		dAmp *= 32768.0;
 
-	fAudioNormalizeMul = (float)dAmp;
+	dAudioNormalizeMul = dAmp;
 }
 
 void decreaseMasterVol(void)
@@ -368,7 +371,7 @@ void updateVoices(void)
 		if (status & IS_Vol)
 		{
 			v->fVolume = ch->fFinalVol; // 0.0f .. 1.0f
-			v->scopeVolume = (uint8_t)(v->fVolume * 255.0f);
+			v->scopeVolume = (uint8_t)((ch->fFinalVol * (SCOPE_HEIGHT*4.0f)) + 0.5f);
 		}
 
 		if (status & IS_Pan)
@@ -400,19 +403,46 @@ void updateVoices(void)
 	}
 }
 
+void resetAudioDither(void)
+{
+	randSeed = INITIAL_DITHER_SEED;
+	dPrngStateL = dPrngStateR = 0.0;
+}
+
+static inline int32_t random32(void)
+{
+	// LCG 32-bit random
+	randSeed *= 134775813;
+	randSeed++;
+
+	return (int32_t)randSeed;
+}
+
 static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 {
+	int32_t out32;
+	double dOut, dPrng;
+
 	int16_t *streamPtr16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
-		int32_t L = (int32_t)(audio.fMixBufferL[i] * fAudioNormalizeMul);
-		int32_t R = (int32_t)(audio.fMixBufferR[i] * fAudioNormalizeMul);
+		// left channel - 1-bit triangular dithering
+		dPrng = random32() * (1.0 / (UINT32_MAX+1.0)); // -0.5 .. 0.5
+		dOut = (double)audio.fMixBufferL[i] * dAudioNormalizeMul;
+		dOut = (dOut + dPrng) - dPrngStateL;
+		dPrngStateL = dPrng;
+		out32 = (int32_t)dOut;
+		CLAMP16(out32);
+		*streamPtr16++ = (int16_t)out32;
 
-		CLAMP16(L);
-		CLAMP16(R);
-
-		*streamPtr16++ = (int16_t)L;
-		*streamPtr16++ = (int16_t)R;
+		// right channel - 1-bit triangular dithering
+		dPrng = random32() * (1.0 / (UINT32_MAX+1.0)); // -0.5 .. 0.5
+		dOut = (double)audio.fMixBufferR[i] * dAudioNormalizeMul;
+		dOut = (dOut + dPrng) - dPrngStateR;
+		dPrngStateR = dPrng;
+		out32 = (int32_t)dOut;
+		CLAMP16(out32);
+		*streamPtr16++ = (int16_t)out32;
 
 		// clear what we read from the mixing buffer
 		audio.fMixBufferL[i] = audio.fMixBufferR[i] = 0.0f;
@@ -421,14 +451,20 @@ static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 
 static void sendSamples32BitFloatStereo(void *stream, uint32_t sampleBlockLength)
 {
+	double dOut;
+
 	float *fStreamPtr32 = (float *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
-		const float fL = audio.fMixBufferL[i] * fAudioNormalizeMul;
-		const float fR = audio.fMixBufferR[i] * fAudioNormalizeMul;
+		// left channel
+		dOut = (double)audio.fMixBufferL[i] * dAudioNormalizeMul;
+		dOut = CLAMP(dOut, -1.0, 1.0);
+		*fStreamPtr32++ = (float)dOut;
 
-		*fStreamPtr32++ = CLAMP(fL, -1.0f, 1.0f);
-		*fStreamPtr32++ = CLAMP(fR, -1.0f, 1.0f);
+		// right channel
+		dOut = (double)audio.fMixBufferR[i] * dAudioNormalizeMul;
+		dOut = CLAMP(dOut, -1.0, 1.0);
+		*fStreamPtr32++ = (float)dOut;
 
 		// clear what we read from the mixing buffer
 		audio.fMixBufferL[i] = audio.fMixBufferR[i] = 0.0f;
@@ -794,11 +830,16 @@ static void fillVisualsSyncBuffer(void)
 static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 {
 	if (editor.wavIsRendering)
+	{
+		memset(stream, 0, len);
 		return;
+	}
 
 	len >>= smpShiftValue; // bytes -> samples
 	if (len <= 0)
 		return;
+
+	audio.callbackOngoing = true;
 
 	int32_t bufferPosition = 0;
 
@@ -844,6 +885,8 @@ static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
 		sendSamples16BitStereo(stream, len);
 	else
 		sendSamples32BitFloatStereo(stream, len);
+
+	audio.callbackOngoing = false;
 
 	(void)userdata;
 }
@@ -1064,4 +1107,6 @@ void closeAudio(void)
 	}
 
 	freeAudioBuffers();
+
+	audio.callbackOngoing = false;
 }

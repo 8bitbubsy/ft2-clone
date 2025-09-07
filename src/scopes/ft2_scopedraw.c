@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 #include "../ft2_config.h"
 #include "../ft2_video.h"
 #include "../ft2_palette.h"
@@ -9,14 +10,14 @@
 #include "ft2_scopedraw.h"
 #include "ft2_scope_macros.h"
 
-static float *fScopeIntrpLUT;
+static int16_t *scopeIntrpLUT;
 
 static void scopeLine(int32_t x1, int32_t y1, int32_t y2, const uint32_t color);
 
 bool calcScopeIntrpLUT(void)
 {
-	fScopeIntrpLUT = (float *)malloc(SCOPE_INTRP_WIDTH * SCOPE_INTRP_PHASES * sizeof (float));
-	if (fScopeIntrpLUT == NULL)
+	scopeIntrpLUT = (int16_t *)malloc(SCOPE_INTRP_WIDTH * SCOPE_INTRP_PHASES * sizeof (int16_t));
+	if (scopeIntrpLUT == NULL)
 		return false;
 
 	/* Several tests have been done to figure out what interpolation method is most suitable
@@ -26,7 +27,8 @@ bool calcScopeIntrpLUT(void)
 	*/
 
 	// 4-point cubic B-spline (no overshoot)
-	float *fPtr = fScopeIntrpLUT;
+
+	int16_t *ptr16 = scopeIntrpLUT;
 	for (int32_t i = 0; i < SCOPE_INTRP_PHASES; i++)
 	{
 		const double x1 = i * (1.0 / SCOPE_INTRP_PHASES);
@@ -38,10 +40,11 @@ bool calcScopeIntrpLUT(void)
 		const double t3 = (x1 *  (1.0/2.0)) + (x2 * (1.0/2.0)) + (x3 * -(1.0/2.0)) + (1.0/6.0);
 		const double t4 =                                         x3 *  (1.0/6.0);
 
-		*fPtr++ = (float)t1; // tap #1 at sample offset -1
-		*fPtr++ = (float)t2; // tap #2 at sample offset  0 (center)
-		*fPtr++ = (float)t3; // tap #3 at sample offset  1
-		*fPtr++ = (float)t4; // tap #4 at sample offset  2
+		// truncate, do not round!
+		*ptr16++ = (int16_t)(t1 * SCOPE_INTRP_SCALE); // tap #1 at sample offset -1
+		*ptr16++ = (int16_t)(t2 * SCOPE_INTRP_SCALE); // tap #2 at sample offset  0 (center)
+		*ptr16++ = (int16_t)(t3 * SCOPE_INTRP_SCALE); // tap #3 at sample offset  1
+		*ptr16++ = (int16_t)(t4 * SCOPE_INTRP_SCALE); // tap #4 at sample offset  2
 	}
 
 	return true;
@@ -49,10 +52,10 @@ bool calcScopeIntrpLUT(void)
 
 void freeScopeIntrpLUT(void)
 {
-	if (fScopeIntrpLUT != NULL)
+	if (scopeIntrpLUT != NULL)
 	{
-		free(fScopeIntrpLUT);
-		fScopeIntrpLUT = NULL;
+		free(scopeIntrpLUT);
+		scopeIntrpLUT = NULL;
 	}
 }
 
