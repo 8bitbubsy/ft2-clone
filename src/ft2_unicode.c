@@ -4,7 +4,7 @@
 #endif
 
 // for detecting if musl or glibc is used
-#ifndef _WIN32
+#if !defined _WIN32 && !defined __APPLE__
 	#ifndef _GNU_SOURCE
 		#define _GNU_SOURCE
 	  #include <features.h>
