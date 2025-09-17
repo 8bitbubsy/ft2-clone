@@ -1,4 +1,7 @@
-/* IFF (Amiga/FT2) sample loader
+/* IFF (Amiga/FT2) sample loader.
+**
+** Intentionally avoids reading the sample volume from the IFF header,
+** as the IFF vol range can differ depending on the software used.
 **
 ** Note: Vol/loop sanitation is done in the last stage
 ** of sample loading, so you don't need to do that here.
@@ -17,7 +20,7 @@
 bool loadIFF(FILE *f, uint32_t filesize)
 {
 	char hdr[4+1];
-	uint32_t length, volume, loopStart, loopLength, sampleRate;
+	uint32_t length, loopStart, loopLength, sampleRate;
 	sample_t *s = &tmpSmp;
 
 	if (filesize < 12)
@@ -100,12 +103,6 @@ bool loadIFF(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	fread(&volume, 4, 1, f); volume = SWAP32(volume);
-	if (volume > 65535)
-		volume = 65535;
-
-	volume = (volume + 512) / 1024; // rounded
-
 	length = bodyLen;
 	if (sample16Bit)
 	{
@@ -140,7 +137,7 @@ bool loadIFF(FILE *f, uint32_t filesize)
 	if (sample16Bit)
 		s->flags |= SAMPLE_16BIT;
 
-	s->volume = (uint8_t)volume;
+	s->volume = 64;
 	s->panning = 128;
 
 	setSampleC4Hz(s, sampleRate);
