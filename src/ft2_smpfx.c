@@ -777,7 +777,7 @@ void sfxPreviewFilter(uint32_t cutoff)
 	ch->realVol = ch->outVol = ch->oldVol = 64;
 	updateVolPanAutoVib(ch);
 
-	while (ch->status & IS_Trigger); // wait for sample to latch in mixer
+	while (ch->status & CS_TRIGGER_VOICE); // wait for voice to trigger in mixer
 	SDL_Delay(1500); // wait 1.5 seconds
 
 	// we're done, stop voice and free temporary data

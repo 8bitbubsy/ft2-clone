@@ -237,11 +237,10 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 
 	// now we need to handle volume ramping
 
-	const bool voiceSampleTrigger = !!(status & IS_Trigger);
-
-	if (voiceSampleTrigger)
+	const bool voiceTriggerFlag = !!(status & CS_TRIGGER_VOICE);
+	if (voiceTriggerFlag)
 	{
-		// sample is about to start, ramp out/in at the same time
+		// voice is about to start, ramp out/in at the same time
 
 		if (v->fCurrVolumeL > 0.0f || v->fCurrVolumeR > 0.0f)
 		{
@@ -265,7 +264,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 		v->fCurrVolumeL = v->fCurrVolumeR = 0.0f;
 	}
 
-	if (!voiceSampleTrigger && v->fTargetVolumeL == v->fCurrVolumeL && v->fTargetVolumeR == v->fCurrVolumeR)
+	if (!voiceTriggerFlag && v->fTargetVolumeL == v->fCurrVolumeL && v->fTargetVolumeR == v->fCurrVolumeR)
 	{
 		v->volumeRampLength = 0; // no ramp needed for now
 	}
@@ -275,7 +274,7 @@ static void voiceUpdateVolumes(int32_t i, uint8_t status)
 		const float fVolumeRDiff = v->fTargetVolumeR - v->fCurrVolumeR;
 
 		float fRampLengthMul;
-		if (status & IS_QuickVol) // duration of 5ms
+		if (status & CS_USE_QUICK_VOLRAMP) // 5ms duration
 		{
 			v->volumeRampLength = audio.quickVolRampSamples;
 			fRampLengthMul = audio.fQuickVolRampSamplesMul;
@@ -368,19 +367,19 @@ void updateVoices(void)
 
 		ch->status = 0;
 
-		if (status & IS_Vol)
+		if (status & CS_UPDATE_VOL)
 		{
 			v->fVolume = ch->fFinalVol; // 0.0f .. 1.0f
 			v->scopeVolume = (uint8_t)((ch->fFinalVol * (SCOPE_HEIGHT*4.0f)) + 0.5f);
 		}
 
-		if (status & IS_Pan)
+		if (status & CS_UPDATE_PAN)
 			v->panning = ch->finalPan;
 
-		if (status & (IS_Vol + IS_Pan))
+		if (status & (CS_UPDATE_VOL + CS_UPDATE_PAN)) // for vol and/or pan updates
 			voiceUpdateVolumes(i, status);
 
-		if (status & IS_Period)
+		if (status & CF_UPDATE_PERIOD)
 		{
 			const double dVoiceHz = dPeriod2Hz(ch->finalPeriod);
 
@@ -398,7 +397,7 @@ void updateVoices(void)
 			}
 		}
 
-		if (status & IS_Trigger)
+		if (status & CS_TRIGGER_VOICE)
 			voiceTrigger(i, ch->smpPtr, ch->smpStartPos);
 	}
 }
@@ -806,7 +805,7 @@ static void fillVisualsSyncBuffer(void)
 		c->smpStartPos = s->smpStartPos;
 
 		c->pianoNoteNum = 255; // no piano key
-		if (songPlaying && ui.instEditorShown && (c->status & IS_Period) && !s->keyOff)
+		if (songPlaying && ui.instEditorShown && (c->status & CF_UPDATE_PERIOD) && !s->keyOff)
 		{
 			const int32_t note = getPianoKey(s->finalPeriod, s->finetune, s->relativeNote);
 			if (note >= 0 && note <= 95)

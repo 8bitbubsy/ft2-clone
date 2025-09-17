@@ -9,12 +9,12 @@
 
 enum
 {
-	// voice flags
-	IS_Vol = 1, // set volume
-	IS_Period = 2, // set resampling rate
-	IS_Trigger = 4, // trigger sample
-	IS_Pan = 8, // set panning
-	IS_QuickVol = 16, // 5ms volramp instead of tick ms
+	// channel/voice status flags
+	CS_UPDATE_VOL = 1,
+	CF_UPDATE_PERIOD = 2,
+	CS_TRIGGER_VOICE = 4,
+	CS_UPDATE_PAN = 8,
+	CS_USE_QUICK_VOLRAMP = 16, // use 5ms vol. ramp instead of the duration of a tick
 
 	LOOP_DISABLED = 0,
 	LOOP_FORWARD = 1,
@@ -240,7 +240,7 @@ typedef struct instr_t
 
 typedef struct channel_t
 {
-	bool keyOff, channelOff, mute, portaSemitoneSlides;
+	bool keyOff, channelOff, mute, semitonePortaMode;
 	volatile uint8_t status, tmpStatus;
 	int8_t relativeNote, finetune;
 	uint8_t smpNum, instrNum, efxData, efx, sampleOffset, tremorParam, tremorPos;
