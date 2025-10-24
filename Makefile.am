@@ -114,11 +114,16 @@ ft2_clone_SOURCES += \
 endif
 
 # Compiler flags
-AM_CFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@
-AM_CXXFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@
+AM_CFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@ @ZLIB_CFLAGS@
+AM_CXXFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@ @ZLIB_CFLAGS@
 
 # Linker flags
-ft2_clone_LDADD = @SDL2_LIBS@ @ALSA_LIBS@ @FLAC_LIBS@ @COREAUDIO_LIBS@ -lpthread -lm -lstdc++ -liconv
+ft2_clone_LDADD = @SDL2_LIBS@ @ALSA_LIBS@ @FLAC_LIBS@ @COREAUDIO_LIBS@ @ZLIB_LIBS@ -lpthread -lm -liconv
+
+# Platform-specific linker flags
+if PLATFORM_DARWIN
+ft2_clone_LDADD += -lstdc++
+endif
 
 # Platform-specific flags
 if PLATFORM_LINUX

@@ -26,6 +26,15 @@ AC_SUBST([SDL2_CFLAGS])
 AC_SUBST([SDL2_LIBS])
 PKG_CHECK_MODULES([SDL2], [sdl2])
 
+# Check for zlib (optional, for better compatibility)
+AC_SUBST([ZLIB_CFLAGS])
+AC_SUBST([ZLIB_LIBS])
+PKG_CHECK_MODULES([ZLIB], [zlib], [has_zlib=yes], [has_zlib=no])
+if test "x$has_zlib" = "xno"; then
+    ZLIB_CFLAGS=""
+    ZLIB_LIBS=""
+fi
+
 # Platform detection
 AC_CANONICAL_HOST
 

@@ -113,20 +113,23 @@ bin_PROGRAMS = ft2-clone$(EXEEXT)
 @HAS_LIBFLAC_TRUE@	src/libflac/windows_unicode_filenames.c
 
 
+# Platform-specific linker flags
+@PLATFORM_DARWIN_TRUE@am__append_2 = -lstdc++
+
 # Platform-specific flags
-@PLATFORM_LINUX_TRUE@am__append_2 = -D__LINUX_ALSA__
-@PLATFORM_DARWIN_TRUE@am__append_3 = -D__MACOSX_CORE__
-@PLATFORM_DARWIN_TRUE@am__append_4 = -stdlib=libc++
+@PLATFORM_LINUX_TRUE@am__append_3 = -D__LINUX_ALSA__
+@PLATFORM_DARWIN_TRUE@am__append_4 = -D__MACOSX_CORE__
+@PLATFORM_DARWIN_TRUE@am__append_5 = -stdlib=libc++
 
 # Platform-specific source files
-@PLATFORM_LINUX_TRUE@am__append_5 = src/rtmidi/rtmidi_c.cpp src/rtmidi/RtMidi.cpp
-@PLATFORM_DARWIN_TRUE@am__append_6 = src/rtmidi/rtmidi_c.cpp src/rtmidi/RtMidi.cpp
+@PLATFORM_LINUX_TRUE@am__append_6 = src/rtmidi/rtmidi_c.cpp src/rtmidi/RtMidi.cpp
+@PLATFORM_DARWIN_TRUE@am__append_7 = src/rtmidi/rtmidi_c.cpp src/rtmidi/RtMidi.cpp
 
 # Debug flags
-@DEBUG_TRUE@am__append_7 = -g -DDEBUG
 @DEBUG_TRUE@am__append_8 = -g -DDEBUG
-@DEBUG_FALSE@am__append_9 = -DNDEBUG
+@DEBUG_TRUE@am__append_9 = -g -DDEBUG
 @DEBUG_FALSE@am__append_10 = -DNDEBUG
+@DEBUG_FALSE@am__append_11 = -DNDEBUG
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -250,7 +253,8 @@ am_ft2_clone_OBJECTS = src/ft2_about.$(OBJEXT) src/ft2_audio.$(OBJEXT) \
 	src/smploaders/ft2_load_wav.$(OBJEXT) $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3)
 ft2_clone_OBJECTS = $(am_ft2_clone_OBJECTS)
-ft2_clone_DEPENDENCIES =
+am__DEPENDENCIES_1 =
+ft2_clone_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -384,9 +388,8 @@ am__define_uniq_tagged_files = \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
 AM_RECURSIVE_TARGETS = cscope
-am__DIST_COMMON = $(srcdir)/Makefile.in AUTHORS COPYING ChangeLog \
-	INSTALL NEWS README.md compile config.guess config.sub depcomp \
-	install-sh missing
+am__DIST_COMMON = $(srcdir)/Makefile.in NEWS README.md compile \
+	config.guess config.sub depcomp install-sh missing
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -468,6 +471,8 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+ZLIB_CFLAGS = @ZLIB_CFLAGS@
+ZLIB_LIBS = @ZLIB_LIBS@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -564,16 +569,18 @@ ft2_clone_SOURCES = src/ft2_about.c src/ft2_audio.c \
 	src/smploaders/ft2_load_aiff.c src/smploaders/ft2_load_brr.c \
 	src/smploaders/ft2_load_flac.c src/smploaders/ft2_load_iff.c \
 	src/smploaders/ft2_load_raw.c src/smploaders/ft2_load_wav.c \
-	$(am__append_1) $(am__append_5) $(am__append_6)
+	$(am__append_1) $(am__append_6) $(am__append_7)
 
 # Compiler flags
-AM_CFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@ $(am__append_2) \
-	$(am__append_3) $(am__append_7) $(am__append_9)
-AM_CXXFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@ \
-	$(am__append_4) $(am__append_8) $(am__append_10)
+AM_CFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@ @ZLIB_CFLAGS@ \
+	$(am__append_3) $(am__append_4) $(am__append_8) \
+	$(am__append_10)
+AM_CXXFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@ @ZLIB_CFLAGS@ \
+	$(am__append_5) $(am__append_9) $(am__append_11)
 
 # Linker flags
-ft2_clone_LDADD = @SDL2_LIBS@ @ALSA_LIBS@ @FLAC_LIBS@ @COREAUDIO_LIBS@ -lpthread -lm -lstdc++ -liconv
+ft2_clone_LDADD = @SDL2_LIBS@ @ALSA_LIBS@ @FLAC_LIBS@ @COREAUDIO_LIBS@ \
+	@ZLIB_LIBS@ -lpthread -lm -liconv $(am__append_2)
 
 # Clean targets
 CLEANFILES = ft2-clone

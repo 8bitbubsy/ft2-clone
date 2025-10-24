@@ -637,6 +637,8 @@ build_os
 build_vendor
 build_cpu
 build
+ZLIB_LIBS
+ZLIB_CFLAGS
 SDL2_LIBS
 SDL2_CFLAGS
 PKG_CONFIG_LIBDIR
@@ -761,6 +763,8 @@ PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
 SDL2_CFLAGS
 SDL2_LIBS
+ZLIB_CFLAGS
+ZLIB_LIBS
 ALSA_CFLAGS
 ALSA_LIBS
 FLAC_CFLAGS
@@ -1423,6 +1427,8 @@ Some influential environment variables:
               path overriding pkg-config's built-in search path
   SDL2_CFLAGS C compiler flags for SDL2, overriding pkg-config
   SDL2_LIBS   linker flags for SDL2, overriding pkg-config
+  ZLIB_CFLAGS C compiler flags for ZLIB, overriding pkg-config
+  ZLIB_LIBS   linker flags for ZLIB, overriding pkg-config
   ALSA_CFLAGS C compiler flags for ALSA, overriding pkg-config
   ALSA_LIBS   linker flags for ALSA, overriding pkg-config
   FLAC_CFLAGS C compiler flags for FLAC, overriding pkg-config
@@ -5530,6 +5536,85 @@ else
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
+fi
+
+# Check for zlib (optional, for better compatibility)
+
+
+
+pkg_failed=no
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for zlib" >&5
+printf %s "checking for zlib... " >&6; }
+
+if test -n "$ZLIB_CFLAGS"; then
+    pkg_cv_ZLIB_CFLAGS="$ZLIB_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"zlib\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "zlib") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_ZLIB_CFLAGS=`$PKG_CONFIG --cflags "zlib" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$ZLIB_LIBS"; then
+    pkg_cv_ZLIB_LIBS="$ZLIB_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"zlib\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "zlib") 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_ZLIB_LIBS=`$PKG_CONFIG --libs "zlib" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+                ZLIB_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "zlib" 2>&1`
+        else
+                ZLIB_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "zlib" 2>&1`
+        fi
+        # Put the nasty error message in config.log where it belongs
+        echo "$ZLIB_PKG_ERRORS" >&5
+
+        has_zlib=no
+elif test $pkg_failed = untried; then
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+        has_zlib=no
+else
+        ZLIB_CFLAGS=$pkg_cv_ZLIB_CFLAGS
+        ZLIB_LIBS=$pkg_cv_ZLIB_LIBS
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+        has_zlib=yes
+fi
+if test "x$has_zlib" = "xno"; then
+    ZLIB_CFLAGS=""
+    ZLIB_LIBS=""
 fi
 
 # Platform detection
