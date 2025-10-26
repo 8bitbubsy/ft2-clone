@@ -118,11 +118,11 @@ AM_CFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@ @ZLIB_CFLAGS@
 AM_CXXFLAGS = @SDL2_CFLAGS@ @ALSA_CFLAGS@ @FLAC_CFLAGS@ @ZLIB_CFLAGS@
 
 # Linker flags
-ft2_clone_LDADD = @SDL2_LIBS@ @ALSA_LIBS@ @FLAC_LIBS@ @COREAUDIO_LIBS@ @ZLIB_LIBS@ -lpthread -lm -liconv
+ft2_clone_LDADD = @SDL2_LIBS@ @ALSA_LIBS@ @FLAC_LIBS@ @COREAUDIO_LIBS@ @ZLIB_LIBS@ -lpthread -lm
 
 # Platform-specific linker flags
 if PLATFORM_DARWIN
-ft2_clone_LDADD += -lstdc++
+ft2_clone_LDADD += -liconv -lstdc++
 endif
 
 # Platform-specific flags
