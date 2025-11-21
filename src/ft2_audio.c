@@ -28,8 +28,7 @@
 static int32_t smpShiftValue;
 static uint32_t oldAudioFreq, tickTimeLenInt, randSeed = INITIAL_DITHER_SEED;
 static uint64_t tickTimeLenFrac;
-static float fSqrtPanningTable[256+1];
-static double dAudioNormalizeMul, dPrngStateL, dPrngStateR;
+static float fSqrtPanningTable[256+1], fAudioNormalizeMul, fPrngStateL, fPrngStateR;
 static voice_t voice[MAX_CHANNELS * 2];
 
 // globalized
@@ -103,11 +102,11 @@ void setAudioAmp(int16_t amp, int16_t masterVol, bool bitDepth32Flag)
 	amp = CLAMP(amp, 1, 32);
 	masterVol = CLAMP(masterVol, 0, 256);
 
-	double dAmp = (amp * masterVol) / (32.0 * 256.0);
+	float fAmp = (amp * masterVol) / (32.0f * 256.0f);
 	if (!bitDepth32Flag)
-		dAmp *= 32768.0;
+		fAmp *= 32768.0f;
 
-	dAudioNormalizeMul = dAmp;
+	fAudioNormalizeMul = fAmp;
 }
 
 void decreaseMasterVol(void)
@@ -194,17 +193,15 @@ void audioSetInterpolationType(uint8_t interpolationType)
 	// set sinc LUT pointers
 	if (config.interpolation == INTERPOLATION_SINC8)
 	{
-		fSinc_1 = fSinc8_1;
-		fSinc_2 = fSinc8_2;
-		fSinc_3 = fSinc8_3;
+		for (int32_t i = 0; i < SINC_KERNELS; i++)
+			fSinc[i] = fSinc8[i];
 
 		audio.sincInterpolation = true;
 	}
 	else if (config.interpolation == INTERPOLATION_SINC16)
 	{
-		fSinc_1 = fSinc16_1;
-		fSinc_2 = fSinc16_2;
-		fSinc_3 = fSinc16_3;
+		for (int32_t i = 0; i < SINC_KERNELS; i++)
+			fSinc[i] = fSinc16[i];
 
 		audio.sincInterpolation = true;
 	}
@@ -381,19 +378,16 @@ void updateVoices(void)
 
 		if (status & CF_UPDATE_PERIOD)
 		{
-			const double dVoiceHz = dPeriod2Hz(ch->finalPeriod);
+			v->delta = period2VoiceDelta(ch->finalPeriod);
 
-			// set voice delta
-			v->delta = (int64_t)((dVoiceHz * audio.dHz2MixDeltaMul) + 0.5); // Hz -> fixed-point delta (rounded)
 			if (audio.sincInterpolation)
 			{
-				// decide which sinc LUT to use according to the resampling ratio
 				if (v->delta <= sincRatio1)
-					v->fSincLUT = fSinc_1;
+					v->fSincLUT = fSinc[0];
 				else if (v->delta <= sincRatio2)
-					v->fSincLUT = fSinc_2;
+					v->fSincLUT = fSinc[1];
 				else
-					v->fSincLUT = fSinc_3;
+					v->fSincLUT = fSinc[2];
 			}
 		}
 
@@ -405,7 +399,7 @@ void updateVoices(void)
 void resetAudioDither(void)
 {
 	randSeed = INITIAL_DITHER_SEED;
-	dPrngStateL = dPrngStateR = 0.0;
+	fPrngStateL = fPrngStateR = 0.0f;
 }
 
 static inline int32_t random32(void)
@@ -420,26 +414,26 @@ static inline int32_t random32(void)
 static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 {
 	int32_t out32;
-	double dOut, dPrng;
+	float fOut, fPrng;
 
 	int16_t *streamPtr16 = (int16_t *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel - 1-bit triangular dithering
-		dPrng = random32() * (1.0 / (UINT32_MAX+1.0)); // -0.5 .. 0.5
-		dOut = (double)audio.fMixBufferL[i] * dAudioNormalizeMul;
-		dOut = (dOut + dPrng) - dPrngStateL;
-		dPrngStateL = dPrng;
-		out32 = (int32_t)dOut;
+		fPrng = (float)random32() * (1.0f / (UINT32_MAX+1.0f)); // -0.5f .. 0.5f
+		fOut = audio.fMixBufferL[i] * fAudioNormalizeMul;
+		fOut = (fOut + fPrng) - fPrngStateL;
+		fPrngStateL = fPrng;
+		out32 = (int32_t)fOut;
 		CLAMP16(out32);
 		*streamPtr16++ = (int16_t)out32;
 
 		// right channel - 1-bit triangular dithering
-		dPrng = random32() * (1.0 / (UINT32_MAX+1.0)); // -0.5 .. 0.5
-		dOut = (double)audio.fMixBufferR[i] * dAudioNormalizeMul;
-		dOut = (dOut + dPrng) - dPrngStateR;
-		dPrngStateR = dPrng;
-		out32 = (int32_t)dOut;
+		fPrng = (float)random32() * (1.0f / (UINT32_MAX+1.0f)); // -0.5f .. 0.5f
+		fOut = audio.fMixBufferR[i] * fAudioNormalizeMul;
+		fOut = (fOut + fPrng) - fPrngStateR;
+		fPrngStateR = fPrng;
+		out32 = (int32_t)fOut;
 		CLAMP16(out32);
 		*streamPtr16++ = (int16_t)out32;
 
@@ -450,20 +444,20 @@ static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 
 static void sendSamples32BitFloatStereo(void *stream, uint32_t sampleBlockLength)
 {
-	double dOut;
+	float fOut;
 
 	float *fStreamPtr32 = (float *)stream;
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel
-		dOut = (double)audio.fMixBufferL[i] * dAudioNormalizeMul;
-		dOut = CLAMP(dOut, -1.0, 1.0);
-		*fStreamPtr32++ = (float)dOut;
+		fOut = audio.fMixBufferL[i] * fAudioNormalizeMul;
+		fOut = CLAMP(fOut, -1.0f, 1.0f);
+		*fStreamPtr32++ = fOut;
 
 		// right channel
-		dOut = (double)audio.fMixBufferR[i] * dAudioNormalizeMul;
-		dOut = CLAMP(dOut, -1.0, 1.0);
-		*fStreamPtr32++ = (float)dOut;
+		fOut = audio.fMixBufferR[i] * fAudioNormalizeMul;
+		fOut = CLAMP(fOut, -1.0f, 1.0f);
+		*fStreamPtr32++ = fOut;
 
 		// clear what we read from the mixing buffer
 		audio.fMixBufferL[i] = audio.fMixBufferR[i] = 0.0f;

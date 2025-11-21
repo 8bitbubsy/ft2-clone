@@ -278,6 +278,8 @@ static void initializeVars(void)
 	memset(&chSync, 0, sizeof (chSync));
 	memset(&song, 0, sizeof (song));
 
+	calcMiscReplayerVars();
+
 	// used for scopes and sampling position line (sampler screen)
 	for (int32_t i = 0; i < MAX_CHANNELS; i++)
 	{
@@ -317,7 +319,6 @@ static void initializeVars(void)
 	editor.diskOpReadOnOpen = true;
 
 	audio.linearPeriodsFlag = true;
-	calcReplayerLogTab();
 
 #ifdef HAS_MIDI
 	midi.enable = true;

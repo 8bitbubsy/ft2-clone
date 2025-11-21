@@ -490,10 +490,8 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 
 		if (status & CF_UPDATE_PERIOD)
 		{
-			const double dHz = dPeriod2Hz(ch->period);
-
-			sc->delta = (uint64_t)(dHz * (SCOPE_FRAC_SCALE / (double)SCOPE_HZ));
-			sc->drawDelta = (uint64_t)(dHz * (SCOPE_FRAC_SCALE / ((double)C4_FREQ/2.0)));
+			sc->delta = period2ScopeDelta(ch->period);
+			sc->drawDelta = period2ScopeDrawDelta(ch->period);
 		}
 
 		if (status & CS_TRIGGER_VOICE)

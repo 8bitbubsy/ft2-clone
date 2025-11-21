@@ -200,7 +200,7 @@
 
 #define WINDOWED_SINC8_INTERPOLATION(s, f, scale) \
 { \
-	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC1_FRACSHIFT) & SINC1_FRACMASK); \
+	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC8_FRACSHIFT) & SINC8_FRACMASK); \
 	fSample = ((s[-3] * t[0]) + \
 	           (s[-2] * t[1]) + \
 	           (s[-1] * t[2]) + \
@@ -213,7 +213,7 @@
 
 #define WINDOWED_SINC16_INTERPOLATION(s, f, scale) \
 { \
-	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC2_FRACSHIFT) & SINC2_FRACMASK); \
+	const float *t = v->fSincLUT + (((uint32_t)(f) >> SINC16_FRACSHIFT) & SINC16_FRACMASK); \
 	fSample = (( s[-7] * t[0]) + \
 	           ( s[-6] * t[1]) + \
 	           ( s[-5] * t[2]) + \

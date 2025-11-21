@@ -30,6 +30,8 @@
 #include "mixer/ft2_cubic_spline.h"
 #include "mixer/ft2_windowed_sinc.h"
 
+static uint64_t logTab[4*12*16], scopeLogTab[4*12*16], scopeDrawLogTab[4*12*16];
+static uint64_t amigaPeriodDiv, scopeAmigaPeriodDiv, scopeDrawAmigaPeriodDiv;
 static double dLogTab[4*12*16], dExp2MulTab[32];
 static bool bxxOverflow;
 static note_t nilPatternLine[MAX_CHANNELS];
@@ -232,34 +234,92 @@ int16_t getRealUsedSamples(int16_t smpNum)
 	return i+1;
 }
 
-double dLinearPeriod2Hz(int32_t period)
+double dPeriod2Hz(uint32_t period)
 {
 	period &= 0xFFFF; // just in case (actual period range is 0..65535)
 
 	if (period == 0)
 		return 0.0; // in FT2, a period of 0 results in 0Hz
 
-	const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
+	if (audio.linearPeriodsFlag)
+	{
+		const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
 
-	const uint32_t quotient  = invPeriod / (12 * 16 * 4);
-	const uint32_t remainder = invPeriod % (12 * 16 * 4);
+		const uint32_t quotient  = invPeriod / (12 * 16 * 4);
+		const uint32_t remainder = invPeriod % (12 * 16 * 4);
 
-	return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y >> ((14-quotient) & 31);
+		return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y >> ((14-quotient) & 31);
+	}
+	else
+	{
+		return (8363.0 * 1712.0) / (int32_t)period;
+	}
 }
 
-double dAmigaPeriod2Hz(int32_t period)
+uint64_t period2VoiceDelta(uint32_t period)
 {
 	period &= 0xFFFF; // just in case (actual period range is 0..65535)
 
 	if (period == 0)
-		return 0.0; // in FT2, a period of 0 results in 0Hz
+		return 0; // in FT2, a period of 0 results in 0Hz
 
-	return (8363.0 * 1712.0) / period;
+	if (audio.linearPeriodsFlag)
+	{
+		const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
+
+		const uint32_t quotient  = invPeriod / (12 * 16 * 4);
+		const uint32_t remainder = invPeriod % (12 * 16 * 4);
+
+		return logTab[remainder] >> ((14-quotient) & 31);
+	}
+	else
+	{
+		return amigaPeriodDiv / period;
+	}
 }
 
-double dPeriod2Hz(int32_t period)
+uint64_t period2ScopeDelta(uint32_t period)
 {
-	return audio.linearPeriodsFlag ? dLinearPeriod2Hz(period) : dAmigaPeriod2Hz(period);
+	period &= 0xFFFF; // just in case (actual period range is 0..65535)
+
+	if (period == 0)
+		return 0; // in FT2, a period of 0 results in 0Hz
+
+	if (audio.linearPeriodsFlag)
+	{
+		const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
+
+		const uint32_t quotient  = invPeriod / (12 * 16 * 4);
+		const uint32_t remainder = invPeriod % (12 * 16 * 4);
+
+		return scopeLogTab[remainder] >> ((14-quotient) & 31);
+	}
+	else
+	{
+		return scopeAmigaPeriodDiv / period;
+	}
+}
+
+uint64_t period2ScopeDrawDelta(uint32_t period)
+{
+	period &= 0xFFFF; // just in case (actual period range is 0..65535)
+
+	if (period == 0)
+		return 0; // in FT2, a period of 0 results in 0Hz
+
+	if (audio.linearPeriodsFlag)
+	{
+		const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
+
+		const uint32_t quotient  = invPeriod / (12 * 16 * 4);
+		const uint32_t remainder = invPeriod % (12 * 16 * 4);
+
+		return scopeDrawLogTab[remainder] >> ((14-quotient) & 31);
+	}
+	else
+	{
+		return scopeDrawAmigaPeriodDiv / period;
+	}
 }
 
 // returns *exact* FT2 C-4 voice rate (depending on finetune, relativeNote and linear/Amiga period mode)
@@ -386,22 +446,18 @@ void keyOff(channel_t *ch)
 	}
 }
 
-void calcReplayerLogTab(void) // for linear period -> hz calculation
-{
-	for (int32_t i = 0; i < 32; i++)
-		dExp2MulTab[i] = 1.0 / exp2(i); // 1/(2^i)
-
-	for (int32_t i = 0; i < 4*12*16; i++)
-		dLogTab[i] = (8363.0 * 256.0) * exp2(i / (4.0 * 12.0 * 16.0));
-}
-
 void calcReplayerVars(int32_t audioFreq)
 {
 	assert(audioFreq > 0);
 	if (audioFreq <= 0)
 		return;
 
-	audio.dHz2MixDeltaMul = (double)MIXER_FRAC_SCALE / audioFreq;
+	const double logTabMul = (UINT32_MAX+1.0) / audioFreq;
+	for (int32_t i = 0; i < 4*12*16; i++)
+		logTab[i] = (uint64_t)round(dLogTab[i] * logTabMul);
+
+	amigaPeriodDiv = (uint64_t)round((MIXER_FRAC_SCALE * (1712.0*8363.0)) / audioFreq);
+
 	audio.quickVolRampSamples = (uint32_t)round(audioFreq / (1000.0 / FT2_QUICK_VOLRAMP_MILLISECONDS));
 	audio.fQuickVolRampSamplesMul = (float)(1.0 / audio.quickVolRampSamples);
 
@@ -2805,6 +2861,22 @@ void closeReplayer(void)
 	freeQuadraticSplineTable();
 	freeCubicSplineTable();
 	freeWindowedSincTables();
+}
+
+void calcMiscReplayerVars(void)
+{
+	for (int32_t i = 0; i < 32; i++)
+		dExp2MulTab[i] = 1.0 / exp2(i); // 1/(2^i)
+
+	for (int32_t i = 0; i < 4*12*16; i++)
+	{
+		dLogTab[i] = (8363.0 * 256.0) * exp2(i / (4.0 * 12.0 * 16.0));
+		scopeLogTab[i] = (uint64_t)round(dLogTab[i] * (SCOPE_FRAC_SCALE / SCOPE_HZ));
+		scopeDrawLogTab[i] = (uint64_t)round(dLogTab[i] * (SCOPE_FRAC_SCALE / (C4_FREQ/2.0)));
+	}
+
+	scopeAmigaPeriodDiv = (uint64_t)round((SCOPE_FRAC_SCALE * (1712.0*8363.0)) / SCOPE_HZ);
+	scopeDrawAmigaPeriodDiv = (uint64_t)round((SCOPE_FRAC_SCALE * (1712.0*8363.0)) / (C4_FREQ/2.0));
 }
 
 bool setupReplayer(void)

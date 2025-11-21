@@ -31,14 +31,14 @@ bool calcScopeIntrpLUT(void)
 	int16_t *ptr16 = scopeIntrpLUT;
 	for (int32_t i = 0; i < SCOPE_INTRP_PHASES; i++)
 	{
-		const double x1 = i * (1.0 / SCOPE_INTRP_PHASES);
-		const double x2 = x1 * x1; // x^2
-		const double x3 = x2 * x1; // x^3
+		const float x1 = i * (1.0f / SCOPE_INTRP_PHASES);
+		const float x2 = x1 * x1; // x^2
+		const float x3 = x2 * x1; // x^3
 
-		const double t1 = (x1 * -(1.0/2.0)) + (x2 * (1.0/2.0)) + (x3 * -(1.0/6.0)) + (1.0/6.0);
-		const double t2 =                     (x2 *     -1.0 ) + (x3 *  (1.0/2.0)) + (2.0/3.0);
-		const double t3 = (x1 *  (1.0/2.0)) + (x2 * (1.0/2.0)) + (x3 * -(1.0/2.0)) + (1.0/6.0);
-		const double t4 =                                         x3 *  (1.0/6.0);
+		const float t1 = (x1 * -(1.0f/2.0f)) + (x2 * (1.0f/2.0f)) + (x3 * -(1.0f/6.0f)) + (1.0f/6.0f);
+		const float t2 =                       (x2 *      -1.0f ) + (x3 *  (1.0f/2.0f)) + (2.0f/3.0f);
+		const float t3 = (x1 *  (1.0f/2.0f)) + (x2 * (1.0f/2.0f)) + (x3 * -(1.0f/2.0f)) + (1.0f/6.0f);
+		const float t4 =                                             x3 *  (1.0f/6.0f);
 
 		// truncate, do not round!
 		*ptr16++ = (int16_t)(t1 * SCOPE_INTRP_SCALE); // tap #1 at sample offset -1

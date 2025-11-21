@@ -288,11 +288,11 @@ void fixInstrAndSampleNames(int16_t insNum);
 
 void calcReplayerVars(int32_t rate);
 void setSampleC4Hz(sample_t *s, double dC4Hz);
-void calcReplayerLogTab(void); // for linear period -> hz calculation
 
-double dLinearPeriod2Hz(int32_t period);
-double dAmigaPeriod2Hz(int32_t period);
-double dPeriod2Hz(int32_t period);
+double dPeriod2Hz(uint32_t period);
+uint64_t period2VoiceDelta(uint32_t period);
+uint64_t period2ScopeDelta(uint32_t period);
+uint64_t period2ScopeDrawDelta(uint32_t period);
 
 int32_t getPianoKey(int32_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
 void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch);
@@ -305,6 +305,7 @@ void freeSample(int16_t insNum, int16_t smpNum);
 
 void freeAllPatterns(void);
 void updateChanNums(void);
+void calcMiscReplayerVars(void);
 bool setupReplayer(void);
 void closeReplayer(void);
 void resetMusic(void);
