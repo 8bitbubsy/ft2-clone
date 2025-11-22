@@ -23,22 +23,22 @@ static sincKernel_t sincKernelConfig[2][SINC_KERNELS] =
 	** Lower beta = less treble cut off, more aliasing (narrower mainlobe, stronger sidelobe)
 	** Higher beta = more treble cut off, less aliasing (wider mainlobe, weaker sidelobe)
 	**
-	** The 8-point kernel should not have a beta lower than around 9.2, as it results
-	** in audible ringing at very low resampling ratios (well below 1.0, that is).
+	** The first 8-point kernel should not have a beta lower than around 9.2, as it
+	** results in audible ringing at very low resampling ratios (well below 1.0, that is).
 	*/
 
 	{ // -- settings for 8-point sinc --
 		// beta, cutoff
-		{   9.2f, 1.000f }, // kernel #1
-		{   8.5f, 0.750f }, // kernel #2
-		{   7.3f, 0.425f }  // kernel #3
+		{  9.2f, 1.000f }, // kernel #1
+		{  8.5f, 0.750f }, // kernel #2
+		{  7.3f, 0.425f }  // kernel #3
 	},
 
 	{ // -- settings for 16-point sinc --
 		// beta, cutoff
-		{   8.6f, 1.000f }, // kernel #1
-		{   8.5f, 0.750f }, // kernel #2
-		{   7.3f, 0.425f }  // kernel #3
+		{  8.6f, 1.000f }, // kernel #1
+		{  8.5f, 0.750f }, // kernel #2
+		{  7.3f, 0.425f }  // kernel #3
 	}
 };
 
@@ -72,7 +72,7 @@ static inline float sinc(float x, const float cutoff)
 	}
 }
 
-// note: numPoints must be 2^n!
+// note: numPoints/numPhases must be 2^n!
 static void makeSincKernel(float *out, int32_t numPoints, int32_t numPhases, float beta, float cutoff)
 {
 	const int32_t kernelLen = numPhases * numPoints;
