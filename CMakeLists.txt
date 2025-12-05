@@ -7,6 +7,11 @@ option(EXTERNAL_LIBFLAC "use external(system) flac library" OFF)
 find_package(SDL2 REQUIRED)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ft2-clone_SOURCE_DIR}/release/other/")
 
+if((CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR (CMAKE_CXX_COMPILER_ID MATCHES "GNU"))
+    add_compile_options(-O3)
+    add_compile_options(-ffast-math)
+endif()
+
 file(GLOB ft2-clone_SRC
     "${ft2-clone_SOURCE_DIR}/src/rtmidi/*.cpp"
     "${ft2-clone_SOURCE_DIR}/src/*.c"
