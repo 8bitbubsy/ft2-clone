@@ -10,7 +10,7 @@
 
 typedef struct
 {
-	float kaiserBeta, sincCutoff;
+	double kaiserBeta, sincCutoff;
 } sincKernel_t;
 
 // globalized
@@ -22,76 +22,72 @@ static sincKernel_t sincKernelConfig[2][SINC_KERNELS] =
 	/* Some notes on the Kaiser-Bessel beta parameter:
 	** Lower beta = less treble cut off, more aliasing (narrower mainlobe, stronger sidelobe)
 	** Higher beta = more treble cut off, less aliasing (wider mainlobe, weaker sidelobe)
-	**
-	** The first 8-point kernel should not have a beta lower than around 9.2, as it
-	** results in audible ringing at very low resampling ratios (well below 1.0, that is).
 	*/
-
 	{ // -- settings for 8-point sinc --
 		// beta, cutoff
-		{  9.2f, 1.000f }, // kernel #1
-		{  8.5f, 0.750f }, // kernel #2
-		{  7.3f, 0.425f }  // kernel #3
+		{  9.20, 1.000 }, // kernel #1 (beta < ~9.2 leads to audible aliasing here)
+		{  8.50, 0.750 }, // kernel #2
+		{  7.30, 0.425 }  // kernel #3
 	},
 
 	{ // -- settings for 16-point sinc --
 		// beta, cutoff
-		{  8.6f, 1.000f }, // kernel #1
-		{  8.5f, 0.750f }, // kernel #2
-		{  7.3f, 0.425f }  // kernel #3
+		{  8.61, 1.000 }, // kernel #1 (beta 8.61 = Blackman-window approximation)
+		{  8.50, 0.750 }, // kernel #2
+		{  7.30, 0.425 }  // kernel #3
 	}
 };
 
 // zeroth-order modified Bessel function of the first kind (series approximation)
-static inline float besselI0(float z)
+static inline double besselI0(double z)
 {
-	float s = 1.0f, ds = 1.0f, d = 2.0f;
-	const float zz = z * z;
+	double s = 1.0, ds = 1.0, d = 2.0;
+	const double zz = z * z;
 
 	do
 	{
 		ds *= zz / (d * d);
 		s += ds;
-		d += 2.0f;
+		d += 2.0;
 	}
-	while (ds > s*(1E-7f));
+	while (ds > s*(1E-12));
 
 	return s;
 }
 
-static inline float sinc(float x, const float cutoff)
+static inline double sinc(double x, double cutoff)
 {
-	if (x == 0.0f)
+	if (x == 0.0)
 	{
 		return cutoff;
 	}
 	else
 	{
-		x *= (float)PI;
-		return sinf(cutoff * x) / x;
+		x *= PI;
+		return sin(cutoff * x) / x;
 	}
 }
 
 // note: numPoints/numPhases must be 2^n!
-static void makeSincKernel(float *out, int32_t numPoints, int32_t numPhases, float beta, float cutoff)
+static void makeSincKernel(float *out, int32_t numPoints, int32_t numPhases, double beta, double cutoff)
 {
 	const int32_t kernelLen = numPhases * numPoints;
 	const int32_t pointBits = (int32_t)log2(numPoints);
 	const int32_t pointMask = numPoints - 1;
 	const int32_t centerPoint = (numPoints / 2) - 1;
-	const float besselI0Beta = 1.0f / besselI0(beta);
-	const float phaseMul = 1.0f / numPhases;
-	const float xMul = 1.0f / (numPoints / 2);
+	const double besselI0Beta = 1.0 / besselI0(beta);
+	const double phaseMul = 1.0 / numPhases;
+	const double xMul = 1.0 / (numPoints / 2);
 
 	for (int32_t i = 0; i < kernelLen; i++)
 	{
-		const float x = (float)((i & pointMask) - centerPoint) - ((float)(i >> pointBits) * phaseMul);
+		const double x = ((i & pointMask) - centerPoint) - ((i >> pointBits) * phaseMul);
 
 		// Kaiser-Bessel window
-		const float n = x * xMul;
-		const float window = besselI0(beta * sqrtf(1.0f - n * n)) * besselI0Beta;
+		const double n = x * xMul;
+		const double window = besselI0(beta * sqrt(1.0 - n * n)) * besselI0Beta;
 
-		out[i] = sinc(x, cutoff) * window;
+		out[i] = (float)(sinc(x, cutoff) * window);
 	}
 }
 
