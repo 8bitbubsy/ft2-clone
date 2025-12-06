@@ -364,6 +364,10 @@ void updateVoices(void)
 
 		ch->status = 0;
 
+		// for "render individual tracks" mode during WAV render
+		if (ch->dontRenderThisChannel)
+			continue;
+
 		if (status & CS_UPDATE_VOL)
 		{
 			v->fVolume = ch->fFinalVol; // 0.0f .. 1.0f

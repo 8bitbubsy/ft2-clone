@@ -38,36 +38,37 @@ typedef struct wavHeader_t
 	uint32_t subchunk2ID, subchunk2Size;
 } wavHeader_t;
 
-static bool useLegacyBPM = false;
+static bool renderIndividualTracks, oldMutes[MAX_CHANNELS];
+static char *tmpFilename, newFilename[PATH_MAX+1];
 static uint8_t WDBitDepth = 16, WDStartPos, WDStopPos, *wavRenderBuffer;
 static int16_t WDAmp;
 static uint32_t WDFrequency = 44100;
 static SDL_Thread *thread;
 
+void cbToggleWavRenderIndividualTracks(void)
+{
+	renderIndividualTracks ^= 1;
+}
+
 static void updateWavRenderer(void)
 {
 	char str[16];
 
-	fillRect(195, 116, 56, 8, PAL_DESKTOP);
-	textOut(237, 116, PAL_FORGRND, "Hz");
+	fillRect(194, 116, 56, 8, PAL_DESKTOP);
+	textOut(236, 116, PAL_FORGRND, "Hz");
 	sprintf(str, "%6d", WDFrequency);
-	textOutFixed(195, 116, PAL_FORGRND, PAL_DESKTOP, str);
+	textOutFixed(194, 116, PAL_FORGRND, PAL_DESKTOP, str);
 	
 	fillRect(229, 130, 21, 8, PAL_DESKTOP);
 	charOut(243, 130, PAL_FORGRND, 'x');
 	sprintf(str, "%02d", WDAmp);
 	textOut(229, 130, PAL_FORGRND, str);
 
+	fillRect(122, 144, 13, 8, PAL_DESKTOP);
+	hexOut(122, 144, PAL_FORGRND, WDStartPos, 2);
+
 	fillRect(237, 144, 13, 8, PAL_DESKTOP);
-	hexOut(237, 144, PAL_FORGRND, WDStartPos, 2);
-
-	fillRect(237, 158, 13, 8, PAL_DESKTOP);
-	hexOut(237, 158, PAL_FORGRND, WDStopPos, 2);
-}
-
-void cbToggleWavRenderBPMMode(void)
-{
-	useLegacyBPM ^= 1;
+	hexOut(237, 144, PAL_FORGRND, WDStopPos, 2);
 }
 
 void setWavRenderFrequency(int32_t freq)
@@ -96,20 +97,18 @@ void updateWavRendererSettings(void) // called when changing config.boostLevel
 void drawWavRenderer(void)
 {
 	drawFramework(0,   92, 291, 17, FRAMEWORK_TYPE1);
-	drawFramework(0,  109,  79, 64, FRAMEWORK_TYPE1);
-	drawFramework(79, 109, 212, 64, FRAMEWORK_TYPE1);
+	drawFramework(0,  109,  59, 64, FRAMEWORK_TYPE1);
+	drawFramework(59, 109, 232, 64, FRAMEWORK_TYPE1);
 
 	textOutShadow(4,   96, PAL_FORGRND, PAL_DSKTOP2, "WAV exporting:");
 	textOutShadow(146, 96, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
 	textOutShadow(211, 96, PAL_FORGRND, PAL_DSKTOP2, "32-bit (float)");
 
-	textOutShadow(19, 114, PAL_FORGRND, PAL_DSKTOP2, "Imprecise");
-	textOutShadow(4,  127, PAL_FORGRND, PAL_DSKTOP2, "BPM (FT2)");
-
-	textOutShadow(85, 116, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate");
-	textOutShadow(85, 130, PAL_FORGRND, PAL_DSKTOP2, "Amplification");
-	textOutShadow(85, 144, PAL_FORGRND, PAL_DSKTOP2, "Start song position");
-	textOutShadow(85, 158, PAL_FORGRND, PAL_DSKTOP2, "Stop song position");
+	textOutShadow(63,  116, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate");
+	textOutShadow(63,  130, PAL_FORGRND, PAL_DSKTOP2, "Amplification");
+	textOutShadow(63,  144, PAL_FORGRND, PAL_DSKTOP2, "Start pos");
+	textOutShadow(181, 144, PAL_FORGRND, PAL_DSKTOP2, "Stop pos");
+	textOutShadow(79,  159, PAL_FORGRND, PAL_DSKTOP2, "Render individual tracks");
 
 	showPushButton(PB_WAV_RENDER);
 	showPushButton(PB_WAV_EXIT);
@@ -121,8 +120,7 @@ void drawWavRenderer(void)
 	showPushButton(PB_WAV_START_DOWN);
 	showPushButton(PB_WAV_END_UP);
 	showPushButton(PB_WAV_END_DOWN);
-
-	showCheckBox(CB_WAV_BPM_MODE);
+	showCheckBox(CB_WAV_RENDER_INDIVIDUAL_TRACKS);
 
 	// bitdepth radiobuttons
 
@@ -179,8 +177,8 @@ void hideWavRenderer(void)
 	hidePushButton(PB_WAV_START_DOWN);
 	hidePushButton(PB_WAV_END_UP);
 	hidePushButton(PB_WAV_END_DOWN);
-	hideCheckBox(CB_WAV_BPM_MODE);
 	hideRadioButtonGroup(RB_GROUP_WAV_RENDER_BITDEPTH);
+	hideCheckBox(CB_WAV_RENDER_INDIVIDUAL_TRACKS);
 
 	ui.scopesShown = true;
 	drawScopeFramework();
@@ -361,8 +359,9 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 		uint8_t *ptr8 = wavRenderBuffer;
 		for (uint32_t i = 0; i < TICKS_PER_RENDER_CHUNK; i++)
 		{
-			if (!editor.wavIsRendering || dump_EndOfTune(WDStopPos))
+			if (editor.stopWavRender || !editor.wavIsRendering || dump_EndOfTune(WDStopPos))
 			{
+				editor.stopWavRender = false;
 				renderDone = true;
 				break;
 			}
@@ -370,14 +369,11 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 			dump_TickReplayer();
 			uint32_t tickSamples = audio.samplesPerTickInt;
 
-			if (!useLegacyBPM)
+			tickSamplesFrac += audio.samplesPerTickFrac;
+			if (tickSamplesFrac >= BPM_FRAC_SCALE)
 			{
-				tickSamplesFrac += audio.samplesPerTickFrac;
-				if (tickSamplesFrac >= BPM_FRAC_SCALE)
-				{
-					tickSamplesFrac &= BPM_FRAC_MASK;
-					tickSamples++;
-				}
+				tickSamplesFrac &= BPM_FRAC_MASK;
+				tickSamples++;
 			}
 
 			mixReplayerTickToBuffer(tickSamples, ptr8, WDBitDepth);
@@ -435,6 +431,239 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	return true;
 }
 
+static int32_t SDLCALL renderWavIndividualTracksThread(void *ptr)
+{
+	bool overflow = false;
+
+	(void)ptr;
+
+	int32_t bytesPerSample = (WDBitDepth / 8) * 2; // 2 channels
+	int32_t maxSamplesPerTick = (int32_t)ceil(WDFrequency / (MIN_BPM / 2.5)) + 1;
+
+	// *2 for stereo
+	wavRenderBuffer = (uint8_t *)malloc((TICKS_PER_RENDER_CHUNK * maxSamplesPerTick) * bytesPerSample);
+	if (wavRenderBuffer == NULL)
+	{
+		diskOpChangeFilenameExt(".wav");
+		okBoxThreadSafe(0, "System message", "Not enough memory!", NULL);
+		return false;
+	}
+
+	// unmute all channels
+	for (int32_t i = 0; i < song.numChannels; i++)
+	{
+		oldMutes[i] = channel[i].channelOff;
+		channel[i].channelOff = false;
+	}
+
+	pauseAudio();
+
+	// wait for main audio callback to catch WAV render flag
+	editor.wavIsRendering = true;
+	while (audio.callbackOngoing)
+		SDL_Delay(5);
+
+	setNewAudioFreq(WDFrequency);
+	setAudioAmp(WDAmp, config.masterVol, (WDBitDepth == 32));
+
+	for (int32_t j = 0; j < song.numChannels; j++)
+	{
+		if (editor.stopWavRender || overflow)
+		{
+			editor.stopWavRender = false;
+			break;
+		}
+
+		sprintf(newFilename, "%s (ch %02d of %02d).wav", tmpFilename, j+1, song.numChannels);
+		FILE *f = fopen(newFilename, "wb");
+		if (f == NULL)
+		{
+			editor.stopWavRender = false;
+
+			for (int32_t i = 0; i < song.numChannels; i++)
+			{
+				channel[i].channelOff = oldMutes[i];
+				channel[i].dontRenderThisChannel = false;
+			}
+
+			setBackOldAudioFreq();
+			setMixerBPM(song.BPM);
+			setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
+			editor.wavIsRendering = false;
+			setMouseBusy(false);
+			updateVisuals();
+			drawPlaybackTime(); // this is needed after the song stopped
+			resumeAudio();
+
+			diskOpChangeFilenameExt(".wav");
+			editor.diskOpReadOnOpen = true;
+
+			okBoxThreadSafe(0, "System message", "General I/O error while writing to WAV (is the file in use)?", NULL);
+			return true;
+		}
+
+		fseek(f, sizeof (wavHeader_t), SEEK_SET);
+
+		resetChannels();
+		setPos(WDStartPos, 0, true);
+		playMode = PLAYMODE_SONG;
+		songPlaying = true;
+		stopVoices();
+		song.globalVolume = 64;
+		setMixerBPM(song.BPM);
+		resetPlaybackTime();
+
+		for (int32_t k = 0; k < song.numChannels; k++)
+			channel[k].dontRenderThisChannel = (j == k) ? false : true;
+
+		uint32_t sampleCounter = 0;
+		bool renderDone = false;
+		uint8_t tickCounter = UPDATE_VISUALS_AT_TICK;
+		uint64_t tickSamplesFrac = 0;
+
+		uint64_t bytesInFile = sizeof (wavHeader_t);
+		overflow = false;
+
+		editor.wavReachedEndFlag = false;
+		while (!renderDone)
+		{
+			uint32_t samplesInChunk = 0;
+
+			// render several ticks at once to prevent frequent disk I/O (speeds up the process)
+			uint8_t *ptr8 = wavRenderBuffer;
+			for (uint32_t i = 0; i < TICKS_PER_RENDER_CHUNK; i++)
+			{
+				if (editor.stopWavRender || !editor.wavIsRendering || dump_EndOfTune(WDStopPos))
+				{
+					renderDone = true;
+					break;
+				}
+
+				dump_TickReplayer();
+				uint32_t tickSamples = audio.samplesPerTickInt;
+
+				tickSamplesFrac += audio.samplesPerTickFrac;
+				if (tickSamplesFrac >= BPM_FRAC_SCALE)
+				{
+					tickSamplesFrac &= BPM_FRAC_MASK;
+					tickSamples++;
+				}
+
+				mixReplayerTickToBuffer(tickSamples, ptr8, WDBitDepth);
+
+				tickSamples *= 2; // stereo
+				samplesInChunk += tickSamples;
+				sampleCounter += tickSamples;
+
+				// increase buffer pointer
+				if (WDBitDepth == 16)
+				{
+					ptr8 += tickSamples * sizeof (int16_t);
+					bytesInFile += tickSamples * sizeof (int16_t);
+				}
+				else
+				{
+					ptr8 += tickSamples * sizeof (float);
+					bytesInFile += tickSamples * sizeof (float);
+				}
+
+				if (bytesInFile >= INT32_MAX)
+				{
+					renderDone = true;
+					overflow = true;
+					break;
+				}
+
+				if (++tickCounter >= UPDATE_VISUALS_AT_TICK)
+				{
+					tickCounter = 0;
+					updateVisuals();
+				}
+			}
+
+			// write buffer to disk
+			if (samplesInChunk > 0)
+			{
+				if (WDBitDepth == 16)
+					fwrite(wavRenderBuffer, sizeof (int16_t), samplesInChunk, f);
+				else
+					fwrite(wavRenderBuffer, sizeof (float), samplesInChunk, f);
+			}
+		}
+
+		stopPlaying();
+
+		// kludge: set speed to 6 if speed was set to 0
+		if (song.speed == 0)
+			song.speed = 6;
+
+		wavHeader_t wavHeader;
+
+		uint32_t totalBytes;
+		if (WDBitDepth == 16)
+			totalBytes = sampleCounter * sizeof (int16_t);
+		else
+			totalBytes = sampleCounter * sizeof (float);
+
+		if (totalBytes & 1)
+			fputc(0, f); // write pad byte
+
+		uint32_t tmpLen = ftell(f)-8;
+
+		// go back and fill in WAV header
+		rewind(f);
+
+		wavHeader.chunkID = 0x46464952; // "RIFF"
+		wavHeader.chunkSize = tmpLen;
+		wavHeader.format = 0x45564157; // "WAVE"
+		wavHeader.subchunk1ID = 0x20746D66; // "fmt "
+		wavHeader.subchunk1Size = 16;
+
+		if (WDBitDepth == 16)
+			wavHeader.audioFormat = WAV_FORMAT_PCM;
+		else
+			wavHeader.audioFormat = WAV_FORMAT_IEEE_FLOAT;
+
+		wavHeader.numChannels = 2;
+		wavHeader.sampleRate = WDFrequency;
+		wavHeader.byteRate = (wavHeader.sampleRate * wavHeader.numChannels * WDBitDepth) / 8;
+		wavHeader.blockAlign = (wavHeader.numChannels * WDBitDepth) / 8;
+		wavHeader.bitsPerSample = WDBitDepth;
+		wavHeader.subchunk2ID = 0x61746164; // "data"
+		wavHeader.subchunk2Size = totalBytes;
+
+		// write main header
+		fwrite(&wavHeader, 1, sizeof (wavHeader_t), f);
+		fclose(f);
+	}
+
+	free(wavRenderBuffer);
+
+	editor.stopWavRender = false;
+	for (int32_t i = 0; i < song.numChannels; i++)
+	{
+		channel[i].channelOff = oldMutes[i];
+		channel[i].dontRenderThisChannel = false;
+	}
+
+	setBackOldAudioFreq();
+	setMixerBPM(song.BPM);
+	setAudioAmp(config.boostLevel, config.masterVol, !!(config.specialFlags & BITDEPTH_32));
+	editor.wavIsRendering = false;
+	setMouseBusy(false);
+	updateVisuals();
+	drawPlaybackTime(); // this is needed after the song stopped
+	resumeAudio();
+
+	diskOpChangeFilenameExt(".wav");
+	editor.diskOpReadOnOpen = true;
+
+	if (overflow)
+		okBoxThreadSafe(0, "System message", "Rendering stopped, file exceeded 2GB!", NULL);
+
+	return true;
+}
+
 static void wavRender(bool checkOverwrite)
 {
 	WDStartPos = (uint8_t)(MAX(0, MIN(WDStartPos, song.songLength - 1)));
@@ -442,26 +671,34 @@ static void wavRender(bool checkOverwrite)
 
 	updateWavRenderer();
 
-	diskOpChangeFilenameExt(".wav");
-
-	char *filename = getDiskOpFilename();
-	if (checkOverwrite && fileExistsAnsi(filename))
+	if (!renderIndividualTracks)
 	{
-		char buf[256];
-		createFileOverwriteText(filename, buf);
-		if (okBox(2, "System request", buf, NULL) != 1)
+		diskOpChangeFilenameExt(".wav");
+
+		char *filename = getDiskOpFilename();
+		if (checkOverwrite && fileExistsAnsi(filename))
+		{
+			char buf[256];
+			createFileOverwriteText(filename, buf);
+			if (okBox(2, "System request", buf, NULL) != 1)
+				return;
+		}
+
+		editor.wavRendererFileHandle = fopen(filename, "wb");
+		if (editor.wavRendererFileHandle == NULL)
+		{
+			okBox(0, "System message", "General I/O error while writing to WAV (is the file in use)?", NULL);
 			return;
+		}
 	}
-
-	editor.wavRendererFileHandle = fopen(filename, "wb");
-	if (editor.wavRendererFileHandle == NULL)
+	else
 	{
-		okBox(0, "System message", "General I/O error while writing to WAV (is the file in use)?", NULL);
-		return;
+		diskOpChangeFilenameExt("");
+		tmpFilename = getDiskOpFilename();
 	}
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(renderWavThread, NULL, NULL);
+	thread = SDL_CreateThread(renderIndividualTracks ? renderWavIndividualTracksThread : renderWavThread, NULL, NULL);
 	if (thread == NULL)
 	{
 		fclose((FILE *)editor.wavRendererFileHandle);

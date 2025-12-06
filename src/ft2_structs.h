@@ -18,7 +18,7 @@ typedef struct editor_t
 #endif
 
 	volatile bool mainLoopOngoing;
-	volatile bool busy, scopeThreadBusy, programRunning, wavIsRendering, wavReachedEndFlag;
+	volatile bool busy, scopeThreadBusy, programRunning, wavIsRendering, wavReachedEndFlag, stopWavRender;
 	volatile bool updateCurSmp, updateCurInstr, diskOpReadDir, diskOpReadDone, updateWindowTitle;
 	volatile uint8_t loadMusicEvent;
 	volatile FILE *wavRendererFileHandle;

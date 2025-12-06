@@ -412,7 +412,7 @@ static void handleSDLEvents(void)
 				if (editor.samplingAudioFlag)
 					stopSampling();
 
-				editor.wavIsRendering = false;
+				editor.stopWavRender = true;
 			}
 
 			continue; // another thread is busy with something, drop input

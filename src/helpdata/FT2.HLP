@@ -795,16 +795,6 @@ changed with respect to the resampling rate.
 By pressing the right mouse button in the sample window, you can
 draw your waveforms manually.
 
-@X020@C001WAV export:
->
->@X040@C001Imprecise BPM (FT2):
->@X060@C002
-The song BPM precision in original FT2 is not exact. Tick this box
-to use the same imprecise BPM as original FT2. It will be a fraction
-off, but the WAV output will have the same length as the output
-from FT2. This setting only affects WAV export, and not tracker
-playback.
-
 @X020@C001Configuration:
 >
 >@X040@C001Auto save:

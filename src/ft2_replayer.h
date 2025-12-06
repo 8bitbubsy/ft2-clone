@@ -240,7 +240,7 @@ typedef struct instr_t
 
 typedef struct channel_t
 {
-	bool keyOff, channelOff, mute, semitonePortaMode;
+	bool dontRenderThisChannel, keyOff, channelOff, mute, semitonePortaMode;
 	volatile uint8_t status, tmpStatus;
 	int8_t relativeNote, finetune;
 	uint8_t smpNum, instrNum, efxData, efx, sampleOffset, tremorParam, tremorPos;
