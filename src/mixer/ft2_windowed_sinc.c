@@ -17,25 +17,17 @@ typedef struct
 float *fSinc[SINC_KERNELS], *fSinc8[SINC_KERNELS], *fSinc16[SINC_KERNELS];
 uint64_t sincRatio1, sincRatio2;
 
-static sincKernel_t sincKernelConfig[2][SINC_KERNELS] =
+static sincKernel_t sincKernelConfig[SINC_KERNELS] =
 {
 	/* Some notes on the Kaiser-Bessel beta parameter:
 	** Lower beta = less treble cut off, more aliasing (narrower mainlobe, stronger sidelobe)
 	** Higher beta = more treble cut off, less aliasing (wider mainlobe, weaker sidelobe)
 	*/
-	{ // -- settings for 8-point sinc --
-		// beta, cutoff
-		{  9.20, 1.000 }, // kernel #1 (beta < ~9.2 leads to audible aliasing here)
-		{  8.50, 0.750 }, // kernel #2
-		{  7.30, 0.425 }  // kernel #3
-	},
 
-	{ // -- settings for 16-point sinc --
-		// beta, cutoff
-		{  8.61, 1.000 }, // kernel #1 (beta 8.61 = Blackman-window approximation)
-		{  8.50, 0.750 }, // kernel #2
-		{  7.30, 0.425 }  // kernel #3
-	}
+	//   beta, cutoff
+	{  9.6377, 1.000 }, // kernel #1 (lower beta results in audible ringing in some cases)
+	{  8.5000, 0.750 }, // kernel #2
+	{  7.3000, 0.425 }  // kernel #3
 };
 
 // zeroth-order modified Bessel function of the first kind (series approximation)
@@ -69,7 +61,7 @@ static inline double sinc(double x, double cutoff)
 }
 
 // note: numPoints/numPhases must be 2^n!
-static void makeSincKernel(float *out, int32_t numPoints, int32_t numPhases, double beta, double cutoff)
+static void makeSincKernel(float *fOut, int32_t numPoints, int32_t numPhases, double beta, double cutoff)
 {
 	const int32_t kernelLen = numPhases * numPoints;
 	const int32_t pointBits = (int32_t)log2(numPoints);
@@ -87,16 +79,16 @@ static void makeSincKernel(float *out, int32_t numPoints, int32_t numPhases, dou
 		const double n = x * xMul;
 		const double window = besselI0(beta * sqrt(1.0 - n * n)) * besselI0Beta;
 
-		out[i] = (float)(sinc(x, cutoff) * window);
+		fOut[i] = (float)(sinc(x, cutoff) * window);
 	}
 }
 
 bool setupWindowedSincTables(void)
 {
-	sincKernel_t *k;
+	sincKernel_t *k = sincKernelConfig;
 	for (int32_t i = 0; i < SINC_KERNELS; i++, k++)
 	{
-		fSinc8[i]  = (float *)malloc( 8 * SINC_PHASES * sizeof (float));
+		 fSinc8[i] = (float *)malloc( 8 * SINC_PHASES * sizeof (float));
 		fSinc16[i] = (float *)malloc(16 * SINC_PHASES * sizeof (float));
 
 		if (fSinc8[i] == NULL || fSinc16[i] == NULL)
@@ -105,10 +97,7 @@ bool setupWindowedSincTables(void)
 			return false;
 		}
 
-		k = &sincKernelConfig[0][i];
-		makeSincKernel(fSinc8[i], 8, SINC_PHASES, k->kaiserBeta, k->sincCutoff);
-
-		k = &sincKernelConfig[1][i];
+		makeSincKernel( fSinc8[i],  8, SINC_PHASES, k->kaiserBeta, k->sincCutoff);
 		makeSincKernel(fSinc16[i], 16, SINC_PHASES, k->kaiserBeta, k->sincCutoff);
 	}
 
