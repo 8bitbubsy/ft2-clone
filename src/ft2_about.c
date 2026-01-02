@@ -54,11 +54,11 @@ static char *customText2 = "https://16-bits.org";
 static char customText3[256];
 static int16_t customText0X, customText0Y, customText1Y, customText2Y;
 static int16_t customText3Y, customText1X, customText2X, customText3X;
-static int16_t sin16[SINUS_PHASES], zSpeed;
+static int16_t sin32767[SINUS_PHASES+(SINUS_PHASES/4)], *cos32767, zSpeed;
 static int32_t lastStarScreenPos[OLD_NUM_STARS];
 static const uint16_t logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
 static const uint16_t starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
-static uint32_t sinp1, sinp2;
+static uint32_t sinp, cosp;
 static oldVector_t oldStarPoints[OLD_NUM_STARS];
 static oldRotate_t oldStarRotation;
 static oldMatrix_t oldStarMatrix;
@@ -90,13 +90,12 @@ static void blendPixelsXY(uint32_t x, uint32_t y, uint32_t pixelB_r, uint32_t pi
 
 static void oldRotateStarfieldMatrix(void)
 {
-	// original code used a cos/sin table, but this only runs once per frame, no need...
-	const int16_t sa = (int16_t)round(32767.0 * sin(oldStarRotation.x * (2.0 * PI / 65536.0)));
-	const int16_t ca = (int16_t)round(32767.0 * cos(oldStarRotation.x * (2.0 * PI / 65536.0)));
-	const int16_t sb = (int16_t)round(32767.0 * sin(oldStarRotation.y * (2.0 * PI / 65536.0)));
-	const int16_t cb = (int16_t)round(32767.0 * cos(oldStarRotation.y * (2.0 * PI / 65536.0)));
-	const int16_t sc = (int16_t)round(32767.0 * sin(oldStarRotation.z * (2.0 * PI / 65536.0)));
-	const int16_t cc = (int16_t)round(32767.0 * cos(oldStarRotation.z * (2.0 * PI / 65536.0)));
+	const int16_t sa = sin32767[oldStarRotation.x >> 6];
+	const int16_t ca = cos32767[oldStarRotation.x >> 6];
+	const int16_t sb = sin32767[oldStarRotation.y >> 6];
+	const int16_t cb = cos32767[oldStarRotation.y >> 6];
+	const int16_t sc = sin32767[oldStarRotation.z >> 6];
+	const int16_t cc = cos32767[oldStarRotation.z >> 6];
 
 	oldStarMatrix.x.x = ((ca * cc) >> 16) + (((sc * ((sa * sb) >> 16)) >> 16) << 1);
 	oldStarMatrix.y.x = (sa * cb) >> 16;
@@ -266,8 +265,8 @@ void renderAboutScreenFrame(void)
 		{
 			for (int32_t x = 0; x < ABOUT_SCREEN_W; x++)
 			{
-				int32_t srcX = (x - ((ABOUT_SCREEN_W-ABOUT_LOGO_W)/2))    + (sin16[(sinp1+x)     & (SINUS_PHASES-1)] >> 10);
-				int32_t srcY = (y - ((ABOUT_SCREEN_H-ABOUT_LOGO_H)/2)+20) + (sin16[(sinp2+y+x+x) & (SINUS_PHASES-1)] >> 11);
+				int32_t srcX = (x - ((ABOUT_SCREEN_W-ABOUT_LOGO_W)/2))    + (sin32767[(sinp+x)     & (SINUS_PHASES-1)] >> 10);
+				int32_t srcY = (y - ((ABOUT_SCREEN_H-ABOUT_LOGO_H)/2)+20) + (cos32767[(cosp+y+x+x) & (SINUS_PHASES-1)] >> 11);
 
 				if ((uint32_t)srcX < ABOUT_LOGO_W && (uint32_t)srcY < ABOUT_LOGO_H)
 				{
@@ -278,8 +277,8 @@ void renderAboutScreenFrame(void)
 			}
 		}
 
-		sinp1 = (sinp1 + 2) & (SINUS_PHASES-1);
-		sinp2 = (sinp2 + 3) & (SINUS_PHASES-1);
+		sinp = (sinp + 2) & (SINUS_PHASES-1);
+		cosp = (cosp + 3) & (SINUS_PHASES-1);
 
 		// render static texts
 		textOut(customText0X, customText0Y, PAL_FORGRND, customText0);
@@ -416,12 +415,12 @@ void initAboutScreen(void)
 		s->z = (float)((randoml(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
 	}
 
-	sinp1 = 0;
-	sinp2 = SINUS_PHASES / 4; // cosine offset
+	sinp = cosp = 0;
 
-	// pre-calc sinus table
-	for (int32_t i = 0; i < SINUS_PHASES; i++)
-		sin16[i] = (int16_t)round(32767.0 * sin(i * PI * 2.0 / SINUS_PHASES));
+	// pre-calc sin/cos table
+	for (int32_t i = 0; i < SINUS_PHASES + (SINUS_PHASES / 4); i++)
+		sin32767[i] = (int16_t)round(32767.0 * sin(i * (PI * 2.0 / SINUS_PHASES)));
+	cos32767 = &sin32767[SINUS_PHASES / 4];
 
 	sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
 	customText0X = (SCREEN_W    - textWidth(customText0)) / 2;
