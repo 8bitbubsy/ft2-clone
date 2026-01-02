@@ -14,7 +14,8 @@
 #define NUM_STARS 1500
 #define LOGO_ALPHA_PERCENTAGE 71
 #define STARSHINE_ALPHA_PERCENTAGE 33
-#define SINUS_PHASES 1024
+#define SIN_PHASES 1024
+#define SIN_MASK (SIN_PHASES-1)
 #define ABOUT_SCREEN_X 3
 #define ABOUT_SCREEN_Y 3
 #define ABOUT_SCREEN_W 626
@@ -54,7 +55,7 @@ static char *customText2 = "https://16-bits.org";
 static char customText3[256];
 static int16_t customText0X, customText0Y, customText1Y, customText2Y;
 static int16_t customText3Y, customText1X, customText2X, customText3X;
-static int16_t sin32767[SINUS_PHASES+(SINUS_PHASES/4)], *cos32767, zSpeed;
+static int16_t sin32767[SIN_PHASES+(SIN_PHASES/4)], *cos32767, zSpeed;
 static int32_t lastStarScreenPos[OLD_NUM_STARS];
 static const uint16_t logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
 static const uint16_t starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
@@ -265,8 +266,8 @@ void renderAboutScreenFrame(void)
 		{
 			for (int32_t x = 0; x < ABOUT_SCREEN_W; x++)
 			{
-				int32_t srcX = (x - ((ABOUT_SCREEN_W-ABOUT_LOGO_W)/2))    + (sin32767[(sinp+x)     & (SINUS_PHASES-1)] >> 10);
-				int32_t srcY = (y - ((ABOUT_SCREEN_H-ABOUT_LOGO_H)/2)+20) + (cos32767[(cosp+y+x+x) & (SINUS_PHASES-1)] >> 11);
+				int32_t srcX = (x - ((ABOUT_SCREEN_W-ABOUT_LOGO_W)/2))    + (sin32767[(sinp+x)     & SIN_MASK] >> 10);
+				int32_t srcY = (y - ((ABOUT_SCREEN_H-ABOUT_LOGO_H)/2)+20) + (cos32767[(cosp+y+x+x) & SIN_MASK] >> 11);
 
 				if ((uint32_t)srcX < ABOUT_LOGO_W && (uint32_t)srcY < ABOUT_LOGO_H)
 				{
@@ -277,8 +278,8 @@ void renderAboutScreenFrame(void)
 			}
 		}
 
-		sinp = (sinp + 2) & (SINUS_PHASES-1);
-		cosp = (cosp + 3) & (SINUS_PHASES-1);
+		sinp = (sinp + 2) & SIN_MASK;
+		cosp = (cosp + 3) & SIN_MASK;
 
 		// render static texts
 		textOut(customText0X, customText0Y, PAL_FORGRND, customText0);
@@ -375,10 +376,10 @@ void showAboutScreen(void) // called once when about screen is opened
 				{
 					int32_t r = (int32_t)round(sqrt(randoml(500) * 500));
 					int32_t w = randoml(3000);
-					int32_t h = cos32767[((8*w+r) / 16) & (SINUS_PHASES - 1)] / 4;
+					int32_t h = cos32767[((8*w+r) / 16) & SIN_MASK] / 4;
 
-					s->z = (int16_t)((cos32767[w & (SINUS_PHASES - 1)] * (w + r)) / 3500);
-					s->y = (int16_t)((sin32767[w & (SINUS_PHASES - 1)] * (w + r)) / 3500);
+					s->z = (int16_t)((cos32767[w & SIN_MASK] * (w + r)) / 3500);
+					s->y = (int16_t)((sin32767[w & SIN_MASK] * (w + r)) / 3500);
 					s->x = (int16_t)((h * r) / 500);
 				}
 			}
@@ -414,9 +415,9 @@ void initAboutScreen(void)
 	sinp = cosp = 0;
 
 	// pre-calc sin/cos table
-	for (int32_t i = 0; i < SINUS_PHASES + (SINUS_PHASES / 4); i++)
-		sin32767[i] = (int16_t)round(32767.0 * sin(i * (PI * 2.0 / SINUS_PHASES)));
-	cos32767 = &sin32767[SINUS_PHASES / 4];
+	for (int32_t i = 0; i < SIN_PHASES + (SIN_PHASES / 4); i++)
+		sin32767[i] = (int16_t)round(32767.0 * sin(i * (PI * 2.0 / SIN_PHASES)));
+	cos32767 = &sin32767[SIN_PHASES / 4];
 
 	sprintf(customText3, "v%s (%s)", PROG_VER_STR, __DATE__);
 	customText0X = (SCREEN_W    - textWidth(customText0)) / 2;
