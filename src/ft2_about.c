@@ -375,15 +375,11 @@ void showAboutScreen(void) // called once when about screen is opened
 				{
 					int32_t r = (int32_t)round(sqrt(randoml(500) * 500));
 					int32_t w = randoml(3000);
-					double ww = ((w * 8) + r) * (1.0 / 16.0);
+					int32_t h = cos32767[((8*w+r) / 16) & (SINUS_PHASES - 1)] / 4;
 
-					const int16_t z =  (int16_t)round(32767.0 * cos(w  * (2.0 * PI / 1024.0)));
-					const int16_t y =  (int16_t)round(32767.0 * sin(w  * (2.0 * PI / 1024.0)));
-					const int16_t x = ((int16_t)round(32767.0 * cos(ww * (2.0 * PI / 1024.0)))) / 4;
-
-					s->z = (int16_t)((z * (w + r)) / 3500);
-					s->y = (int16_t)((y * (w + r)) / 3500);
-					s->x = (int16_t)((x * r) / 500);
+					s->z = (int16_t)((cos32767[w & (SINUS_PHASES - 1)] * (w + r)) / 3500);
+					s->y = (int16_t)((sin32767[w & (SINUS_PHASES - 1)] * (w + r)) / 3500);
+					s->x = (int16_t)((h * r) / 500);
 				}
 			}
 			break;
