@@ -77,9 +77,6 @@
     <ClCompile Include="..\..\src\mixer\ft2_silence_mix.c">
       <Filter>mixer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\mixer\ft2_windowed_sinc.c">
-      <Filter>mixer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\modloaders\ft2_load_mod.c">
       <Filter>modloaders</Filter>
     </ClCompile>
@@ -160,9 +157,6 @@
       <Filter>scopes</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\ft2_hpc.c" />
-    <ClCompile Include="..\..\src\mixer\ft2_cubic_spline.c">
-      <Filter>mixer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\modloaders\ft2_load_bem.c">
       <Filter>modloaders</Filter>
     </ClCompile>
@@ -173,11 +167,11 @@
     <ClCompile Include="..\..\src\modloaders\ft2_load_it.c">
       <Filter>modloaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\mixer\ft2_quadratic_spline.c">
-      <Filter>mixer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\ft2_random.c" />
     <ClCompile Include="..\..\src\ft2_smpfx.c" />
+    <ClCompile Include="..\..\src\mixer\ft2_mix_interpolation.c">
+      <Filter>mixer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\rtmidi\RtMidi.h">
@@ -312,9 +306,6 @@
     <ClInclude Include="..\..\src\mixer\ft2_silence_mix.h">
       <Filter>mixer</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\mixer\ft2_windowed_sinc.h">
-      <Filter>mixer</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\scopes\ft2_scope_macros.h">
       <Filter>scopes</Filter>
     </ClInclude>
@@ -327,20 +318,17 @@
     <ClInclude Include="..\..\src\ft2_hpc.h">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\mixer\ft2_cubic_spline.h">
-      <Filter>mixer</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\ft2_unicode.h">
       <Filter>headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\mixer\ft2_quadratic_spline.h">
-      <Filter>mixer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ft2_random.h">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\ft2_smpfx.h">
       <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\mixer\ft2_mix_interpolation.h">
+      <Filter>mixer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

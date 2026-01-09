@@ -358,9 +358,7 @@
     <ClCompile Include="..\..\src\libflac\stream_decoder.c" />
     <ClCompile Include="..\..\src\libflac\window.c" />
     <ClCompile Include="..\..\src\libflac\windows_unicode_filenames.c" />
-    <ClCompile Include="..\..\src\mixer\ft2_cubic_spline.c" />
-    <ClCompile Include="..\..\src\mixer\ft2_quadratic_spline.c" />
-    <ClCompile Include="..\..\src\mixer\ft2_windowed_sinc.c" />
+    <ClCompile Include="..\..\src\mixer\ft2_mix_interpolation.c" />
     <ClCompile Include="..\..\src\mixer\ft2_mix.c" />
     <ClCompile Include="..\..\src\mixer\ft2_silence_mix.c" />
     <ClCompile Include="..\..\src\modloaders\ft2_load_digi.c" />
@@ -436,9 +434,7 @@
     <ClInclude Include="..\..\src\ft2_unicode.h" />
     <ClInclude Include="..\..\src\ft2_video.h" />
     <ClInclude Include="..\..\src\ft2_wav_renderer.h" />
-    <ClInclude Include="..\..\src\mixer\ft2_cubic_spline.h" />
-    <ClInclude Include="..\..\src\mixer\ft2_quadratic_spline.h" />
-    <ClInclude Include="..\..\src\mixer\ft2_windowed_sinc.h" />
+    <ClInclude Include="..\..\src\mixer\ft2_mix_interpolation.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix_macros.h" />
     <ClInclude Include="..\..\src\mixer\ft2_silence_mix.h" />

@@ -27,8 +27,7 @@
 #include "ft2_sample_loader.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
-#include "mixer/ft2_cubic_spline.h"
-#include "mixer/ft2_windowed_sinc.h"
+#include "mixer/ft2_mix_interpolation.h"
 
 static uint64_t logTab[4*12*16], scopeLogTab[4*12*16], scopeDrawLogTab[4*12*16];
 static uint64_t amigaPeriodDiv, scopeAmigaPeriodDiv, scopeDrawAmigaPeriodDiv;
@@ -2857,10 +2856,8 @@ void closeReplayer(void)
 		free(instr[131]);
 		instr[131] = NULL;
 	}
-
-	freeQuadraticSplineTable();
-	freeCubicSplineTable();
-	freeWindowedSincTables();
+	
+	freeMixerInterpolationTables();
 }
 
 void calcMiscReplayerVars(void)

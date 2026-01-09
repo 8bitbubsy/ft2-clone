@@ -1,9 +1,6 @@
 #pragma once
 
 #include "../ft2_audio.h"
-#include "ft2_quadratic_spline.h"
-#include "ft2_cubic_spline.h"
-#include "ft2_windowed_sinc.h"
 
 /* ----------------------------------------------------------------------- */
 /*                          GENERAL MIXER MACROS                           */
