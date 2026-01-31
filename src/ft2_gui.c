@@ -1032,7 +1032,7 @@ void showTopLeftMainScreen(bool restoreScreens)
 		drawFramework(291, 0, 65, 173, FRAMEWORK_TYPE1);
 		showPushButton(PB_ABOUT);
 		showPushButton(PB_NIBBLES);
-		showPushButton(PB_KILL);
+		showPushButton(PB_ZAP);
 		showPushButton(PB_TRIM);
 		showPushButton(PB_EXTEND_VIEW);
 		showPushButton(PB_TRANSPOSE);
@@ -1126,7 +1126,7 @@ void hideTopLeftMainScreen(void)
 	// left menu
 	hidePushButton(PB_ABOUT);
 	hidePushButton(PB_NIBBLES);
-	hidePushButton(PB_KILL);
+	hidePushButton(PB_ZAP);
 	hidePushButton(PB_TRIM);
 	hidePushButton(PB_EXTEND_VIEW);
 	hidePushButton(PB_TRANSPOSE);
