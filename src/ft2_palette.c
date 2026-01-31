@@ -21,11 +21,6 @@ static uint8_t palContrast[12][2] = // palette desktop/button contrasts
 	{66, 62}, {68, 57}, {58, 42}, {57, 55}, {62, 57}, {52, 57}
 };
 
-void setCustomPalColor(uint32_t color)
-{
-	video.palette[PAL_CUSTOM] = (PAL_CUSTOM << 24) | color;
-}
-
 void setPal16(pal16 *p, bool redrawScreen)
 {
 #define LOOP_PIN_COL_SUB 96

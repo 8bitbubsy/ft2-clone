@@ -38,9 +38,6 @@ enum
 	PAL_TEXTMRK = 17,
 	PAL_BOXSLCT = 18,
 
-	// modifiable with setCustomPalColor()
-	PAL_CUSTOM = 19,
-
 	PAL_NUM
 };
 
@@ -59,8 +56,6 @@ pal16;
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif
-
-void setCustomPalColor(uint32_t color);
 
 uint8_t palMax(int32_t c);
 void setPal16(pal16 *p, bool redrawScreen);
