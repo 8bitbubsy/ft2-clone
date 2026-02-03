@@ -53,7 +53,7 @@ s3mHdr_t;
 
 static uint8_t pattBuff[12288];
 
-static int8_t countS3MChannels(uint16_t antPtn);
+static int8_t countS3MChannels(uint16_t numPatterns);
 
 bool loadS3M(FILE *f, uint32_t filesize)
 {
@@ -641,10 +641,10 @@ bool loadS3M(FILE *f, uint32_t filesize)
 	return true;
 }
 
-static int8_t countS3MChannels(uint16_t antPtn)
+static int8_t countS3MChannels(uint16_t numPatterns)
 {
 	int32_t channels = 0;
-	for (int32_t i = 0; i < antPtn; i++)
+	for (int32_t i = 0; i < numPatterns; i++)
 	{
 		if (patternTmp[i] == NULL)
 			continue;

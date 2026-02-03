@@ -23,9 +23,8 @@ static uint32_t extraSampleLengths[32-MAX_SMP_PER_INST];
 
 static bool loadInstrHeader(FILE *f, uint16_t i);
 static bool loadInstrSample(FILE *f, uint16_t i);
-static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn);
-static bool loadPatterns(FILE *f, uint16_t antPtn, uint16_t xmVersion);
-static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn);
+static bool loadPatterns(FILE *f, uint16_t numPatterns, uint16_t xmVersion);
+static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t numChannels);
 static void loadADPCMSample(FILE *f, sample_t *s); // ModPlug Tracker
 
 bool loadXM(FILE *f, uint32_t filesize)
@@ -414,13 +413,13 @@ static bool loadInstrSample(FILE *f, uint16_t i)
 	return true;
 }
 
-static bool loadPatterns(FILE *f, uint16_t antPtn, uint16_t xmVersion)
+static bool loadPatterns(FILE *f, uint16_t numPatterns, uint16_t xmVersion)
 {
 	uint8_t tmpLen;
 	xmPatHdr_t ph;
 
 	bool pattLenWarn = false;
-	for (uint16_t i = 0; i < antPtn; i++)
+	for (uint16_t i = 0; i < numPatterns; i++)
 	{
 		if (fread(&ph.headerSize, 4, 1, f) != 1)
 			goto pattCorrupt;
@@ -501,24 +500,24 @@ pattCorrupt:
 	return false;
 }
 
-static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
+static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t numChannels)
 {
 	int32_t j;
 
 	if (dst == NULL)
 		return;
 
-	const int32_t srcEnd = len * (sizeof (note_t) * antChn);
+	const int32_t srcEnd = len * (sizeof (note_t) * numChannels);
 	int32_t srcIdx = 0;
 
-	int32_t numChannels = antChn;
-	if (numChannels > MAX_CHANNELS)
-		numChannels = MAX_CHANNELS;
+	int32_t readChannels = numChannels;
+	if (readChannels > MAX_CHANNELS)
+		readChannels = MAX_CHANNELS;
 
-	const int32_t pitch = sizeof (note_t) * (MAX_CHANNELS - antChn);
+	const int32_t pitch = sizeof (note_t) * (MAX_CHANNELS - numChannels);
 	for (int32_t i = 0; i < len; i++)
 	{
-		for (j = 0; j < numChannels; j++)
+		for (j = 0; j < readChannels; j++)
 		{
 			if (srcIdx >= srcEnd)
 				return; // error!
@@ -545,7 +544,7 @@ static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 		}
 
 		// if more than 32 channels, skip rest of the channels for this row
-		for (; j < antChn; j++)
+		for (; j < numChannels; j++)
 		{
 			if (srcIdx >= srcEnd)
 				return; // error!
@@ -571,7 +570,7 @@ static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t antChn)
 		}
 
 		// if song has <32 channels, align pointer to next row (skip unused channels)
-		if (antChn < MAX_CHANNELS)
+		if (numChannels < MAX_CHANNELS)
 			dst += pitch;
 	}
 }
