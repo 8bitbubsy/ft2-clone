@@ -114,16 +114,16 @@ itSmpHdr_t;
 
 static uint8_t decompBuffer[65536];
 static uint8_t volPortaConv[9] = { 1, 4, 8, 16, 32, 64, 96, 128, 255 };
+static uint32_t insOffs[256], smpOffs[256], patOffs[256];
+static itSmpHdr_t *itSmp, smpHdrs[256];
 
 static bool loadCompressed16BitSample(FILE *f, sample_t *s, bool deltaEncoded);
 static bool loadCompressed8BitSample(FILE *f, sample_t *s, bool deltaEncoded);
-static void setAutoVibrato(instr_t *ins, itSmpHdr_t *itSmp);
-static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *itSmp);
+static void setAutoVibrato(instr_t *ins, itSmpHdr_t *is);
+static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *is);
 
 bool loadIT(FILE *f, uint32_t filesize)
 {
-	uint32_t insOffs[256], smpOffs[256], patOffs[256];
-	itSmpHdr_t *itSmp, smpHdrs[256];
 	itHdr_t itHdr;
 
 	if (filesize < sizeof (itHdr))
@@ -1456,38 +1456,38 @@ static bool loadCompressed8BitSample(FILE *f, sample_t *s, bool deltaEncoded)
 	return true;
 }
 
-static void setAutoVibrato(instr_t *ins, itSmpHdr_t *itSmp)
+static void setAutoVibrato(instr_t *ins, itSmpHdr_t *is)
 {
-	ins->autoVibType = itSmp->autoVibratoWaveform;
-	if (ins->autoVibType > 3 || itSmp->autoVibratoRate == 0)
+	ins->autoVibType = is->autoVibratoWaveform;
+	if (ins->autoVibType > 3 || is->autoVibratoRate == 0)
 	{
 		// turn off auto-vibrato
 		ins->autoVibDepth = ins->autoVibRate = ins->autoVibSweep = ins->autoVibType = 0;
 		return;
 	}
 
-	ins->autoVibRate = itSmp->autoVibratoSpeed;
+	ins->autoVibRate = is->autoVibratoSpeed;
 	if (ins->autoVibRate > 63)
 		ins->autoVibRate = 63;
 
-	int32_t autoVibSweep = ((itSmp->autoVibratoDepth * 256) + 128) / itSmp->autoVibratoRate;
+	int32_t autoVibSweep = ((is->autoVibratoDepth * 256) + 128) / is->autoVibratoRate;
 	if (autoVibSweep > 255)
 		autoVibSweep = 255;
 	ins->autoVibSweep = (uint8_t)autoVibSweep;
 
-	ins->autoVibDepth = itSmp->autoVibratoDepth;
+	ins->autoVibDepth = is->autoVibratoDepth;
 	if (ins->autoVibDepth > 15)
 		ins->autoVibDepth = 15;
 }
 
-static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *itSmp)
+static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *is)
 {
-	bool sampleIs16Bit = !!(itSmp->flags & 2);
-	bool compressed = !!(itSmp->flags & 8);
-	bool hasLoop = !!(itSmp->flags & 16);
-	bool bidiLoop = !!(itSmp->flags & 64);
-	bool signedSamples = !!(itSmp->cvt & 1);
-	bool deltaEncoded = !!(itSmp->cvt & 4);
+	bool sampleIs16Bit = !!(is->flags & 2);
+	bool compressed = !!(is->flags & 8);
+	bool hasLoop = !!(is->flags & 16);
+	bool bidiLoop = !!(is->flags & 64);
+	bool signedSamples = !!(is->cvt & 1);
+	bool deltaEncoded = !!(is->cvt & 4);
 
 	if (sampleIs16Bit)
 		s->flags |= SAMPLE_16BIT;
@@ -1495,27 +1495,27 @@ static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *itSmp)
 	if (hasLoop)
 		s->flags |= bidiLoop ? LOOP_BIDI : LOOP_FWD;
 
-	s->length = itSmp->length;
-	s->loopStart = itSmp->loopBegin;
-	s->loopLength = itSmp->loopEnd - itSmp->loopBegin;
-	s->volume = itSmp->vol;
+	s->length = is->length;
+	s->loopStart = is->loopBegin;
+	s->loopLength = is->loopEnd - is->loopBegin;
+	s->volume = is->vol;
 
 	s->panning = 128;
-	if (itSmp->defPan & 128) // use panning?
+	if (is->defPan & 128) // use panning?
 	{
-		int32_t pan = (itSmp->defPan & 127) * 4; // 0..64 -> 0..256
+		int32_t pan = (is->defPan & 127) * 4; // 0..64 -> 0..256
 		if (pan > 255)
 			pan = 255;
 
 		s->panning = (uint8_t)pan;
 	}
 
-	memcpy(s->name, itSmp->sampleName, 22);
+	memcpy(s->name, is->sampleName, 22);
 	s->name[22] = '\0';
 
-	setSampleC4Hz(s, itSmp->c5Speed);
+	setSampleC4Hz(s, is->c5Speed);
 
-	if (s->length <= 0 || itSmp->offsetInFile == 0)
+	if (s->length <= 0 || is->offsetInFile == 0)
 		return true; // empty sample, skip data loading
 
 	if (!allocateSmpData(s, s->length, sampleIs16Bit))
@@ -1523,7 +1523,7 @@ static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *itSmp)
 
 	// begin sample loading
 
-	fseek(f, itSmp->offsetInFile, SEEK_SET);
+	fseek(f, is->offsetInFile, SEEK_SET);
 
 	if (compressed)
 	{

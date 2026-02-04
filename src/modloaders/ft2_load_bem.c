@@ -80,6 +80,8 @@ enum
 };
 
 static const uint8_t xmEfxTab[] = { 10, 16, 17, 25 }; // A, G, H, P
+static uint16_t trackList[256*32];
+static note_t *decodedTrack[MAX_TRACKS];
 
 static char *readString(FILE *f)
 {
@@ -264,11 +266,10 @@ bool loadBEM(FILE *f, uint32_t filesize)
 	// load tracks
 
 	uint16_t rowsInPattern[256];
-	uint16_t trackList[256*32];
+	
 	fread(rowsInPattern, 2, h.numpat, f);
 	fread(trackList, 2, h.numpat * h.numchn, f);
-
-	note_t *decodedTrack[MAX_TRACKS];
+	
 	for (int32_t i = 0; i < h.numtrk; i++)
 	{
 		uint16_t trackBytesInFile;
