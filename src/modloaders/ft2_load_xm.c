@@ -223,7 +223,7 @@ static bool loadInstrHeader(FILE *f, uint16_t i)
 		return false;
 	}
 
-	if (i <= MAX_INST) // copy over instrument names
+	if (i <= MAX_INST) // copy over instrument name
 		memcpy(songTmp.instrName[i], ih.name, 22);
 
 	if (ih.numSamples > 0 && ih.numSamples <= 32)

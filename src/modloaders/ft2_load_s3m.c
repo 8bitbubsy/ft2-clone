@@ -336,11 +336,8 @@ bool loadS3M(FILE *f, uint32_t filesize)
 										tmpNote.efxData |= 0x10;
 
 									tmpNote.efx = (uint8_t)tmp;
-
 									if (tmpNote.efx == 0x21 && tmpNote.efxData == 0)
-									{
 										tmpNote.efx = 0;
-									}
 								}
 								else
 								{
