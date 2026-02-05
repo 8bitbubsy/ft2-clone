@@ -234,7 +234,7 @@ void copyInstr(void) // dstInstr = srcInstr
 		return;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(copyInstrThread, NULL, NULL);
+	thread = SDL_CreateThread(copyInstrThread, "instrument copy thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -3097,7 +3097,7 @@ void saveInstr(UNICHAR *filenameU, int16_t insNum)
 	UNICHAR_STRCPY(editor.tmpFilenameU, filenameU);
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(saveInstrThread, NULL, NULL);
+	thread = SDL_CreateThread(saveInstrThread, "instrument save thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -3526,7 +3526,7 @@ void loadInstr(UNICHAR *filenameU)
 	{
 		// load as instrument
 		mouseAnimOn();
-		thread = SDL_CreateThread(loadInstrThread, NULL, NULL);
+		thread = SDL_CreateThread(loadInstrThread, "instrument load thread", NULL);
 		if (thread == NULL)
 		{
 			okBox(0, "System message", "Couldn't create thread!", NULL);

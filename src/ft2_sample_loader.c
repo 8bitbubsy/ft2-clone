@@ -253,7 +253,7 @@ bool loadSample(UNICHAR *filenameU, uint8_t smpNr, bool instrFlag)
 	UNICHAR_STRCPY(editor.tmpFilenameU, filenameU);
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(loadSampleThread, NULL, NULL);
+	thread = SDL_CreateThread(loadSampleThread, "sample load thread", NULL);
 	if (thread == NULL)
 	{
 		sampleIsLoading = false;

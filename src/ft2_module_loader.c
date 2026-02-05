@@ -252,7 +252,7 @@ void loadMusic(UNICHAR *filenameU)
 	clearTmpModule(); // clear stuff from last loading session (very important)
 	UNICHAR_STRCPY(editor.tmpFilenameU, filenameU);
 
-	thread = SDL_CreateThread(loadMusicThread, NULL, NULL);
+	thread = SDL_CreateThread(loadMusicThread, "mod load thread", NULL);
 	if (thread == NULL)
 	{
 		editor.loadMusicEvent = EVENT_NONE;

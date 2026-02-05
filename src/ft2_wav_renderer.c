@@ -698,7 +698,7 @@ static void wavRender(bool checkOverwrite)
 	}
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(renderIndividualTracks ? renderWavIndividualTracksThread : renderWavThread, NULL, NULL);
+	thread = SDL_CreateThread(renderIndividualTracks ? renderWavIndividualTracksThread : renderWavThread, "WAV render thread", NULL);
 	if (thread == NULL)
 	{
 		fclose((FILE *)editor.wavRendererFileHandle);

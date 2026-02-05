@@ -1983,7 +1983,7 @@ void diskOp_StartDirReadThread(void)
 	editor.diskOpReadDone = false;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(diskOp_ReadDirectoryThread, NULL, NULL);
+	thread = SDL_CreateThread(diskOp_ReadDirectoryThread, "file lister thread", NULL);
 	if (thread == NULL)
 	{
 		editor.diskOpReadDone = true;

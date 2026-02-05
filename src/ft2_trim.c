@@ -1190,7 +1190,7 @@ void pbTrimDoTrim(void)
 	mouseAnimOn();
 	pauseAudio();
 
-	trimThread = SDL_CreateThread(trimThreadFunc, NULL, NULL);
+	trimThread = SDL_CreateThread(trimThreadFunc, "trim thread", NULL);
 	if (trimThread == NULL)
 	{
 		resumeAudio();

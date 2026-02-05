@@ -172,7 +172,7 @@ static int32_t SDLCALL resampleThread(void *ptr)
 static void pbDoResampling(void)
 {
 	mouseAnimOn();
-	thread = SDL_CreateThread(resampleThread, NULL, NULL);
+	thread = SDL_CreateThread(resampleThread, "resample thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -556,7 +556,7 @@ static void pbCreateEcho(void)
 	stopThread = false;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(createEchoThread, NULL, NULL);
+	thread = SDL_CreateThread(createEchoThread, "echo thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -943,7 +943,7 @@ static int32_t SDLCALL mixThread(void *ptr)
 static void pbMix(void)
 {
 	mouseAnimOn();
-	thread = SDL_CreateThread(mixThread, NULL, NULL);
+	thread = SDL_CreateThread(mixThread, "sample mix thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -1273,7 +1273,7 @@ static void pbApplyVolume(void)
 	}
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(applyVolumeThread, NULL, NULL);
+	thread = SDL_CreateThread(applyVolumeThread, "sample modification thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -1379,7 +1379,7 @@ getScaleExit:
 static void pbGetMaxScale(void)
 {
 	mouseAnimOn();
-	thread = SDL_CreateThread(getMaxScaleThread, NULL, NULL);
+	thread = SDL_CreateThread(getMaxScaleThread, "sample modification thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);

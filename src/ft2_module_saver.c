@@ -669,7 +669,7 @@ void saveMusic(UNICHAR *filenameU)
 	UNICHAR_STRCPY(editor.tmpFilenameU, filenameU);
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(saveMusicThread, NULL, NULL);
+	thread = SDL_CreateThread(saveMusicThread, "mod save thread", NULL);
 	if (thread == NULL)
 	{
 		okBoxThreadSafe(0, "System message", "Couldn't create thread!", NULL);

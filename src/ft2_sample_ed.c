@@ -742,7 +742,7 @@ void copySmp(void) // copy sample from srcInstr->srcSmp to curInstr->curSmp
 		return;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(copySampleThread, NULL, NULL);
+	thread = SDL_CreateThread(copySampleThread, "copy sample thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -2000,7 +2000,7 @@ void sampCut(void)
 		return;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(sampCutThread, NULL, NULL);
+	thread = SDL_CreateThread(sampCutThread, "sample cut thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -2048,7 +2048,7 @@ void sampCopy(void)
 		return;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(sampCopyThread, NULL, NULL);
+	thread = SDL_CreateThread(sampCopyThread, "sample copy thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -2259,7 +2259,7 @@ void sampPaste(void)
 	}
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(sampPasteThread, NULL, NULL);
+	thread = SDL_CreateThread(sampPasteThread, "sample paste thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -2314,7 +2314,7 @@ void sampCrop(void)
 		return; // nothing to crop (the whole sample is marked)
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(sampCropThread, NULL, NULL);
+	thread = SDL_CreateThread(sampCropThread, "sample crop thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -2681,7 +2681,7 @@ void rbSample8bit(void)
 	if (okBox(2, "System request", "Pre-convert sample data?", NULL) == 1)
 	{
 		mouseAnimOn();
-		thread = SDL_CreateThread(convSmp8Bit, NULL, NULL);
+		thread = SDL_CreateThread(convSmp8Bit, "sample convert thread", NULL);
 		if (thread == NULL)
 		{
 			okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -2749,7 +2749,7 @@ void rbSample16bit(void)
 	if (okBox(2, "System request", "Pre-convert sample data?", NULL) == 1)
 	{
 		mouseAnimOn();
-		thread = SDL_CreateThread(convSmp16Bit, NULL, NULL);
+		thread = SDL_CreateThread(convSmp16Bit, "sample convert thread", NULL);
 		if (thread == NULL)
 		{
 			okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -3613,7 +3613,7 @@ void sampleBackwards(void)
 		return;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(sampleBackwardsThread, NULL, NULL);
+	thread = SDL_CreateThread(sampleBackwardsThread, "sample modification thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -3662,7 +3662,7 @@ void sampleChangeSign(void)
 		return;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(sampleChangeSignThread, NULL, NULL);
+	thread = SDL_CreateThread(sampleChangeSignThread, "sample modification thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -3716,7 +3716,7 @@ void sampleByteSwap(void)
 	}
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(sampleByteSwapThread, NULL, NULL);
+	thread = SDL_CreateThread(sampleByteSwapThread, "sample modification thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);
@@ -3828,7 +3828,7 @@ void fixDC(void)
 		return;
 
 	mouseAnimOn();
-	thread = SDL_CreateThread(fixDCThread, NULL, NULL);
+	thread = SDL_CreateThread(fixDCThread, "sample modification thread", NULL);
 	if (thread == NULL)
 	{
 		okBox(0, "System message", "Couldn't create thread!", NULL);

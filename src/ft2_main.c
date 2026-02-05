@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
 #ifdef HAS_MIDI
 #ifdef __APPLE__
 	// MIDI init can take several seconds on Mac, use thread
-	midi.initMidiThread = SDL_CreateThread(initMidiFunc, NULL, NULL);
+	midi.initMidiThread = SDL_CreateThread(initMidiFunc, "MIDI init thread", NULL);
 	if (midi.initMidiThread == NULL)
 	{
 		showErrorMsgBox("Couldn't create MIDI initialization thread!");
