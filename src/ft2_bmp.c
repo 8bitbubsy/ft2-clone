@@ -20,8 +20,13 @@ enum
 	COMP_RLE4 = 2
 };
 
+#ifdef _MSC_VER
+#pragma pack(push)
+#pragma pack(1)
+#endif
 typedef struct bmpHeader_t
 {
+	char BM[2];
 	uint32_t bfSizebfSize;
 	uint16_t bfReserved1;
 	uint16_t bfReserved2;
@@ -37,7 +42,14 @@ typedef struct bmpHeader_t
 	int32_t biYPelsPerMeter;
 	int32_t biClrUsed;
 	int32_t biClrImportant;
-} bmpHeader_t;
+}
+#ifdef __GNUC__
+__attribute__((packed))
+#endif
+bmpHeader_t;
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 static uint32_t *loadBMPTo32Bit(const uint8_t *src);
 static uint8_t *loadBMPTo1Bit(const uint8_t *src);
@@ -143,32 +155,12 @@ void freeBMPs(void)
 	if (bmp.checkboxGfx != NULL) { free(bmp.checkboxGfx); bmp.checkboxGfx = NULL; }
 }
 
-/* Very basic BMP loaders that supports top-down RLE-packed bitmaps, but only at 4-bit or 8-bit colors.
-** This is only meant to be used for BMPs that are carefully crafted for this program!
-*/
-
-#ifdef _DEBUG
-
-#define CHECK_SRC_BOUNDARY     assert(src8      < src8End);
-#define CHECK_DST8_BOUNDARY    assert(tmp8      < allocEnd);
-#define CHECK_DST8_BOUNDARY_X  assert(&tmp8[x]  < allocEnd);
-#define CHECK_DST32_BOUNDARY   assert(tmp32     < allocEnd);
-#define CHECK_DST32_BOUNDARY_X assert(&tmp32[x] < allocEnd);
-
-#else
-#define CHECK_SRC_BOUNDARY
-#define CHECK_DST8_BOUNDARY
-#define CHECK_DST8_BOUNDARY_X
-#define CHECK_DST32_BOUNDARY
-#define CHECK_DST32_BOUNDARY_X
-#endif
-
 static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 {
 	int32_t len, byte, palIdx;
 	uint32_t *tmp32, color, color2, pal[256];
 
-	bmpHeader_t *hdr = (bmpHeader_t *)&src[2];
+	bmpHeader_t *hdr = (bmpHeader_t *)src;
 	const uint8_t *pData = &src[hdr->bfOffBits];
 	const int32_t colorsInBitmap = 1 << hdr->biBitCount;
 
@@ -179,10 +171,6 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 	if (outData == NULL)
 		return NULL;
 
-#ifdef _DEBUG
-	const uint32_t *allocEnd = outData + (hdr->biWidth * hdr->biHeight);
-#endif
-
 	// pre-fill image with first palette color
 	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
 	memcpy(pal, &src[0x36], palEntries * sizeof (uint32_t));
@@ -192,20 +180,15 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 
 	const int32_t lineEnd = hdr->biWidth;
 	const uint8_t *src8 = pData;
-#ifdef _DEBUG
-	const uint8_t *src8End = src8 + hdr->biSizeImage;
-#endif
 	uint32_t *dst32 = outData;
 	int32_t x = 0;
 	int32_t y = hdr->biHeight - 1;
 
 	while (true)
 	{
-		CHECK_SRC_BOUNDARY
 		byte = *src8++;
 		if (byte == 0) // escape control
 		{
-			CHECK_SRC_BOUNDARY
 			byte = *src8++;
 			if (byte == 0) // end of line
 			{
@@ -218,9 +201,7 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 			}
 			else if (byte == 2) // add to x/y position
 			{
-				CHECK_SRC_BOUNDARY
 				x += *src8++;
-				CHECK_SRC_BOUNDARY
 				y -= *src8++;
 			}
 			else // absolute bytes
@@ -229,11 +210,7 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 				{
 					tmp32 = &dst32[(y * hdr->biWidth) + x];
 					for (int32_t i = 0; i < byte; i++)
-					{
-						CHECK_DST32_BOUNDARY
-						CHECK_SRC_BOUNDARY
 						*tmp32++ = pal[*src8++];
-					}
 
 					if (byte & 1)
 						src8++;
@@ -247,17 +224,11 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 					tmp32 = &dst32[y * hdr->biWidth];
 					for (int32_t i = 0; i < len; i++)
 					{
-						CHECK_SRC_BOUNDARY
 						palIdx = *src8++;
-
-						CHECK_DST32_BOUNDARY_X
 						tmp32[x++] = pal[palIdx >> 4];
 
 						if (x < lineEnd)
-						{
-							CHECK_DST32_BOUNDARY_X
 							tmp32[x++] = pal[palIdx & 0xF];
-						}
 					}
 
 					if (((byte + 1) >> 1) & 1)
@@ -267,7 +238,6 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 		}
 		else
 		{
-			CHECK_SRC_BOUNDARY
 			palIdx = *src8++;
 
 			if (hdr->biCompression == COMP_RLE8)
@@ -275,10 +245,7 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 				color = pal[palIdx];
 				tmp32 = &dst32[(y * hdr->biWidth) + x];
 				for (int32_t i = 0; i < byte; i++)
-				{
-					CHECK_DST32_BOUNDARY
 					*tmp32++ = color;
-				}
 
 				x += byte;
 			}
@@ -291,14 +258,9 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 				tmp32 = &dst32[y * hdr->biWidth];
 				for (int32_t i = 0; i < len; i++)
 				{
-					CHECK_DST32_BOUNDARY_X
 					tmp32[x++] = color;
-
 					if (x < lineEnd)
-					{
-						CHECK_DST32_BOUNDARY_X
 						tmp32[x++] = color2;
-					}
 				}
 			}
 		}
@@ -313,7 +275,7 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 	int32_t len, byte, i;
 	uint32_t pal[16];
 
-	bmpHeader_t *hdr = (bmpHeader_t *)&src[2];
+	bmpHeader_t *hdr = (bmpHeader_t *)src;
 	const uint8_t *pData = &src[hdr->bfOffBits];
 	const int32_t colorsInBitmap = 1 << hdr->biBitCount;
 
@@ -323,10 +285,6 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 	uint8_t *outData = (uint8_t *)malloc(hdr->biWidth * hdr->biHeight * sizeof (uint8_t));
 	if (outData == NULL)
 		return NULL;
-
-#ifdef _DEBUG
-	const uint8_t *allocEnd = outData + (hdr->biWidth * hdr->biHeight);
-#endif
 
 	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
 	memcpy(pal, &src[0x36], palEntries * sizeof (uint32_t));
@@ -338,20 +296,15 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 
 	const int32_t lineEnd = hdr->biWidth;
 	const uint8_t *src8 = pData;
-#ifdef _DEBUG
-	const uint8_t *src8End = src8 + hdr->biSizeImage;
-#endif
 	uint8_t *dst8 = outData;
 	int32_t x = 0;
 	int32_t y = hdr->biHeight - 1;
 
 	while (true)
 	{
-		CHECK_SRC_BOUNDARY
 		byte = *src8++;
 		if (byte == 0) // escape control
 		{
-			CHECK_SRC_BOUNDARY
 			byte = *src8++;
 			if (byte == 0) // end of line
 			{
@@ -364,9 +317,7 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 			}
 			else if (byte == 2) // add to x/y position
 			{
-				CHECK_SRC_BOUNDARY
 				x += *src8++;
-				CHECK_SRC_BOUNDARY
 				y -= *src8++;
 			}
 			else // absolute bytes
@@ -375,17 +326,11 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 				tmp8 = &dst8[y * hdr->biWidth];
 				for (i = 0; i < len; i++)
 				{
-					CHECK_SRC_BOUNDARY
 					palIdx = *src8++;
-
-					CHECK_DST8_BOUNDARY_X
 					tmp8[x++] = !!pal[palIdx >> 4];
 					
 					if (x < lineEnd)
-					{
-						CHECK_DST8_BOUNDARY_X
 						tmp8[x++] = !!pal[palIdx & 0xF];
-					}
 				}
 
 				if (((byte + 1) >> 1) & 1)
@@ -394,7 +339,6 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 		}
 		else
 		{
-			CHECK_SRC_BOUNDARY
 			palIdx = *src8++;
 
 			color = !!pal[palIdx >> 4];
@@ -404,14 +348,9 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 			tmp8 = &dst8[y * hdr->biWidth];
 			for (i = 0; i < len; i++)
 			{
-				CHECK_DST8_BOUNDARY_X
 				tmp8[x++] = color;
-
 				if (x < lineEnd)
-				{
-					CHECK_DST8_BOUNDARY_X
 					tmp8[x++] = color2;
-				}
 			}
 		}
 	}
@@ -425,7 +364,7 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 	int32_t len, byte, i;
 	uint32_t pal[16];
 
-	bmpHeader_t *hdr = (bmpHeader_t *)&src[2];
+	bmpHeader_t *hdr = (bmpHeader_t *)src;
 	const uint8_t *pData = &src[hdr->bfOffBits];
 	const int32_t colorsInBitmap = 1 << hdr->biBitCount;
 
@@ -435,10 +374,6 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 	uint8_t *outData = (uint8_t *)malloc(hdr->biWidth * hdr->biHeight * sizeof (uint8_t));
 	if (outData == NULL)
 		return NULL;
-
-#ifdef _DEBUG
-	const uint8_t *allocEnd = outData + (hdr->biWidth * hdr->biHeight);
-#endif
 
 	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
 	memcpy(pal, &src[0x36], palEntries * sizeof (uint32_t));
@@ -450,20 +385,15 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 
 	const int32_t lineEnd = hdr->biWidth;
 	const uint8_t *src8 = pData;
-#ifdef _DEBUG
-	const uint8_t *src8End = src8 + hdr->biSizeImage;
-#endif
 	uint8_t *dst8 = outData;
 	int32_t x = 0;
 	int32_t y = hdr->biHeight - 1;
 
 	while (true)
 	{
-		CHECK_SRC_BOUNDARY
 		byte = *src8++;
 		if (byte == 0) // escape control
 		{
-			CHECK_SRC_BOUNDARY
 			byte = *src8++;
 			if (byte == 0) // end of line
 			{
@@ -476,9 +406,7 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 			}
 			else if (byte == 2) // add to x/y position
 			{
-				CHECK_SRC_BOUNDARY
 				x += *src8++;
-				CHECK_SRC_BOUNDARY
 				y -= *src8++;
 			}
 			else // absolute bytes
@@ -487,17 +415,11 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 				len = byte >> 1;
 				for (i = 0; i < len; i++)
 				{
-					CHECK_SRC_BOUNDARY
 					palIdx = *src8++;
-
-					CHECK_DST8_BOUNDARY_X
 					tmp8[x++] = getFT2PalNrFromPixel(pal[palIdx >> 4]);
 
 					if (x < lineEnd)
-					{
-						CHECK_DST8_BOUNDARY_X
 						tmp8[x++] = getFT2PalNrFromPixel(pal[palIdx & 0xF]);
-					}
 				}
 
 				if (((byte + 1) >> 1) & 1)
@@ -506,7 +428,6 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 		}
 		else
 		{
-			CHECK_SRC_BOUNDARY
 			palIdx = *src8++;
 
 			pal1 = getFT2PalNrFromPixel(pal[palIdx >> 4]);
@@ -516,14 +437,9 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 			len = byte >> 1;
 			for (i = 0; i < len; i++)
 			{
-				CHECK_DST8_BOUNDARY_X
 				tmp8[x++] = pal1;
-
 				if (x < lineEnd)
-				{
-					CHECK_DST8_BOUNDARY_X
 					tmp8[x++] = pal2;
-				}
 			}
 		}
 	}
