@@ -1,4 +1,5 @@
 #include <stdio.h> // vsnprintf()
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_config.h"
@@ -24,7 +25,8 @@ int16_t (*loaderSysReq)(int16_t, const char *, const char *, void (*)(void));
 
 #define NUM_SYSREQ_TYPES 7
 
-static char *buttonText[NUM_SYSREQ_TYPES][5] =
+#define MAX_PUSHBUTTONS 5
+static char *buttonText[NUM_SYSREQ_TYPES][MAX_PUSHBUTTONS] =
 {
 	// generic dialogs
 	{ "OK", "","","","" },
@@ -216,8 +218,11 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 
 	// count number of buttons
 	uint16_t numButtons = 0;
-	while (buttonText[type][numButtons][0] != '\0' && numButtons < 5)
-		numButtons++;
+	for (int32_t i = 0; i < MAX_PUSHBUTTONS; i++)
+	{
+		if (buttonText[type][i][0] != '\0')
+			numButtons++;
+	}
 
 	uint16_t tlen = textWidth(text);
 	uint16_t hlen = textWidth(headline);
@@ -447,10 +452,12 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 	uint16_t wlen = textWidth(headline);
 	const uint16_t headlineX = (SCREEN_W - wlen) / 2;
 
-	// count number of buttons
 	uint16_t numButtons = 0;
-	while (buttonText[type][numButtons][0] != '\0' && numButtons < 5)
-		numButtons++;
+	for (int32_t i = 0; i < MAX_PUSHBUTTONS; i++)
+	{
+		if (buttonText[type][i][0] != '\0')
+			numButtons++;
+	}
 
 	uint16_t tx = TEXTBOX_W;
 	if (tx > wlen)
