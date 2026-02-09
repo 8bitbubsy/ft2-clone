@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 #include <math.h> // modf()
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
@@ -262,6 +264,8 @@ int main(int argc, char *argv[])
 
 static void initializeVars(void)
 {
+	srand((uint32_t)time(NULL));
+
 	cpu.hasSSE = SDL_HasSSE();
 	cpu.hasSSE2 = SDL_HasSSE2();
 
