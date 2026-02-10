@@ -203,15 +203,6 @@ bool loadSTK(FILE *f, uint32_t filesize)
 				}
 			}
 		}
-
-		if (tmpPatternEmpty(a))
-		{
-			if (patternTmp[a] != NULL)
-			{
-				free(patternTmp[a]);
-				patternTmp[a] = NULL;
-			}
-		}
 	}
 
 	// pattern command conversion for non-PT formats

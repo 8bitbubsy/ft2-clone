@@ -178,15 +178,6 @@ bool loadSTM(FILE *f, uint32_t filesize)
 				}
 			}
 		}
-
-		if (tmpPatternEmpty(i))
-		{
-			if (patternTmp[i] != NULL)
-			{
-				free(patternTmp[i]);
-				patternTmp[i] = NULL;
-			}
-		}
 	}
 
 	for (i = 0; i < 31; i++)

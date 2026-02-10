@@ -1198,7 +1198,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 	}
 
 	// removing this message is considered a criminal act!!!
-	loaderMsgBox("Loading of this format has severe issues. Don't use this for listening to .ITs!");
+	loaderMsgBox("This format is very incompatible with FT2. Please don't use this program as a .IT player!");
 
 	return true;
 

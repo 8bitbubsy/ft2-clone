@@ -125,15 +125,6 @@ bool loadDIGI(FILE *f, uint32_t filesize)
 					readPatternNote(f, &patternTmp[i][(k * MAX_CHANNELS) + j]);
 			}
 		}
-
-		if (tmpPatternEmpty(i))
-		{
-			if (patternTmp[i] != NULL)
-			{
-				free(patternTmp[i]);
-				patternTmp[i] = NULL;
-			}
-		}
 	}
 
 	// pattern command handling

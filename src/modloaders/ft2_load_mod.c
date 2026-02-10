@@ -141,15 +141,6 @@ bool loadMOD(FILE *f, uint32_t filesize)
 					fseek(f, remainingChans*4, SEEK_CUR);
 				}
 			}
-
-			if (tmpPatternEmpty(a))
-			{
-				if (patternTmp[a] != NULL)
-				{
-					free(patternTmp[a]);
-					patternTmp[a] = NULL;
-				}
-			}
 		}
 	}
 	else
@@ -191,18 +182,6 @@ bool loadMOD(FILE *f, uint32_t filesize)
 					p->instr = (bytes[0] & 0xF0) | (bytes[2] >> 4);
 					p->efx = bytes[2] & 0x0F;
 					p->efxData = bytes[3];
-				}
-			}
-		}
-
-		for (a = 0; a < b; a++)
-		{
-			if (tmpPatternEmpty(a))
-			{
-				if (patternTmp[a] != NULL)
-				{
-					free(patternTmp[a]);
-					patternTmp[a] = NULL;
 				}
 			}
 		}

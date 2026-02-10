@@ -53,12 +53,10 @@ s3mHdr_t;
 
 static uint8_t pattBuff[12288];
 
-static int8_t countS3MChannels(uint16_t numPatterns);
-
 bool loadS3M(FILE *f, uint32_t filesize)
 {
-	uint8_t alastnfo[32], alastefx[32], alastvibnfo[32], s3mLastGInstr[32];
-	int16_t ii, kk, tmp;
+	uint8_t alastnfo[32], alastefx[32], alastvibnfo[32], alastGxxInstr[32];
+	int16_t tmp;
 	int32_t patternOffsets[256], sampleOffsets[256], j, k;
 	note_t tmpNote;
 	sample_t *s;
@@ -158,7 +156,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 
 	// *** PATTERNS ***
 
-	k = 0;
+	int32_t highestChannel = 0;
 	for (int32_t i = 0; i < hdr.numPatterns; i++)
 	{
 		if (patternOffsets[i]  == 0)
@@ -167,19 +165,20 @@ bool loadS3M(FILE *f, uint32_t filesize)
 		memset(alastnfo, 0, sizeof (alastnfo));
 		memset(alastefx, 0, sizeof (alastefx));
 		memset(alastvibnfo, 0, sizeof (alastvibnfo));
-		memset(s3mLastGInstr, 0, sizeof (s3mLastGInstr));
+		memset(alastGxxInstr, 0, sizeof (alastGxxInstr));
 
 		fseek(f, patternOffsets[i], SEEK_SET);
 		if (feof(f))
 			continue;
 
-		if (fread(&j, 2, 1, f) != 1)
+		uint16_t packedPattLen;
+		if (fread(&packedPattLen, 2, 1, f) != 1)
 		{
 			loaderMsgBox("General I/O error during loading! Is the file in use?");
 			return false;
 		}
 
-		if (j > 0 && j <= 12288)
+		if (packedPattLen > 0 && packedPattLen <= 12288)
 		{
 			if (!allocateTmpPatt(i, 64))
 			{
@@ -187,30 +186,33 @@ bool loadS3M(FILE *f, uint32_t filesize)
 				return false;
 			}
 
-			fread(pattBuff, j, 1, f);
+			note_t *p = patternTmp[i];
 
-			k = 0;
-			kk = 0;
+			fread(pattBuff, packedPattLen, 1, f);
 
-			while (k < j && kk < 64)
+			uint16_t index = 0, chn = 0, row = 0;
+			while (index < packedPattLen)
 			{
-				uint8_t bits = pattBuff[k++];
+				const uint8_t bits = pattBuff[index++];
 
 				if (bits == 0)
 				{
-					kk++;
+					if (++row >= 64)
+						break;
 				}
 				else
 				{
-					ii = bits & 31;
+					chn = bits & 31;
+					if (chn > highestChannel)
+						highestChannel = chn;
 
-					memset(&tmpNote, 0, sizeof (tmpNote));
+					tmpNote.note = tmpNote.instr = tmpNote.vol = tmpNote.efx = tmpNote.efxData = 0;
 
 					// note and sample
 					if (bits & 32)
 					{
-						tmpNote.note = pattBuff[k++];
-						tmpNote.instr = pattBuff[k++];
+						tmpNote.note = pattBuff[index++];
+						tmpNote.instr = pattBuff[index++];
 
 						if (tmpNote.instr > MAX_INST)
 							tmpNote.instr = 0;
@@ -228,7 +230,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 					// volume column
 					if (bits & 64)
 					{
-						tmpNote.vol = pattBuff[k++];
+						tmpNote.vol = pattBuff[index++];
 
 						if (tmpNote.vol <= 64)
 							tmpNote.vol += 0x10;
@@ -239,14 +241,14 @@ bool loadS3M(FILE *f, uint32_t filesize)
 					// effect
 					if (bits & 128)
 					{
-						tmpNote.efx = pattBuff[k++];
-						tmpNote.efxData = pattBuff[k++];
+						tmpNote.efx = pattBuff[index++];
+						tmpNote.efxData = pattBuff[index++];
 
 						if (tmpNote.efxData > 0)
 						{
-							alastnfo[ii] = tmpNote.efxData;
+							alastnfo[chn] = tmpNote.efxData;
 							if (tmpNote.efx == 8 || tmpNote.efx == 21)
-								alastvibnfo[ii] = tmpNote.efxData; // H/U
+								alastvibnfo[chn] = tmpNote.efxData; // H/U
 						}
 
 						// in ST3, a lot of effects directly share the same memory!
@@ -254,16 +256,16 @@ bool loadS3M(FILE *f, uint32_t filesize)
 						{
 							uint8_t efx = tmpNote.efx;
 							if (efx == 8 || efx == 21) // H/U
-								tmpNote.efxData = alastvibnfo[ii];
+								tmpNote.efxData = alastvibnfo[chn];
 							else if ((efx >= 4 && efx <= 12) || (efx >= 17 && efx <= 19)) // D/E/F/I/J/K/L/Q/R/S
-								tmpNote.efxData = alastnfo[ii];
+								tmpNote.efxData = alastnfo[chn];
 
 							/* If effect data is zero and effect type was the same as last one, clear out
 							** data if it's not J or S (those have no memory in the equivalent XM effects).
 							** Also goes for extra fine pitch slides and fine volume slides,
 							** since they get converted to other effects.
 							*/
-							if (efx == alastefx[ii] && tmpNote.efx != 10 && tmpNote.efx != 19) // J/S
+							if (efx == alastefx[chn] && tmpNote.efx != 10 && tmpNote.efx != 19) // J/S
 							{
 								uint8_t nfo = tmpNote.efxData;
 								bool extraFinePitchSlides = (efx == 5 || efx == 6) && ((nfo & 0xF0) == 0xE0);
@@ -276,7 +278,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 						}
 
 						if (tmpNote.efx > 0)
-							alastefx[ii] = tmpNote.efx;
+							alastefx[chn] = tmpNote.efx;
 
 						switch (tmpNote.efx)
 						{
@@ -352,8 +354,8 @@ bool loadS3M(FILE *f, uint32_t filesize)
 								tmpNote.efx = 3;
 
 								// fix illegal slides (to new instruments)
-								if (tmpNote.instr != 0 && tmpNote.instr != s3mLastGInstr[ii])
-									tmpNote.instr = s3mLastGInstr[ii];
+								if (tmpNote.instr != 0 && tmpNote.instr != alastGxxInstr[chn])
+									tmpNote.instr = alastGxxInstr[chn];
 							}
 							break;
 
@@ -492,22 +494,15 @@ bool loadS3M(FILE *f, uint32_t filesize)
 					}
 
 					if (tmpNote.instr != 0 && tmpNote.efx != 3)
-						s3mLastGInstr[ii] = tmpNote.instr;
+						alastGxxInstr[chn] = tmpNote.instr;
 
-					patternTmp[i][(kk * MAX_CHANNELS) + ii] = tmpNote;
-				}
-			}
-
-			if (tmpPatternEmpty((uint16_t)i))
-			{
-				if (patternTmp[i] != NULL)
-				{
-					free(patternTmp[i]);
-					patternTmp[i] = NULL;
+					p[(row * MAX_CHANNELS) + chn] = tmpNote;
 				}
 			}
 		}
 	}
+
+	songTmp.numChannels = highestChannel + 1;
 
 	// *** SAMPLES ***
 
@@ -627,8 +622,6 @@ bool loadS3M(FILE *f, uint32_t filesize)
 		}
 	}
 
-	songTmp.numChannels = countS3MChannels(hdr.numPatterns);
-
 	if (adlibInsWarn)
 		loaderMsgBox("Warning: The module contains unsupported AdLib instruments!");
 
@@ -636,30 +629,4 @@ bool loadS3M(FILE *f, uint32_t filesize)
 		loaderSysReq(0, "System message", "Loading of this format is not fully supported and can have issues.", configToggleImportWarning);
 
 	return true;
-}
-
-static int8_t countS3MChannels(uint16_t numPatterns)
-{
-	int32_t channels = 0;
-	for (int32_t i = 0; i < numPatterns; i++)
-	{
-		if (patternTmp[i] == NULL)
-			continue;
-
-		note_t *p = patternTmp[i];
-		for (int32_t j = 0; j < 64; j++)
-		{
-			for (int32_t k = 0; k < MAX_CHANNELS; k++, p++)
-			{
-				if (p->note == 0 && p->instr == 0 && p->vol == 0 && p->efx == 0 && p->efxData == 0)
-					continue;
-
-				if (k > channels)
-					channels = k;
-			}
-		}
-	}
-	channels++;
-
-	return (int8_t)channels;
 }
