@@ -554,7 +554,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 				memcpy(s->name, smpHdr.name, 22);
 
 				// non-FT2: fixes "miracle man.s3m" and other broken S3Ms
-				if (offsetInFile+smpHdr.length > (int32_t)filesize)
+				if (offsetInFile+smpHdr.length > filesize)
 					smpHdr.length = filesize - offsetInFile;
 
 				bool hasLoop = !!(smpHdr.flags & 1);
