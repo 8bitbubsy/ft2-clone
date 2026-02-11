@@ -37,9 +37,8 @@ typedef struct stmHdr_t
 	char name[20], sig[8];
 	uint8_t x1A, type;
 	uint8_t verMajor, verMinor;
-	uint8_t tempo, numPatterns, volume, reserved[13];
+	uint8_t tempo, numPatterns, masterVol, reserved[13];
 	stmSmpHdr_t smp[31];
-	uint8_t orders[128];
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
@@ -73,22 +72,34 @@ bool loadSTM(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	if (hdr.verMinor == 0 || hdr.type != 2)
+	if (hdr.type != 2)
 	{
 		loaderMsgBox("Error loading STM: Incompatible module!");
 		return false;
 	}
 
 	songTmp.numChannels = 4;
-	memcpy(songTmp.orders, hdr.orders, 128);
 
-	i = 0;
-	while (i < 128 && songTmp.orders[i] < 99)
-		i++;
-	songTmp.songLength = i + (i == 0);
+	uint8_t maxOrders = (hdr.verMinor == 0) ? 64 : 128;
+	fread(songTmp.orders, 1, maxOrders, f);
 
-	if (songTmp.songLength < 255)
-		memset(&songTmp.orders[songTmp.songLength], 0, 256 - songTmp.songLength);
+	// count number of orders (song length)
+	uint8_t songLength = 0;
+	for (i = 0; i < maxOrders; i++)
+	{
+		if (songTmp.orders[i] >= 99)
+			break;
+
+		songLength++;
+	}
+
+	if (songLength == 0)
+		songLength = 1;
+
+	songTmp.songLength = songLength;
+
+	// clear unused orders
+	memset(&songTmp.orders[songTmp.songLength], 0, 256 - songTmp.songLength);
 
 	memcpy(songTmp.name, hdr.name, 20);
 
@@ -147,24 +158,27 @@ bool loadSTM(FILE *f, uint32_t filesize)
 				p->efxData = pattPtr[3];
 
 				uint8_t efx = pattPtr[2] & 0x0F;
-				if (efx == 1)
+				if (efx == 1) // set speed
 				{
 					p->efx = 15;
 
 					if (hdr.verMinor < 21)
 						p->efxData = ((p->efxData / 10) << 4) + (p->efxData % 10);
-					
+
 					p->efxData >>= 4;
+					if (p->efxData == 0)
+						p->efx = 0;
 				}
-				else if (efx == 3)
+				else if (efx == 3) // pattern break
 				{
 					p->efx = 13;
 					p->efxData = 0;
 				}
 				else if (efx == 2 || (efx >= 4 && efx <= 12))
 				{
-					p->efx = stmEfx[efx];
-					if (p->efx == 0xA)
+					p->efx = stmEfx[efx]; // convert to XM effect
+
+					if (p->efx == 0xA) // volume slide
 					{
 						if (p->efxData & 0x0F)
 							p->efxData &= 0x0F;
@@ -186,10 +200,20 @@ bool loadSTM(FILE *f, uint32_t filesize)
 
 		if (hdr.smp[i].length > 0)
 		{
-			allocateTmpInstr(1 + i);
+			if (!allocateTmpInstr(1 + i))
+			{
+				loaderMsgBox("Not enough memory!");
+				return false;
+			}
+
 			setNoEnvelope(instrTmp[i]);
 
 			sample_t *s = &instrTmp[1+i]->smp[0];
+
+			// non-FT2: fixes "acidlamb.stm" and other broken STMs
+			const uint32_t offsetInFile = (uint32_t)ftell(f);
+			if (offsetInFile+hdr.smp[i].length > filesize)
+				hdr.smp[i].length = (uint16_t)(filesize - offsetInFile);
 
 			if (!allocateSmpData(s, hdr.smp[i].length, false))
 			{
@@ -210,18 +234,20 @@ bool loadSTM(FILE *f, uint32_t filesize)
 				if (s->loopStart+s->loopLength > s->length)
 					s->loopLength = s->length - s->loopStart;
 
-				s->flags |= LOOP_FWD; // enable loop
+				s->flags |= LOOP_FWD;
 			}
 			else
 			{
-				s->loopStart = 0;
-				s->loopLength = 0;
+				s->loopStart = s->loopLength = 0;
 			}
 
-			if (fread(s->dataPtr, s->length, 1, f) != 1)
+			if (offsetInFile < filesize)
 			{
-				loaderMsgBox("General I/O error during loading! Possibly corrupt module?");
-				return false;
+				if (fread(s->dataPtr, s->length, 1, f) != 1)
+				{
+					loaderMsgBox("General I/O error during loading! Possibly corrupt module?");
+					return false;
+				}
 			}
 		}
 	}

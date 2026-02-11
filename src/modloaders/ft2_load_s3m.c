@@ -528,7 +528,10 @@ bool loadS3M(FILE *f, uint32_t filesize)
 		}
 		else if (smpHdr.type == 1)
 		{
-			int32_t offsetInFile = ((smpHdr.offsetInFileH << 16) | smpHdr.offsetInFile) << 4;
+			uint32_t offsetInFile = ((smpHdr.offsetInFileH << 16) | smpHdr.offsetInFile) << 4;
+			if (offsetInFile >= filesize)
+				continue;
+
 			if ((smpHdr.flags & (255-1-2-4)) != 0 || smpHdr.packFlag != 0)
 			{
 				loaderMsgBox("Error loading .s3m: Incompatible module!");
