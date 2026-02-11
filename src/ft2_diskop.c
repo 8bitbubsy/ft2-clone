@@ -1912,7 +1912,7 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 	int8_t lastFindFileFlag = findFirst(&tmpBuffer);
 	if (lastFindFileFlag != LFF_DONE && lastFindFileFlag != LFF_SKIP)
 	{
-		FReq_Buffer = (DirRec *)malloc(sizeof (DirRec) * (FReq_FileCount+1));
+		FReq_Buffer = (DirRec *)malloc(sizeof (DirRec));
 		if (FReq_Buffer == NULL)
 		{
 			findClose();
@@ -1929,7 +1929,7 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 			return false;
 		}
 
-		memcpy(&FReq_Buffer[FReq_FileCount], &tmpBuffer, sizeof (DirRec));
+		memcpy(FReq_Buffer, &tmpBuffer, sizeof (DirRec));
 		FReq_FileCount++;
 	}
 
@@ -2289,7 +2289,7 @@ void showDiskOpScreen(void)
 	if (editor.diskOpReadOnOpen)
 	{
 		editor.diskOpReadOnOpen = false;
-		diskOp_StartDirReadThread();
+		editor.diskOpReadDir = true;
 	}
 }
 
