@@ -205,7 +205,7 @@ bool loadSTK(FILE *f, uint32_t filesize)
 		}
 	}
 
-	// pattern command conversion for non-PT formats
+	// pattern command conversion
 	for (a = 0; a < b; a++)
 	{
 		if (patternTmp[a] == NULL)
