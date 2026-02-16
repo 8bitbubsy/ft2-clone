@@ -3194,13 +3194,9 @@ void stopVoices(void)
 		ch->instrNum = 0;
 		ch->instrPtr = instr[0]; // important: set instrument pointer to instr 0 (placeholder instrument)
 		ch->status = CS_UPDATE_VOL;
-		ch->realVol = 0;
-		ch->outVol = 0;
-		ch->oldVol = 0;
+		ch->realVol = ch->outVol = ch->oldVol = 0;
 		ch->fFinalVol = 0.0f;
-		ch->oldPan = 128;
-		ch->outPan = 128;
-		ch->finalPan = 128;
+		ch->oldPan = ch->outPan = ch->finalPan = 128;
 		ch->vibratoDepth = 0;
 		ch->midiVibDepth = 0;
 		ch->midiPitch = 0;
