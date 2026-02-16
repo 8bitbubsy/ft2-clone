@@ -268,11 +268,12 @@ bool loadS3M(FILE *f, uint32_t filesize)
 							if (efx == alastefx[chn] && tmpNote.efx != 10 && tmpNote.efx != 19) // J/S
 							{
 								uint8_t nfo = tmpNote.efxData;
+								bool finePitchSlides = (efx == 5 || efx == 6) && ((nfo & 0xF0) == 0xF0);
 								bool extraFinePitchSlides = (efx == 5 || efx == 6) && ((nfo & 0xF0) == 0xE0);
 								bool fineVolSlides = (efx == 4 || efx == 11) &&
 								     ((nfo > 0xF0) || (((nfo & 0xF) == 0xF) && ((nfo & 0xF0) > 0)));
 
-								if (!extraFinePitchSlides && !fineVolSlides)
+								if (!finePitchSlides && !extraFinePitchSlides && !fineVolSlides)
 									tmpNote.efxData = 0;
 							}
 						}
