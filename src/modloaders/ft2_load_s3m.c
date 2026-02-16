@@ -36,12 +36,12 @@ s3mSmpHdr_t;
 typedef struct s3mHdr_t
 {
 	char name[28];
-	uint8_t junk1, type;
-	uint16_t junk2;
+	uint8_t _magic_pinit, type;
+	uint8_t _reserved1[2];
 	int16_t numOrders, numSamples, numPatterns;
-	uint16_t flags, junk3, version;
+	uint16_t flags, junk3, ffi;
 	char ID[4];
-	uint8_t junk4, speed, BPM, junk5, junk6[12], chnSettings[32];
+	uint8_t globalVol, speed, BPM, mastermul, ultraclick, defaultpan252, reserved[10], chnSettings[32];
 }
 #ifdef __GNUC__
 __attribute__ ((packed))
@@ -79,7 +79,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 	}
 
 	if (hdr.numSamples > MAX_INST || hdr.numOrders > MAX_ORDERS || hdr.numPatterns > MAX_PATTERNS ||
-		hdr.type != 16 || hdr.version < 1 || hdr.version > 2)
+		hdr.type != 16 || hdr.ffi < 1 || hdr.ffi > 2)
 	{
 		loaderMsgBox("Error loading .s3m: Incompatible module!");
 		return false;
@@ -597,29 +597,25 @@ bool loadS3M(FILE *f, uint32_t filesize)
 
 				fseek(f, offsetInFile, SEEK_SET);
 
-				if (hdr.version == 1)
+				if (fread(s->dataPtr, SAMPLE_LENGTH_BYTES(s), 1, f) != 1)
 				{
-					fseek(f, lengthInFile, SEEK_CUR); // sample not supported
+					loaderMsgBox("General I/O error during loading! Is the file in use?");
+					return false;
 				}
-				else
-				{
-					if (fread(s->dataPtr, SAMPLE_LENGTH_BYTES(s), 1, f) != 1)
-					{
-						loaderMsgBox("General I/O error during loading! Is the file in use?");
-						return false;
-					}
 
+				if (hdr.ffi == 2) // unsigned samples, convert to signed
+				{
 					if (sample16Bit)
 						conv16BitSample(s->dataPtr, s->length, stereoSample);
 					else
 						conv8BitSample(s->dataPtr, s->length, stereoSample);
+				}
 
-					// if stereo sample: reduce memory footprint after sample was downmixed to mono
-					if (stereoSample)
-					{
-						s->length >>= 1;
-						reallocateSmpData(s, s->length, sample16Bit);
-					}
+				// if stereo sample: reduce memory footprint after sample was downmixed to mono
+				if (stereoSample)
+				{
+					s->length >>= 1;
+					reallocateSmpData(s, s->length, sample16Bit);
 				}
 			}
 		}
