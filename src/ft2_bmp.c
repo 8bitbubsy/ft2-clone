@@ -163,18 +163,27 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 	bmpHeader_t *hdr = (bmpHeader_t *)src;
 	const uint8_t *pData = &src[hdr->bfOffBits];
 	const int32_t colorsInBitmap = 1 << hdr->biBitCount;
+	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
 
-	if (hdr->biCompression == COMP_RGB || hdr->biClrUsed > 256 || colorsInBitmap > 256)
+	if (hdr->biCompression == COMP_RGB || palEntries > 256)
 		return NULL;
 
 	uint32_t *outData = (uint32_t *)malloc(hdr->biWidth * hdr->biHeight * sizeof (uint32_t));
 	if (outData == NULL)
 		return NULL;
 
-	// pre-fill image with first palette color
-	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
-	memcpy(pal, &src[0x36], palEntries * sizeof (uint32_t));
+	const uint8_t *p = (uint8_t *)&src[0x36];
+	for (int32_t i = 0; i < palEntries; i++)
+	{
+		const uint8_t b8 = *p++;
+		const uint8_t g8 = *p++;
+		const uint8_t r8 = *p++;
+		p++;
 
+		pal[i] = (r8 << 16) | (g8 << 8) | b8;
+	}
+
+	// pre-fill image with first palette color
 	for (int32_t i = 0; i < hdr->biWidth * hdr->biHeight; i++)
 		outData[i] = pal[0];
 
@@ -272,27 +281,35 @@ static uint32_t *loadBMPTo32Bit(const uint8_t *src)
 static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 {
 	uint8_t palIdx, color, color2, *tmp8;
-	int32_t len, byte, i;
-	uint32_t pal[16];
+	int32_t len, byte;
+	uint8_t pal[16];
 
 	bmpHeader_t *hdr = (bmpHeader_t *)src;
 	const uint8_t *pData = &src[hdr->bfOffBits];
 	const int32_t colorsInBitmap = 1 << hdr->biBitCount;
+	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
 
-	if (hdr->biCompression != COMP_RLE4 || hdr->biClrUsed > 16 || colorsInBitmap > 16)
+	if (hdr->biCompression != COMP_RLE4 || palEntries > 16)
 		return NULL;
 
 	uint8_t *outData = (uint8_t *)malloc(hdr->biWidth * hdr->biHeight * sizeof (uint8_t));
 	if (outData == NULL)
 		return NULL;
+	
+	const uint8_t *p = (uint8_t *)&src[0x36];
+	for (int32_t i = 0; i < palEntries; i++)
+	{
+		const uint8_t b8 = *p++;
+		const uint8_t g8 = *p++;
+		const uint8_t r8 = *p++;
+		p++;
 
-	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
-	memcpy(pal, &src[0x36], palEntries * sizeof (uint32_t));
+		pal[i] = ((r8 + g8 + b8) != 0) ? 1 : 0;
+	}
 
 	// pre-fill image with first palette color
-	color = !!pal[0];
-	for (i = 0; i < hdr->biWidth * hdr->biHeight; i++)
-		outData[i] = color;
+	for (int32_t i = 0; i < hdr->biWidth * hdr->biHeight; i++)
+		outData[i] = pal[0];
 
 	const int32_t lineEnd = hdr->biWidth;
 	const uint8_t *src8 = pData;
@@ -324,13 +341,13 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 			{
 				len = byte >> 1;
 				tmp8 = &dst8[y * hdr->biWidth];
-				for (i = 0; i < len; i++)
+				for (int32_t i = 0; i < len; i++)
 				{
 					palIdx = *src8++;
-					tmp8[x++] = !!pal[palIdx >> 4];
+					tmp8[x++] = pal[palIdx >> 4];
 					
 					if (x < lineEnd)
-						tmp8[x++] = !!pal[palIdx & 0xF];
+						tmp8[x++] = pal[palIdx & 0xF];
 				}
 
 				if (((byte + 1) >> 1) & 1)
@@ -341,12 +358,12 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 		{
 			palIdx = *src8++;
 
-			color = !!pal[palIdx >> 4];
-			color2 = !!pal[palIdx & 0x0F];
+			color = pal[palIdx >> 4];
+			color2 = pal[palIdx & 0x0F];
 
 			len = byte >> 1;
 			tmp8 = &dst8[y * hdr->biWidth];
-			for (i = 0; i < len; i++)
+			for (int32_t i = 0; i < len; i++)
 			{
 				tmp8[x++] = color;
 				if (x < lineEnd)
@@ -361,26 +378,35 @@ static uint8_t *loadBMPTo1Bit(const uint8_t *src) // supports 4-bit RLE only
 static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 {
 	uint8_t palIdx, *tmp8, pal1, pal2;
-	int32_t len, byte, i;
+	int32_t len, byte;
 	uint32_t pal[16];
 
 	bmpHeader_t *hdr = (bmpHeader_t *)src;
 	const uint8_t *pData = &src[hdr->bfOffBits];
 	const int32_t colorsInBitmap = 1 << hdr->biBitCount;
+	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
 
-	if (hdr->biCompression != COMP_RLE4 || hdr->biClrUsed > 16 || colorsInBitmap > 16)
+	if (hdr->biCompression != COMP_RLE4 || palEntries > 16)
 		return NULL;
 
 	uint8_t *outData = (uint8_t *)malloc(hdr->biWidth * hdr->biHeight * sizeof (uint8_t));
 	if (outData == NULL)
 		return NULL;
 
-	const int32_t palEntries = (hdr->biClrUsed == 0) ? colorsInBitmap : hdr->biClrUsed;
-	memcpy(pal, &src[0x36], palEntries * sizeof (uint32_t));
+	const uint8_t *p = (uint8_t *)&src[0x36];
+	for (int32_t i = 0; i < palEntries; i++)
+	{
+		const uint8_t b8 = *p++;
+		const uint8_t g8 = *p++;
+		const uint8_t r8 = *p++;
+		p++;
+
+		pal[i] = (r8 << 16) | (g8 << 8) | b8;
+	}
 
 	// pre-fill image with first palette color
 	palIdx = getFT2PalNrFromPixel(pal[0]);
-	for (i = 0; i < hdr->biWidth * hdr->biHeight; i++)
+	for (int32_t i = 0; i < hdr->biWidth * hdr->biHeight; i++)
 		outData[i] = palIdx;
 
 	const int32_t lineEnd = hdr->biWidth;
@@ -413,7 +439,7 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 			{
 				tmp8 = &dst8[y * hdr->biWidth];
 				len = byte >> 1;
-				for (i = 0; i < len; i++)
+				for (int32_t i = 0; i < len; i++)
 				{
 					palIdx = *src8++;
 					tmp8[x++] = getFT2PalNrFromPixel(pal[palIdx >> 4]);
@@ -435,7 +461,7 @@ static uint8_t *loadBMPTo4BitPal(const uint8_t *src) // supports 4-bit RLE only
 
 			tmp8 = &dst8[y * hdr->biWidth];
 			len = byte >> 1;
-			for (i = 0; i < len; i++)
+			for (int32_t i = 0; i < len; i++)
 			{
 				tmp8[x++] = pal1;
 				if (x < lineEnd)
