@@ -3,7 +3,6 @@
 #include <crtdbg.h>
 #endif
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>

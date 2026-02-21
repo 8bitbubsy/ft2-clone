@@ -1,5 +1,5 @@
-#include <assert.h>
 #include <stdint.h>
+#include "../ft2_header.h"
 #include "../ft2_audio.h"
 
 // used for the audio channel mixer when voice volume is zero

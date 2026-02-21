@@ -3,7 +3,9 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 #include <stdbool.h>
+#ifdef _DEBUG
 #include <assert.h>
+#endif
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
 #include <windows.h>
