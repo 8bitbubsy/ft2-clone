@@ -231,7 +231,7 @@ void fixSample(sample_t *s)
 	int32_t pos;
 	bool backwards;
 
-	assert(s != NULL);
+	ASSERT(s != NULL);
 	if (s->dataPtr == NULL || s->length <= 0)
 	{
 		s->isFixed = false;
@@ -465,7 +465,7 @@ void fixSample(sample_t *s)
 // restores interpolation tap samples after loop/end
 void unfixSample(sample_t *s)
 {
-	assert(s != NULL);
+	ASSERT(s != NULL);
 	if (s->dataPtr == NULL || !s->isFixed)
 		return; // empty sample or not fixed (f.ex. no loop)
 
@@ -794,7 +794,7 @@ static void writeRange(void)
 	end = CLAMP(end, 0, SAMPLE_AREA_WIDTH-1);
 
 	int32_t rangeLen = (end + 1) - start;
-	assert(start+rangeLen <= SCREEN_W);
+	ASSERT(start+rangeLen <= SCREEN_W);
 
 	uint32_t *ptr32 = &video.frameBuffer[(174 * SCREEN_W) + start];
 	for (int32_t y = 0; y < SAMPLE_AREA_HEIGHT; y++)
@@ -2647,7 +2647,7 @@ void rbSamplePingpongLoop(void)
 static int32_t SDLCALL convSmp8Bit(void *ptr)
 {
 	sample_t *s = getCurSample();
-	assert(s->dataPtr != NULL);
+	ASSERT(s->dataPtr != NULL);
 
 	pauseAudio();
 	unfixSample(s);
@@ -3055,7 +3055,7 @@ static void writeSamplePosLine(void)
 {
 	uint8_t ins, smp;
 
-	assert(editor.curSmpChannel < MAX_CHANNELS);
+	ASSERT(editor.curSmpChannel < MAX_CHANNELS);
 	lastChInstr_t *c = &lastChInstr[editor.curSmpChannel];
 
 	if (c->instrNum == 130) // "Play Wave/Range/Display" in Smp. Ed.

@@ -264,7 +264,7 @@ static void readHelp(void) // this is a bit messy...
 
 static void bigTextOutHalf(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, bool lowerHalf, const char *textPtr)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t currX = xPos;
 	while (true)

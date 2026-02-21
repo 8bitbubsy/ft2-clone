@@ -25,6 +25,14 @@
 #define SCALE_VBLANK_DELTA(x) (int32_t)(((x) * (FT2_VBLANK_HZ / (double)VBLANK_HZ)) + 0.5)
 #define SCALE_VBLANK_DELTA_REV(x) (int32_t)(((x) * (VBLANK_HZ / (double)FT2_VBLANK_HZ)) + 0.5)
 
+#ifndef ASSERT
+#ifdef _DEBUG
+#define ASSERT(x) assert(x)
+#else
+#define ASSERT(x)
+#endif
+#endif
+
 /* Amount of extra bytes to allocate for every instrument sample,
 ** this is used for a hack for resampling interpolation to be
 ** branchless in the inner channel mixer loop.

@@ -69,7 +69,7 @@ void drawPatternBorders(void)
 	else if (chans == 10 && !config.ptnShowVolColumn)
 		chans = 12;
 
-	assert(chans >= 2 && chans <= 12);
+	ASSERT(chans >= 2 && chans <= 12);
 
 	const uint16_t chanWidth = chanWidths[(chans >> 1) - 1] + 2;
 
@@ -182,7 +182,7 @@ static void writeCursor(void)
 	int32_t xPos = pattCursorXTab[tabOffset];
 	const int32_t width = pattCursorWTab[tabOffset];
 
-	assert(editor.ptnCursorY > 0 && xPos > 0 && width > 0);
+	ASSERT(editor.ptnCursorY > 0 && xPos > 0 && width > 0);
 	xPos += ((cursor.ch - ui.channelOffset) * ui.patternChannelWidth);
 
 	uint32_t *dstPtr = &video.frameBuffer[(editor.ptnCursorY * SCREEN_W) + xPos];
@@ -277,7 +277,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 			return;
 	}
 
-	assert(x1 > 0 && x1 < SCREEN_W && x2 > 0 && x2 < SCREEN_W &&
+	ASSERT(x1 > 0 && x1 < SCREEN_W && x2 > 0 && x2 < SCREEN_W &&
 	       y1 > 0 && y1 < SCREEN_H && y2 > 0 && y2 < SCREEN_H);
 
 	// pattern mark drawing
@@ -285,7 +285,7 @@ static void writePatternBlockMark(int32_t currRow, uint32_t rowHeight, const pat
 	const int32_t w = x2 - x1;
 	const int32_t h = y2 - y1;
 
-	assert(x1+w <= SCREEN_W && y1+h <= SCREEN_H);
+	ASSERT(x1+w <= SCREEN_W && y1+h <= SCREEN_H);
 
 	uint32_t *ptr32 = &video.frameBuffer[(y1 * SCREEN_W) + x1];
 	for (int32_t y = 0; y < h; y++)
@@ -372,7 +372,7 @@ static void showNoteNum(uint32_t xPos, uint32_t yPos, int16_t note, uint32_t col
 {
 	xPos += 3;
 
-	assert(note >= 0 && note <= 97);
+	ASSERT(note >= 0 && note <= 97);
 
 	if (ui.numChannelsShown <= 4)
 	{
@@ -514,7 +514,7 @@ static void showNoteNumNoVolColumn(uint32_t xPos, uint32_t yPos, int16_t note, u
 {
 	xPos += 3;
 
-	assert(note >= 0 && note <= 97);
+	ASSERT(note >= 0 && note <= 97);
 
 	if (ui.numChannelsShown <= 6)
 	{
@@ -656,7 +656,7 @@ void writePattern(int32_t currRow, int32_t currPattern)
 	if (chans > ui.maxVisibleChannels)
 		chans = ui.maxVisibleChannels;
 
-	assert(chans >= 2 && chans <= 12);
+	ASSERT(chans >= 2 && chans <= 12);
 
 	// get channel width
 	const uint32_t chanWidth = chanWidths[(chans / 2) - 1];

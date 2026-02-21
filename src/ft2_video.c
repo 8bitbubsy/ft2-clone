@@ -477,7 +477,7 @@ void eraseSprites(void)
 		if (s->x >= SCREEN_W || s->y >= SCREEN_H) // sprite is hidden, don't draw nor fill clear buffer
 			continue;
 
-		assert(s->refreshBuffer != NULL);
+		ASSERT(s->refreshBuffer != NULL);
 
 		int32_t sw = s->w;
 		int32_t sh = s->h;
@@ -530,7 +530,7 @@ void renderSprites(void)
 		// don't render the text edit cursor if window is inactive
 		if (i == SPRITE_TEXT_CURSOR)
 		{
-			assert(video.window != NULL);
+			ASSERT(video.window != NULL);
 			const uint32_t windowFlags = SDL_GetWindowFlags(video.window);
 			if (!(windowFlags & SDL_WINDOW_INPUT_FOCUS))
 				continue;
@@ -543,7 +543,7 @@ void renderSprites(void)
 		if (s->x >= SCREEN_W || s->y >= SCREEN_H) // sprite is hidden, don't draw nor fill clear buffer
 			continue;
 
-		assert(s->data != NULL && s->refreshBuffer != NULL);
+		ASSERT(s->data != NULL && s->refreshBuffer != NULL);
 
 		int32_t sw = s->w;
 		int32_t sh = s->h;
@@ -617,7 +617,7 @@ void renderSprites(void)
 
 					if (*src8 != PAL_TRANSPR)
 					{
-						assert(*src8 < PAL_NUM);
+						ASSERT(*src8 < PAL_NUM);
 						*dst32 = video.palette[*src8];
 					}
 
@@ -642,7 +642,7 @@ void renderLoopPins(void)
 	// left loop pin
 
 	sprite_t *s = &sprites[SPRITE_LEFT_LOOP_PIN];
-	assert(s->data != NULL && s->refreshBuffer != NULL);
+	ASSERT(s->data != NULL && s->refreshBuffer != NULL);
 
 	// set new sprite position
 	s->x = s->newX;
@@ -681,7 +681,7 @@ void renderLoopPins(void)
 
 				if (*src8 != PAL_TRANSPR)
 				{
-					assert(*src8 < PAL_NUM);
+					ASSERT(*src8 < PAL_NUM);
 					*dst32 = video.palette[*src8];
 				}
 
@@ -698,7 +698,7 @@ void renderLoopPins(void)
 	// right loop pin
 
 	s = &sprites[SPRITE_RIGHT_LOOP_PIN];
-	assert(s->data != NULL && s->refreshBuffer != NULL);
+	ASSERT(s->data != NULL && s->refreshBuffer != NULL);
 
 	// set new sprite position
 	s->x = s->newX;
@@ -740,7 +740,7 @@ void renderLoopPins(void)
 
 				if (*src8 != PAL_TRANSPR)
 				{
-					assert(*src8 < PAL_NUM);
+					ASSERT(*src8 < PAL_NUM);
 					if (y < 9 && *src8 == PAL_LOOPPIN)
 					{
 						// don't draw marker line on top of left loop pin's thumb graphics
@@ -1104,7 +1104,7 @@ void handleRedrawing(void)
 	// blink text edit cursor
 	if (editor.editTextFlag && mouse.lastEditBox != -1)
 	{
-		assert(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
+		ASSERT(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
 
 		textBox_t *txt = &textBoxes[mouse.lastEditBox];
 		if (editor.textCursorBlinkCounter < 256/2 && !textIsMarked() && !(mouse.leftButtonPressed | mouse.rightButtonPressed))

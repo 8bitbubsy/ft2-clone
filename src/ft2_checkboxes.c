@@ -129,7 +129,7 @@ void drawCheckBox(uint16_t checkBoxID)
 {
 	const uint8_t *gfxPtr;
 
-	assert(checkBoxID < NUM_CHECKBOXES);
+	ASSERT(checkBoxID < NUM_CHECKBOXES);
 	checkBox_t *checkBox = &checkBoxes[checkBoxID];
 	if (!checkBox->visible)
 		return;
@@ -150,21 +150,21 @@ void drawCheckBox(uint16_t checkBoxID)
 
 void showCheckBox(uint16_t checkBoxID)
 {
-	assert(checkBoxID < NUM_CHECKBOXES);
+	ASSERT(checkBoxID < NUM_CHECKBOXES);
 	checkBoxes[checkBoxID].visible = true;
 	drawCheckBox(checkBoxID);
 }
 
 void hideCheckBox(uint16_t checkBoxID)
 {
-	assert(checkBoxID < NUM_CHECKBOXES);
+	ASSERT(checkBoxID < NUM_CHECKBOXES);
 	checkBoxes[checkBoxID].state = 0;
 	checkBoxes[checkBoxID].visible = false;
 }
 
 void handleCheckBoxesWhileMouseDown(void)
 {
-	assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_CHECKBOXES);
+	ASSERT(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_CHECKBOXES);
 	checkBox_t *checkBox = &checkBoxes[mouse.lastUsedObjectID];
 	if (!checkBox->visible)
 		return;
@@ -226,7 +226,7 @@ void testCheckBoxMouseRelease(void)
 	if (mouse.lastUsedObjectType != OBJECT_CHECKBOX || mouse.lastUsedObjectID == OBJECT_ID_NONE)
 		return;
 
-	assert(mouse.lastUsedObjectID < NUM_CHECKBOXES);
+	ASSERT(mouse.lastUsedObjectID < NUM_CHECKBOXES);
 	checkBox_t *checkBox = &checkBoxes[mouse.lastUsedObjectID];
 	if (!checkBox->visible)
 		return;

@@ -267,7 +267,7 @@ void xchgInstr(void) // dstInstr <-> srcInstr
 static void drawMIDICh(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->midiChannel <= 15);
+	ASSERT(ins->midiChannel <= 15);
 	const uint8_t val = ins->midiChannel + 1;
 	textOutFixed(156, 132, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[val]);
 }
@@ -275,14 +275,14 @@ static void drawMIDICh(void)
 static void drawMIDIPrg(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->midiProgram <= 127);
+	ASSERT(ins->midiProgram <= 127);
 	textOutFixed(149, 146, PAL_FORGRND, PAL_DESKTOP, dec3StrTab[ins->midiProgram]);
 }
 
 static void drawMIDIBend(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->midiBend <= 36);
+	ASSERT(ins->midiBend <= 36);
 	textOutFixed(156, 160, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->midiBend]);
 }
 
@@ -412,42 +412,42 @@ void updateNewInstrument(void)
 static void drawVolEnvSus(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->volEnvSustain < 100);
+	ASSERT(ins->volEnvSustain < 100);
 	textOutFixed(382, 206, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->volEnvSustain]);
 }
 
 static void drawVolEnvRepS(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->volEnvLoopStart < 100);
+	ASSERT(ins->volEnvLoopStart < 100);
 	textOutFixed(382, 233, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->volEnvLoopStart]);
 }
 
 static void drawVolEnvRepE(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->volEnvLoopEnd < 100);
+	ASSERT(ins->volEnvLoopEnd < 100);
 	textOutFixed(382, 247, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->volEnvLoopEnd]);
 }
 
 static void drawPanEnvSus(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->panEnvSustain < 100);
+	ASSERT(ins->panEnvSustain < 100);
 	textOutFixed(382, 293, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->panEnvSustain]);
 }
 
 static void drawPanEnvRepS(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->panEnvLoopStart < 100);
+	ASSERT(ins->panEnvLoopStart < 100);
 	textOutFixed(382, 320, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->panEnvLoopStart]);
 }
 
 static void drawPanEnvRepE(void)
 {
 	instr_t *ins = getCurDispInstr();
-	assert(ins->panEnvLoopEnd < 100);
+	ASSERT(ins->panEnvLoopEnd < 100);
 	textOutFixed(382, 334, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[ins->panEnvLoopEnd]);
 }
 
@@ -1577,7 +1577,7 @@ void cbPEnvLoop(void)
 
 static void pianoNumberOut(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint8_t val)
 {
-	assert(val <= 0xF);
+	ASSERT(val <= 0xF);
 
 	const uint32_t fg = video.palette[fgPalette];
 	const uint32_t bg = video.palette[bgPalette];

@@ -181,7 +181,7 @@ static void channelMode(int32_t chn)
 {
 	int32_t i;
 	
-	assert(chn < song.numChannels);
+	ASSERT(chn < song.numChannels);
 
 	bool m = mouse.leftButtonPressed && !mouse.rightButtonPressed;
 	bool m2 = mouse.rightButtonPressed && mouse.leftButtonPressed;

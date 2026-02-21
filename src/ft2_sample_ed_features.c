@@ -593,14 +593,14 @@ static void drawEchoBox(void)
 	textOutShadow(177, 254, PAL_FORGRND, PAL_BUTTON2, "Fade out");
 	textOutShadow(192, 270, PAL_FORGRND, PAL_BUTTON2, "Add memory to sample");
 
-	assert(echo_nEcho <= 64);
+	ASSERT(echo_nEcho <= 64);
 	charOut(315 + (2 * 7), 226, PAL_FORGRND, '0' + (char)(echo_nEcho / 10));
 	charOut(315 + (3 * 7), 226, PAL_FORGRND, '0' + (echo_nEcho % 10));
 
-	assert(echo_Distance <= 0x4000);
+	ASSERT(echo_Distance <= 0x4000);
 	hexOut(308, 240, PAL_FORGRND, echo_Distance << 4, 5);
 
-	assert(echo_VolChange <= 100);
+	ASSERT(echo_VolChange <= 100);
 	textOutFixed(312, 254, PAL_FORGRND, PAL_BUTTONS, dec3StrTab[echo_VolChange]);
 
 	charOutShadow(313 + (3 * 7), 254, PAL_FORGRND, PAL_BUTTON2, '%');
@@ -995,7 +995,7 @@ static void drawMixSampleBox(void)
 
 	textOutShadow(198, 246, PAL_FORGRND, PAL_BUTTON2, "Mixing balance");
 
-	assert((mix_Balance >= 0) && (mix_Balance <= 100));
+	ASSERT((mix_Balance >= 0) && (mix_Balance <= 100));
 	textOutFixed(299, 246, PAL_FORGRND, PAL_BUTTONS, dec3StrTab[mix_Balance]);
 }
 

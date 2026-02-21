@@ -647,7 +647,7 @@ modSaveError:
 
 static int32_t SDLCALL saveMusicThread(void *ptr)
 {
-	assert(editor.tmpFilenameU != NULL);
+	ASSERT(editor.tmpFilenameU != NULL);
 	if (editor.tmpFilenameU == NULL)
 		return false;
 

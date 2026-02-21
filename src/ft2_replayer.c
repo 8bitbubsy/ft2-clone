@@ -162,7 +162,7 @@ void setSampleC4Hz(sample_t *s, double dC4Hz)
 
 void setPatternLen(uint16_t pattNum, int16_t numRows)
 {
-	assert(pattNum < MAX_PATTERNS);
+	ASSERT(pattNum < MAX_PATTERNS);
 	if ((numRows < 1 || numRows > MAX_PATT_LEN) || numRows == patternNumRows[pattNum])
 		return;
 
@@ -424,7 +424,7 @@ void keyOff(channel_t *ch)
 	ch->keyOff = true;
 
 	instr_t *ins = ch->instrPtr;
-	assert(ins != NULL);
+	ASSERT(ins != NULL);
 
 	if (ins->volEnvFlags & ENV_ENABLED)
 	{
@@ -447,7 +447,7 @@ void keyOff(channel_t *ch)
 
 void calcReplayerVars(int32_t audioFreq)
 {
-	assert(audioFreq > 0);
+	ASSERT(audioFreq > 0);
 	if (audioFreq <= 0)
 		return;
 
@@ -540,7 +540,7 @@ void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 
 	ch->noteNum = note;
 
-	assert(ch->instrNum <= 130);
+	ASSERT(ch->instrNum <= 130);
 	instr_t *ins = instr[ch->instrNum];
 	if (ins == NULL)
 		ins = instr[0]; // empty instruments use this placeholder instrument
@@ -573,7 +573,7 @@ void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 	{
 		const uint16_t noteIndex = ((note-1) * 16) + (((int8_t)ch->finetune >> 3) + 16); // 0..1920
 
-		assert(note2PeriodLUT != NULL);
+		ASSERT(note2PeriodLUT != NULL);
 		ch->outPeriod = ch->realPeriod = note2PeriodLUT[noteIndex];
 	}
 
@@ -821,7 +821,7 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 	int32_t tick;
 
 	instr_t *ins = ch->instrPtr;
-	assert(ins != NULL);
+	ASSERT(ins != NULL);
 
 	// (envelope precision has been upgraded from .8fp to single-precision float)
 
@@ -1305,7 +1305,7 @@ static void preparePortamento(channel_t *ch, const note_t *p, uint8_t inst)
 			const uint16_t note = (((p->note-1) + ch->relativeNote) * 16) + (((int8_t)ch->finetune >> 3) + 16);
 			if (note < MAX_NOTES)
 			{
-				assert(note2PeriodLUT != NULL);
+				ASSERT(note2PeriodLUT != NULL);
 				ch->portamentoTargetPeriod = note2PeriodLUT[note];
 
 				if (ch->portamentoTargetPeriod == ch->realPeriod)
@@ -1441,7 +1441,7 @@ void updateVolPanAutoVib(channel_t *ch)
 	float fEnvVal, fVol;
 
 	instr_t *ins = ch->instrPtr;
-	assert(ins != NULL);
+	ASSERT(ins != NULL);
 
 	// *** FADEOUT ON KEY OFF ***
 	if (ch->keyOff)
@@ -2287,7 +2287,7 @@ static void getNextPos(void)
 				song.songPos = song.songLoopStart;
 			}
 
-			assert(song.songPos <= 255);
+			ASSERT(song.songPos <= 255);
 			song.pattNum = song.orders[song.songPos & 0xFF];
 			song.currNumRows = patternNumRows[song.pattNum & 0xFF];
 		}
@@ -2415,7 +2415,7 @@ void setPos(int16_t songPos, int16_t row, bool resetTimer)
 			song.songPos = song.songLength - 1;
 
 		song.pattNum = song.orders[song.songPos];
-		assert(song.pattNum < MAX_PATTERNS);
+		ASSERT(song.pattNum < MAX_PATTERNS);
 		song.currNumRows = patternNumRows[song.pattNum];
 
 		checkMarkLimits(); // non-FT2 safety
@@ -2742,7 +2742,7 @@ bool patternEmpty(uint16_t pattNum)
 
 void updateChanNums(void)
 {
-	assert(!(song.numChannels & 1));
+	ASSERT(!(song.numChannels & 1));
 
 	const int32_t maxChannelsShown = getMaxVisibleChannels();
 
@@ -2934,7 +2934,7 @@ void startPlaying(int8_t mode, int16_t row)
 {
 	lockMixerCallback();
 
-	assert(mode != PLAYMODE_IDLE && mode != PLAYMODE_EDIT);
+	ASSERT(mode != PLAYMODE_IDLE && mode != PLAYMODE_EDIT);
 	if (mode == PLAYMODE_PATT || mode == PLAYMODE_RECPATT)
 		setPos(-1, row, true);
 	else
@@ -3009,7 +3009,7 @@ void playTone(uint8_t chNum, uint8_t insNum, uint8_t note, int8_t vol, uint16_t 
 	if (ins == NULL)
 		return;
 
-	assert(chNum < MAX_CHANNELS && insNum <= MAX_INST && note <= NOTE_OFF);
+	ASSERT(chNum < MAX_CHANNELS && insNum <= MAX_INST && note <= NOTE_OFF);
 	channel_t *ch = &channel[chNum];
 
 	// FT2 bugfix: don't play note if certain requirements are not met
@@ -3073,7 +3073,7 @@ void playSample(uint8_t chNum, uint8_t insNum, uint8_t smpNum, uint8_t note, uin
 	editor.curPlayInstr = 255;
 	editor.curPlaySmp = 255;
 
-	assert(chNum < MAX_CHANNELS && insNum <= MAX_INST && smpNum < MAX_SMP_PER_INST && note <= NOTE_OFF);
+	ASSERT(chNum < MAX_CHANNELS && insNum <= MAX_INST && smpNum < MAX_SMP_PER_INST && note <= NOTE_OFF);
 	channel_t *ch = &channel[chNum];
 
 	memcpy(&instr[130]->smp[0], &instr[insNum]->smp[smpNum], sizeof (sample_t));
@@ -3124,7 +3124,7 @@ void playRange(uint8_t chNum, uint8_t insNum, uint8_t smpNum, uint8_t note, uint
 	editor.curPlayInstr = 255;
 	editor.curPlaySmp = 255;
 
-	assert(chNum < MAX_CHANNELS && insNum <= MAX_INST && smpNum < MAX_SMP_PER_INST && note <= NOTE_OFF);
+	ASSERT(chNum < MAX_CHANNELS && insNum <= MAX_INST && smpNum < MAX_SMP_PER_INST && note <= NOTE_OFF);
 
 	channel_t *ch = &channel[chNum];
 	sample_t *s = &instr[130]->smp[0];

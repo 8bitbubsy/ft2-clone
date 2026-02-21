@@ -98,7 +98,7 @@ void killPatternIfUnused(uint16_t pattNum) // for tracker use only, not in loade
 
 uint8_t getMaxVisibleChannels(void)
 {
-	assert(config.ptnMaxChannels >= 0 && config.ptnMaxChannels <= 3);
+	ASSERT(config.ptnMaxChannels >= 0 && config.ptnMaxChannels <= 3);
 	if (config.ptnShowVolColumn)
 		return maxVisibleChans1[config.ptnMaxChannels];
 	else
@@ -110,7 +110,7 @@ void updatePatternWidth(void)
 	if (ui.numChannelsShown > ui.maxVisibleChannels)
 		ui.numChannelsShown = ui.maxVisibleChannels;
 
-	assert(ui.numChannelsShown >= 2 && ui.numChannelsShown <= 12);
+	ASSERT(ui.numChannelsShown >= 2 && ui.numChannelsShown <= 12);
 
 	ui.patternChannelWidth = chanWidths[(ui.numChannelsShown / 2) - 1] + 3;
 }
@@ -764,7 +764,7 @@ void checkMarkLimits(void)
 
 static int8_t mouseXToCh(void) // used to get channel num from mouse x (for pattern marking)
 {
-	assert(ui.patternChannelWidth > 0);
+	ASSERT(ui.patternChannelWidth > 0);
 	if (ui.patternChannelWidth == 0)
 		return 0;
 
@@ -1450,7 +1450,7 @@ void setChannelScrollPos(uint32_t pos)
 
 	ui.channelOffset = (uint8_t)pos;
 
-	assert(song.numChannels > ui.numChannelsShown);
+	ASSERT(song.numChannels > ui.numChannelsShown);
 	if (ui.channelOffset >= song.numChannels-ui.numChannelsShown)
 		ui.channelOffset = (uint8_t)(song.numChannels-ui.numChannelsShown);
 
@@ -1479,7 +1479,7 @@ void jumpToChannel(uint8_t chNr) // for ALT+q..i ALT+a..k
 
 	if (ui.pattChanScrollShown)
 	{
-		assert(song.numChannels > ui.numChannelsShown);
+		ASSERT(song.numChannels > ui.numChannelsShown);
 
 		if (chNr >= ui.channelOffset+ui.numChannelsShown)
 			scrollBarScrollDown(SB_CHAN_SCROLL, (chNr - (ui.channelOffset + ui.numChannelsShown)) + 1);
@@ -2006,7 +2006,7 @@ void drawPosEdNums(int16_t songPos)
 		if (entry < 0)
 			continue;
 
-		assert(entry < 256);
+		ASSERT(entry < 256);
 
 		if (ui.extendedPatternEditor)
 		{
@@ -2020,7 +2020,7 @@ void drawPosEdNums(int16_t songPos)
 		}
 	}
 
-	assert(songPos < 256);
+	ASSERT(songPos < 256);
 
 	// middle
 	if (ui.extendedPatternEditor)
@@ -2155,13 +2155,13 @@ void drawGlobalVol(uint16_t val)
 	if (ui.extendedPatternEditor)
 		y = 56;
 
-	assert(val <= 64);
+	ASSERT(val <= 64);
 	textOutFixed(x, y, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[val]);
 }
 
 void drawIDAdd(void)
 {
-	assert(editor.editRowSkip <= 16);
+	ASSERT(editor.editRowSkip <= 16);
 	textOutFixed(152, 64, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[editor.editRowSkip]);
 }
 

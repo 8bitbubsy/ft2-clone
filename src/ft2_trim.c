@@ -805,7 +805,7 @@ static int64_t calculateTrimSize(void)
 				newPattDataLen += getPackedPattSize(tmpPatt[i], tmpPattLens[i], numChannels);
 		}
 
-		assert(pattDataLen >= newPattDataLen);
+		ASSERT(pattDataLen >= newPattDataLen);
 
 		if (pattDataLen > newPattDataLen)
 			bytes64 += (pattDataLen - newPattDataLen);
@@ -819,7 +819,7 @@ static int64_t calculateTrimSize(void)
 	{
 		int64_t newInstrSize64 = getTempInsAndSmpSize();
 
-		assert(oldInstrSize64 >= newInstrSize64);
+		ASSERT(oldInstrSize64 >= newInstrSize64);
 		if (oldInstrSize64 > newInstrSize64)
 			bytes64 += (oldInstrSize64 - newInstrSize64);
 	}

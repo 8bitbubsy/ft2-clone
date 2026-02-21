@@ -69,7 +69,7 @@ void unstuckLastUsedGUIElement(void)
 
 		case OBJECT_PUSHBUTTON:
 		{
-			assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
+			ASSERT(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
 			pushButton_t *p = &pushButtons[mouse.lastUsedObjectID];
 			if (p->state == PUSHBUTTON_PRESSED)
 			{
@@ -82,7 +82,7 @@ void unstuckLastUsedGUIElement(void)
 
 		case OBJECT_RADIOBUTTON:
 		{
-			assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_RADIOBUTTONS);
+			ASSERT(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_RADIOBUTTONS);
 			radioButton_t *r = &radioButtons[mouse.lastUsedObjectID];
 			if (r->state == RADIOBUTTON_PRESSED)
 			{
@@ -95,7 +95,7 @@ void unstuckLastUsedGUIElement(void)
 
 		case OBJECT_CHECKBOX:
 		{
-			assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_CHECKBOXES);
+			ASSERT(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_CHECKBOXES);
 			checkBox_t *c = &checkBoxes[mouse.lastUsedObjectID];
 			if (c->state == CHECKBOX_PRESSED)
 			{
@@ -108,7 +108,7 @@ void unstuckLastUsedGUIElement(void)
 
 		case OBJECT_SCROLLBAR:
 		{
-			assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_SCROLLBARS);
+			ASSERT(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_SCROLLBARS);
 			scrollBar_t *s = &scrollBars[mouse.lastUsedObjectID];
 			if (s->state == SCROLLBAR_PRESSED)
 			{
@@ -237,7 +237,7 @@ uint8_t charWidth16(char ch)
 // return full pixel width of a text string
 uint16_t textWidth(const char *textPtr)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t textWidth = 0;
 	while (*textPtr != '\0')
@@ -252,7 +252,7 @@ uint16_t textWidth(const char *textPtr)
 
 uint16_t textNWidth(const char *textPtr, int32_t length)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t textWidth = 0;
 	for (int32_t i = 0; i < length; i++)
@@ -274,7 +274,7 @@ uint16_t textNWidth(const char *textPtr, int32_t length)
 // return full pixel width of a text string (big font)
 uint16_t textWidth16(const char *textPtr)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t textWidth = 0;
 	while (*textPtr != '\0')
@@ -346,7 +346,7 @@ void textOutTinyOutline(int32_t xPos, int32_t yPos, char *str) // A..Z/a..z and 
 
 void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	if ((uint8_t)chr > 127+31)
 		chr = ' ';
@@ -374,7 +374,7 @@ void charOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 
 void charOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, char chr)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	if ((uint8_t)chr > 127+31)
 		chr = ' ';
@@ -411,7 +411,7 @@ void charOutOutlined(uint16_t x, uint16_t y, uint8_t paletteIndex, char chr)
 
 void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	if ((uint8_t)chr > 127+31)
 		chr = ' ';
@@ -445,7 +445,7 @@ void charOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t s
 
 void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, uint16_t clipX)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	if (xPos > clipX)
 		return;
@@ -480,7 +480,7 @@ void charOutClipX(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr, 
 
 void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	if ((uint8_t)chr > 127+31)
 		chr = ' ';
@@ -508,7 +508,7 @@ void bigCharOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, char chr)
 
 static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t shadowPaletteIndex, char chr)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	if ((uint8_t)chr > 127+31)
 		chr = ' ';
@@ -542,7 +542,7 @@ static void bigCharOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex,
 
 void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t currX = x;
 	while (true)
@@ -569,7 +569,7 @@ void textOutBorder(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t borderP
 // fixed width
 void textOutFixed(uint16_t x, uint16_t y, uint8_t fgPaltete, uint8_t bgPalette, const char *textPtr)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t currX = x;
 	while (true)
@@ -585,7 +585,7 @@ void textOutFixed(uint16_t x, uint16_t y, uint8_t fgPaltete, uint8_t bgPalette, 
 
 void textOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, const char *textPtr)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t currX = x;
 	while (true)
@@ -601,7 +601,7 @@ void textOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowP
 
 void bigTextOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t currX = x;
 	while (true)
@@ -617,7 +617,7 @@ void bigTextOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPt
 
 void bigTextOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, const char *textPtr)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t currX = x;
 	while (true)
@@ -633,7 +633,7 @@ void bigTextOutShadow(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shad
 
 void textOutClipX(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr, uint16_t clipX)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t currX = x;
 	while (true)
@@ -652,7 +652,7 @@ void textOutClipX(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *text
 
 void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, uint8_t numDigits)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	const uint32_t pixVal = video.palette[paletteIndex];
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
@@ -680,7 +680,7 @@ void hexOut(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint32_t val, ui
 
 void hexOutBg(uint16_t xPos, uint16_t yPos, uint8_t fgPalette, uint8_t bgPalette, uint32_t val, uint8_t numDigits)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H);
 
 	const uint32_t fg = video.palette[fgPalette];
 	const uint32_t bg = video.palette[bgPalette];
@@ -715,7 +715,7 @@ void hexOutShadow(uint16_t xPos, uint16_t yPos, uint8_t paletteIndex, uint8_t sh
 
 void clearRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
 	const uint32_t pitch = w * sizeof (int32_t);
 
@@ -726,7 +726,7 @@ void clearRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h)
 
 void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t paletteIndex)
 {
-	assert(xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+	ASSERT(xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
 	const uint32_t pixVal = video.palette[paletteIndex];
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
@@ -742,7 +742,7 @@ void fillRect(uint16_t xPos, uint16_t yPos, uint16_t w, uint16_t h, uint8_t pale
 
 void blit32(uint16_t xPos, uint16_t yPos, const uint32_t *srcPtr, uint16_t w, uint16_t h)
 {
-	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+	ASSERT(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	for (int32_t y = 0; y < h; y++)
@@ -760,7 +760,7 @@ void blit32(uint16_t xPos, uint16_t yPos, const uint32_t *srcPtr, uint16_t w, ui
 
 void blit(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h)
 {
-	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+	ASSERT(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	for (int32_t y = 0; y < h; y++)
@@ -782,7 +782,7 @@ void blitClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, 
 	if (clipX > w)
 		clipX = w;
 
-	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + clipX) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+	ASSERT(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + clipX) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	for (int32_t y = 0; y < h; y++)
@@ -801,7 +801,7 @@ void blitClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, 
 
 void blitFast(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t w, uint16_t h) // no transparency/colorkey
 {
-	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+	ASSERT(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + w) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	for (int32_t y = 0; y < h; y++)
@@ -819,7 +819,7 @@ void blitFastClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t
 	if (clipX > w)
 		clipX = w;
 
-	assert(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + clipX) <= SCREEN_W && (yPos + h) <= SCREEN_H);
+	ASSERT(srcPtr != NULL && xPos < SCREEN_W && yPos < SCREEN_H && (xPos + clipX) <= SCREEN_W && (yPos + h) <= SCREEN_H);
 
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 	for (int32_t y = 0; y < h; y++)
@@ -836,7 +836,7 @@ void blitFastClipX(uint16_t xPos, uint16_t yPos, const uint8_t *srcPtr, uint16_t
 
 void hLine(uint16_t x, uint16_t y, uint16_t w, uint8_t paletteIndex)
 {
-	assert(x < SCREEN_W && y < SCREEN_H && (x + w) <= SCREEN_W);
+	ASSERT(x < SCREEN_W && y < SCREEN_H && (x + w) <= SCREEN_W);
 
 	const uint32_t pixVal = video.palette[paletteIndex];
 
@@ -847,7 +847,7 @@ void hLine(uint16_t x, uint16_t y, uint16_t w, uint8_t paletteIndex)
 
 void vLine(uint16_t x, uint16_t y, uint16_t h, uint8_t paletteIndex)
 {
-	assert(x < SCREEN_W && y < SCREEN_H && (y + h) <= SCREEN_W);
+	ASSERT(x < SCREEN_W && y < SCREEN_H && (y + h) <= SCREEN_W);
 
 	const uint32_t pixVal = video.palette[paletteIndex];
 
@@ -931,7 +931,7 @@ void line(int16_t x1, int16_t x2, int16_t y1, int16_t y2, uint8_t paletteIndex)
 
 void drawFramework(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t type)
 {
-	assert(x < SCREEN_W && y < SCREEN_H && w >= 2 && h >= h);
+	ASSERT(x < SCREEN_W && y < SCREEN_H && w >= 2 && h >= h);
 
 	h--;
 	w--;

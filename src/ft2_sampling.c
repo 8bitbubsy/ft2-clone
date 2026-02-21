@@ -170,7 +170,7 @@ static void getMinMax16(const int16_t *p, uint32_t position, uint32_t scanLen, i
 	int16_t minVal =  32767;
 	int16_t maxVal = -32768;
 
-	assert(position+scanLen <= PREVIEW_SAMPLES);
+	ASSERT(position+scanLen <= PREVIEW_SAMPLES);
 
 	const int16_t *ptr16 = (const int16_t *)p + position;
 	for (uint32_t i = 0; i < scanLen; i++)

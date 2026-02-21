@@ -294,7 +294,7 @@ static void nibbleWriteLevelSprite(int16_t xOut, int16_t yOut, int16_t levelNum)
 
 static void highScoreTextOutClipX(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t shadowPaletteIndex, const char *textPtr, uint16_t clipX)
 {
-	assert(textPtr != NULL);
+	ASSERT(textPtr != NULL);
 
 	uint16_t currX = x;
 	for (uint16_t i = 0; i < 22; i++)
@@ -415,19 +415,19 @@ static bool nibblesInvalid(int16_t x, int16_t y, int16_t d)
 			return true;
 	}
 
-	assert(x >= 0 && x < 51 && y >= 0 && y < 23);
+	ASSERT(x >= 0 && x < 51 && y >= 0 && y < 23);
 	return (NI_Screen[x][y] >= 1 && NI_Screen[x][y] <= 15);
 }
 
 static void drawScoresLives(void)
 {
 	// player 1
-	assert(NI_P1Lives < 100);
+	ASSERT(NI_P1Lives < 100);
 	hexOutBg(89, 27, PAL_FORGRND, PAL_DESKTOP, NI_P1Score, 8);
 	textOutFixed(131, 39, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[NI_P1Lives]);
 
 	// player 2
-	assert(NI_P2Lives < 100);
+	ASSERT(NI_P2Lives < 100);
 	hexOutBg(89, 75, PAL_FORGRND, PAL_DESKTOP, NI_P2Score, 8);
 	textOutFixed(131, 87, PAL_FORGRND, PAL_DESKTOP, dec2StrTab[NI_P2Lives]);
 }
@@ -845,7 +845,7 @@ void nibblesPlay(void)
 	if (wallColorsAreCloseToBlack())
 		okBox(0, "Nibbles warning", "The Desktop/Button colors are set to values that make the walls hard to see!", NULL);
 
-	assert(config.NI_Speed < 4);
+	ASSERT(config.NI_Speed < 4);
 	NI_CurSpeed = NI_Speeds[config.NI_Speed];
 
 	// adjust for 70Hz -> 60Hz countdown frames (this is not exact, but we don't want fractional numbers aka. frame skipping)

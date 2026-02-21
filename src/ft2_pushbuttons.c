@@ -424,7 +424,7 @@ void drawPushButton(uint16_t pushButtonID)
 {
 	uint16_t textX, textY, textW;
 
-	assert(pushButtonID < NUM_PUSHBUTTONS);
+	ASSERT(pushButtonID < NUM_PUSHBUTTONS);
 
 	pushButton_t *b = &pushButtons[pushButtonID];
 	if (!b->visible)
@@ -437,7 +437,7 @@ void drawPushButton(uint16_t pushButtonID)
 	uint16_t w = b->w;
 	uint16_t h = b->h;
 
-	assert(x < SCREEN_W && y < SCREEN_H && w >= 4 && h >= 4);
+	ASSERT(x < SCREEN_W && y < SCREEN_H && w >= 4 && h >= 4);
 
 	if (b->bitmapFlag)
 	{
@@ -544,14 +544,14 @@ void drawPushButton(uint16_t pushButtonID)
 
 void showPushButton(uint16_t pushButtonID)
 {
-	assert(pushButtonID < NUM_PUSHBUTTONS);
+	ASSERT(pushButtonID < NUM_PUSHBUTTONS);
 	pushButtons[pushButtonID].visible = true;
 	drawPushButton(pushButtonID);
 }
 
 void hidePushButton(uint16_t pushButtonID)
 {
-	assert(pushButtonID < NUM_PUSHBUTTONS);
+	ASSERT(pushButtonID < NUM_PUSHBUTTONS);
 	pushButtons[pushButtonID].state = 0;
 	pushButtons[pushButtonID].visible = false;
 }
@@ -560,7 +560,7 @@ void handlePushButtonsWhileMouseDown(void)
 {
 	int8_t buttonDelay;
 
-	assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
+	ASSERT(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
 	pushButton_t *pushButton = &pushButtons[mouse.lastUsedObjectID];
 	if (!pushButton->visible)
 		return;
@@ -668,7 +668,7 @@ int16_t testPushButtonMouseRelease(bool runCallback)
 	if (mouse.lastUsedObjectType != OBJECT_PUSHBUTTON || mouse.lastUsedObjectID == OBJECT_ID_NONE)
 		return -1;
 
-	assert(mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
+	ASSERT(mouse.lastUsedObjectID < NUM_PUSHBUTTONS);
 	pushButton_t *pushButton = &pushButtons[mouse.lastUsedObjectID];
 	if (!pushButton->visible)
 		return -1;

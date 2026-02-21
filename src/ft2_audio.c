@@ -555,7 +555,7 @@ bool pattQueuePush(pattSyncData_t t)
 	if (!pattQueueWriteSize())
 		return false;
 
-	assert(pattSync.writePos <= SYNC_QUEUE_LEN);
+	ASSERT(pattSync.writePos <= SYNC_QUEUE_LEN);
 	pattSync.data[pattSync.writePos] = t;
 	pattSync.writePos = (pattSync.writePos + 1) & SYNC_QUEUE_LEN;
 
@@ -568,7 +568,7 @@ bool pattQueuePop(void)
 		return false;
 
 	pattSync.readPos = (pattSync.readPos + 1) & SYNC_QUEUE_LEN;
-	assert(pattSync.readPos <= SYNC_QUEUE_LEN);
+	ASSERT(pattSync.readPos <= SYNC_QUEUE_LEN);
 
 	return true;
 }
@@ -578,7 +578,7 @@ pattSyncData_t *pattQueuePeek(void)
 	if (!pattQueueReadSize())
 		return NULL;
 
-	assert(pattSync.readPos <= SYNC_QUEUE_LEN);
+	ASSERT(pattSync.readPos <= SYNC_QUEUE_LEN);
 	return &pattSync.data[pattSync.readPos];
 }
 
@@ -587,7 +587,7 @@ uint64_t getPattQueueTimestamp(void)
 	if (!pattQueueReadSize())
 		return 0;
 
-	assert(pattSync.readPos <= SYNC_QUEUE_LEN);
+	ASSERT(pattSync.readPos <= SYNC_QUEUE_LEN);
 	return pattSync.data[pattSync.readPos].timestamp;
 }
 
@@ -643,7 +643,7 @@ bool chQueuePush(chSyncData_t t)
 	if (!chQueueWriteSize())
 		return false;
 
-	assert(chSync.writePos <= SYNC_QUEUE_LEN);
+	ASSERT(chSync.writePos <= SYNC_QUEUE_LEN);
 	chSync.data[chSync.writePos] = t;
 	chSync.writePos = (chSync.writePos + 1) & SYNC_QUEUE_LEN;
 
@@ -656,7 +656,7 @@ bool chQueuePop(void)
 		return false;
 
 	chSync.readPos = (chSync.readPos + 1) & SYNC_QUEUE_LEN;
-	assert(chSync.readPos <= SYNC_QUEUE_LEN);
+	ASSERT(chSync.readPos <= SYNC_QUEUE_LEN);
 
 	return true;
 }
@@ -666,7 +666,7 @@ chSyncData_t *chQueuePeek(void)
 	if (!chQueueReadSize())
 		return NULL;
 
-	assert(chSync.readPos <= SYNC_QUEUE_LEN);
+	ASSERT(chSync.readPos <= SYNC_QUEUE_LEN);
 	return &chSync.data[chSync.readPos];
 }
 
@@ -675,7 +675,7 @@ uint64_t getChQueueTimestamp(void)
 	if (!chQueueReadSize())
 		return 0;
 
-	assert(chSync.readPos <= SYNC_QUEUE_LEN);
+	ASSERT(chSync.readPos <= SYNC_QUEUE_LEN);
 	return chSync.data[chSync.readPos].timestamp;
 }
 

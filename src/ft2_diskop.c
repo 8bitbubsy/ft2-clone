@@ -1712,7 +1712,7 @@ static void printFormattedFilesize(uint16_t x, uint16_t y, uint32_t bufEntry)
 		return;
 	}
 
-	assert(filesize >= 0);
+	ASSERT(filesize >= 0);
 
 	if (filesize >= 1024*1024*10) // >= 10MB?
 	{
@@ -2250,7 +2250,7 @@ void showDiskOpScreen(void)
 	// if first time opening Disk Op., set initial directory
 	if (firstTimeOpeningDiskOp)
 	{
-		assert(FReq_ModCurPathU != NULL);
+		ASSERT(FReq_ModCurPathU != NULL);
 
 		// first test if we can change the dir to the one stored in the config (if present)
 		if (FReq_ModCurPathU[0] == '\0' || UNICHAR_CHDIR(FReq_ModCurPathU) != 0)

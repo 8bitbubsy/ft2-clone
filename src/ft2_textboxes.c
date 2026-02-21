@@ -125,7 +125,7 @@ static int16_t getTextLength(textBox_t *t, uint16_t offset)
 	}
 
 	i -= offset; // i now contains string length
-	assert(i <= t->maxChars);
+	ASSERT(i <= t->maxChars);
 
 	return i;
 }
@@ -138,7 +138,7 @@ static void deleteMarkedText(textBox_t *t)
 	const int16_t start = getTextMarkStart();
 	const int16_t end = getTextMarkEnd();
 
-	assert(start < t->maxChars && end <= t->maxChars);
+	ASSERT(start < t->maxChars && end <= t->maxChars);
 
 	// calculate pixel width of string to delete
 	int32_t deleteTextWidth = 0;
@@ -169,7 +169,7 @@ static void setCursorToMarkStart(textBox_t *t)
 		return;
 
 	const int16_t start = getTextMarkStart();
-	assert(start < t->maxChars);
+	ASSERT(start < t->maxChars);
 	t->cursorPos = start;
 
 	int32_t startXPos = 0;
@@ -193,7 +193,7 @@ static void setCursorToMarkEnd(textBox_t *t)
 		return;
 
 	const int16_t end = getTextMarkEnd();
-	assert(end <= t->maxChars);
+	ASSERT(end <= t->maxChars);
 	t->cursorPos = end;
 
 	int32_t endXPos = 0;
@@ -219,7 +219,7 @@ static void copyMarkedText(textBox_t *t)
 	const int32_t start = getTextMarkStart();
 	const int32_t end = getTextMarkEnd();
 
-	assert(start < t->maxChars && end <= t->maxChars);
+	ASSERT(start < t->maxChars && end <= t->maxChars);
 
 	const int32_t length = end - start;
 	if (length < 1)
@@ -357,7 +357,7 @@ void exitTextEditing(void)
 
 static int16_t cursorPosToX(textBox_t *t)
 {
-	assert(t->textPtr != NULL);
+	ASSERT(t->textPtr != NULL);
 
 	int32_t x = -1; // cursor starts one pixel before character
 	for (int16_t i = 0; i < t->cursorPos; i++)
@@ -387,7 +387,7 @@ static void scrollTextBufferLeft(textBox_t *t)
 
 static void scrollTextBufferRight(textBox_t *t, uint16_t numCharsInText)
 {
-	assert(numCharsInText <= t->maxChars);
+	ASSERT(numCharsInText <= t->maxChars);
 
 	// get end of text position
 	int32_t textEnd = 0;
@@ -459,7 +459,7 @@ static void moveTextCursorToMouseX(uint16_t textBoxID)
 
 static void textOutBuf(uint8_t *dstBuffer, uint32_t dstWidth, uint8_t paletteIndex, char *text, uint32_t maxTextLen)
 {
-	assert(text != NULL);
+	ASSERT(text != NULL);
 	if (*text == '\0')
 		return; // empty string
 
@@ -498,7 +498,7 @@ void drawTextBox(uint16_t textBoxID)
 	int8_t cw;
 	uint8_t pal;
 
-	assert(textBoxID < NUM_TEXTBOXES);
+	ASSERT(textBoxID < NUM_TEXTBOXES);
 	textBox_t *t = &textBoxes[textBoxID];
 	if (!t->visible)
 		return;
@@ -506,7 +506,7 @@ void drawTextBox(uint16_t textBoxID)
 	// test if buffer offset is not overflowing
 #ifdef _DEBUG
 	if (t->renderBufW > t->renderW)
-		assert(t->bufOffset <= t->renderBufW-t->renderW);
+		ASSERT(t->bufOffset <= t->renderBufW-t->renderW);
 #endif
 
 	// fill text rendering buffer with transparency key
@@ -525,7 +525,7 @@ void drawTextBox(uint16_t textBoxID)
 			int32_t start = getTextMarkStart();
 			int32_t end = getTextMarkEnd();
 
-			assert(start < t->maxChars && end <= t->maxChars);
+			ASSERT(start < t->maxChars && end <= t->maxChars);
 
 			// find pixel start/length from markX1 and markX2
 
@@ -551,7 +551,7 @@ void drawTextBox(uint16_t textBoxID)
 				start = x1;
 				const int32_t length = x2 - x1;
 
-				assert(start+length <= t->renderBufW);
+				ASSERT(start+length <= t->renderBufW);
 
 				uint8_t *ptr32 = &t->renderBuf[start];
 				for (uint16_t y = 0; y < t->renderBufH; y++, ptr32 += t->renderBufW)
@@ -573,13 +573,13 @@ void drawTextBox(uint16_t textBoxID)
 
 void showTextBox(uint16_t textBoxID)
 {
-	assert(textBoxID < NUM_TEXTBOXES);
+	ASSERT(textBoxID < NUM_TEXTBOXES);
 	textBoxes[textBoxID].visible = true;
 }
 
 void hideTextBox(uint16_t textBoxID)
 {
-	assert(textBoxID < NUM_TEXTBOXES);
+	ASSERT(textBoxID < NUM_TEXTBOXES);
 	hideSprite(SPRITE_TEXT_CURSOR);
 	textBoxes[textBoxID].visible = false;
 }
@@ -641,14 +641,14 @@ static void setMarkX2ToMouseX(textBox_t *t)
 	}
 
 	t->cursorPos = markX2;
-	assert(t->cursorPos >= 0 && t->cursorPos <= getTextLength(t, 0));
+	ASSERT(t->cursorPos >= 0 && t->cursorPos <= getTextLength(t, 0));
 
 	editor.textCursorBlinkCounter = 0;
 }
 
 void handleTextBoxWhileMouseDown(void)
 {
-	assert(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_TEXTBOXES);
+	ASSERT(mouse.lastUsedObjectID >= 0 && mouse.lastUsedObjectID < NUM_TEXTBOXES);
 	textBox_t *t = &textBoxes[mouse.lastUsedObjectID];
 	if (!t->visible)
 		return;
@@ -812,10 +812,10 @@ void handleTextEditControl(SDL_Keycode keycode)
 	int32_t textLength;
 	uint32_t textWidth;
 
-	assert(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
+	ASSERT(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
 
 	textBox_t *t = &textBoxes[mouse.lastEditBox];
-	assert(t->textPtr != NULL);
+	ASSERT(t->textPtr != NULL);
 
 	switch (keycode)
 	{
@@ -1113,7 +1113,7 @@ void handleTextEditControl(SDL_Keycode keycode)
 
 void handleTextEditInputChar(char textChar)
 {
-	assert(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
+	ASSERT(mouse.lastEditBox >= 0 && mouse.lastEditBox < NUM_TEXTBOXES);
 
 	textBox_t *t = &textBoxes[mouse.lastEditBox];
 	if (t->textPtr == NULL)
