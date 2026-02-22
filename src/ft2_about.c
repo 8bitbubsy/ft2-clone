@@ -12,7 +12,7 @@
 
 #define OLD_NUM_STARS 1000
 #define NUM_STARS 1500
-#define LOGO_ALPHA_PERCENTAGE 71
+#define LOGO_ALPHA_PERCENTAGE 75
 #define STARSHINE_ALPHA_PERCENTAGE 33
 #define SIN_PHASES 1024
 #define SIN_MASK (SIN_PHASES-1)
@@ -59,7 +59,6 @@ static int16_t sin32767[SIN_PHASES+(SIN_PHASES/4)], *cos32767, zSpeed;
 static int32_t lastStarScreenPos[OLD_NUM_STARS];
 static const uint16_t logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
 static const uint16_t starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
-static uint32_t sinp, cosp;
 static oldVector_t oldStarPoints[OLD_NUM_STARS];
 static oldRotate_t oldStarRotation;
 static oldMatrix_t oldStarMatrix;
@@ -149,7 +148,7 @@ static void starfield(void)
 		if (g < 0)
 			g = 0;
 
-		int32_t b = intensity255 + 64;
+		int32_t b = intensity255 + 60;
 		if (b > 255)
 			b = 255;
 
@@ -259,27 +258,20 @@ void renderAboutScreenFrame(void)
 		starRotation.z += 0.0001f;
 		rotateStarfieldMatrix();
 
-		// waving FT2 logo
-	
-		uint32_t *dstPtr = video.frameBuffer + (ABOUT_SCREEN_Y * SCREEN_W) + ABOUT_SCREEN_X;
-		for (int32_t y = 0; y < ABOUT_SCREEN_H; y++, dstPtr += SCREEN_W)
-		{
-			for (int32_t x = 0; x < ABOUT_SCREEN_W; x++)
-			{
-				int32_t srcX = (x - ((ABOUT_SCREEN_W-ABOUT_LOGO_W)/2))    + (sin32767[(sinp+x)     & SIN_MASK] >> 10);
-				int32_t srcY = (y - ((ABOUT_SCREEN_H-ABOUT_LOGO_H)/2)+20) + (cos32767[(cosp+y+x+x) & SIN_MASK] >> 11);
+		// FT2 logo
 
-				if ((uint32_t)srcX < ABOUT_LOGO_W && (uint32_t)srcY < ABOUT_LOGO_H)
-				{
-					const uint32_t logoPixel = bmp.ft2AboutLogo[(srcY * ABOUT_LOGO_W) + srcX];
-					if (logoPixel != 0x00FF00) // transparency
-						dstPtr[x] = blendPixels(dstPtr[x], logoPixel, logoAlpha16);
-				}
+		uint32_t *srcPtr = bmp.ft2AboutLogo;
+		uint32_t *dstPtr = &video.frameBuffer[(30 * SCREEN_W) + ((SCREEN_W - ABOUT_LOGO_W) / 2)];
+
+		for (int32_t y = 0; y < ABOUT_LOGO_H; y++, srcPtr += ABOUT_LOGO_W, dstPtr += SCREEN_W)
+		{
+			for (int32_t x = 0; x < ABOUT_LOGO_W; x++)
+			{
+				const uint32_t logoPixel = srcPtr[x];
+				if (logoPixel != 0x00FF00) // transparency
+					dstPtr[x] = blendPixels(dstPtr[x], logoPixel, logoAlpha16);
 			}
 		}
-
-		sinp = (sinp + 2) & SIN_MASK;
-		cosp = (cosp + 3) & SIN_MASK;
 
 		// render static texts
 		textOut(customText0X, customText0Y, PAL_FORGRND, customText0);
@@ -412,8 +404,6 @@ void initAboutScreen(void)
 		s->z = (float)((randoml(INT32_MAX) - (INT32_MAX/2)) * (1.0 / INT32_MAX));
 	}
 
-	sinp = cosp = 0;
-
 	// pre-calc sin/cos table
 	for (int32_t i = 0; i < SIN_PHASES + (SIN_PHASES / 4); i++)
 		sin32767[i] = (int16_t)round(32767.0 * sin(i * (PI * 2.0 / SIN_PHASES)));
@@ -424,7 +414,7 @@ void initAboutScreen(void)
 	customText1X = (SCREEN_W    - textWidth(customText1)) / 2;
 	customText2X = (SCREEN_W-8) - textWidth(customText2);
 	customText3X = (SCREEN_W-8) - textWidth(customText3);
-	customText0Y = 157-28;
+	customText0Y = 157-34;
 	customText1Y = 157-12;
 	customText2Y = 157-12;
 	customText3Y = 157;
