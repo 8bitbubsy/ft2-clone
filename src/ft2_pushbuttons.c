@@ -384,7 +384,6 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{  70,  53, 58, 16, 0, 0, "Make dir.",          NULL,    NULL,            pbDiskOpMakeDir },
 	{  70,  70, 58, 16, 0, 0, "Refresh",            NULL,    NULL,            pbDiskOpRefresh },
 	{  70,  87, 58, 16, 0, 0, "Set path",           NULL,    NULL,            pbDiskOpSetPath },
-	{  70, 104, 58, 16, 0, 0, "Show all",           NULL,    NULL,            pbDiskOpShowAll },
 	{  70, 121, 58, 19, 0, 0, "Exit",               NULL,    NULL,            pbDiskOpExit },
 #ifdef _WIN32 // partition letters
 	{ 134,   2, 31, 13, 0, 0, DISKOP_PARENT_STRING, NULL,    NULL,            pbDiskOpParent },

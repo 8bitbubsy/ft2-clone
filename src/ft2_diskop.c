@@ -1771,9 +1771,7 @@ static void displayCurrPath(void)
 #ifdef _WIN32
 		memcpy(FReq_NameTemp, p, 3); // get drive (f.ex. C:\)
 		FReq_NameTemp[3] = '\0';
-
-		strcat(FReq_NameTemp, ".\001"); // special character in font
-		FReq_NameTemp[5] = '\0';
+		strcat(FReq_NameTemp, "..\\");
 #else
 		FReq_NameTemp[0] = '\0';
 		strcpy(FReq_NameTemp, "/");
@@ -2209,10 +2207,12 @@ static void drawDiskOpScreen(void)
 	showPushButton(PB_DISKOP_EXIT);
 	showPushButton(PB_DISKOP_PARENT);
 	showPushButton(PB_DISKOP_ROOT);
-	showPushButton(PB_DISKOP_SHOW_ALL);
 	showPushButton(PB_DISKOP_SET_PATH);
 	showPushButton(PB_DISKOP_LIST_UP);
 	showPushButton(PB_DISKOP_LIST_DOWN);
+
+	showCheckBox(CB_DISKOP_SHOW_ALL);
+	textOutShadow(85, 108, PAL_FORGRND, PAL_DSKTOP2, "All files");
 
 	showScrollBar(SB_DISKOP_LIST);
 	showTextBox(TB_DISKOP_FILENAME);
@@ -2308,10 +2308,11 @@ void hideDiskOpScreen(void)
 	hidePushButton(PB_DISKOP_EXIT);
 	hidePushButton(PB_DISKOP_PARENT);
 	hidePushButton(PB_DISKOP_ROOT);
-	hidePushButton(PB_DISKOP_SHOW_ALL);
 	hidePushButton(PB_DISKOP_SET_PATH);
 	hidePushButton(PB_DISKOP_LIST_UP);
 	hidePushButton(PB_DISKOP_LIST_DOWN);
+
+	hideCheckBox(CB_DISKOP_SHOW_ALL);
 
 	hideScrollBar(SB_DISKOP_LIST);
 	hideTextBox(TB_DISKOP_FILENAME);
@@ -2375,9 +2376,9 @@ void pbDiskOpRoot(void)
 #endif
 }
 
-void pbDiskOpShowAll(void)
+void cbDiskOpAllFiles(void)
 {
-	FReq_ShowAllFiles = true;
+	FReq_ShowAllFiles ^= 1;
 	editor.diskOpReadDir = true; // refresh dir
 }
 

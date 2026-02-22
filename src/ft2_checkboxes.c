@@ -16,6 +16,7 @@
 #include "ft2_bmp.h"
 #include "ft2_wav_renderer.h"
 #include "ft2_smpfx.h"
+#include "ft2_diskop.h"
 #include "ft2_structs.h"
 
 checkBox_t checkBoxes[NUM_CHECKBOXES] =
@@ -119,6 +120,10 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 113, 128,  78, 12, cbFullScreen },
 	{ 113, 141,  75, 12, cbStretchImage },
 	{ 113, 154,  78, 12, cbPixelFilter },
+
+	// DISK OP. CHECKBOXES
+	//x,  y,   w,  h,  funcOnUp
+	{ 70, 106, 58, 12, cbDiskOpAllFiles },
 
 	// WAV RENDERER BPM MODE
 	//x,   y,   w,   h,  funcOnUp

@@ -52,7 +52,7 @@ void sbDiskOpSetPos(uint32_t pos);
 void pbDiskOpListUp(void);
 void pbDiskOpListDown(void);
 void pbDiskOpParent(void);
-void pbDiskOpShowAll(void);
+void cbDiskOpAllFiles(void);
 #ifdef _WIN32
 void pbDiskOpDrive1(void);
 void pbDiskOpDrive2(void);
