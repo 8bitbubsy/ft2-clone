@@ -33,121 +33,118 @@ stkHdr_t;
 
 bool loadSTK(FILE *f, uint32_t filesize)
 {
-	uint8_t bytes[4];
-	int16_t i, j, k;
-	uint16_t a, b;
 	sample_t *s;
-	stkHdr_t h;
+	modSmpHdr_t *srcSmp;
+	stkHdr_t header;
 
 	tmpLinearPeriodsFlag = false; // use Amiga periods
 
 	bool veryLateSTKVerFlag = false; // "DFJ SoundTracker III" nad later
 	bool lateSTKVerFlag = false; // "TJC SoundTracker II" and later
 
-	if (filesize < sizeof (h))
+	if (filesize < sizeof (header))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	memset(&h, 0, sizeof (stkHdr_t));
-	if (fread(&h, 1, sizeof (h), f) != sizeof (h))
+	memset(&header, 0, sizeof (stkHdr_t));
+	if (fread(&header, 1, sizeof (header), f) != sizeof (header))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	if (h.CIAVal == 0) // a CIA value of 0 results in 120
-		h.CIAVal = 120;
+	if (header.CIAVal == 0) // a CIA value of 0 results in 120
+		header.CIAVal = 120;
 
-	if (h.numOrders < 1 || h.numOrders > 128 || h.CIAVal > 220)
+	if (header.numOrders < 1 || header.numOrders > 128 || header.CIAVal > 220)
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	memcpy(songTmp.orders, h.orders, 128);
+	memcpy(songTmp.orders, header.orders, 128);
 
 	songTmp.numChannels = 4;
-	songTmp.songLength = h.numOrders;
+	songTmp.songLength = header.numOrders;
 	songTmp.BPM = 125;
 	songTmp.speed = 6;
 
-	for (a = 0; a < 15; a++)
+	srcSmp = header.smp;
+	for (int32_t i = 0; i < 15; i++, srcSmp++)
 	{
-		modSmpHdr_t *modSmp = &h.smp[a];
-		memcpy(songTmp.instrName[1+a], modSmp->name, 22);
+		memcpy(songTmp.instrName[1+i], srcSmp->name, 22);
 
 		/* Only late versions of Ultimate SoundTracker supports samples larger than 9999 bytes.
 		** If found, we know for sure that this is a late STK module.
 		*/
-		const int32_t sampleLen = 2*SWAP16(modSmp->length);
+		const int32_t sampleLen = 2*SWAP16(srcSmp->length);
 		if (sampleLen > 9999)
 			lateSTKVerFlag = true;
 	}
 
 	// jjk55.mod by Jesper Kyd has a bogus STK tempo value that should be ignored (hackish!)
-	if (!strcmp("jjk55", h.name))
-		h.CIAVal = 120;
+	if (!strcmp("jjk55", header.name))
+		header.CIAVal = 120;
 
-	if (h.CIAVal != 120) // 120 is a special case and means 50Hz (125BPM)
+	if (header.CIAVal != 120) // 120 is a special case and means 50Hz (125BPM)
 	{
-		if (h.CIAVal > 220)
-			h.CIAVal = 220;
+		if (header.CIAVal > 220)
+			header.CIAVal = 220;
 
 		// convert UST tempo to BPM
-		uint16_t ciaPeriod = (240 - h.CIAVal) * 122;
+		uint16_t ciaPeriod = (240 - header.CIAVal) * 122;
 		
 		double dHz = 709379.0 / (ciaPeriod+1); // +1, CIA triggers on underflow
 
 		songTmp.BPM = (uint16_t)((dHz * (125.0 / 50.0)) + 0.5);
 	}
 
-	memcpy(songTmp.name, h.name, 20);
+	memcpy(songTmp.name, header.name, 20);
 
 	// count number of patterns
-	b = 0;
-	for (a = 0; a < 128; a++)
+	int32_t numPatterns = 0;
+	for (int32_t i = 0; i < 128; i++)
 	{
-		if (songTmp.orders[a] > b)
-			b = songTmp.orders[a];
+		if (songTmp.orders[i] > numPatterns)
+			numPatterns = songTmp.orders[i];
 	}
-	b++;
+	numPatterns++;
 
-	for (a = 0; a < b; a++)
+	// patterns
+
+	for (int32_t i = 0; i < numPatterns; i++)
 	{
-		if (!allocateTmpPatt(a, 64))
+		if (!allocateTmpPatt(i, 64))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
 
-		for (j = 0; j < 64; j++)
-		{
-			for (k = 0; k < songTmp.numChannels; k++)
-			{
-				note_t *p = &patternTmp[a][(j * MAX_CHANNELS) + k];
+		fread(tmpBuffer, 1, 64 * 4 * 4, f);
+		uint8_t *pattPtr = tmpBuffer;
 
-				if (fread(bytes, 1, 4, f) != 4)
-				{
-					loaderMsgBox("Error: This file is either not a module, or is not supported.");
-					return false;
-				}
+		for (int32_t row = 0; row < 64; row++)
+		{
+			for (int32_t ch = 0; ch < 4; ch++, pattPtr += 4)
+			{
+				note_t *p = &patternTmp[i][(row * MAX_CHANNELS) + ch];
 
 				// period to note
-				uint16_t period = ((bytes[0] & 0x0F) << 8) | bytes[1];
-				for (i = 0; i < 3*12; i++)
+				uint16_t period = ((pattPtr[0] & 0x0F) << 8) | pattPtr[1];
+				for (int32_t note = 0; note < 3*12; note++)
 				{
-					if (period >= ptPeriods[i])
+					if (period >= ptPeriods[note])
 					{
-						p->note = 1 + (3*12) + (uint8_t)i;
+						p->note = 1 + (3*12) + (uint8_t)note;
 						break;
 					}
 				}
 
-				p->instr = (bytes[0] & 0xF0) | (bytes[2] >> 4);
-				p->efx = bytes[2] & 0x0F;
-				p->efxData = bytes[3];
+				p->instr = (pattPtr[0] & 0xF0) | (pattPtr[2] >> 4);
+				p->efx = pattPtr[2] & 0x0F;
+				p->efxData = pattPtr[3];
 
 				if (p->efx == 0xC || p->efx == 0xD || p->efx == 0xE)
 				{
@@ -206,16 +203,16 @@ bool loadSTK(FILE *f, uint32_t filesize)
 	}
 
 	// pattern command conversion
-	for (a = 0; a < b; a++)
+	for (int32_t i = 0; i < numPatterns; i++)
 	{
-		if (patternTmp[a] == NULL)
+		if (patternTmp[i] == NULL)
 			continue;
 
-		for (j = 0; j < 64; j++)
+		for (int32_t row = 0; row < 64; row++)
 		{
-			for (k = 0; k < songTmp.numChannels; k++)
+			for (int32_t ch = 0; ch < songTmp.numChannels; ch++)
 			{
-				note_t *p = &patternTmp[a][(j * MAX_CHANNELS) + k];
+				note_t *p = &patternTmp[i][(row * MAX_CHANNELS) + ch];
 
 				// convert STK effects to PT effects
 
@@ -270,24 +267,28 @@ bool loadSTK(FILE *f, uint32_t filesize)
 		}
 	}
 
-	for (a = 0; a < 15; a++)
+	// samples
+
+	srcSmp = header.smp;
+	for (int32_t i = 0; i < 15; i++, srcSmp++)
 	{
-		if (h.smp[a].length == 0)
+		if (srcSmp->length == 0)
 			continue;
 
-		if (!allocateTmpInstr(1+a))
+		if (!allocateTmpInstr(1+i))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
+		setNoEnvelope(instrTmp[1+i]);
+		s = &instrTmp[1+i]->smp[0];
 
-		setNoEnvelope(instrTmp[1+a]);
+		memcpy(s->name, srcSmp->name, 22);
 
-		s = &instrTmp[1+a]->smp[0];
-		s->volume = h.smp[a].volume;
-		s->length = 2 * SWAP16(h.smp[a].length);
-		s->loopStart = SWAP16(h.smp[a].loopStart); // in STK, loopStart = bytes, not words
-		s->loopLength = 2 * SWAP16(h.smp[a].loopLength);
+		s->volume = srcSmp->volume;
+		s->length = 2 * SWAP16(srcSmp->length);
+		s->loopStart = SWAP16(srcSmp->loopStart); // in STK, loopStart = bytes, not words
+		s->loopLength = 2 * SWAP16(srcSmp->loopLength);
 
 		if (s->loopLength < 2)
 			s->loopLength = 2;

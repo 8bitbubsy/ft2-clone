@@ -146,15 +146,15 @@ error:
 
 bool loadBEM(FILE *f, uint32_t filesize)
 {
-	bemHdr_t h;
+	bemHdr_t header;
 
-	if (filesize < sizeof (h))
+	if (filesize < sizeof (header))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	fread(&h, 1, sizeof (bemHdr_t), f);
+	fread(&header, 1, sizeof (header), f);
 
 	char *songName = readString(f);
 	if (songName == NULL)
@@ -168,31 +168,30 @@ bool loadBEM(FILE *f, uint32_t filesize)
 	fread(&strLength, 2, 1, f);
 	fseek(f, strLength, SEEK_CUR);
 
-	if (h.numpos > 256 || h.numpat > 256 || h.numchn > 32 || h.numtrk > MAX_TRACKS)
+	if (header.numpos > 256 || header.numpat > 256 || header.numchn > 32 || header.numtrk > MAX_TRACKS)
 	{
 		loaderMsgBox("Error loading BEM: The module is corrupt!");
 		return false;
 	}
 
-	tmpLinearPeriodsFlag = !!(h.flags & FLAG_LINEARSLIDES);
+	tmpLinearPeriodsFlag = !!(header.flags & FLAG_LINEARSLIDES);
 
-	songTmp.numChannels = h.numchn;
-	songTmp.songLength = h.numpos;
-	songTmp.songLoopStart = h.reppos;
-	songTmp.BPM = h.inittempo;
-	songTmp.speed = h.initspeed;
+	songTmp.numChannels = header.numchn;
+	songTmp.songLength = header.numpos;
+	songTmp.songLoopStart = header.reppos;
+	songTmp.BPM = header.inittempo;
+	songTmp.speed = header.initspeed;
 	
-	memcpy(songTmp.orders, h.positions, 256);
+	memcpy(songTmp.orders, header.positions, 256);
 
 	// load instruments
-	for (int16_t i = 0; i < h.numins; i++)
+	for (int16_t i = 0; i < header.numins; i++)
 	{
 		if (!allocateTmpInstr(1 + i))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
-
 		instr_t *ins = instrTmp[1 + i];
 
 		ins->numSamples = (uint8_t)fgetc(f);
@@ -229,10 +228,9 @@ bool loadBEM(FILE *f, uint32_t filesize)
 		memcpy(songTmp.instrName[1+i], insName, insNameLen);
 		free(insName);
 
-		for (int32_t j = 0; j < ins->numSamples; j++)
+		sample_t *s = ins->smp;
+		for (int32_t j = 0; j < ins->numSamples; j++, s++)
 		{
-			sample_t *s = &ins->smp[j];
-
 			s->finetune = (int8_t)fgetc(f) ^ 0x80;
 			fseek(f, 1, SEEK_CUR);
 			s->relativeNote = (int8_t)fgetc(f);
@@ -267,10 +265,10 @@ bool loadBEM(FILE *f, uint32_t filesize)
 
 	uint16_t rowsInPattern[256];
 	
-	fread(rowsInPattern, 2, h.numpat, f);
-	fread(trackList, 2, h.numpat * h.numchn, f);
+	fread(rowsInPattern, 2, header.numpat, f);
+	fread(trackList, 2, header.numpat * header.numchn, f);
 	
-	for (int32_t i = 0; i < h.numtrk; i++)
+	for (int32_t i = 0; i < header.numtrk; i++)
 	{
 		uint16_t trackBytesInFile;
 		fread(&trackBytesInFile, 2, 1, f);
@@ -354,7 +352,7 @@ trackError:
 	}
 
 	// create patterns from tracks
-	for (int32_t i = 0; i < h.numpat; i++)
+	for (int32_t i = 0; i < header.numpat; i++)
 	{
 		uint16_t numRows = rowsInPattern[i];
 		if (numRows == 0 || numRows > 256)
@@ -367,28 +365,28 @@ trackError:
 		}
 
 		note_t *dst = patternTmp[i];
-		for (int32_t j = 0; j < h.numchn; j++)
+		for (int32_t ch = 0; ch < header.numchn; ch++)
 		{
-			note_t *src = (note_t *)decodedTrack[trackList[(i * h.numchn) + j]];
+			note_t *src = (note_t *)decodedTrack[trackList[(i * header.numchn) + ch]];
 			if (src != NULL)
 			{
-				for (int32_t k = 0; k < numRows; k++)
-					dst[(k * MAX_CHANNELS) + j] = src[k];
+				for (int32_t row = 0; row < numRows; row++)
+					dst[(row * MAX_CHANNELS) + ch] = src[row];
 			}
 		}
 	}
 
-	// load sample data
-	for (int32_t i = 0; i < h.numins; i++)
+	// samples
+
+	for (int32_t i = 0; i < header.numins; i++)
 	{
 		instr_t *ins = instrTmp[1 + i];
 		if (ins == NULL)
 			continue;
 
-		for (int32_t j = 0; j < ins->numSamples; j++)
+		sample_t *s = ins->smp;
+		for (int32_t j = 0; j < ins->numSamples; j++, s++)
 		{
-			sample_t *s = &ins->smp[j];
-
 			bool sampleIs16Bit = !!(s->flags & SAMPLE_16BIT);
 			if (!allocateSmpData(s, s->length, sampleIs16Bit))
 			{
@@ -396,7 +394,11 @@ trackError:
 				return false;
 			}
 
-			fread(s->dataPtr, 1 + sampleIs16Bit, s->length, f);
+			if (sampleIs16Bit)
+				fread(s->dataPtr, 2, s->length, f);
+			else
+				fread(s->dataPtr, 1, s->length, f);
+
 			delta2Samp(s->dataPtr, s->length, s->flags);
 		}
 	}

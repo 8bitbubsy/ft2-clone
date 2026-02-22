@@ -49,30 +49,28 @@ stmHdr_t;
 #endif
 
 static const uint8_t stmEfx[16] = { 0, 0, 11, 0, 10, 2, 1, 3, 4, 7, 0, 5, 6, 0, 0, 0 };
-static uint8_t pattBuff[64*4*4];
 
 static uint16_t stmTempoToBPM(uint8_t tempo);
 
 bool loadSTM(FILE *f, uint32_t filesize)
 {
-	int16_t i, j, k;
-	stmHdr_t hdr;
+	stmHdr_t header;
 
 	tmpLinearPeriodsFlag = false; // use Amiga periods
 
-	if (filesize < sizeof (hdr))
+	if (filesize < sizeof (header))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	if (fread(&hdr, 1, sizeof (hdr), f) != sizeof (hdr))
+	if (fread(&header, 1, sizeof (header), f) != sizeof (header))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	if (hdr.type != 2)
+	if (header.type != 2)
 	{
 		loaderMsgBox("Error loading STM: Incompatible module!");
 		return false;
@@ -80,40 +78,40 @@ bool loadSTM(FILE *f, uint32_t filesize)
 
 	songTmp.numChannels = 4;
 
-	uint8_t maxOrders = (hdr.verMinor == 0) ? 64 : 128;
+	uint8_t maxOrders = (header.verMinor == 0) ? 64 : 128;
 	fread(songTmp.orders, 1, maxOrders, f);
 
 	// count number of orders (song length)
-	uint8_t songLength = 0;
-	for (i = 0; i < maxOrders; i++)
+	songTmp.songLength = 0;
+	for (int32_t i = 0; i < maxOrders; i++)
 	{
 		if (songTmp.orders[i] >= 99)
 			break;
 
-		songLength++;
+		songTmp.songLength++;
 	}
 
-	if (songLength == 0)
-		songLength = 1;
-
-	songTmp.songLength = songLength;
+	if (songTmp.songLength == 0)
+		songTmp.songLength = 1;
 
 	// clear unused orders
 	memset(&songTmp.orders[songTmp.songLength], 0, 256 - songTmp.songLength);
 
-	memcpy(songTmp.name, hdr.name, 20);
+	memcpy(songTmp.name, header.name, 20);
 
-	uint8_t tempo = hdr.tempo;
-	if (hdr.verMinor < 21)
+	uint8_t tempo = header.tempo;
+	if (header.verMinor < 21)
 		tempo = ((tempo / 10) << 4) + (tempo % 10);
 
 	if (tempo == 0)
 		tempo = 96;
 
 	songTmp.BPM = stmTempoToBPM(tempo);
-	songTmp.speed = hdr.tempo >> 4;
+	songTmp.speed = header.tempo >> 4;
 
-	for (i = 0; i < hdr.numPatterns; i++)
+	// patterns
+
+	for (int32_t i = 0; i < header.numPatterns; i++)
 	{
 		if (!allocateTmpPatt(i, 64))
 		{
@@ -121,18 +119,14 @@ bool loadSTM(FILE *f, uint32_t filesize)
 			return false;
 		}
 
-		if (fread(pattBuff, 64 * 4 * 4, 1, f) != 1)
-		{
-			loaderMsgBox("General I/O error during loading!");
-			return false;
-		}
+		fread(tmpBuffer, 64 * 4 * 4, 1, f);
+		uint8_t *pattPtr = tmpBuffer;
 
-		uint8_t *pattPtr = pattBuff;
-		for (j = 0; j < 64; j++)
+		for (int32_t row = 0; row < 64; row++)
 		{
-			for (k = 0; k < 4; k++, pattPtr += 4)
+			for (int32_t ch = 0; ch < 4; ch++, pattPtr += 4)
 			{
-				note_t *p = &patternTmp[i][(j * MAX_CHANNELS) + k];
+				note_t *p = &patternTmp[i][(row * MAX_CHANNELS) + ch];
 				
 				if (pattPtr[0] == 254)
 				{
@@ -162,7 +156,7 @@ bool loadSTM(FILE *f, uint32_t filesize)
 				{
 					p->efx = 15;
 
-					if (hdr.verMinor < 21)
+					if (header.verMinor < 21)
 						p->efxData = ((p->efxData / 10) << 4) + (p->efxData % 10);
 
 					p->efxData >>= 4;
@@ -194,42 +188,43 @@ bool loadSTM(FILE *f, uint32_t filesize)
 		}
 	}
 
-	for (i = 0; i < 31; i++)
-	{
-		memcpy(&songTmp.instrName[1+i], hdr.smp[i].name, 12);
+	// samples
 
-		if (hdr.smp[i].length > 0)
+	stmSmpHdr_t *srcSmp = header.smp;
+	for (int32_t i = 0; i < 31; i++, srcSmp++)
+	{
+		memcpy(&songTmp.instrName[1+i], srcSmp->name, 12);
+
+		if (srcSmp->length > 0)
 		{
 			if (!allocateTmpInstr(1 + i))
 			{
 				loaderMsgBox("Not enough memory!");
 				return false;
 			}
-
 			setNoEnvelope(instrTmp[i]);
-
 			sample_t *s = &instrTmp[1+i]->smp[0];
+
+			memcpy(s->name, srcSmp->name, 12);
 
 			// non-FT2: fixes "acidlamb.stm" and other broken STMs
 			const uint32_t offsetInFile = (uint32_t)ftell(f);
-			if (offsetInFile+hdr.smp[i].length > filesize)
-				hdr.smp[i].length = (uint16_t)(filesize - offsetInFile);
+			if (offsetInFile+srcSmp->length > filesize)
+				srcSmp->length = (uint16_t)(filesize - offsetInFile);
 
-			if (!allocateSmpData(s, hdr.smp[i].length, false))
+			if (!allocateSmpData(s, srcSmp->length, false))
 			{
 				loaderMsgBox("Not enough memory!");
 				return false;
 			}
 
-			s->length = hdr.smp[i].length;
-			s->volume = hdr.smp[i].volume;
-			s->loopStart = hdr.smp[i].loopStart;
-			s->loopLength = hdr.smp[i].loopEnd - hdr.smp[i].loopStart;
+			s->length = srcSmp->length;
+			s->volume = srcSmp->volume;
+			s->loopStart = srcSmp->loopStart;
+			s->loopLength = srcSmp->loopEnd - srcSmp->loopStart;
+			setSampleC4Hz(s, srcSmp->midCFreq);
 
-			memcpy(s->name, hdr.smp[i].name, 12);
-			setSampleC4Hz(s, hdr.smp[i].midCFreq);
-
-			if (s->loopStart < s->length && hdr.smp[i].loopEnd > s->loopStart && hdr.smp[i].loopEnd != 0xFFFF)
+			if (s->loopStart < s->length && srcSmp->loopEnd > s->loopStart && srcSmp->loopEnd != 0xFFFF)
 			{
 				if (s->loopStart+s->loopLength > s->length)
 					s->loopLength = s->length - s->loopStart;

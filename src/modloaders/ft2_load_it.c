@@ -112,10 +112,9 @@ itSmpHdr_t;
 #pragma pack(pop)
 #endif
 
-static uint8_t decompBuffer[65536];
 static uint8_t volPortaConv[9] = { 1, 4, 8, 16, 32, 64, 96, 128, 255 };
 static uint32_t insOffs[256], smpOffs[256], patOffs[256];
-static itSmpHdr_t *itSmp, smpHdrs[256];
+static itSmpHdr_t *srcSmp, smpHdrs[256];
 
 static bool loadCompressed16BitSample(FILE *f, sample_t *s, bool deltaEncoded);
 static bool loadCompressed8BitSample(FILE *f, sample_t *s, bool deltaEncoded);
@@ -124,35 +123,35 @@ static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *is);
 
 bool loadIT(FILE *f, uint32_t filesize)
 {
-	itHdr_t itHdr;
+	itHdr_t header;
 
-	if (filesize < sizeof (itHdr))
+	if (filesize < sizeof (header))
 	{
 		loaderMsgBox("This IT module is not supported or is corrupt!");
 		goto error;
 	}
 
-	fread(&itHdr, sizeof (itHdr), 1, f);
+	fread(&header, sizeof (header), 1, f);
 
-	if (itHdr.ordNum > 257 || itHdr.insNum > 256 || itHdr.smpNum > 256 || itHdr.patNum > 256)
+	if (header.ordNum > 257 || header.insNum > 256 || header.smpNum > 256 || header.patNum > 256)
 	{
 		loaderMsgBox("This IT module is not supported or is corrupt!");
 		goto error;
 	}
 
-	tmpLinearPeriodsFlag = !!(itHdr.flags & 8);
+	tmpLinearPeriodsFlag = !!(header.flags & 8);
 
-	songTmp.pattNum = itHdr.patNum;
-	songTmp.speed = itHdr.speed;
-	songTmp.BPM = itHdr.BPM;
+	songTmp.pattNum = header.patNum;
+	songTmp.speed = header.speed;
+	songTmp.BPM = header.BPM;
 
-	memcpy(songTmp.name, itHdr.songName, 20);
+	memcpy(songTmp.name, header.songName, 20);
 	songTmp.name[20] = '\0';
 
-	bool oldFormat = (itHdr.cmwt < 0x200);
-	bool songUsesInstruments = !!(itHdr.flags & 4);
-	bool oldEffects = !!(itHdr.flags & 16);
-	bool compatGxx = !!(itHdr.flags & 32);
+	bool oldFormat = (header.cmwt < 0x200);
+	bool songUsesInstruments = !!(header.flags & 4);
+	bool oldEffects = !!(header.flags & 16);
+	bool compatGxx = !!(header.flags & 32);
 
 	// read order list
 	for (int32_t i = 0; i < MAX_ORDERS; i++)
@@ -172,12 +171,12 @@ bool loadIT(FILE *f, uint32_t filesize)
 	}
 
 	// read file pointers
-	fseek(f, sizeof (itHdr) + itHdr.ordNum, SEEK_SET);
-	fread(insOffs, 4, itHdr.insNum, f);
-	fread(smpOffs, 4, itHdr.smpNum, f);
-	fread(patOffs, 4, itHdr.patNum, f);
+	fseek(f, sizeof (header) + header.ordNum, SEEK_SET);
+	fread(insOffs, 4, header.insNum, f);
+	fread(smpOffs, 4, header.smpNum, f);
+	fread(patOffs, 4, header.patNum, f);
 
-	for (int32_t i = 0; i < itHdr.smpNum; i++)
+	for (int32_t i = 0; i < header.smpNum; i++)
 	{
 		fseek(f, smpOffs[i], SEEK_SET);
 		fread(&smpHdrs[i], sizeof (itSmpHdr_t), 1, f);
@@ -185,10 +184,10 @@ bool loadIT(FILE *f, uint32_t filesize)
 
 	if (!songUsesInstruments) // read samples (as instruments)
 	{
-		int32_t numIns = MIN(itHdr.smpNum, MAX_INST);
+		int32_t numIns = MIN(header.smpNum, MAX_INST);
 
-		itSmp = smpHdrs;
-		for (int16_t i = 0; i < numIns; i++, itSmp++)
+		srcSmp = smpHdrs;
+		for (int16_t i = 0; i < numIns; i++, srcSmp++)
 		{
 			if (!allocateTmpInstr(1 + i))
 			{
@@ -199,15 +198,15 @@ bool loadIT(FILE *f, uint32_t filesize)
 			instr_t *ins = instrTmp[1+i];
 			sample_t *s = &ins->smp[0];
 
-			memcpy(songTmp.instrName[1+i], itSmp->sampleName, 22);
+			memcpy(songTmp.instrName[1+i], srcSmp->sampleName, 22);
 			songTmp.instrName[1+i][22] = '\0';
 
-			ins->numSamples = (itSmp->length > 0) ? 1 : 0;
+			ins->numSamples = (srcSmp->length > 0) ? 1 : 0;
 			if (ins->numSamples > 0)
 			{
-				setAutoVibrato(ins, itSmp);
+				setAutoVibrato(ins, srcSmp);
 
-				if (!loadSample(f, s, itSmp))
+				if (!loadSample(f, s, srcSmp))
 				{
 					loaderMsgBox("Not enough memory!");
 					goto error;
@@ -219,7 +218,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 	{
 		itOldInsHdr_t itIns;
 
-		int32_t numIns = MIN(itHdr.insNum, MAX_INST);
+		int32_t numIns = MIN(header.insNum, MAX_INST);
 		for (int16_t i = 0; i < numIns; i++)
 		{
 			fseek(f, insOffs[i], SEEK_SET);
@@ -360,7 +359,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 	{
 		itInsHdr_t itIns;
 
-		int32_t numIns = MIN(itHdr.insNum, MAX_INST);
+		int32_t numIns = MIN(header.insNum, MAX_INST);
 		for (int16_t i = 0; i < numIns; i++)
 		{
 			fseek(f, insOffs[i], SEEK_SET);
@@ -533,7 +532,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 		}
 	}
 
-	// load pattern data
+	// patterns
 
 	uint32_t numChannels = 0;
 	for (int32_t i = 0; i < songTmp.pattNum; i++)
@@ -557,6 +556,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 			loaderMsgBox("Not enough memory!");
 			goto error;
 		}
+		note_t *patt = patternTmp[i];
 
 		uint8_t lastMask[64];
 		memset(lastMask, 0, sizeof (lastMask));
@@ -564,13 +564,14 @@ bool loadIT(FILE *f, uint32_t filesize)
 		note_t lastNote[64];
 		memset(lastNote, 0, sizeof (lastNote));
 
-		note_t *patt = patternTmp[i];
+		fread(tmpBuffer, 1, length, f);
+		uint8_t *pattPtr = tmpBuffer;
 
 		int32_t bytesRead = 0;
 		int32_t row = 0;
 		while (bytesRead < length && row < numRows)
 		{
-			uint8_t byte = (uint8_t)fgetc(f);
+			uint8_t byte = *pattPtr++;
 			bytesRead++;
 
 			if (byte == 0)
@@ -588,7 +589,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 
 			if (byte & 128)
 			{
-				lastMask[ch] = (uint8_t)fgetc(f);
+				lastMask[ch] = *pattPtr++;
 				bytesRead++;
 			}
 
@@ -609,7 +610,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 
 			if (lastMask[ch] & 1)
 			{
-				uint8_t note = (uint8_t)fgetc(f);
+				uint8_t note = *pattPtr++;
 				bytesRead++;
 
 				if (note < 120)
@@ -635,7 +636,7 @@ bool loadIT(FILE *f, uint32_t filesize)
 
 			if (lastMask[ch] & 2)
 			{
-				uint8_t ins = (uint8_t)fgetc(f);
+				uint8_t ins = *pattPtr++;
 				bytesRead++;
 
 				if (ins > MAX_INST)
@@ -646,16 +647,16 @@ bool loadIT(FILE *f, uint32_t filesize)
 
 			if (lastMask[ch] & 4)
 			{
-				p->vol = lastNote[ch].vol = 1 + (uint8_t)fgetc(f);
+				p->vol = lastNote[ch].vol = 1 + *pattPtr++;
 				bytesRead++;
 			}
 
 			if (lastMask[ch] & 8)
 			{
-				p->efx = lastNote[ch].efx = (uint8_t)fgetc(f);
+				p->efx = lastNote[ch].efx = *pattPtr++;
 				bytesRead++;;
 
-				p->efxData = lastNote[ch].efxData = (uint8_t)fgetc(f);
+				p->efxData = lastNote[ch].efxData = *pattPtr++;
 				bytesRead++;
 			}
 		}
@@ -1398,9 +1399,9 @@ static bool loadCompressed16BitSample(FILE *f, sample_t *s, bool deltaEncoded)
 
 		uint16_t packedLen;
 		fread(&packedLen, sizeof (uint16_t), 1, f);
-		fread(decompBuffer, 1, packedLen, f);
+		fread(tmpBuffer, 1, packedLen, f);
 
-		decompress16BitData((int16_t *)dstPtr, decompBuffer, bytesToUnpack);
+		decompress16BitData((int16_t *)dstPtr, tmpBuffer, bytesToUnpack);
 
 		if (deltaEncoded) // convert from delta values to PCM
 		{
@@ -1435,9 +1436,9 @@ static bool loadCompressed8BitSample(FILE *f, sample_t *s, bool deltaEncoded)
 
 		uint16_t packedLen;
 		fread(&packedLen, sizeof (uint16_t), 1, f);
-		fread(decompBuffer, 1, packedLen, f);
+		fread(tmpBuffer, 1, packedLen, f);
 
-		decompress8BitData(dstPtr, decompBuffer, bytesToUnpack);
+		decompress8BitData(dstPtr, tmpBuffer, bytesToUnpack);
 
 		if (deltaEncoded) // convert from delta values to PCM
 		{
@@ -1534,7 +1535,10 @@ static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *is)
 	}
 	else
 	{
-		fread(s->dataPtr, 1+(size_t)sampleIs16Bit, s->length, f);
+		if (sampleIs16Bit)
+			fread(s->dataPtr, 2, s->length, f);
+		else
+			fread(s->dataPtr, 1, s->length, f);
 
 		if (!signedSamples)
 		{

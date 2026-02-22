@@ -63,6 +63,7 @@ char *supportedModExtensions[] =
 
 // globals for module loaders
 volatile bool tmpLinearPeriodsFlag;
+uint8_t tmpBuffer[65536] = {0}; // pre-initialize to assure it's in __data instead of __common
 int16_t patternNumRowsTmp[MAX_PATTERNS];
 note_t *patternTmp[MAX_PATTERNS];
 instr_t *instrTmp[1+256];
@@ -297,7 +298,7 @@ bool allocateTmpPatt(int32_t pattNum, uint16_t numRows)
 	return true;
 }
 
-bool allocateTmpInstr(int16_t insNum)
+bool allocateTmpInstr(int32_t insNum)
 {
 	if (instrTmp[insNum] != NULL)
 		return false; // already allocated
@@ -344,7 +345,7 @@ static void freeTmpModule(void) // called on module load error
 	}
 }
 
-bool tmpPatternEmpty(uint16_t pattNum)
+bool tmpPatternEmpty(int32_t pattNum)
 {
 	if (patternTmp[pattNum] == NULL)
 		return true;

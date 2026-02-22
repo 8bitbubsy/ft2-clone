@@ -718,22 +718,22 @@ static void patternDelay(channel_t *ch, uint8_t param)
 
 static const efxRoutine EJumpTab_TickZero[16] =
 {
-	dummy,				// 0
-	finePitchSlideUp,	// 1
-	finePitchSlideDown,	// 2
-	setPortamentoCtrl,	// 3
-	setVibratoCtrl,		// 4
-	dummy,				// 5
-	patternLoop,		// 6
-	setTremoloCtrl,		// 7
-	dummy,				// 8
-	dummy,				// 9
-	fineVolSlideUp,		// A
-	fineVolFineDown,	// B
-	noteCut0,			// C
-	dummy,				// D
-	patternDelay,		// E
-	dummy				// F
+	dummy,              // 0
+	finePitchSlideUp,   // 1
+	finePitchSlideDown, // 2
+	setPortamentoCtrl,  // 3
+	setVibratoCtrl,     // 4
+	dummy,              // 5
+	patternLoop,        // 6
+	setTremoloCtrl,     // 7
+	dummy,              // 8
+	dummy,              // 9
+	fineVolSlideUp,     // A
+	fineVolFineDown,    // B
+	noteCut0,           // C
+	dummy,              // D
+	patternDelay,       // E
+	dummy               // F
 };
 
 static void E_Effects_TickZero(channel_t *ch, uint8_t param)
@@ -964,42 +964,42 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 
 static const efxRoutine JumpTab_TickZero[36] =
 {
-	dummy,				// 0
-	dummy,				// 1
-	dummy,				// 2
-	dummy,				// 3
-	dummy,				// 4
-	dummy,				// 5
-	dummy,				// 6
-	dummy,				// 7
-	dummy,				// 8
-	dummy,				// 9
-	dummy,				// A
-	positionJump,		// B
-	dummy,				// C
-	patternBreak,		// D
-	E_Effects_TickZero,	// E
-	setSpeed,			// F
-	setGlobalVolume,	// G
-	dummy,				// H
-	dummy,				// I
-	dummy,				// J
-	dummy,				// K
-	setEnvelopePos,		// L
-	dummy,				// M
-	dummy,				// N
-	dummy,				// O
-	dummy,				// P
-	dummy,				// Q
-	dummy,				// R
-	dummy,				// S
-	dummy,				// T
-	dummy,				// U
-	dummy,				// V
-	dummy,				// W
-	dummy,				// X
-	dummy,				// Y
-	dummy 				// Z
+	dummy,              // 0
+	dummy,              // 1
+	dummy,              // 2
+	dummy,              // 3
+	dummy,              // 4
+	dummy,              // 5
+	dummy,              // 6
+	dummy,              // 7
+	dummy,              // 8
+	dummy,              // 9
+	dummy,              // A
+	positionJump,       // B
+	dummy,              // C
+	patternBreak,       // D
+	E_Effects_TickZero, // E
+	setSpeed,           // F
+	setGlobalVolume,    // G
+	dummy,              // H
+	dummy,              // I
+	dummy,              // J
+	dummy,              // K
+	setEnvelopePos,     // L
+	dummy,              // M
+	dummy,              // N
+	dummy,              // O
+	dummy,              // P
+	dummy,              // Q
+	dummy,              // R
+	dummy,              // S
+	dummy,              // T
+	dummy,              // U
+	dummy,              // V
+	dummy,              // W
+	dummy,              // X
+	dummy,              // Y
+	dummy               // Z
 };
 
 static void handleMoreEffects_TickZero(channel_t *ch) // called even if channel is muted!
@@ -2164,22 +2164,22 @@ static void noteDelay(channel_t *ch, uint8_t param)
 
 static const efxRoutine EJumpTab_TickNonZero[16] =
 {
-	dummy,		// 0
-	dummy,		// 1
-	dummy,		// 2
-	dummy,		// 3
-	dummy,		// 4
-	dummy,		// 5
-	dummy,		// 6
-	dummy,		// 7
-	dummy,		// 8
-	retrigNote,	// 9
-	dummy,		// A
-	dummy,		// B
-	noteCut,	// C
-	noteDelay,	// D
-	dummy,		// E
-	dummy		// F
+	dummy,      // 0
+	dummy,      // 1
+	dummy,      // 2
+	dummy,      // 3
+	dummy,      // 4
+	dummy,      // 5
+	dummy,      // 6
+	dummy,      // 7
+	dummy,      // 8
+	retrigNote, // 9
+	dummy,      // A
+	dummy,      // B
+	noteCut,    // C
+	noteDelay,  // D
+	dummy,      // E
+	dummy       // F
 };
 
 static void E_Effects_TickNonZero(channel_t *ch, uint8_t param)
@@ -2189,42 +2189,42 @@ static void E_Effects_TickNonZero(channel_t *ch, uint8_t param)
 
 static const efxRoutine JumpTab_TickNonZero[36] =
 {
-	arpeggio,		// 0
-	pitchSlideUp,		// 1
-	pitchSlideDown,		// 2
-	portamento,		// 3
-	vibrato,		// 4
-	portamentoPlusVolSlide,	// 5
-	vibratoPlusVolSlide,	// 6
-	tremolo,		// 7
-	dummy,			// 8
-	dummy,			// 9
-	volSlide,		// A
-	dummy,			// B
-	dummy,			// C
-	dummy,			// D
-	E_Effects_TickNonZero,	// E
-	dummy,			// F
-	dummy,			// G
-	globalVolSlide,		// H
-	dummy,			// I
-	dummy,			// J
-	keyOffCmd,		// K
-	dummy,			// L
-	dummy,			// M
-	dummy,			// N
-	dummy,			// O
-	panningSlide,		// P
-	dummy,			// Q
-	doMultiNoteRetrig,	// R
-	dummy,			// S
-	tremor,			// T
-	dummy,			// U
-	dummy,			// V
-	dummy,			// W
-	dummy,			// X
-	dummy,			// Y
-	dummy			// Z
+	arpeggio,               // 0
+	pitchSlideUp,           // 1
+	pitchSlideDown,         // 2
+	portamento,             // 3
+	vibrato,                // 4
+	portamentoPlusVolSlide, // 5
+	vibratoPlusVolSlide,    // 6
+	tremolo,                // 7
+	dummy,                  // 8
+	dummy,                  // 9
+	volSlide,               // A
+	dummy,                  // B
+	dummy,                  // C
+	dummy,                  // D
+	E_Effects_TickNonZero,  // E
+	dummy,                  // F
+	dummy,                  // G
+	globalVolSlide,         // H
+	dummy,                  // I
+	dummy,                  // J
+	keyOffCmd,              // K
+	dummy,                  // L
+	dummy,                  // M
+	dummy,                  // N
+	dummy,                  // O
+	panningSlide,           // P
+	dummy,                  // Q
+	doMultiNoteRetrig,      // R
+	dummy,                  // S
+	tremor,                 // T
+	dummy,                  // U
+	dummy,                  // V
+	dummy,                  // W
+	dummy,                  // X
+	dummy,                  // Y
+	dummy                   // Z
 };
 
 static void handleEffects_TickNonZero(channel_t *ch)

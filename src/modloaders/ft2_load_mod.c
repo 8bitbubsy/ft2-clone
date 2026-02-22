@@ -27,40 +27,105 @@ enum // supported 31-sample .MOD types
 
 static uint8_t getModType(uint8_t *numChannels, const char *id);
 
+static void convertPatternEffect(note_t *p, uint8_t modFormat)
+{
+	if (p->efx == 0xC)
+	{
+		if (p->efxData > 64)
+			p->efxData = 64;
+	}
+	else if (p->efx == 0x1)
+	{
+		if (p->efxData == 0)
+			p->efx = 0;
+	}
+	else if (p->efx == 0x2)
+	{
+		if (p->efxData == 0)
+			p->efx = 0;
+	}
+	else if (p->efx == 0x5)
+	{
+		if (p->efxData == 0)
+			p->efx = 0x3;
+	}
+	else if (p->efx == 0x6)
+	{
+		if (p->efxData == 0)
+			p->efx = 0x4;
+	}
+	else if (p->efx == 0xA)
+	{
+		if (p->efxData == 0)
+			p->efx = 0;
+	}
+	else if (p->efx == 0xE)
+	{
+		// check if certain E commands are empty
+		if (p->efxData == 0x10 || p->efxData == 0x20 || p->efxData == 0xA0 || p->efxData == 0xB0)
+		{
+			p->efx = 0;
+			p->efxData = 0;
+		}
+	}
+
+	if (modFormat == FORMAT_NT || modFormat == FORMAT_HMNT)
+	{
+		// any Dxx == D00 in NT/HMNT
+		if (p->efx == 0xD)
+			p->efxData = 0;
+
+		// effect F with param 0x00 does nothing in NT/HMNT
+		if (p->efx == 0xF && p->efxData == 0)
+			p->efx = 0;
+	}
+	else if (modFormat == FORMAT_FLT4 || modFormat == FORMAT_FLT8) // Startrekker
+	{
+		if (p->efx == 0xE) // remove unsupported "assembly macros" command
+		{
+			p->efx = 0;
+			p->efxData = 0;
+		}
+
+		// Startrekker is always in vblank mode, and limits speed to 0x1F
+		if (p->efx == 0xF && p->efxData > 0x1F)
+			p->efxData = 0x1F;
+	}
+}
+
 bool loadMOD(FILE *f, uint32_t filesize)
 {
-	uint8_t bytes[4], modFormat, numChannels;
-	int16_t i, j, k;
-	uint16_t a, b;
+	uint8_t numChannels;
 	sample_t *s;
-	modHdr_t hdr;
+	modSmpHdr_t *srcSmp;
+	modHdr_t header;
 
 	tmpLinearPeriodsFlag = false; // use Amiga periods
 
-	if (filesize < sizeof (hdr))
+	if (filesize < sizeof (header))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	memset(&hdr, 0, sizeof (hdr));
-	if (fread(&hdr, 1, sizeof (hdr), f) != sizeof (hdr))
+	memset(&header, 0, sizeof (header));
+	if (fread(&header, 1, sizeof (header), f) != sizeof (header))
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	modFormat = getModType(&numChannels, hdr.ID);
+	uint8_t modFormat = getModType(&numChannels, header.ID);
 	if (modFormat == FORMAT_UNKNOWN)
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
 	}
 
-	if (modFormat == FORMAT_MK && hdr.numOrders == 129)
-		hdr.numOrders = 127; // fixes a specific copy of beatwave.mod (FIXME: Do we want to keep this hack?)
+	if (modFormat == FORMAT_MK && header.numOrders == 129)
+		header.numOrders = 127; // fixes a specific copy of beatwave.mod (FIXME: Do we want to keep this hack?)
 
-	if (numChannels == 0 || hdr.numOrders < 1 || hdr.numOrders > 128)
+	if (numChannels == 0 || header.numOrders < 1 || header.numOrders > 128)
 	{
 		loaderMsgBox("Error: This file is either not a module, or is not supported.");
 		return false;
@@ -69,77 +134,77 @@ bool loadMOD(FILE *f, uint32_t filesize)
 	bool tooManyChannels = numChannels > MAX_CHANNELS;
 
 	songTmp.numChannels = tooManyChannels ? MAX_CHANNELS : numChannels;
-	songTmp.songLength = hdr.numOrders;
-	songTmp.songLoopStart = hdr.songLoopStart;
+	songTmp.songLength = header.numOrders;
+	songTmp.songLoopStart = header.songLoopStart;
 	songTmp.BPM = 125;
 	songTmp.speed = 6;
 
-	memcpy(songTmp.orders, hdr.orders, 128);
+	memcpy(songTmp.orders, header.orders, 128);
 
-	for (a = 0; a < 31; a++)
+	srcSmp = header.smp;
+	for (int32_t i = 0; i < 31; i++, srcSmp++)
 	{
-		modSmpHdr_t *modSmp = &hdr.smp[a];
-
 		// copy over sample name if format isn't "His Master's Noisetracker" (junk sample names)
 		if (modFormat != FORMAT_HMNT)
-			memcpy(songTmp.instrName[1+a], modSmp->name, 22);
+			memcpy(songTmp.instrName[1+i], srcSmp->name, 22);
 	}
 
-	memcpy(songTmp.name, hdr.name, 20);
+	memcpy(songTmp.name, header.name, 20);
 
 	// count number of patterns
-	b = 0;
-	for (a = 0; a < 128; a++)
+	int32_t numPatterns = 0;
+	for (int32_t i = 0; i < 128; i++)
 	{
 		if (modFormat == FORMAT_FLT8)
-			songTmp.orders[a] >>= 1;
+			songTmp.orders[i] >>= 1;
 
-		if (songTmp.orders[a] > b)
-			b = songTmp.orders[a];
+		if (songTmp.orders[i] > numPatterns)
+			numPatterns = songTmp.orders[i];
 	}
-	b++;
+	numPatterns++;
 
-	// load pattern data
+	// patterns
+
 	if (modFormat != FORMAT_FLT8)
 	{
 		// normal pattern loading
 
-		for (a = 0; a < b; a++)
+		for (int32_t i = 0; i < numPatterns; i++)
 		{
-			if (!allocateTmpPatt(a, 64))
+			if (!allocateTmpPatt(i, 64))
 			{
 				loaderMsgBox("Not enough memory!");
 				return false;
 			}
 
-			for (j = 0; j < 64; j++)
+			fread(tmpBuffer, 1, 64 * numChannels * 4, f);
+			uint8_t *pattPtr = tmpBuffer;
+
+			for (int32_t row = 0; row < 64; row++)
 			{
-				for (k = 0; k < songTmp.numChannels; k++)
+				for (int32_t ch = 0; ch < songTmp.numChannels; ch++, pattPtr += 4)
 				{
-					note_t *p = &patternTmp[a][(j * MAX_CHANNELS) + k];
-					fread(bytes, 1, 4, f);
+					note_t *p = &patternTmp[i][(row * MAX_CHANNELS) + ch];
 
 					// period to note
-					uint16_t period = ((bytes[0] & 0x0F) << 8) | bytes[1];
-					for (i = 0; i < 8*12; i++)
+					uint16_t period = ((pattPtr[0] & 0x0F) << 8) | pattPtr[1];
+					for (int32_t note = 0; note < 8*12; note++)
 					{
-						if (period >= modPeriods[i])
+						if (period >= modPeriods[note])
 						{
-							p->note = (uint8_t)i + 1;
+							p->note = (uint8_t)note + 1;
 							break;
 						}
 					}
 
-					p->instr = (bytes[0] & 0xF0) | (bytes[2] >> 4);
-					p->efx = bytes[2] & 0x0F;
-					p->efxData = bytes[3];
+					p->instr = (pattPtr[0] & 0xF0) | (pattPtr[2] >> 4);
+					p->efx = pattPtr[2] & 0x0F;
+					p->efxData = pattPtr[3];
+					convertPatternEffect(p, modFormat);
 				}
 
 				if (tooManyChannels)
-				{
-					int32_t remainingChans = numChannels-songTmp.numChannels;
-					fseek(f, remainingChans*4, SEEK_CUR);
-				}
+					pattPtr += (numChannels - MAX_CHANNELS) * 4;
 			}
 		}
 	}
@@ -147,151 +212,77 @@ bool loadMOD(FILE *f, uint32_t filesize)
 	{
 		// FLT8 pattern loading
 
-		for (a = 0; a < b; a++)
+		for (int32_t i = 0; i < numPatterns; i++)
 		{
-			if (!allocateTmpPatt(a, 64))
+			if (!allocateTmpPatt(i, 64))
 			{
 				loaderMsgBox("Not enough memory!");
 				return false;
 			}
 		}
 
-		for (a = 0; a < b*2; a++)
+		for (int32_t i = 0; i < numPatterns * 2; i++)
 		{
-			int32_t pattNum = a >> 1;
-			int32_t chnOffset = (a & 1) * 4;
+			int32_t pattNum = i >> 1;
+			int32_t chnOffset = (i & 1) * 4;
 
-			for (j = 0; j < 64; j++)
+			fread(tmpBuffer, 1, 64 * 4 * 4, f);
+			uint8_t *pattPtr = tmpBuffer;
+
+			for (int32_t row = 0; row < 64; row++)
 			{
-				for (k = 0; k < 4; k++)
+				for (int32_t ch = 0; ch < 4; ch++, pattPtr += 4)
 				{
-					note_t *p = &patternTmp[pattNum][(j * MAX_CHANNELS) + (k+chnOffset)];
-					fread(bytes, 1, 4, f);
+					note_t *p = &patternTmp[pattNum][(row * MAX_CHANNELS) + (ch+chnOffset)];
 
 					// period to note
-					uint16_t period = ((bytes[0] & 0x0F) << 8) | bytes[1];
-					for (i = 0; i < 8*12; i++)
+					uint16_t period = ((pattPtr[0] & 0x0F) << 8) | pattPtr[1];
+					for (int32_t note = 0; note < 8*12; note++)
 					{
-						if (period >= modPeriods[i])
+						if (period >= modPeriods[note])
 						{
-							p->note = (uint8_t)i + 1;
+							p->note = (uint8_t)note + 1;
 							break;
 						}
 					}
 
-					p->instr = (bytes[0] & 0xF0) | (bytes[2] >> 4);
-					p->efx = bytes[2] & 0x0F;
-					p->efxData = bytes[3];
+					p->instr = (pattPtr[0] & 0xF0) | (pattPtr[2] >> 4);
+					p->efx = pattPtr[2] & 0x0F;
+					p->efxData = pattPtr[3];
+					convertPatternEffect(p, modFormat);
 				}
 			}
 		}
 	}
 
-	// pattern command conversion
-	for (a = 0; a < b; a++)
+	// samples
+
+	srcSmp = header.smp;
+	for (int32_t i = 0; i < 31; i++, srcSmp++)
 	{
-		if (patternTmp[a] == NULL)
+		if (srcSmp->length == 0)
 			continue;
 
-		for (j = 0; j < 64; j++)
-		{
-			for (k = 0; k < songTmp.numChannels; k++)
-			{
-				note_t *p = &patternTmp[a][(j * MAX_CHANNELS) + k];
-
-				if (p->efx == 0xC)
-				{
-					if (p->efxData > 64)
-						p->efxData = 64;
-				}
-				else if (p->efx == 0x1)
-				{
-					if (p->efxData == 0)
-						p->efx = 0;
-				}
-				else if (p->efx == 0x2)
-				{
-					if (p->efxData == 0)
-						p->efx = 0;
-				}
-				else if (p->efx == 0x5)
-				{
-					if (p->efxData == 0)
-						p->efx = 0x3;
-				}
-				else if (p->efx == 0x6)
-				{
-					if (p->efxData == 0)
-						p->efx = 0x4;
-				}
-				else if (p->efx == 0xA)
-				{
-					if (p->efxData == 0)
-						p->efx = 0;
-				}
-				else if (p->efx == 0xE)
-				{
-					// check if certain E commands are empty
-					if (p->efxData == 0x10 || p->efxData == 0x20 || p->efxData == 0xA0 || p->efxData == 0xB0)
-					{
-						p->efx = 0;
-						p->efxData = 0;
-					}
-				}
-
-				if (modFormat == FORMAT_NT || modFormat == FORMAT_HMNT)
-				{
-					// any Dxx == D00 in NT/HMNT
-					if (p->efx == 0xD)
-						p->efxData = 0;
-
-					// effect F with param 0x00 does nothing in NT/HMNT
-					if (p->efx == 0xF && p->efxData == 0)
-						p->efx = 0;
-				}
-				else if (modFormat == FORMAT_FLT4 || modFormat == FORMAT_FLT8) // Startrekker
-				{
-					if (p->efx == 0xE) // remove unsupported "assembly macros" command
-					{
-						p->efx = 0;
-						p->efxData = 0;
-					}
-
-					// Startrekker is always in vblank mode, and limits speed to 0x1F
-					if (p->efx == 0xF && p->efxData > 0x1F)
-						p->efxData = 0x1F;
-				}
-			}
-		}
-	}
-
-	for (a = 0; a < 31; a++)
-	{
-		if (hdr.smp[a].length == 0)
-			continue;
-
-		if (!allocateTmpInstr(1+a))
+		if (!allocateTmpInstr(1+i))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
-
-		setNoEnvelope(instrTmp[1+a]);
-
-		s = &instrTmp[1+a]->smp[0];
+		setNoEnvelope(instrTmp[1+i]);
+		s = &instrTmp[1+i]->smp[0];
 
 		// copy over sample name if format isn't "His Master's Noisetracker" (junk sample names)
 		if (modFormat != FORMAT_HMNT)
-			memcpy(s->name, songTmp.instrName[1+a], 22);
+			memcpy(s->name, songTmp.instrName[1+i], 22);
 
 		if (modFormat == FORMAT_HMNT) // finetune in "His Master's NoiseTracker" is different
-			hdr.smp[a].finetune = (uint8_t)((-hdr.smp[a].finetune & 0x1F) >> 1); // one more bit of precision, + inverted
+			srcSmp->finetune = (uint8_t)((-srcSmp->finetune & 0x1F) >> 1); // one more bit of precision, + inverted
 
-		s->length = 2 * SWAP16(hdr.smp[a].length);
-		s->finetune = FINETUNE_MOD2XM(hdr.smp[a].finetune);
-		s->volume = hdr.smp[a].volume;
-		s->loopStart = 2 * SWAP16(hdr.smp[a].loopStart);
-		s->loopLength = 2 * SWAP16(hdr.smp[a].loopLength);
+		s->length = 2 * SWAP16(srcSmp->length);
+		s->finetune = FINETUNE_MOD2XM(srcSmp->finetune);
+		s->volume = srcSmp->volume;
+		s->loopStart = 2 * SWAP16(srcSmp->loopStart);
+		s->loopLength = 2 * SWAP16(srcSmp->loopLength);
 
 		// fix for poorly converted STK (< v2.5) -> PT/NT modules
 		if (s->loopLength > 2 && s->loopStart+s->loopLength > s->length)

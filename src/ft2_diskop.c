@@ -1558,9 +1558,9 @@ static bool swapBufferEntry(int32_t a, int32_t b) // used for sorting
 	if (a >= FReq_FileCount || b >= FReq_FileCount)
 		return false;
 
-	DirRec tmpBuffer = FReq_Buffer[a];
+	DirRec tmp = FReq_Buffer[a];
 	FReq_Buffer[a] = FReq_Buffer[b];
-	FReq_Buffer[b] = tmpBuffer;
+	FReq_Buffer[b] = tmp;
 
 	return true;
 }
@@ -1899,7 +1899,7 @@ static DirRec *bufferCreateEmptyDir(void) // special case: creates a dir entry w
 
 static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 {
-	DirRec tmpBuffer;
+	DirRec tmp;
 
 	FReq_DirPos = 0;
 
@@ -1909,7 +1909,7 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 	UNICHAR_GETCWD(FReq_CurPathU, PATH_MAX);
 
 	// read first file
-	int8_t lastFindFileFlag = findFirst(&tmpBuffer);
+	int8_t lastFindFileFlag = findFirst(&tmp);
 	if (lastFindFileFlag != LFF_DONE && lastFindFileFlag != LFF_SKIP)
 	{
 		FReq_Buffer = (DirRec *)malloc(sizeof (DirRec));
@@ -1929,14 +1929,14 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 			return false;
 		}
 
-		memcpy(FReq_Buffer, &tmpBuffer, sizeof (DirRec));
+		memcpy(FReq_Buffer, &tmp, sizeof (DirRec));
 		FReq_FileCount++;
 	}
 
 	// read remaining files
 	while (lastFindFileFlag != LFF_DONE)
 	{
-		lastFindFileFlag = findNext(&tmpBuffer);
+		lastFindFileFlag = findNext(&tmp);
 		if (lastFindFileFlag != LFF_DONE && lastFindFileFlag != LFF_SKIP)
 		{
 			DirRec *newPtr = (DirRec *)realloc(FReq_Buffer, sizeof (DirRec) * (FReq_FileCount + 1));
@@ -1949,7 +1949,7 @@ static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
 
 			FReq_Buffer = newPtr;
 
-			memcpy(&FReq_Buffer[FReq_FileCount], &tmpBuffer, sizeof (DirRec));
+			memcpy(&FReq_Buffer[FReq_FileCount], &tmp, sizeof (DirRec));
 			FReq_FileCount++;
 		}
 	}

@@ -78,7 +78,7 @@ enum // envelope flags
 
 #define GET_LOOPTYPE(smpFlags) ((smpFlags) & (LOOP_FWD | LOOP_BIDI))
 #define DISABLE_LOOP(smpFlags) ((smpFlags) &= ~(LOOP_FWD | LOOP_BIDI))
-#define SAMPLE_LENGTH_BYTES(smp) (smp->length << !!(smp->flags & SAMPLE_16BIT))
+#define SAMPLE_LENGTH_BYTES(smp) ((smp->flags & SAMPLE_16BIT) ? (smp->length * 2) : smp->length)
 #define FINETUNE_MOD2XM(f) (((uint8_t)(f) & 0x0F) << 4)
 #define FINETUNE_XM2MOD(f) ((uint8_t)(f) >> 4)
 
