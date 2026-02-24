@@ -119,7 +119,7 @@ bool loadSTM(FILE *f, uint32_t filesize)
 			return false;
 		}
 
-		fread(tmpBuffer, 64 * 4 * 4, 1, f);
+		fread(tmpBuffer, 1, 64 * 4 * 4, f);
 		uint8_t *pattPtr = tmpBuffer;
 
 		for (int32_t row = 0; row < 64; row++)

@@ -181,7 +181,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 			}
 			note_t *p = patternTmp[i];
 
-			fread(tmpBuffer, packedPattLen, 1, f);
+			fread(tmpBuffer, 1, packedPattLen, f);
 
 			uint16_t index = 0, chn = 0, row = 0;
 			while (index < packedPattLen)
