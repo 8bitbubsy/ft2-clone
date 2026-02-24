@@ -54,11 +54,8 @@ s3mHdr_t;
 bool loadS3M(FILE *f, uint32_t filesize)
 {
 	uint8_t alastnfo[32], alastefx[32], alastvibnfo[32], alastGxxInstr[32];
-
 	uint16_t tmpU16;
 	int32_t patternOffsets[256], sampleOffsets[256];
-	note_t tmpNote;
-	sample_t *s;
 	s3mHdr_t header;
 	s3mSmpHdr_t smpHdr;
 
@@ -151,7 +148,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 		patternOffsets[i] = tmpU16 << 4;
 	}
 
-	// *** PATTERNS ***
+	// patterns
 
 	int32_t highestChannel = 0;
 	for (int32_t i = 0; i < header.numPatterns; i++)
@@ -189,6 +186,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 			uint16_t index = 0, chn = 0, row = 0;
 			while (index < packedPattLen)
 			{
+				note_t tmpNote;
 				const uint8_t bits = tmpBuffer[index++];
 
 				if (bits == 0)
@@ -545,7 +543,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 					return false;
 				}
 				setNoEnvelope(instrTmp[1 + i]);
-				s = &instrTmp[1+i]->smp[0];
+				sample_t *s = &instrTmp[1+i]->smp[0];
 
 				memcpy(s->name, srcSmp->name, 22);
 
