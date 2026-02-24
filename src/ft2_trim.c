@@ -483,7 +483,7 @@ static void wipeSmpDataAfterLoop(bool testWipeSize, int16_t ai)
 		sample_t *s = ins->smp;
 		for (int16_t j = 0; j < l; j++, s++)
 		{
-			if (s->dataPtr != NULL && GET_LOOPTYPE(s->flags) != LOOP_OFF && s->length > 0 && s->length > s->loopStart+s->loopLength)
+			if (s->dataPtr != NULL && GET_LOOPTYPE(s->flags) != LOOP_DISABLED && s->length > 0 && s->length > s->loopStart+s->loopLength)
 			{
 				if (!testWipeSize)
 					unfixSample(s);

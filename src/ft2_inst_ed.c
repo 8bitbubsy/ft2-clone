@@ -3400,9 +3400,9 @@ static int32_t SDLCALL loadInstrThread(void *ptr)
 				if (patWave_h.flags & 4) // loop enabled?
 				{
 					if (patWave_h.flags & 8)
-						s->flags |= LOOP_BIDI;
+						s->flags |= LOOP_PINGPONG;
 					else
-						s->flags |= LOOP_FWD;
+						s->flags |= LOOP_FORWARD;
 				}
 
 				s->panning = ((patWave_h.balance << 4) & 0xF0) | (patWave_h.balance & 0xF); // 0..15 -> 0..255

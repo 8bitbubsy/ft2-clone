@@ -89,16 +89,16 @@ static void scopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t 
 	}
 }
 
-static void scopeDrawBidiLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawPingpongLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_INIT_BIDI
+	SCOPE_INIT_PINGPONG
 
 	for (; x < width; x++)
 	{
-		SCOPE_GET_SMP8_BIDI
+		SCOPE_GET_SMP8_PINGPONG
 		SCOPE_DRAW_SMP
 		SCOPE_UPDATE_READPOS
-		SCOPE_HANDLE_POS_BIDI
+		SCOPE_HANDLE_POS_PINGPONG
 	}
 }
 
@@ -128,16 +128,16 @@ static void scopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t
 	}
 }
 
-static void scopeDrawBidiLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawPingpongLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	SCOPE_INIT_BIDI
+	SCOPE_INIT_PINGPONG
 
 	for (; x < width; x++)
 	{
-		SCOPE_GET_SMP16_BIDI
+		SCOPE_GET_SMP16_PINGPONG
 		SCOPE_DRAW_SMP
 		SCOPE_UPDATE_READPOS
-		SCOPE_HANDLE_POS_BIDI
+		SCOPE_HANDLE_POS_PINGPONG
 	}
 }
 
@@ -175,18 +175,18 @@ static void linedScopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint
 	}
 }
 
-static void linedScopeDrawBidiLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawPingpongLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_INIT_BIDI
-	LINED_SCOPE_PREPARE_SMP8_BIDI
-	SCOPE_HANDLE_POS_BIDI
+	LINED_SCOPE_INIT_PINGPONG
+	LINED_SCOPE_PREPARE_SMP8_PINGPONG
+	SCOPE_HANDLE_POS_PINGPONG
 
 	for (; x < width; x++)
 	{
-		SCOPE_GET_INTERPOLATED_SMP8_BIDI
+		SCOPE_GET_INTERPOLATED_SMP8_PINGPONG
 		LINED_SCOPE_DRAW_SMP
 		SCOPE_UPDATE_READPOS
-		SCOPE_HANDLE_POS_BIDI
+		SCOPE_HANDLE_POS_PINGPONG
 	}
 }
 
@@ -220,18 +220,18 @@ static void linedScopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uin
 	}
 }
 
-static void linedScopeDrawBidiLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawPingpongLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
-	LINED_SCOPE_INIT_BIDI
-	LINED_SCOPE_PREPARE_SMP16_BIDI
-	SCOPE_HANDLE_POS_BIDI
+	LINED_SCOPE_INIT_PINGPONG
+	LINED_SCOPE_PREPARE_SMP16_PINGPONG
+	SCOPE_HANDLE_POS_PINGPONG
 
 	for (; x < width; x++)
 	{
-		SCOPE_GET_INTERPOLATED_SMP16_BIDI
+		SCOPE_GET_INTERPOLATED_SMP16_PINGPONG
 		LINED_SCOPE_DRAW_SMP
 		SCOPE_UPDATE_READPOS
-		SCOPE_HANDLE_POS_BIDI
+		SCOPE_HANDLE_POS_PINGPONG
 	}
 }
 
@@ -300,14 +300,14 @@ const scopeDrawRoutine scopeDrawRoutineTable[12] =
 {
 	(scopeDrawRoutine)scopeDrawNoLoop_8bit,
 	(scopeDrawRoutine)scopeDrawLoop_8bit,
-	(scopeDrawRoutine)scopeDrawBidiLoop_8bit,
+	(scopeDrawRoutine)scopeDrawPingpongLoop_8bit,
 	(scopeDrawRoutine)scopeDrawNoLoop_16bit,
 	(scopeDrawRoutine)scopeDrawLoop_16bit,
-	(scopeDrawRoutine)scopeDrawBidiLoop_16bit,
+	(scopeDrawRoutine)scopeDrawPingpongLoop_16bit,
 	(scopeDrawRoutine)linedScopeDrawNoLoop_8bit,
 	(scopeDrawRoutine)linedScopeDrawLoop_8bit,
-	(scopeDrawRoutine)linedScopeDrawBidiLoop_8bit,
+	(scopeDrawRoutine)linedScopeDrawPingpongLoop_8bit,
 	(scopeDrawRoutine)linedScopeDrawNoLoop_16bit,
 	(scopeDrawRoutine)linedScopeDrawLoop_16bit,
-	(scopeDrawRoutine)linedScopeDrawBidiLoop_16bit
+	(scopeDrawRoutine)linedScopeDrawPingpongLoop_16bit
 };

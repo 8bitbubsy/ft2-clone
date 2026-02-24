@@ -257,7 +257,7 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__St
 
 				s->loopStart = loopStart;
 				s->loopLength = (loopEnd+1) - loopStart;
-				s->flags |= (loopType == 0) ? LOOP_FWD : LOOP_BIDI;
+				s->flags |= (loopType == 0) ? LOOP_FORWARD : LOOP_PINGPONG;
 			}
 		}
 	}
@@ -302,7 +302,7 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__St
 				s->loopLength = loopLength;
 
 				DISABLE_LOOP(s->flags);
-				s->flags |= LOOP_FWD;
+				s->flags |= LOOP_FORWARD;
 			}
 
 			if (tmpSampleRate > 0)

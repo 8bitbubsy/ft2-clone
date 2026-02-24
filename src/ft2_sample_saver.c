@@ -156,7 +156,7 @@ static bool saveRawSample(UNICHAR *filenameU, bool saveRangedData)
 	fclose(f);
 
 	// restore modified interpolation tap samples after loopEnd
-	bool loopEnabled = GET_LOOPTYPE(smp->flags) != LOOP_OFF;
+	bool loopEnabled = GET_LOOPTYPE(smp->flags) != LOOP_DISABLED;
 	if (loopEnabled && smp->length > smp->loopStart+smp->loopLength)
 		fileRestoreFixedSampleData(filenameU, 0, smp);
 
@@ -238,7 +238,7 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 	// "VHDR" chunk
 	iffWriteChunkHeader(f, "VHDR", 20);
 
-	if (!saveRangedData && GET_LOOPTYPE(smp->flags) != LOOP_OFF)
+	if (!saveRangedData && GET_LOOPTYPE(smp->flags) != LOOP_DISABLED)
 	{
 		iffWriteUint32(f, smp->loopStart << sample16Bit); // oneShotHiSamples
 		iffWriteUint32(f, smp->loopLength << sample16Bit); // repeatHiSamples
@@ -308,7 +308,7 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 	fclose(f);
 
 	// restore modified interpolation tap samples after loopEnd
-	bool loopEnabled = GET_LOOPTYPE(smp->flags) != LOOP_OFF;
+	bool loopEnabled = GET_LOOPTYPE(smp->flags) != LOOP_DISABLED;
 	if (loopEnabled && smp->length > smp->loopStart+smp->loopLength)
 		fileRestoreFixedSampleData(filenameU, sampleDataPos, smp);
 
@@ -391,7 +391,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 		fputc(0, f); // write pad byte if chunk size is uneven
 
 	// write "smpl" chunk if loop is enabled
-	if (!saveRangedData && GET_LOOPTYPE(smp->flags) != LOOP_OFF)
+	if (!saveRangedData && GET_LOOPTYPE(smp->flags) != LOOP_DISABLED)
 	{
 		memset(&samplerChunk, 0, sizeof (samplerChunk));
 
@@ -488,7 +488,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 	fclose(f);
 
 	// restore modified interpolation tap samples after loopEnd
-	bool loopEnabled = GET_LOOPTYPE(smp->flags) != LOOP_OFF;
+	bool loopEnabled = GET_LOOPTYPE(smp->flags) != LOOP_DISABLED;
 	if (loopEnabled && smp->length > smp->loopStart+smp->loopLength)
 		fileRestoreFixedSampleData(filenameU, sampleDataPos, smp);
 

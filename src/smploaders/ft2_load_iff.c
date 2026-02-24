@@ -132,7 +132,7 @@ bool loadIFF(FILE *f, uint32_t filesize)
 	s->loopLength = loopLength;
 
 	if (s->loopLength > 0)
-		s->flags |= LOOP_FWD;
+		s->flags |= LOOP_FORWARD;
 
 	if (sample16Bit)
 		s->flags |= SAMPLE_16BIT;

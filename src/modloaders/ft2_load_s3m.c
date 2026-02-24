@@ -586,7 +586,7 @@ bool loadS3M(FILE *f, uint32_t filesize)
 				}
 
 				if (hasLoop)
-					s->flags |= LOOP_FWD;
+					s->flags |= LOOP_FORWARD;
 
 				fseek(f, offsetInFile, SEEK_SET);
 

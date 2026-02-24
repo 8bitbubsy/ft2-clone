@@ -229,7 +229,7 @@ bool loadSTM(FILE *f, uint32_t filesize)
 				if (s->loopStart+s->loopLength > s->length)
 					s->loopLength = s->length - s->loopStart;
 
-				s->flags |= LOOP_FWD;
+				s->flags |= LOOP_FORWARD;
 			}
 			else
 			{

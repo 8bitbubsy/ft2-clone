@@ -202,8 +202,8 @@ void sanitizeSample(sample_t *s)
 		return;
 
 	// if a sample has both forward loop and pingpong loop set, it means pingpong loop (FT2 mixer behavior)
-	if (GET_LOOPTYPE(s->flags) == (LOOP_FWD | LOOP_BIDI))
-		s->flags &= ~LOOP_FWD; // remove forward loop flag
+	if (GET_LOOPTYPE(s->flags) == (LOOP_FORWARD | LOOP_PINGPONG))
+		s->flags &= ~LOOP_FORWARD; // remove forward loop flag
 
 	if (s->volume > 64)
 		s->volume = 64;
@@ -271,7 +271,7 @@ void fixSample(sample_t *s)
 			s->dataPtr[i-MAX_LEFT_TAPS] = s->dataPtr[0];
 	}
 
-	if (loopType == LOOP_OFF) // no loop
+	if (loopType == LOOP_DISABLED) // no loop
 	{
 		if (sample16Bit)
 		{
@@ -292,7 +292,7 @@ void fixSample(sample_t *s)
 	s->fixedPos = loopEnd;
 	s->isFixed = true;
 
-	if (loopType == LOOP_FWD) // forward loop
+	if (loopType == LOOP_FORWARD) // forward loop
 	{
 		if (sample16Bit)
 		{
@@ -629,7 +629,7 @@ static void fixLoopGadgets(void)
 	sample_t *s = getCurSample();
 
 	bool showLoopPins = true;
-	if (s == NULL || s->dataPtr == NULL || s->length <= 0 || GET_LOOPTYPE(s->flags) == LOOP_OFF)
+	if (s == NULL || s->dataPtr == NULL || s->length <= 0 || GET_LOOPTYPE(s->flags) == LOOP_DISABLED)
 		showLoopPins = false;
 
 	// draw Repeat/Replen. numbers
@@ -1485,9 +1485,9 @@ void updateSampleEditor(void)
 	uncheckRadioButtonGroup(RB_GROUP_SAMPLE_LOOP);
 
 	uint8_t loopType = GET_LOOPTYPE(flags);
-	if (loopType == LOOP_OFF)
+	if (loopType == LOOP_DISABLED)
 		radioButtons[RB_SAMPLE_NO_LOOP].state = RADIOBUTTON_CHECKED;
-	else if (loopType == LOOP_FWD)
+	else if (loopType == LOOP_FORWARD)
 		radioButtons[RB_SAMPLE_FORWARD_LOOP].state = RADIOBUTTON_CHECKED;
 	else
 		radioButtons[RB_SAMPLE_PINGPONG_LOOP].state = RADIOBUTTON_CHECKED;
@@ -2333,7 +2333,7 @@ void sampXFade(void)
 		return;
 
 	// check if the sample has the loop flag enabled
-	if (GET_LOOPTYPE(s->flags) == LOOP_OFF)
+	if (GET_LOOPTYPE(s->flags) == LOOP_DISABLED)
 	{
 		okBox(0, "System message", "X-Fade can only be used on a loop-enabled sample!", NULL);
 		return;
@@ -2358,7 +2358,7 @@ void sampXFade(void)
 
 	bool sample16Bit = !!(s->flags & SAMPLE_16BIT);
 
-	if (GET_LOOPTYPE(s->flags) == LOOP_BIDI)
+	if (GET_LOOPTYPE(s->flags) == LOOP_PINGPONG)
 	{
 		y1 = s->loopStart;
 		if (x1 <= y1) // first loop point
@@ -2602,7 +2602,7 @@ void rbSampleForwardLoop(void)
 	unfixSample(s);
 
 	DISABLE_LOOP(s->flags);
-	s->flags |= LOOP_FWD;
+	s->flags |= LOOP_FORWARD;
 
 	if (s->loopStart+s->loopLength == 0)
 	{
@@ -2628,7 +2628,7 @@ void rbSamplePingpongLoop(void)
 	unfixSample(s);
 
 	DISABLE_LOOP(s->flags);
-	s->flags |= LOOP_BIDI;
+	s->flags |= LOOP_PINGPONG;
 
 	if (s->loopStart+s->loopLength == 0)
 	{
@@ -2797,7 +2797,7 @@ void sampMinimize(void)
 	if (s == NULL || s->dataPtr == NULL || s->length <= 0)
 		return;
 
-	const bool hasLoop = GET_LOOPTYPE(s->flags) != LOOP_OFF;
+	const bool hasLoop = GET_LOOPTYPE(s->flags) != LOOP_DISABLED;
 	if (!hasLoop)
 	{
 		okBox(0, "System message", "Only a looped sample can be minimized!", NULL);

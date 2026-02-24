@@ -14,6 +14,7 @@ enum
 	CS_UPDATE_PAN = 8,
 	CS_USE_QUICK_VOLRAMP = 16, // use 5ms vol. ramp instead of the duration of a tick
 
+	// sample loop type
 	LOOP_DISABLED = 0,
 	LOOP_FORWARD = 1,
 	LOOP_PINGPONG = 2,
@@ -61,9 +62,6 @@ enum
 
 enum // sample flags
 {
-	LOOP_OFF = 0,
-	LOOP_FWD = 1,
-	LOOP_BIDI = 2,
 	SAMPLE_16BIT = 16,
 	SAMPLE_STEREO = 32,
 	SAMPLE_ADPCM = 64, // not an existing flag, but used by loader
@@ -76,8 +74,8 @@ enum // envelope flags
 	ENV_LOOP    = 4
 };
 
-#define GET_LOOPTYPE(smpFlags) ((smpFlags) & (LOOP_FWD | LOOP_BIDI))
-#define DISABLE_LOOP(smpFlags) ((smpFlags) &= ~(LOOP_FWD | LOOP_BIDI))
+#define GET_LOOPTYPE(smpFlags) ((smpFlags) & (LOOP_FORWARD | LOOP_PINGPONG))
+#define DISABLE_LOOP(smpFlags) ((smpFlags) &= ~(LOOP_FORWARD | LOOP_PINGPONG))
 #define SAMPLE_LENGTH_BYTES(smp) ((smp->flags & SAMPLE_16BIT) ? (smp->length * 2) : smp->length)
 #define FINETUNE_MOD2XM(f) (((uint8_t)(f) & 0x0F) << 4)
 #define FINETUNE_XM2MOD(f) ((uint8_t)(f) >> 4)

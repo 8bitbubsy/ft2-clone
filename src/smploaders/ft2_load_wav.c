@@ -627,7 +627,7 @@ bool loadWAV(FILE *f, uint32_t filesize)
 			{
 				s->loopStart = loopStart;
 				s->loopLength = loopEnd - loopStart;
-				s->flags |= (loopType == 0) ? LOOP_FWD : LOOP_BIDI;
+				s->flags |= (loopType == 0) ? LOOP_FORWARD : LOOP_PINGPONG;
 			}
 		}
 	}

@@ -1326,7 +1326,7 @@ static int32_t SDLCALL getMaxScaleThread(void *ptr)
 	** we need to unfix the fixed interpolation sample before scanning,
 	** and fix it again after we're done.
 	*/
-	bool hasLoop = GET_LOOPTYPE(s->flags) != LOOP_OFF;
+	bool hasLoop = GET_LOOPTYPE(s->flags) != LOOP_DISABLED;
 	const int32_t loopEnd = s->loopStart + s->loopLength;
 	bool fixedSampleInRange = hasLoop && (x1 <= loopEnd) && (x2 >= loopEnd);
 

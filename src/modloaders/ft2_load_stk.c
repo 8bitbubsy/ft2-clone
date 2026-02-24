@@ -309,7 +309,7 @@ bool loadSTK(FILE *f, uint32_t filesize)
 
 		if (s->loopStart+s->loopLength > 2)
 		{
-			s->flags |= LOOP_FWD; // enable loop
+			s->flags |= LOOP_FORWARD; // enable loop
 		}
 		else
 		{

@@ -367,7 +367,7 @@ static bool saveMOD(UNICHAR *filenameU)
 		if (j == 1)
 		{
 			if (ins->fadeout != 0 || ins->volEnvFlags != 0 || ins->panEnvFlags != 0 || ins->autoVibRate > 0 ||
-				GET_LOOPTYPE(smp->flags) == LOOP_BIDI || smp->relativeNote != 0 || ins->midiOn)
+				GET_LOOPTYPE(smp->flags) == LOOP_PINGPONG || smp->relativeNote != 0 || ins->midiOn)
 			{
 				test = true;
 				break;
@@ -471,7 +471,7 @@ static bool saveMOD(UNICHAR *filenameU)
 			if (length > UINT16_MAX)
 				length = UINT16_MAX;
 
-			if (GET_LOOPTYPE(smp->flags) == LOOP_OFF)
+			if (GET_LOOPTYPE(smp->flags) == LOOP_DISABLED)
 			{
 				loopStart = 0;
 				loopLength = 1;

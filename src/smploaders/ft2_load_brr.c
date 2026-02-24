@@ -173,7 +173,7 @@ bool loadBRR(FILE *f, uint32_t filesize)
 
 	if (loopFlag) // XXX: Maybe this is not how to do it..?
 	{
-		s->flags |= LOOP_FWD;
+		s->flags |= LOOP_FORWARD;
 		s->loopStart = loopStart;
 		s->loopLength = sampleLength - loopStart;
 	}

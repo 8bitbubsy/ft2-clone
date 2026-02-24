@@ -15,7 +15,7 @@
 	int32_t position = s->position; \
 	uint64_t positionFrac = s->positionFrac;
 
-#define SCOPE_INIT_BIDI \
+#define SCOPE_INIT_PINGPONG \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
 	int32_t sample; \
@@ -28,8 +28,8 @@
 	int32_t smpY1, smpY2; \
 	width--;
 
-#define LINED_SCOPE_INIT_BIDI \
-	SCOPE_INIT_BIDI \
+#define LINED_SCOPE_INIT_PINGPONG \
+	SCOPE_INIT_PINGPONG \
 	int32_t smpY1, smpY2; \
 	width--;
 
@@ -153,10 +153,10 @@
 	else \
 		sample = 0;
 
-#define SCOPE_GET_SMP8_BIDI \
+#define SCOPE_GET_SMP8_PINGPONG \
 	if (s->active) \
 	{ \
-		GET_BIDI_POSITION \
+		GET_PINGPONG_POSITION \
 		sample = (s->base8[actualPos] * s->volume) >> (8+2); \
 	} \
 	else \
@@ -164,10 +164,10 @@
 		sample = 0; \
 	}
 
-#define SCOPE_GET_SMP16_BIDI \
+#define SCOPE_GET_SMP16_PINGPONG \
 	if (s->active) \
 	{ \
-		GET_BIDI_POSITION \
+		GET_PINGPONG_POSITION \
 		sample = (s->base16[actualPos] * s->volume) >> (16+2); \
 	} \
 	else \
@@ -215,16 +215,16 @@
 		sample = 0; \
 	}
 
-#define GET_BIDI_POSITION \
+#define GET_PINGPONG_POSITION \
 	if (samplingBackwards) \
 		actualPos = (s->sampleEnd - 1) - (position - s->loopStart); \
 	else \
 		actualPos = position;
 
-#define SCOPE_GET_INTERPOLATED_SMP8_BIDI \
+#define SCOPE_GET_INTERPOLATED_SMP8_PINGPONG \
 	if (s->active) \
 	{ \
-		GET_BIDI_POSITION \
+		GET_PINGPONG_POSITION \
 		INTERPOLATE_SMP8_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
 	} \
 	else \
@@ -232,10 +232,10 @@
 		sample = 0; \
 	}
 
-#define SCOPE_GET_INTERPOLATED_SMP16_BIDI \
+#define SCOPE_GET_INTERPOLATED_SMP16_PINGPONG \
 	if (s->active) \
 	{ \
-		GET_BIDI_POSITION \
+		GET_PINGPONG_POSITION \
 		INTERPOLATE_SMP16_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
 	} \
 	else \
@@ -271,13 +271,13 @@
 	smpY1 = lineY - sample; \
 	SCOPE_UPDATE_READPOS
 
-#define LINED_SCOPE_PREPARE_SMP8_BIDI \
-	SCOPE_GET_INTERPOLATED_SMP8_BIDI \
+#define LINED_SCOPE_PREPARE_SMP8_PINGPONG \
+	SCOPE_GET_INTERPOLATED_SMP8_PINGPONG \
 	smpY1 = lineY - sample; \
 	SCOPE_UPDATE_READPOS
 
-#define LINED_SCOPE_PREPARE_SMP16_BIDI \
-	SCOPE_GET_INTERPOLATED_SMP16_BIDI \
+#define LINED_SCOPE_PREPARE_SMP16_PINGPONG \
+	SCOPE_GET_INTERPOLATED_SMP16_PINGPONG \
 	smpY1 = lineY - sample; \
 	SCOPE_UPDATE_READPOS
 
@@ -301,7 +301,7 @@
 		s->hasLooped = true; \
 	}
 
-#define SCOPE_HANDLE_POS_BIDI \
+#define SCOPE_HANDLE_POS_PINGPONG \
 	if (position >= s->sampleEnd) \
 	{ \
 		if (s->loopLength >= 2) \

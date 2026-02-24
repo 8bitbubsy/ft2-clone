@@ -50,11 +50,11 @@
 	base = v->base16; \
 	smpPtr = base + position;
 
-#define SET_BASE8_BIDI \
+#define SET_BASE8_PINGPONG \
 	base = v->base8; \
 	revBase = v->revBase8;
 
-#define SET_BASE16_BIDI \
+#define SET_BASE16_PINGPONG \
 	base = v->base16; \
 	revBase = v->revBase16;
 
@@ -63,7 +63,7 @@
 	smpPtr += positionFrac >> MIXER_FRAC_BITS; \
 	positionFrac &= MIXER_FRAC_MASK;
 
-#define INC_POS_BIDI \
+#define INC_POS_PINGPONG \
 	positionFrac += deltaLo; \
 	smpPtr += positionFrac >> MIXER_FRAC_BITS; \
 	smpPtr += deltaHi; \
@@ -294,7 +294,7 @@
 	if (samplesToMix > samplesLeft) \
 		samplesToMix = samplesLeft;
 
-#define START_BIDI \
+#define START_PINGPONG \
 	if (v->samplingBackwards) \
 	{ \
 		tmpDelta = 0 - delta; \
@@ -354,7 +354,7 @@
 		v->hasLooped = true; \
 	}
 
-#define WRAP_BIDI_LOOP \
+#define WRAP_PINGPONG_LOOP \
 	if (position >= v->sampleEnd) \
 	{ \
 		do \
@@ -366,7 +366,7 @@
 		v->hasLooped = true; \
 	}
 
-#define END_BIDI \
+#define END_PINGPONG \
 	if (v->samplingBackwards) \
 	{ \
 		positionFrac ^= MIXER_FRAC_MASK; \

@@ -245,8 +245,8 @@ bool loadBEM(FILE *f, uint32_t filesize)
 			uint16_t flags;
 			fread(&flags, 2, 1, f);
 			if (flags &  1) s->flags |= SAMPLE_16BIT;
-			if (flags & 16) s->flags |= LOOP_FWD;
-			if (flags & 32) s->flags |= LOOP_BIDI;
+			if (flags & 16) s->flags |= LOOP_FORWARD;
+			if (flags & 32) s->flags |= LOOP_PINGPONG;
 
 			char *smpName = readString(f);
 			if (smpName == NULL)

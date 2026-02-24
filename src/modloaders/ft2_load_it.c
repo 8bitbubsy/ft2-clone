@@ -1486,7 +1486,7 @@ static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *is)
 	bool sampleIs16Bit = !!(is->flags & 2);
 	bool compressed = !!(is->flags & 8);
 	bool hasLoop = !!(is->flags & 16);
-	bool bidiLoop = !!(is->flags & 64);
+	bool pingpongLoop = !!(is->flags & 64);
 	bool signedSamples = !!(is->cvt & 1);
 	bool deltaEncoded = !!(is->cvt & 4);
 
@@ -1494,7 +1494,7 @@ static bool loadSample(FILE *f, sample_t *s, itSmpHdr_t *is)
 		s->flags |= SAMPLE_16BIT;
 
 	if (hasLoop)
-		s->flags |= bidiLoop ? LOOP_BIDI : LOOP_FWD;
+		s->flags |= pingpongLoop ? LOOP_PINGPONG : LOOP_FORWARD;
 
 	s->length = is->length;
 	s->loopStart = is->loopBegin;

@@ -43,7 +43,7 @@ int32_t getSamplePositionFromScopes(uint8_t ch)
 
 	if (sc.position >= 0 && sc.position < sc.sampleEnd)
 	{
-		if (sc.samplingBackwards) // get actual bidi pos when in backwards mode
+		if (sc.samplingBackwards) // get actual pos when in backwards mode (pingpong loop)
 			sc.position = (sc.sampleEnd - 1) - (sc.position - sc.loopStart);
 
 		return sc.position;
@@ -315,7 +315,7 @@ static void scopeTrigger(int32_t ch, const sample_t *s, int32_t playOffset)
 	tempState.loopType = loopType;
 	tempState.hasLooped = false;
 	tempState.samplingBackwards = false;
-	tempState.sampleEnd = (loopType == LOOP_OFF) ? length : loopEnd;
+	tempState.sampleEnd = (loopType == LOOP_DISABLED) ? length : loopEnd;
 	tempState.loopStart = loopStart;
 	tempState.loopLength = loopLength;
 	tempState.loopEnd = loopEnd;
@@ -360,7 +360,7 @@ static void updateScopes(void)
 
 		if (s.position >= s.sampleEnd)
 		{
-			if (s.loopType == LOOP_BIDI)
+			if (s.loopType == LOOP_PINGPONG)
 			{
 				if (s.loopLength >= 2)
 				{

@@ -323,7 +323,7 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 	v->hasLooped = false; // for cubic/sinc interpolation special case
 	v->samplingBackwards = false;
 	v->loopType = loopType;
-	v->sampleEnd = (loopType == LOOP_OFF) ? length : loopEnd;
+	v->sampleEnd = (loopType == LOOP_DISABLED) ? length : loopEnd;
 	v->loopStart = loopStart;
 	v->loopLength = loopLength;
 	v->position = position;
@@ -473,7 +473,7 @@ static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 	voice_t *v = voice; // normal voices
 	voice_t *r = &voice[MAX_CHANNELS]; // volume ramp fadeout-voices
 
-	const int32_t mixOffsetBias = 3 * NUM_INTERPOLATORS * 2; // 3 = loop types (off/fwd/bidi), 2 = bit depths (8-bit/16-bit)
+	const int32_t mixOffsetBias = 3 * NUM_INTERPOLATORS * 2; // 3 = loop types (off/fwd/pingpong), 2 = bit depths (8-bit/16-bit)
 
 	for (int32_t i = 0; i < song.numChannels; i++, v++, r++)
 	{

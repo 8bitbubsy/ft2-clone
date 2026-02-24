@@ -306,7 +306,7 @@ bool loadMOD(FILE *f, uint32_t filesize)
 		}
 
 		if (s->loopStart+s->loopLength > 2)
-			s->flags |= LOOP_FWD; // enable loop
+			s->flags |= LOOP_FORWARD; // enable loop
 
 		if (!allocateSmpData(s, s->length, false))
 		{
@@ -321,7 +321,7 @@ bool loadMOD(FILE *f, uint32_t filesize)
 			memset(&s->dataPtr[bytesRead], 0, bytesToClear);
 		}
 
-		if (GET_LOOPTYPE(s->flags) == LOOP_OFF) // clear loopLength and loopStart on non-looping samples...
+		if (GET_LOOPTYPE(s->flags) == LOOP_DISABLED) // clear loopLength and loopStart on non-looping samples...
 		{
 			s->loopLength = 0;
 			s->loopStart = 0;
