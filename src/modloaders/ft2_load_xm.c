@@ -134,7 +134,7 @@ bool loadXM(FILE *f, uint32_t filesize)
 		if (!loadPatterns(f, header.numPatterns, header.version))
 			return false;
 
-		for (uint16_t i = 1; i <= header.numInstr; i++)
+		for (int32_t i = 1; i <= header.numInstr; i++)
 		{
 			if (!loadInstrHeader(f, i))
 				return false;
@@ -189,10 +189,7 @@ bool loadXM(FILE *f, uint32_t filesize)
 static bool loadInstrHeader(FILE *f, int32_t insNum)
 {
 	uint32_t readSize;
-	instr_t *ins;
 	xmInsHdr_t ih;
-	xmSmpHdr_t *src;
-	sample_t *s;
 
 	memset(extraSampleLengths, 0, sizeof (extraSampleLengths));
 	memset(&ih, 0, sizeof (ih));
@@ -232,7 +229,7 @@ static bool loadInstrHeader(FILE *f, int32_t insNum)
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
-		ins = instrTmp[insNum];
+		instr_t *ins = instrTmp[insNum];
 
 		// copy instrument header elements to our instrument struct
 
@@ -282,30 +279,30 @@ static bool loadInstrHeader(FILE *f, int32_t insNum)
 			}
 		}
 
-		s = instrTmp[insNum]->smp;
-		src = ih.smp;
-		for (int32_t j = 0; j < sampleHeadersToRead; j++, s++, src++)
+		xmSmpHdr_t *srcSmp = ih.smp;
+		sample_t *s = instrTmp[insNum]->smp;
+		for (int32_t j = 0; j < sampleHeadersToRead; j++, s++, srcSmp++)
 		{
 			// copy sample header elements to our sample struct
 
-			s->length = src->length;
-			s->loopStart = src->loopStart;
-			s->loopLength = src->loopLength;
-			s->volume = src->volume;
-			s->finetune = src->finetune;
-			s->flags = src->flags;
-			s->panning = src->panning;
-			s->relativeNote = src->relativeNote;
+			s->length = srcSmp->length;
+			s->loopStart = srcSmp->loopStart;
+			s->loopLength = srcSmp->loopLength;
+			s->volume = srcSmp->volume;
+			s->finetune = srcSmp->finetune;
+			s->flags = srcSmp->flags;
+			s->panning = srcSmp->panning;
+			s->relativeNote = srcSmp->relativeNote;
 
 			/* If the sample is 8-bit mono and nameLength (reserved) is 0xAD,
 			** then this is a 4-bit ADPCM compressed sample (ModPlug Tracker).
 			*/
-			if (src->nameLength == 0xAD && !(src->flags & (SAMPLE_16BIT | SAMPLE_STEREO)))
+			if (srcSmp->nameLength == 0xAD && !(srcSmp->flags & (SAMPLE_16BIT | SAMPLE_STEREO)))
 				s->flags |= SAMPLE_ADPCM;
 
-			memcpy(s->name, src->name, 22);
+			memcpy(s->name, srcSmp->name, 22);
 
-			// dst->dataPtr is set up later
+			// s->dataPtr is set up later
 		}
 	}
 
