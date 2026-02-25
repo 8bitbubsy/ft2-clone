@@ -145,19 +145,19 @@ void setSampleC4Hz(sample_t *s, double dC4Hz)
 	/* Sets a sample's relative note and finetune according to input C-4 rate.
 	**
 	** Note:
-	** This algorithm uses only 5 finetune bits (like FT2 internally),
+	** This algorithm uses only 5 finetune bits (like FT2's replayer)
 	** so that the resulting finetune is the same when loading it in a
-	** tracker that does support the full 8 finetune bits.
+	** tracker that *does* support the full 8 finetune bits.
 	*/
 
 	const double dC4PeriodOffset = (NOTE_C4 * 16) + 16;
-	int32_t period = (int32_t)round(dC4PeriodOffset + (log2(dC4Hz / C4_FREQ) * 12.0 * 16.0));
+	int32_t note = (int32_t)round(dC4PeriodOffset + (log2(dC4Hz / C4_FREQ) * (12.0 * 16.0)));
 
 	// Hi-limit is A#9 at highest finetune. B-9 is bugged in FT2, don't include it.
-	period = CLAMP(period, 0, (12 * 16 * 10) - 1);
+	note = CLAMP(note, 0, (10 * 12 * 16) - 1);
 
-	s->finetune = ((period & 31) - 16) << 3; // 0..31 -> -128..120
-	s->relativeNote = (int8_t)(((period & ~31) >> 4) - NOTE_C4);
+	s->finetune = ((note & 31) - 16) << 3; // 0..31 -> -128..120 (scale back to 8 bits)
+	s->relativeNote = (int8_t)(((note & ~31) >> 4) - NOTE_C4);
 }
 
 void setPatternLen(uint16_t pattNum, int16_t numRows)
