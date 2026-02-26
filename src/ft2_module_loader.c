@@ -194,16 +194,18 @@ static bool doLoadMusic(bool externalThreadFlag)
 	uint32_t filesize = ftell(f);
 
 	rewind(f);
+
+	bool wasLoaded = false;
 	switch (format)
 	{
-		case FORMAT_XM: moduleLoaded = loadXM(f, filesize); break;
-		case FORMAT_S3M: moduleLoaded = loadS3M(f, filesize); break;
-		case FORMAT_STM: moduleLoaded = loadSTM(f, filesize); break;
-		case FORMAT_MOD: moduleLoaded = loadMOD(f, filesize); break;
-		case FORMAT_POSSIBLY_STK: moduleLoaded = loadSTK(f, filesize); break;
-		case FORMAT_DIGI: moduleLoaded = loadDIGI(f, filesize); break;
-		case FORMAT_BEM: moduleLoaded = loadBEM(f, filesize); break;
-		case FORMAT_IT: moduleLoaded = loadIT(f, filesize); break;
+		case FORMAT_XM: wasLoaded = loadXM(f, filesize); break;
+		case FORMAT_S3M: wasLoaded = loadS3M(f, filesize); break;
+		case FORMAT_STM: wasLoaded = loadSTM(f, filesize); break;
+		case FORMAT_MOD: wasLoaded = loadMOD(f, filesize); break;
+		case FORMAT_POSSIBLY_STK: wasLoaded = loadSTK(f, filesize); break;
+		case FORMAT_DIGI: wasLoaded = loadDIGI(f, filesize); break;
+		case FORMAT_BEM: wasLoaded = loadBEM(f, filesize); break;
+		case FORMAT_IT: wasLoaded = loadIT(f, filesize); break;
 
 		default:
 			loaderMsgBox("This file is not a supported module!");
@@ -211,7 +213,7 @@ static bool doLoadMusic(bool externalThreadFlag)
 	}
 	fclose(f);
 
-	if (!moduleLoaded)
+	if (!wasLoaded)
 		goto loadError;
 
 	moduleLoaded = true;
@@ -246,19 +248,19 @@ void loadMusic(UNICHAR *filenameU)
 
 	mouseAnimOn();
 
-	musicIsLoading = true;
-	moduleLoaded = false;
-	moduleFailedToLoad = false;
+	moduleLoaded = moduleFailedToLoad = false;
 
 	clearTmpModule(); // clear stuff from last loading session (very important)
 	UNICHAR_STRCPY(editor.tmpFilenameU, filenameU);
+
+	musicIsLoading = true;
 
 	thread = SDL_CreateThread(loadMusicThread, "mod load thread", NULL);
 	if (thread == NULL)
 	{
 		editor.loadMusicEvent = EVENT_NONE;
-		okBox(0, "System message", "Couldn't create thread!", NULL);
 		musicIsLoading = false;
+		okBox(0, "System message", "Couldn't create thread!", NULL);
 		return;
 	}
 
