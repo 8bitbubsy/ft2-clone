@@ -22,7 +22,7 @@ static uint32_t extraSampleLengths[32-MAX_SMP_PER_INST];
 static bool loadInstrHeader(FILE *f, int32_t insNum);
 static bool loadInstrSample(FILE *f, int32_t insNum);
 static bool loadPatterns(FILE *f, int32_t numPatterns, uint16_t xmVersion);
-static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t numChannels);
+static void unpackPattern(note_t *p, uint8_t *src, int32_t numRows, int32_t numChannels);
 static void loadADPCMSample(FILE *f, sample_t *s); // ModPlug Tracker
 
 bool loadXM(FILE *f, uint32_t filesize)
@@ -280,7 +280,7 @@ static bool loadInstrHeader(FILE *f, int32_t insNum)
 		}
 
 		xmSmpHdr_t *srcSmp = ih.smp;
-		sample_t *s = instrTmp[insNum]->smp;
+		sample_t *s = ins->smp;
 		for (int32_t j = 0; j < sampleHeadersToRead; j++, s++, srcSmp++)
 		{
 			// copy sample header elements to our sample struct
@@ -413,7 +413,6 @@ static bool loadInstrSample(FILE *f, int32_t insNum)
 
 static bool loadPatterns(FILE *f, int32_t numPatterns, uint16_t xmVersion)
 {
-	uint8_t tmpLen;
 	xmPatHdr_t ph;
 
 	bool pattLenWarn = false;
@@ -428,6 +427,7 @@ static bool loadPatterns(FILE *f, int32_t numPatterns, uint16_t xmVersion)
 		ph.numRows = 0;
 		if (xmVersion == 0x0102)
 		{
+			uint8_t tmpLen;
 			if (fread(&tmpLen, 1, 1, f) != 1)
 				goto pattCorrupt;
 
@@ -472,7 +472,7 @@ static bool loadPatterns(FILE *f, int32_t numPatterns, uint16_t xmVersion)
 			if (fread(tmpBuffer, 1, ph.dataSize, f) != ph.dataSize)
 				goto pattCorrupt;
 
-			unpackPatt((uint8_t *)patternTmp[i], tmpBuffer, patternNumRowsTmp[i], songTmp.numChannels);
+			unpackPattern(patternTmp[i], tmpBuffer, patternNumRowsTmp[i], songTmp.numChannels);
 			clearUnusedChannels(patternTmp[i], patternNumRowsTmp[i], songTmp.numChannels);
 		}
 
@@ -498,77 +498,73 @@ pattCorrupt:
 	return false;
 }
 
-static void unpackPatt(uint8_t *dst, uint8_t *src, uint16_t len, int32_t numChannels)
+static void unpackPattern(note_t *p, uint8_t *src, int32_t numRows, int32_t numChannels)
 {
-	if (dst == NULL)
+	if (p == NULL)
 		return;
 
-	const int32_t srcEnd = len * (sizeof (note_t) * numChannels);
-	int32_t srcIdx = 0;
+	int32_t channelsToLoad = numChannels;
+	if (channelsToLoad > MAX_CHANNELS)
+		channelsToLoad = MAX_CHANNELS;
 
-	int32_t readChannels = numChannels;
-	if (readChannels > MAX_CHANNELS)
-		readChannels = MAX_CHANNELS;
+	const int32_t unpackedBytes = numRows * (sizeof (note_t) * numChannels);
 
-	const int32_t pitch = sizeof (note_t) * (MAX_CHANNELS - numChannels);
-	for (int32_t i = 0; i < len; i++)
+	int32_t bytesWritten = 0;
+	for (int32_t i = 0; i < numRows; i++)
 	{
 		int32_t j;
-		for (j = 0; j < readChannels; j++)
+		for (j = 0; j < channelsToLoad; j++, p++)
 		{
-			if (srcIdx >= srcEnd)
-				return; // error!
+			if (bytesWritten >= unpackedBytes)
+				return; // pack error!
 
-			const uint8_t note = *src++;
-			if (note & 0x80)
+			const uint8_t byte = *src++;
+			if (byte & 128)
 			{
-				*dst++ = (note & 0x01) ? *src++ : 0;
-				*dst++ = (note & 0x02) ? *src++ : 0;
-				*dst++ = (note & 0x04) ? *src++ : 0;
-				*dst++ = (note & 0x08) ? *src++ : 0;
-				*dst++ = (note & 0x10) ? *src++ : 0;
+				p->note    = (byte &  1) ? *src++ : 0;
+				p->instr   = (byte &  2) ? *src++ : 0;
+				p->vol     = (byte &  4) ? *src++ : 0;
+				p->efx     = (byte &  8) ? *src++ : 0;
+				p->efxData = (byte & 16) ? *src++ : 0;
 			}
 			else
 			{
-				*dst++ = note;
-				*dst++ = *src++;
-				*dst++ = *src++;
-				*dst++ = *src++;
-				*dst++ = *src++;
+				p->note    = byte;
+				p->instr   = *src++;
+				p->vol     = *src++;
+				p->efx     = *src++;
+				p->efxData = *src++;
 			}
 
-			srcIdx += sizeof (note_t);
+			bytesWritten += sizeof (note_t);
 		}
 
-		// if more than 32 channels, skip rest of the channels for this row
+		// if >32 channels, skip rest of the channels for this row
 		for (; j < numChannels; j++)
 		{
-			if (srcIdx >= srcEnd)
-				return; // error!
+			if (bytesWritten >= unpackedBytes)
+				return; // pack error!
 
-			const uint8_t note = *src++;
-			if (note & 0x80)
+			const uint8_t byte = *src++;
+			if (byte & 128)
 			{
-				if (note & 0x01) src++;
-				if (note & 0x02) src++;
-				if (note & 0x04) src++;
-				if (note & 0x08) src++;
-				if (note & 0x10) src++;
+				if (byte &  1) src++;
+				if (byte &  2) src++;
+				if (byte &  4) src++;
+				if (byte &  8) src++;
+				if (byte & 16) src++;
 			}
 			else
 			{
-				src++;
-				src++;
-				src++;
-				src++;
+				src += 4;
 			}
 
-			srcIdx += sizeof (note_t);
+			bytesWritten += sizeof (note_t);
 		}
 
-		// if song has <32 channels, align pointer to next row (skip unused channels)
+		// skip unused channels if if song has <32 channels (we always allocate 32 channels)
 		if (numChannels < MAX_CHANNELS)
-			dst += pitch;
+			p += MAX_CHANNELS - numChannels;
 	}
 }
 
