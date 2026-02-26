@@ -60,13 +60,8 @@ bool loadXM(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	if (header.numChannels == 0)
-	{
-		loaderMsgBox("Error loading XM: This file is corrupt.");
-		return false;
-	}
-
-	if (header.numInstr > 256) // if >128 instruments, we fake-load up to 128 extra instruments and discard them
+	// (if >128 instruments, we fake-load up to 128 extra instruments and discard them)
+	if (header.numChannels == 0 || header.numInstr > 256)
 	{
 		loaderMsgBox("Error loading XM: This file is corrupt.");
 		return false;
@@ -90,7 +85,7 @@ bool loadXM(FILE *f, uint32_t filesize)
 	tmpLinearPeriodsFlag = !!(header.flags & 1);
 
 	if (songTmp.songLength == 0)
-		songTmp.songLength = 1; // songTmp.songTab is already empty
+		songTmp.songLength = 1; // (songTmp.orders is already zeroed, this is safe)
 	else
 		memcpy(songTmp.orders, header.orders, songTmp.songLength);
 
@@ -112,7 +107,7 @@ bool loadXM(FILE *f, uint32_t filesize)
 	{
 		// XM v1.02 and XM v1.03
 
-		for (int32_t i = 1; i <= header.numInstr; i++)
+		for (int32_t i = 0; i < header.numInstr; i++)
 		{
 			if (!loadInstrHeader(f, i))
 				return false;
@@ -121,7 +116,7 @@ bool loadXM(FILE *f, uint32_t filesize)
 		if (!loadPatterns(f, header.numPatterns, header.version))
 			return false;
 
-		for (int32_t i = 1; i <= header.numInstr; i++)
+		for (int32_t i = 0; i < header.numInstr; i++)
 		{
 			if (!loadInstrSample(f, i))
 				return false;
@@ -134,7 +129,7 @@ bool loadXM(FILE *f, uint32_t filesize)
 		if (!loadPatterns(f, header.numPatterns, header.version))
 			return false;
 
-		for (int32_t i = 1; i <= header.numInstr; i++)
+		for (int32_t i = 0; i < header.numInstr; i++)
 		{
 			if (!loadInstrHeader(f, i))
 				return false;
@@ -147,12 +142,12 @@ bool loadXM(FILE *f, uint32_t filesize)
 	// if we temporarily loaded more than 128 instruments, clear the extra allocated memory
 	if (header.numInstr > MAX_INST)
 	{
-		for (int32_t i = MAX_INST+1; i <= header.numInstr; i++)
+		for (int32_t i = MAX_INST; i < header.numInstr; i++)
 		{
-			if (instrTmp[i] != NULL)
+			if (instrTmp[1+i] != NULL)
 			{
-				free(instrTmp[i]);
-				instrTmp[i] = NULL;
+				free(instrTmp[1+i]);
+				instrTmp[1+i] = NULL;
 			}
 		}
 	}
@@ -162,12 +157,16 @@ bool loadXM(FILE *f, uint32_t filesize)
 	** back to max 16 in the headers before loading is done.
 	*/
 	bool instrHasMoreThan16Samples = false;
-	for (int32_t i = 1; i <= MAX_INST; i++)
+	for (int32_t i = 0; i < header.numInstr; i++)
 	{
-		if (instrTmp[i] != NULL && instrTmp[i]->numSamples > MAX_SMP_PER_INST)
+		instr_t *ins = instrTmp[1+i];
+		if (ins == NULL)
+			continue;
+
+		if (ins->numSamples > MAX_SMP_PER_INST)
 		{
+			ins->numSamples = MAX_SMP_PER_INST;
 			instrHasMoreThan16Samples = true;
-			instrTmp[i]->numSamples = MAX_SMP_PER_INST;
 		}
 	}
 
@@ -219,17 +218,17 @@ static bool loadInstrHeader(FILE *f, int32_t insNum)
 		return false;
 	}
 
-	if (insNum <= MAX_INST) // copy over instrument name
-		memcpy(songTmp.instrName[insNum], ih.name, 22);
+	if (insNum < MAX_INST) // copy over instrument name
+		memcpy(songTmp.instrName[1+insNum], ih.name, 22);
 
 	if (ih.numSamples > 0 && ih.numSamples <= 32)
 	{
-		if (!allocateTmpInstr(insNum))
+		if (!allocateTmpInstr(1+insNum))
 		{
 			loaderMsgBox("Not enough memory!");
 			return false;
 		}
-		instr_t *ins = instrTmp[insNum];
+		instr_t *ins = instrTmp[1+insNum];
 
 		// copy instrument header elements to our instrument struct
 
@@ -271,11 +270,11 @@ static bool loadInstrHeader(FILE *f, int32_t insNum)
 		// if instrument contains more than 16 sample headers (unsupported), skip them
 		if (ih.numSamples > MAX_SMP_PER_INST) // can only be 0..32 at this point
 		{
-			const int32_t samplesToSkip = ih.numSamples-MAX_SMP_PER_INST;
+			const int32_t samplesToSkip = ih.numSamples - MAX_SMP_PER_INST;
 			for (int32_t j = 0; j < samplesToSkip; j++)
 			{
 				fread(&extraSampleLengths[j], 4, 1, f); // used for skipping data in loadInstrSample()
-				fseek(f, sizeof (xmSmpHdr_t)-4, SEEK_CUR);
+				fseek(f, sizeof (xmSmpHdr_t) - 4, SEEK_CUR);
 			}
 		}
 
@@ -311,16 +310,16 @@ static bool loadInstrHeader(FILE *f, int32_t insNum)
 
 static bool loadInstrSample(FILE *f, int32_t insNum)
 {
-	if (instrTmp[insNum] == NULL)
+	instr_t *ins = instrTmp[1+insNum];
+	if (ins == NULL)
 		return true; // empty instrument, let's just pretend it got loaded successfully
 
-	int32_t numSamples = instrTmp[insNum]->numSamples;
+	int32_t numSamples = ins->numSamples;
 	if (numSamples > MAX_SMP_PER_INST)
 		numSamples = MAX_SMP_PER_INST;
 
-	sample_t *s = instrTmp[insNum]->smp;
-
-	if (insNum > MAX_INST) // insNum > 128, just skip sample data
+	sample_t *s = ins->smp;
+	if (insNum >= MAX_INST) // insNum >= 128, just skip sample data
 	{
 		for (int32_t i = 0; i < numSamples; i++, s++)
 		{
@@ -398,13 +397,13 @@ static bool loadInstrSample(FILE *f, int32_t insNum)
 	}
 
 	// skip sample headers if we have more than 16 samples in instrument
-	if (instrTmp[insNum]->numSamples > MAX_SMP_PER_INST)
+	if (ins->numSamples > MAX_SMP_PER_INST)
 	{
-		const int32_t samplesToSkip = instrTmp[insNum]->numSamples-MAX_SMP_PER_INST;
+		const int32_t samplesToSkip = ins->numSamples - MAX_SMP_PER_INST;
 		for (int32_t i = 0; i < samplesToSkip; i++)
 		{
 			if (extraSampleLengths[i] > 0)
-				fseek(f, extraSampleLengths[i], SEEK_CUR); 
+				fseek(f, extraSampleLengths[i], SEEK_CUR);
 		}
 	}
 
