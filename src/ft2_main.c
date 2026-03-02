@@ -136,6 +136,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	SDL_SetHint("SDL_MOUSE_FOCUS_CLICKTHROUGH", "1");
+
 	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
 	/* Text input is started by default in SDL2, turn it off to remove ~2ms spikes per key press.
