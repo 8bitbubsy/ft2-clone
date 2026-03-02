@@ -65,18 +65,18 @@ bool loadMP3(FILE *f, uint32_t filesize)
 	mp3dec_file_info_t info;
 	sample_t *s = &tmpSmp;
 
-	int16_t stereoAction = -1;
-	if (mp3IsStereo)
-	{
-		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true);
-	}
-
 	uint8_t *buf = (uint8_t *)malloc(filesize);
 	if (buf == NULL)
 	{
 		loaderMsgBox("Out of memory!");
 		return false;
+	}
+
+	int16_t stereoAction = -1;
+	if (mp3IsStereo)
+	{
+		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
+		setMouseBusy(true);
 	}
 
 	if (fread(buf, 1, filesize, f) != filesize)
