@@ -16,7 +16,7 @@ If these don't work for you, you'll have to compile the code manually.
 # Improvements over original DOS version
 - New sample editor features, like waveform generators and resonant filters
 - The channel resampler/mixer uses floating-point arithmetics for less errors, and has extra interpolation options (3-point quadratic spline, 4-point cubic spline, 8-point/16-point windowed-sinc)
-- The sample loader supports FLAC/AIFF/BRR (SNES) samples and more WAV types than original FT2. It will also attempt to tune the sample (finetune and rel. note) to its playback frequency on load.
+- The sample loader supports FLAC/AIFF/MP3/BRR (SNES) samples and more WAV types than original FT2. It will also attempt to tune the sample (finetune and rel. note) to its playback frequency on load.
 - It contains a new "Trim" feature, which will remove unused stuff to potentially make the module smaller
 - Drag n' drop of modules/samples
 - The waveform display in the sample editor shows peak based data when zoomed out
