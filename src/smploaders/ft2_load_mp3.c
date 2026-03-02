@@ -21,9 +21,12 @@
 #define MINIMP3_IMPLEMENTATION
 #include "minimp3_ex.h"
 #include "../ft2_header.h"
+#include "../ft2_mouse.h"
 #include "../ft2_sample_ed.h"
 #include "../ft2_sysreqs.h"
 #include "../ft2_sample_loader.h"
+
+static bool mp3IsStereo = true;
 
 bool detectMP3(FILE *f)
 {
@@ -41,9 +44,11 @@ bool detectMP3(FILE *f)
 
 		fseek(f, 10+bytesToSkip, SEEK_SET);
 
-		h[0] = h[1] = h[2] = 0;
-		fread(h, 1, 3, f);
+		h[0] = h[1] = h[2] = h[3] = 0;
+		fread(h, 1, 4, f);
 	}
+
+	mp3IsStereo = (((h[3]) & 0xC0) != 0xC0);
 
 	// we can now test if this is an MP3 file
 
@@ -59,6 +64,13 @@ bool loadMP3(FILE *f, uint32_t filesize)
 	mp3dec_t mp3d;
 	mp3dec_file_info_t info;
 	sample_t *s = &tmpSmp;
+
+	int16_t stereoAction = -1;
+	if (mp3IsStereo)
+	{
+		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
+		setMouseBusy(true);
+	}
 
 	uint8_t *buf = (uint8_t *)malloc(filesize);
 	if (buf == NULL)
@@ -100,9 +112,8 @@ bool loadMP3(FILE *f, uint32_t filesize)
 
 	int16_t *src16 = (int16_t *)info.buffer;
 	uint32_t sampleLength = (uint32_t)info.samples;
-	bool stereo = (info.channels == 2);
 
-	if (stereo)
+	if (mp3IsStereo)
 		sampleLength >>= 1;
 
 	if (!allocateSmpData(s, sampleLength, true))
@@ -112,9 +123,8 @@ bool loadMP3(FILE *f, uint32_t filesize)
 	}
 
 	int16_t *out16 = (int16_t *)s->dataPtr;
-	if (stereo)
+	if (mp3IsStereo)
 	{
-		int16_t stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
 		switch (stereoAction)
 		{
 			case STEREO_SAMPLE_READ_LEFT_CHANNEL:

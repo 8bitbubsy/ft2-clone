@@ -21,6 +21,7 @@
 #include <unistd.h>
 #endif
 #include "../ft2_header.h"
+#include "../ft2_mouse.h"
 #include "../ft2_audio.h"
 #include "../ft2_sample_ed.h"
 #include "../ft2_sysreqs.h"
@@ -208,7 +209,10 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__St
 
 		stereoSampleLoadMode = -1;
 		if (numChannels == 2)
+		{
 			stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
+			setMouseBusy(true);
+		}
 	}
 
 	// check for RIFF chunks (loop/vol/pan information)

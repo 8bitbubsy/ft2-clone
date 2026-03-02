@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include "../ft2_header.h"
+#include "../ft2_mouse.h"
 #include "../ft2_audio.h"
 #include "../ft2_sample_ed.h"
 #include "../ft2_sysreqs.h"
@@ -149,7 +150,10 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 	int16_t stereoSampleLoadMode = -1;
 	if (aiffIsStereo(f))
+	{
 		stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
+		setMouseBusy(true);
+	}
 
 	// read sample data
 
