@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "../ft2_header.h" // CLAMP16()
+#include "../ft2_header.h"
 #include "ft2_mix.h"
 #include "ft2_mix_macros.h"
 

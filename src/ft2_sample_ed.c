@@ -503,17 +503,16 @@ double getSampleValue(int8_t *smpData, int32_t position, bool sample16Bit)
 
 void putSampleValue(int8_t *smpData, int32_t position, double dSample, bool sample16Bit)
 {
-	DROUND(dSample);
-	int32_t sample = (int32_t)dSample;
+	int32_t sample = (int32_t)round(dSample);
 
 	if (sample16Bit)
 	{
-		CLAMP16(sample);
+		sample = CLAMP(sample, INT16_MIN, INT16_MAX);
 		*((int16_t *)&smpData[position<<1]) = (int16_t)sample;
 	}
 	else
 	{
-		CLAMP8(sample);
+		sample = CLAMP(sample, INT8_MIN, INT8_MAX);
 		smpData[position] = (int8_t)sample;
 	}
 }
@@ -3757,7 +3756,7 @@ static int32_t SDLCALL fixDCThread(void *ptr)
 		pauseAudio();
 		unfixSample(s);
 
-		int64_t	averageDC = 0;
+		int64_t averageDC = 0;
 		for (int32_t i = 0; i < length; i++)
 			averageDC += ptr16[i];
 		averageDC = (averageDC + (length>>1)) / length; // rounded
@@ -3766,8 +3765,7 @@ static int32_t SDLCALL fixDCThread(void *ptr)
 		for (int32_t i = 0; i < length; i++)
 		{
 			int32_t smp32 = ptr16[i] - smpSub;
-			CLAMP16(smp32);
-			ptr16[i] = (int16_t)smp32;
+			ptr16[i] = (int16_t)(CLAMP(smp32, INT16_MIN, INT16_MAX));
 		}
 
 		fixSample(s);
@@ -3795,7 +3793,7 @@ static int32_t SDLCALL fixDCThread(void *ptr)
 		pauseAudio();
 		unfixSample(s);
 
-		int64_t	averageDC = 0;
+		int64_t averageDC = 0;
 		for (int32_t i = 0; i < length; i++)
 			averageDC += ptr8[i];
 		averageDC = (averageDC + (length>>1)) / length; // rounded
@@ -3804,8 +3802,7 @@ static int32_t SDLCALL fixDCThread(void *ptr)
 		for (int32_t i = 0; i < length; i++)
 		{
 			int32_t smp32 = ptr8[i] - smpSub;
-			CLAMP8(smp32);
-			ptr8[i] = (int8_t)smp32;
+			ptr8[i] = (int8_t)(CLAMP(smp32, INT8_MIN, INT8_MAX));
 		}
 
 		fixSample(s);

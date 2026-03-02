@@ -429,8 +429,7 @@ static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 		fOut = (fOut + fPrng) - fPrngStateL;
 		fPrngStateL = fPrng;
 		out32 = (int32_t)fOut;
-		CLAMP16(out32);
-		*streamPtr16++ = (int16_t)out32;
+		*streamPtr16++ = (int16_t)(CLAMP(out32, INT16_MIN, INT16_MAX));
 
 		// right channel - 1-bit triangular dithering
 		fPrng = (float)random32() * (1.0f / (UINT32_MAX+1.0f)); // -0.5f .. 0.5f
@@ -438,8 +437,7 @@ static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 		fOut = (fOut + fPrng) - fPrngStateR;
 		fPrngStateR = fPrng;
 		out32 = (int32_t)fOut;
-		CLAMP16(out32);
-		*streamPtr16++ = (int16_t)out32;
+		*streamPtr16++ = (int16_t)(CLAMP(out32, INT16_MIN, INT16_MAX));
 
 		// clear what we read from the mixing buffer
 		audio.fMixBufferL[i] = audio.fMixBufferR[i] = 0.0f;

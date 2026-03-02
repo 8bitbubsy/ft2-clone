@@ -14,7 +14,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "2.05"
+#define PROG_VER_STR "2.06"
 
 // do NOT change these! It will only mess things up...
 
@@ -61,20 +61,6 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define CLAMP(x, low, high) (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
-
-#define DROUND(x) \
-	     if (x < 0.0) x -= 0.5; \
-	else if (x > 0.0) x += 0.5
-
-#define FROUND(x) \
-	     if (x < 0.0f) x -= 0.5f; \
-	else if (x > 0.0f) x += 0.5f
-
-// fast 32-bit -> 8-bit clamp
-#define CLAMP8(i) if ((int8_t)(i) != i) i = 0x7F ^ (i >> 31)
-
-// fast 32-bit -> 16-bit clamp
-#define CLAMP16(i) if ((int16_t)(i) != i) i = 0x7FFF ^ (i >> 31)
 
 #define SWAP16(x) \
 ( \

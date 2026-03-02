@@ -27,9 +27,8 @@
 #include "ft2_structs.h"
 
 static volatile bool stopThread;
-
-static int8_t smpEd_RelReSmp, mix_Balance = 50;
 static bool echo_AddMemory, exitFlag, outOfMemory;
+static int8_t smpEd_RelReSmp, mix_Balance = 50;
 static int16_t echo_nEcho = 1, echo_VolChange = 30;
 static int32_t echo_Distance = 0x100;
 static double dVol_StartVol = 100.0, dVol_EndVol = 100.0;
@@ -489,11 +488,8 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 					break;
 			}
 
-			DROUND(dSmpOut);
-
-			int32_t smp32 = (int32_t)dSmpOut;
-			CLAMP16(smp32);
-			writePtr16[writeIdx++] = (int16_t)smp32;
+			int32_t smp32 = (int32_t)round(dSmpOut);
+			writePtr16[writeIdx++] = (int16_t)(CLAMP(smp32, INT16_MIN, INT16_MAX));
 		}
 	}
 	else // 8-bit
@@ -519,11 +515,8 @@ static int32_t SDLCALL createEchoThread(void *ptr)
 					break;
 			}
 
-			DROUND(dSmpOut);
-
-			int32_t smp32 = (int32_t)dSmpOut;
-			CLAMP8(smp32);
-			writePtr8[writeIdx++] = (int8_t)smp32;
+			int32_t smp32 = (int32_t)round(dSmpOut);
+			writePtr8[writeIdx++] = (int8_t)(CLAMP(smp32, INT8_MIN, INT8_MAX));
 		}
 	}
 
@@ -1210,8 +1203,7 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 			for (int32_t i = 0; i < len; i++)
 			{
 				int32_t smp32 = (int32_t)((int32_t)ptr16[i] * dVol);
-				CLAMP16(smp32);
-				ptr16[i] = (int16_t)smp32;
+				ptr16[i] = (int16_t)(CLAMP(smp32, INT16_MIN, INT16_MAX));
 
 				dVol += dVolDelta;
 			}
@@ -1221,8 +1213,7 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 			for (int32_t i = 0; i < len; i++)
 			{
 				int32_t smp32 = (int32_t)((int32_t)ptr16[i] * dVol);
-				CLAMP16(smp32);
-				ptr16[i] = (int16_t)smp32;
+				ptr16[i] = (int16_t)(CLAMP(smp32, INT16_MIN, INT16_MAX));
 			}
 		}
 	}
@@ -1234,8 +1225,7 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 			for (int32_t i = 0; i < len; i++)
 			{
 				int32_t smp32 = (int32_t)((int32_t)ptr8[i] * dVol);
-				CLAMP8(smp32);
-				ptr8[i] = (int8_t)smp32;
+				ptr8[i] = (int8_t)(CLAMP(smp32, INT8_MIN, INT8_MAX));
 
 				dVol += dVolDelta;
 			}
@@ -1245,8 +1235,7 @@ static int32_t SDLCALL applyVolumeThread(void *ptr)
 			for (int32_t i = 0; i < len; i++)
 			{
 				int32_t smp32 = (int32_t)((int32_t)ptr8[i] * dVol);
-				CLAMP8(smp32);
-				ptr8[i] = (int8_t)smp32;
+				ptr8[i] = (int8_t)(CLAMP(smp32, INT8_MIN, INT8_MAX));
 			}
 		}
 	}
