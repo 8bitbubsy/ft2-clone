@@ -387,6 +387,7 @@
     <ClCompile Include="..\..\src\smploaders\ft2_load_brr.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_flac.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_iff.c" />
+    <ClCompile Include="..\..\src\smploaders\ft2_load_mp3.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_raw.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_wav.c" />
   </ItemGroup>
@@ -443,6 +444,8 @@
     <ClInclude Include="..\..\src\scopes\ft2_scopedraw.h" />
     <ClInclude Include="..\..\src\scopes\ft2_scopes.h" />
     <ClInclude Include="..\..\src\scopes\ft2_scope_macros.h" />
+    <ClInclude Include="..\..\src\smploaders\minimp3.h" />
+    <ClInclude Include="..\..\src\smploaders\minimp3_ex.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\src\ft2-clone.rc" />

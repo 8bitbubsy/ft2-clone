@@ -172,6 +172,9 @@
     <ClCompile Include="..\..\src\mixer\ft2_mix_interpolation.c">
       <Filter>mixer</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\smploaders\ft2_load_mp3.c">
+      <Filter>smploaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\rtmidi\RtMidi.h">
@@ -329,6 +332,12 @@
     </ClInclude>
     <ClInclude Include="..\..\src\mixer\ft2_mix_interpolation.h">
       <Filter>mixer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\smploaders\minimp3.h">
+      <Filter>smploaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\smploaders\minimp3_ex.h">
+      <Filter>smploaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

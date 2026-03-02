@@ -43,11 +43,12 @@
 >@X060@C002
 >- Gravis Ultrasound Patches, PAT.
 >- SMP/SAM/RAW/SND data files, signed and unsigned.
->- WAV files.
->- Amiga IFF.
->- Apple AIFF.
->- FLAC files.
->- Super Nintendo BRR files.
+>- WAV files
+>- Amiga IFF
+>- Apple AIFF
+>- FLAC files
+>- MP3 files
+>- Super Nintendo BRR files
 
 @X040@C001FT2 introduces several new file formats:
 >@X060@C002
