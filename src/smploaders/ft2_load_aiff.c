@@ -149,7 +149,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 	int16_t stereoSampleLoadMode = -1;
 	if (aiffIsStereo(f))
-		stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample...", NULL);
+		stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
 
 	// read sample data
 
@@ -181,14 +181,14 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 			switch (stereoSampleLoadMode)
 			{
-				case STEREO_SAMPLE_READ_LEFT:
+				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
 					for (i = 1; i < sampleLength; i++)
 						audioDataS8[i] = audioDataS8[(i * 2) + 0];
 				}
 				break;
 
-				case STEREO_SAMPLE_READ_RIGHT:
+				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
 					len32 = sampleLength - 1;
 					for (i = 0; i < len32; i++)
@@ -199,7 +199,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				break;
 
 				default:
-				case STEREO_SAMPLE_CONVERT:
+				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
 					len32 = sampleLength - 1;
 					for (i = 0; i < len32; i++)
@@ -241,14 +241,14 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 			switch (stereoSampleLoadMode)
 			{
-				case STEREO_SAMPLE_READ_LEFT:
+				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
 					for (i = 1; i < sampleLength; i++)
 						audioDataS16[i] = audioDataS16[(i * 2) + 0];
 				}
 				break;
 
-				case STEREO_SAMPLE_READ_RIGHT:
+				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
 					len32 = sampleLength - 1;
 					for (i = 0; i < len32; i++)
@@ -259,7 +259,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				break;
 
 				default:
-				case STEREO_SAMPLE_CONVERT:
+				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
 					len32 = sampleLength - 1;
 					for (i = 0; i < len32; i++)
@@ -308,14 +308,14 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 			switch (stereoSampleLoadMode)
 			{
-				case STEREO_SAMPLE_READ_LEFT:
+				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
 					for (i = 1; i < sampleLength; i++)
 						audioDataS32[i] = audioDataS32[(i * 2) + 0];
 				}
 				break;
 
-				case STEREO_SAMPLE_READ_RIGHT:
+				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
 					len32 = sampleLength - 1;
 					for (i = 0; i < len32; i++)
@@ -326,7 +326,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				break;
 
 				default:
-				case STEREO_SAMPLE_CONVERT:
+				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
 					len32 = sampleLength - 1;
 					for (i = 0; i < len32; i++)
@@ -379,14 +379,14 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 			switch (stereoSampleLoadMode)
 			{
-				case STEREO_SAMPLE_READ_LEFT:
+				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
 					for (i = 1; i < sampleLength; i++)
 						audioDataS32[i] = audioDataS32[(i * 2) + 0];
 				}
 				break;
 
-				case STEREO_SAMPLE_READ_RIGHT:
+				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
 					len32 = sampleLength - 1;
 					for (i = 0; i < len32; i++)
@@ -397,7 +397,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				break;
 
 				default:
-				case STEREO_SAMPLE_CONVERT:
+				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
 					len32 = sampleLength - 1;
 					for (i = 0; i < len32; i++)
@@ -451,7 +451,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 			sampleLength /= 2;
 			switch (stereoSampleLoadMode)
 			{
-				case STEREO_SAMPLE_READ_LEFT:
+				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
 					// remove right channel data
 					for (i = 1; i < sampleLength; i++)
@@ -459,7 +459,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				}
 				break;
 
-				case STEREO_SAMPLE_READ_RIGHT:
+				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
 					// remove left channel data
 					len32 = sampleLength - 1;
@@ -471,7 +471,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				break;
 
 				default:
-				case STEREO_SAMPLE_CONVERT:
+				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
 					// mix stereo to mono
 					len32 = sampleLength - 1;
@@ -523,7 +523,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 			sampleLength /= 2;
 			switch (stereoSampleLoadMode)
 			{
-				case STEREO_SAMPLE_READ_LEFT:
+				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
 					// remove right channel data
 					for (i = 1; i < sampleLength; i++)
@@ -531,7 +531,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				}
 				break;
 
-				case STEREO_SAMPLE_READ_RIGHT:
+				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
 					// remove left channel data
 					len32 = sampleLength - 1;
@@ -543,7 +543,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				break;
 
 				default:
-				case STEREO_SAMPLE_CONVERT:
+				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
 					// mix stereo to mono
 					len32 = sampleLength - 1;

@@ -208,7 +208,7 @@ static void metadata_callback(const FLAC__StreamDecoder *decoder, const FLAC__St
 
 		stereoSampleLoadMode = -1;
 		if (numChannels == 2)
-			stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample...", NULL);
+			stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
 	}
 
 	// check for RIFF chunks (loop/vol/pan information)
@@ -351,7 +351,7 @@ static FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *
 	if (samplesRead+blockSize > samplesAllocated)
 		blockSize = samplesAllocated-samplesRead;
 
-	if (stereoSampleLoadMode == STEREO_SAMPLE_CONVERT) // mix to mono
+	if (stereoSampleLoadMode == STEREO_SAMPLE_MIX_TO_MONO) // mix to mono
 	{
 		const int32_t *src32_L = buffer[0];
 		const int32_t *src32_R = buffer[1];
@@ -387,7 +387,7 @@ static FLAC__StreamDecoderWriteStatus write_callback(const FLAC__StreamDecoder *
 	}
 	else // mono sample
 	{
-		const int32_t *src32 = (stereoSampleLoadMode == STEREO_SAMPLE_READ_RIGHT) ? buffer[1] : buffer[0];
+		const int32_t *src32 = (stereoSampleLoadMode == STEREO_SAMPLE_READ_RIGHT_CHANNEL) ? buffer[1] : buffer[0];
 
 		switch (bitDepth)
 		{

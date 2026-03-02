@@ -35,7 +35,7 @@ static char *buttonText[NUM_SYSREQ_TYPES][MAX_PUSHBUTTONS] =
 
 	// custom dialogs
 	{ "All", "Song", "Instruments", "Cancel", "" },   // "song clear" dialog
-	{ "Read left", "Read right", "Convert", "", "" }, // "stereo sample loader" dialog
+	{ "Left channel", "Right channel", "Mix to mono", "", "" }, // "stereo sample loader" dialog
 	{ "Mono", "Stereo", "Cancel", "","" },            // "audio sampling" dialog
 	{ "OK", "Preview", "Cancel", "","" }              // sample editor effects filters
 };
@@ -191,8 +191,9 @@ static bool mouseButtonUpLogic(uint8_t mouseButton)
 // If the checkBoxCallback argument is set, then you get a "Do not show again" checkbox.
 int16_t okBox(int16_t type, const char *headline, const char *text, void (*checkBoxCallback)(void))
 {
-#define PUSHBUTTON_W 80
+#define DEFAULT_PUSHBUTTON_WIDTH 80
 
+	pushButton_t *p;
 	SDL_Event inputEvent;
 
 	if (editor.editTextFlag)
@@ -246,16 +247,24 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 	// the dialog's y position differs in extended pattern editor mode
 	const uint16_t y = ui.extendedPatternEditor ? SYSTEM_REQUEST_Y_EXT : SYSTEM_REQUEST_Y;
 
-	// set up buttons
-	for (uint16_t i = 0; i < numButtons; i++)
+	// find widest button size
+	uint16_t buttonWidthHi = DEFAULT_PUSHBUTTON_WIDTH;
+	for (int32_t i = 0; i < numButtons; i++)
 	{
-		pushButton_t *p = &pushButtons[i];
+		uint16_t buttonWidth = textWidth(buttonText[type][i]) + 10;
+		if (buttonWidth > buttonWidthHi)
+			buttonWidthHi = buttonWidth;
+	}
 
+	// set up buttons
+	p = pushButtons;
+	for (uint16_t i = 0; i < numButtons; i++, p++)
+	{
+		p->caption = buttonText[type][i];
 		p->x = ((SCREEN_W - tx) / 2) + (i * 100);
 		p->y = y + 42;
-		p->w = PUSHBUTTON_W;
+		p->w = buttonWidthHi;
 		p->h = 16;
-		p->caption = buttonText[type][i];
 		p->visible = true;
 	}
 
