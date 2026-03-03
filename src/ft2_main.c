@@ -51,6 +51,25 @@ static void disableWasapi(void);
 
 int main(int argc, char *argv[])
 {
+#ifdef _WIN32 // test for SSE/SSE2 presence very first, to make sure no SSE/SSE2 code is attempted to be ran
+	cpu.hasSSE = SDL_HasSSE();
+	cpu.hasSSE2 = SDL_HasSSE2();
+
+	if (cpu.hasSSE)
+	{
+		MessageBoxA(NULL, "Your computer's processor doesn't have the SSE instruction set " \
+			"which is needed for this program to run. Sorry!", "Error", MB_ICONEXCLAMATION);
+		return 0;
+	}
+
+	if (cpu.hasSSE2)
+	{
+		MessageBoxA(NULL, "Your computer's processor doesn't have the SSE2 instruction set " \
+			"which is needed for this program to run. Sorry!", "Error", MB_ICONEXCLAMATION);
+		return 0;
+	}
+#endif
+
 #if defined _WIN32 || defined __APPLE__
 	SDL_version sdlVer;
 #endif
@@ -103,20 +122,6 @@ int main(int argc, char *argv[])
 	SetProcessDPIAware();
 #endif
 
-	if (!cpu.hasSSE)
-	{
-		showErrorMsgBox("Your computer's processor doesn't have the SSE instruction set\n" \
-		                "which is needed for this program to run. Sorry!");
-		return 0;
-	}
-
-	if (!cpu.hasSSE2)
-	{
-		showErrorMsgBox("Your computer's processor doesn't have the SSE2 instruction set\n" \
-		                "which is needed for this program to run. Sorry!");
-		return 0;
-	}
-
 	disableWasapi(); // disable problematic WASAPI SDL2 audio driver on Windows (causes clicks/pops sometimes...)
 	                 // 13.03.2020: This is still needed with SDL 2.0.12...
 #endif
@@ -137,7 +142,6 @@ int main(int argc, char *argv[])
 	}
 
 	SDL_SetHint("SDL_MOUSE_FOCUS_CLICKTHROUGH", "1");
-
 	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
 	/* Text input is started by default in SDL2, turn it off to remove ~2ms spikes per key press.
@@ -267,9 +271,6 @@ int main(int argc, char *argv[])
 static void initializeVars(void)
 {
 	srand((uint32_t)time(NULL));
-
-	cpu.hasSSE = SDL_HasSSE();
-	cpu.hasSSE2 = SDL_HasSSE2();
 
 	// clear common structs
 #ifdef HAS_MIDI
