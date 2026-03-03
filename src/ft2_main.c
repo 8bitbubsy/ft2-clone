@@ -55,14 +55,14 @@ int main(int argc, char *argv[])
 	cpu.hasSSE = SDL_HasSSE();
 	cpu.hasSSE2 = SDL_HasSSE2();
 
-	if (cpu.hasSSE)
+	if (!cpu.hasSSE)
 	{
 		MessageBoxA(NULL, "Your computer's processor doesn't have the SSE instruction set " \
 			"which is needed for this program to run. Sorry!", "Error", MB_ICONEXCLAMATION);
 		return 0;
 	}
 
-	if (cpu.hasSSE2)
+	if (!cpu.hasSSE2)
 	{
 		MessageBoxA(NULL, "Your computer's processor doesn't have the SSE2 instruction set " \
 			"which is needed for this program to run. Sorry!", "Error", MB_ICONEXCLAMATION);
