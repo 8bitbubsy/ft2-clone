@@ -112,6 +112,8 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+	hpc_Init();
+
 	// ALT+F4 is used in FT2, but is "close program" in some cases...
 #if SDL_MINOR_VERSION >= 24 || (SDL_MINOR_VERSION == 0 && SDL_PATCHLEVEL >= 4)
 	SDL_SetHint("SDL_WINDOWS_NO_CLOSE_ON_ALT_F4", "1");
@@ -150,7 +152,6 @@ int main(int argc, char *argv[])
 	*/
 	SDL_StopTextInput();
 
-	hpc_Init();
 	hpc_SetDurationInHz(&video.vblankHpc, VBLANK_HZ);
 
 #ifdef __APPLE__

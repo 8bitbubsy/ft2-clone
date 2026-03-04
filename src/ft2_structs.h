@@ -36,7 +36,6 @@ typedef struct editor_t
 	uint16_t tmpPattern, editPattern, BPM, speed, tick, ptnCursorY;
 	int32_t keyOffNr, keyOffTime[MAX_CHANNELS];
 	uint32_t framesPassed, wavRendererTime;
-	double dPerfFreq, dPerfFreqMulMicro, dPerfFreqMulMs;
 } editor_t;
 
 typedef struct ui_t

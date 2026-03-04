@@ -463,22 +463,20 @@ void calcReplayerVars(int32_t audioFreq)
 	for (int32_t bpm = MIN_BPM; bpm <= MAX_BPM; bpm++)
 	{
 		const int32_t i = bpm - MIN_BPM; // index for tables
-
 		const double dBpmHz = bpm / 2.5;
-		const double dSamplesPerTick = audioFreq / dBpmHz;
 
-		double dSamplesPerTickInt;
-		double dSamplesPerTickFrac = modf(dSamplesPerTick, &dSamplesPerTickInt);
+		const double dSamplesPerTick = audioFreq / dBpmHz;
+		double dSamplesPerTickInt, dSamplesPerTickFrac = modf(dSamplesPerTick, &dSamplesPerTickInt);
 
 		audio.samplesPerTickIntTab[i] = (uint32_t)dSamplesPerTickInt;
-		audio.samplesPerTickFracTab[i] = (uint64_t)((dSamplesPerTickFrac * BPM_FRAC_SCALE) + 0.5); // rounded
+		audio.samplesPerTickFracTab[i] = (uint64_t)(dSamplesPerTickFrac * BPM_FRAC_SCALE);
 
-		// BPM Hz -> tick length for performance counter (syncing visuals to audio)
-		double dTimeInt;
-		double dTimeFrac = modf(editor.dPerfFreq / dBpmHz, &dTimeInt);
+		// for performance counter (syncing visuals to audio)
+		double dTickTime = (double)hpcFreq.freq64 / dBpmHz;
+		double dTickTimeInt, dTickTimeFrac = modf(dTickTime, &dTickTimeInt);
 
-		audio.tickTimeIntTab[i] = (uint32_t)dTimeInt;
-		audio.tickTimeFracTab[i] = (uint64_t)((dTimeFrac * TICK_TIME_FRAC_SCALE) + 0.5); // rounded
+		audio.tickTimeIntTab[i] = (uint32_t)dTickTimeInt;
+		audio.tickTimeFracTab[i] = (uint64_t)(dTickTimeFrac * TICK_TIME_FRAC_SCALE);
 	}
 }
 

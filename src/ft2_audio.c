@@ -917,17 +917,14 @@ static void freeAudioBuffers(void)
 
 static void calcAudioLatencyVars(int32_t audioBufferSize, int32_t audioFreq)
 {
-	double dInt;
-
 	if (audioFreq == 0)
 		return;
 
-	const double dAudioLatencySecs = audioBufferSize / (double)audioFreq;
+	const double dAudioLatencyTime = (audioBufferSize / (double)audioFreq) * (double)hpcFreq.freq64;
+	double dAudioLatencyTimeInt, dAudioLatencyTimeFrac = modf(dAudioLatencyTime, &dAudioLatencyTimeInt);
 
-	double dFrac = modf(dAudioLatencySecs * editor.dPerfFreq, &dInt);
-
-	audio.audLatencyPerfValInt = (uint32_t)dInt;
-	audio.audLatencyPerfValFrac = (uint64_t)((dFrac * TICK_TIME_FRAC_SCALE) + 0.5); // rounded
+	audio.audLatencyPerfValInt = (uint32_t)dAudioLatencyTimeInt;
+	audio.audLatencyPerfValFrac = (uint64_t)(dAudioLatencyTimeFrac * TICK_TIME_FRAC_SCALE);
 }
 
 static void setLastWorkingAudioDevName(void)
