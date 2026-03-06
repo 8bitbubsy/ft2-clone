@@ -923,6 +923,9 @@ END
 ;***************************************************************************
 @LProblems/FAQ
 >@X020
+>@C001Q: The pattern editor layout is different than FT2! I don't like it!
+>@C002A: Go to Config -> Miscellaneous, enable "Original FT2 pattern layout"
+>@X020
 >@C001Q: How can I toggle fullscreen mode?
 >@C002A: Press Alt+Enter (Ctrl+Cmd+F also works on Mac)
 >@X020

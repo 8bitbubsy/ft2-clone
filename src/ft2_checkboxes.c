@@ -100,6 +100,7 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 237, 108,  13, 12, cbEnableCustomPointer },
 	{ 255, 158, 111, 12, cbSoftwareMouse },
 	// ---------------------------------
+	//x,   y,   w,   h,  funcOnUp
 	{ 212,   2, 150, 12, cbSampCutToBuff },
 	{ 212,  15, 153, 12, cbPattCutToBuff },
 	{ 212,  28, 159, 12, cbKillNotesAtStop },
@@ -110,7 +111,7 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	{ 212, 107, 143, 12, cbRecKeyOff },
 	{ 212, 120,  89, 12, cbQuantization },
 	{ 212, 133, 180, 24, cbChangePattLenInsDel },
-	{ 212, 159, 169, 12, cbUseOldAboutScreen },
+	{ 212, 159, 174, 12, cbAltPatternLayout },
 	{ 411,  93,  83, 12, cbMIDIEnable },
 	{ 530, 106,  29, 12, cbMIDIRecAllChn },
 	{ 411, 119, 121, 12, cbMIDIRecTransp },

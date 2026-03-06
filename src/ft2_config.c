@@ -1023,7 +1023,7 @@ static void setConfigMiscCheckButtonStates(void)
 	checkBoxes[CB_CONF_REC_KEYOFF].checked = config.recRelease;
 	checkBoxes[CB_CONF_QUANTIZATION].checked = config.recQuant;
 	checkBoxes[CB_CONF_CHANGE_PATTLEN_INS_DEL].checked = config.recTrueInsert;
-	checkBoxes[CB_CONF_USE_OLD_ABOUT_SCREEN].checked = !config.useNewAboutScreen;
+	checkBoxes[CB_CONF_ORIG_FT2_PATT_LAYOUT].checked = !config.ptnAlternativeLayout;
 #ifdef HAS_MIDI
 	checkBoxes[CB_CONF_MIDI_ENABLE].checked = midi.enable;
 #else
@@ -1048,7 +1048,7 @@ static void setConfigMiscCheckButtonStates(void)
 	showCheckBox(CB_CONF_REC_KEYOFF);
 	showCheckBox(CB_CONF_QUANTIZATION);
 	showCheckBox(CB_CONF_CHANGE_PATTLEN_INS_DEL);
-	showCheckBox(CB_CONF_USE_OLD_ABOUT_SCREEN);
+	showCheckBox(CB_CONF_ORIG_FT2_PATT_LAYOUT);
 	showCheckBox(CB_CONF_MIDI_ENABLE);
 	showCheckBox(CB_CONF_MIDI_REC_ALL);
 	showCheckBox(CB_CONF_MIDI_REC_TRANS);
@@ -1306,8 +1306,8 @@ void showConfigScreen(void)
 			drawFramework(485,  75, 145,  14, FRAMEWORK_TYPE2);
 
 			textOutShadow(114,   3, PAL_FORGRND, PAL_DSKTOP2, "Dir. sorting pri.:");
-			textOutShadow(130,  16, PAL_FORGRND, PAL_DSKTOP2, "Ext.");
-			textOutShadow(130,  30, PAL_FORGRND, PAL_DSKTOP2, "Name");
+			textOutShadow(130,  16, PAL_FORGRND, PAL_DSKTOP2, "Extension");
+			textOutShadow(130,  30, PAL_FORGRND, PAL_DSKTOP2, "Filename");
 
 			textOutShadow(228,   4, PAL_FORGRND, PAL_DSKTOP2, "Sample \"cut to buffer\"");
 			textOutShadow(228,  17, PAL_FORGRND, PAL_DSKTOP2, "Pattern \"cut to buffer\"");
@@ -1342,7 +1342,7 @@ void showConfigScreen(void)
 			textOutShadow(338, 122, PAL_FORGRND, PAL_DSKTOP2, "1/");
 			textOutShadow(228, 135, PAL_FORGRND, PAL_DSKTOP2, "Change pattern length when");
 			textOutShadow(228, 146, PAL_FORGRND, PAL_DSKTOP2, "inserting/deleting line.");
-			textOutShadow(228, 161, PAL_FORGRND, PAL_DSKTOP2, "Original FT2 About screen");
+			textOutShadow(228, 161, PAL_FORGRND, PAL_DSKTOP2, "Original FT2 pattern layout");
 
 			textOutShadow(428,  95, PAL_FORGRND, PAL_DSKTOP2, "Enable MIDI");
 			textOutShadow(412, 108, PAL_FORGRND, PAL_DSKTOP2, "Record MIDI chn.");
@@ -1497,7 +1497,7 @@ void hideConfigScreen(void)
 	hideCheckBox(CB_CONF_REC_KEYOFF);
 	hideCheckBox(CB_CONF_QUANTIZATION);
 	hideCheckBox(CB_CONF_CHANGE_PATTLEN_INS_DEL);
-	hideCheckBox(CB_CONF_USE_OLD_ABOUT_SCREEN);
+	hideCheckBox(CB_CONF_ORIG_FT2_PATT_LAYOUT);
 	hideCheckBox(CB_CONF_MIDI_ENABLE);
 	hideCheckBox(CB_CONF_MIDI_REC_ALL);
 	hideCheckBox(CB_CONF_MIDI_REC_TRANS);
@@ -2080,9 +2080,10 @@ void cbChangePattLenInsDel(void)
 	config.recTrueInsert ^= 1;
 }
 
-void cbUseOldAboutScreen(void)
+void cbAltPatternLayout(void)
 {
-	config.useNewAboutScreen ^= 1;
+	config.ptnAlternativeLayout ^= 1;
+	redrawPatternEditor();
 }
 
 void cbMIDIEnable(void)

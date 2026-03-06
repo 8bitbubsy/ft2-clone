@@ -171,8 +171,8 @@ radioButton_t radioButtons[NUM_RADIOBUTTONS] =
 
 	// FILENAME SORTING
 	//x,   y,  w,  group,                    funcOnUp
-	{ 114, 15, 40, RB_GROUP_CONFIG_FILESORT, rbFileSortExt },
-	{ 114, 29, 48, RB_GROUP_CONFIG_FILESORT, rbFileSortName },
+	{ 114, 15, 75, RB_GROUP_CONFIG_FILESORT, rbFileSortExt },
+	{ 114, 29, 67, RB_GROUP_CONFIG_FILESORT, rbFileSortName },
 
 	// WINDOW SIZE
 	//x,   y,  w,  group,                    funcOnUp

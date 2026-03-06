@@ -327,6 +327,7 @@ static void drawRowNums(int32_t yPos, uint8_t row, bool selectedRowFlag)
 	uint32_t pixVal;
 
 	// set color based on some conditions
+
 	if (selectedRowFlag)
 		pixVal = video.palette[PAL_FORGRND];
 	else if (config.ptnLineLight && !(row & 3))
@@ -397,52 +398,77 @@ static void showNoteNum(uint32_t xPos, uint32_t yPos, int16_t note, uint32_t col
 static void showInstrNum(uint32_t xPos, uint32_t yPos, uint8_t ins, uint32_t color)
 {
 	uint8_t charW, fontType;
+	uint32_t xStart, xDelta;
 
 	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 67;
 	}
 	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 27;
 	}
 	else
 	{
 		fontType = FONT_TYPE3;
 		charW = FONT3_CHAR_W;
+		xStart = 1;
+		xDelta = 4;
+
 		xPos += 31;
 	}
 
-	if (config.ptnInstrZero)
+	if (config.ptnAlternativeLayout && ins == 0)
 	{
-		pattCharOut(xPos,         yPos, ins >> 4,   fontType, color);
-		pattCharOut(xPos + charW, yPos, ins & 0x0F, fontType, color);
+		yPos += 3;
+		xPos += xStart;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+		xPos += xDelta;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
 	}
 	else
 	{
-		const uint8_t chr1 = ins >> 4;
-		const uint8_t chr2 = ins & 0x0F;
+		if (config.ptnAlternativeLayout || config.ptnInstrZero)
+		{
+			pattCharOut(xPos,         yPos, ins >> 4,   fontType, color);
+			pattCharOut(xPos + charW, yPos, ins & 0x0F, fontType, color);
+		}
+		else
+		{
+			const uint8_t chr1 = ins >> 4;
+			const uint8_t chr2 = ins & 0x0F;
 
-		if (chr1 > 0)
-			pattCharOut(xPos, yPos, chr1, fontType, color);
+			if (chr1 > 0)
+				pattCharOut(xPos, yPos, chr1, fontType, color);
 
-		if (chr1 > 0 || chr2 > 0)
-			pattCharOut(xPos + charW, yPos, chr2, fontType, color);
+			if (chr1 > 0 || chr2 > 0)
+				pattCharOut(xPos + charW, yPos, chr2, fontType, color);
+		}
 	}
 }
 
 static void showVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t color)
 {
 	uint8_t char1, char2, fontType, charW;
+	uint32_t xStart, xDelta;
 
 	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 91;
 
 		char1 = vol2charTab1[vol >> 4];
@@ -455,6 +481,9 @@ static void showVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t color
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 51;
 
 		char1 = vol2charTab1[vol >> 4];
@@ -467,6 +496,9 @@ static void showVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t color
 	{
 		fontType = FONT_TYPE3;
 		charW = FONT3_CHAR_W;
+		xStart = 1;
+		xDelta = 4;
+
 		xPos += 43;
 
 		char1 = vol2charTab2[vol >> 4];
@@ -476,36 +508,70 @@ static void showVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t color
 			char2 = vol & 0x0F;
 	}
 
-	pattCharOut(xPos,         yPos, char1, fontType, color);
-	pattCharOut(xPos + charW, yPos, char2, fontType, color);
+	if (config.ptnAlternativeLayout && vol == 0)
+	{
+		yPos += 3;
+		xPos += xStart;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+		xPos += xDelta;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+	}
+	else
+	{
+		pattCharOut(xPos,         yPos, char1, fontType, color);
+		pattCharOut(xPos + charW, yPos, char2, fontType, color);
+	}
 }
 
 static void showEfx(uint32_t xPos, uint32_t yPos, uint8_t efx, uint8_t efxData, uint32_t color)
 {
 	uint8_t fontType, charW;
+	uint32_t xStart, xDelta;
 
 	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 115;
 	}
 	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 67;
 	}
 	else
 	{
 		fontType = FONT_TYPE3;
 		charW = FONT3_CHAR_W;
+		xStart = 1;
+		xDelta = 4;
+
 		xPos += 55;
 	}
 
-	pattCharOut(xPos,               yPos, efx,            fontType, color);
-	pattCharOut(xPos +  charW,      yPos, efxData >> 4,   fontType, color);
-	pattCharOut(xPos + (charW * 2), yPos, efxData & 0x0F, fontType, color);
+	if (config.ptnAlternativeLayout && efx == 0 && efxData == 0)
+	{
+		yPos += 3;
+		xPos += xStart;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+		xPos += xDelta;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+		xPos += xDelta;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+	}
+	else
+	{
+		pattCharOut(xPos,               yPos, efx,            fontType, color);
+		pattCharOut(xPos +  charW,      yPos, efxData >> 4,   fontType, color);
+		pattCharOut(xPos + (charW * 2), yPos, efxData & 0x0F, fontType, color);
+	}
 }
 
 // DRAWING ROUTINES (WITHOUT VOLUME COLUMN)
@@ -548,47 +614,71 @@ static void showNoteNumNoVolColumn(uint32_t xPos, uint32_t yPos, int16_t note, u
 static void showInstrNumNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t ins, uint32_t color)
 {
 	uint8_t charW, fontType;
+	uint32_t xStart, xDelta;
 
 	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE5;
 		charW = FONT5_CHAR_W;
+		xStart = 7;
+		xDelta = 16;
+
 		xPos += 59;
 	}
 	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 51;
 	}
 	else if (ui.numChannelsShown <= 8)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 27;
 	}
 	else
 	{
 		fontType = FONT_TYPE3;
 		charW = FONT3_CHAR_W;
+		xStart = 1;
+		xDelta = 4;
+
 		xPos += 23;
 	}
 
-	if (config.ptnInstrZero)
+	if (config.ptnAlternativeLayout && ins == 0)
 	{
-		pattCharOut(xPos,         yPos, ins >> 4,   fontType, color);
-		pattCharOut(xPos + charW, yPos, ins & 0x0F, fontType, color);
+		yPos += 3;
+		xPos += xStart;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+		xPos += xDelta;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
 	}
 	else
 	{
-		const uint8_t chr1 = ins >> 4;
-		const uint8_t chr2 = ins & 0x0F;
+		if (config.ptnAlternativeLayout || config.ptnInstrZero)
+		{
+			pattCharOut(xPos,         yPos, ins >> 4,   fontType, color);
+			pattCharOut(xPos + charW, yPos, ins & 0x0F, fontType, color);
+		}
+		else
+		{
+			const uint8_t chr1 = ins >> 4;
+			const uint8_t chr2 = ins & 0x0F;
 
-		if (chr1 > 0)
-			pattCharOut(xPos, yPos, chr1, fontType, color);
+			if (chr1 > 0)
+				pattCharOut(xPos, yPos, chr1, fontType, color);
 
-		if (chr1 > 0 || chr2 > 0)
-			pattCharOut(xPos + charW, yPos, chr2, fontType, color);
+			if (chr1 > 0 || chr2 > 0)
+				pattCharOut(xPos + charW, yPos, chr2, fontType, color);
+		}
 	}
 }
 
@@ -603,35 +693,60 @@ static void showNoVolEfx(uint32_t xPos, uint32_t yPos, uint8_t vol, uint32_t col
 static void showEfxNoVolColumn(uint32_t xPos, uint32_t yPos, uint8_t efx, uint8_t efxData, uint32_t color)
 {
 	uint8_t charW, fontType;
+	uint32_t xStart, xDelta;
 
 	if (ui.numChannelsShown <= 4)
 	{
 		fontType = FONT_TYPE5;
 		charW = FONT5_CHAR_W;
+		xStart = 7;
+		xDelta = 16;
 		xPos += 91;
 	}
 	else if (ui.numChannelsShown <= 6)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 67;
 	}
 	else if (ui.numChannelsShown <= 8)
 	{
 		fontType = FONT_TYPE4;
 		charW = FONT4_CHAR_W;
+		xStart = 4;
+		xDelta = 8;
+
 		xPos += 43;
 	}
 	else
 	{
 		fontType = FONT_TYPE3;
 		charW = FONT3_CHAR_W;
+		xStart = 1;
+		xDelta = 4;
+
 		xPos += 31;
 	}
 
-	pattCharOut(xPos,               yPos, efx,            fontType, color);
-	pattCharOut(xPos +  charW,      yPos, efxData >> 4,   fontType, color);
-	pattCharOut(xPos + (charW * 2), yPos, efxData & 0x0F, fontType, color);
+	if (config.ptnAlternativeLayout && efx == 0 && efxData == 0)
+	{
+		yPos += 3;
+		xPos += xStart;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+		xPos += xDelta;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+		xPos += xDelta;
+		video.frameBuffer[(yPos * SCREEN_W) + xPos] = color;
+	}
+	else
+	{
+		pattCharOut(xPos,               yPos, efx,            fontType, color);
+		pattCharOut(xPos +  charW,      yPos, efxData >> 4,   fontType, color);
+		pattCharOut(xPos + (charW * 2), yPos, efxData & 0x0F, fontType, color);
+	}
 }
 
 void writePattern(int32_t currRow, int32_t currPattern)
@@ -839,19 +954,32 @@ static void pattCharOut(uint32_t xPos, uint32_t yPos, uint8_t chr, uint8_t fontT
 
 static void drawEmptyNoteSmall(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
-	const uint8_t *srcPtr = &bmp.font7[18 * FONT7_CHAR_W];
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	for (int32_t y = 0; y < FONT7_CHAR_H; y++)
+	if (config.ptnAlternativeLayout)
 	{
-		for (int32_t x = 0; x < FONT7_CHAR_W*3; x++)
-		{
-			if (srcPtr[x] != 0)
-				dstPtr[x] = color;
-		}
+		dstPtr += (3 * SCREEN_W) + 2;
+		*dstPtr = color;
+		dstPtr += 5;
+		*dstPtr = color;
+		dstPtr += 5;
+		*dstPtr = color;
+	}
+	else
+	{
+		const uint8_t *srcPtr = &bmp.font7[18 * FONT7_CHAR_W];
 
-		srcPtr += FONT7_WIDTH;
-		dstPtr += SCREEN_W;
+		for (int32_t y = 0; y < FONT7_CHAR_H; y++)
+		{
+			for (int32_t x = 0; x < FONT7_CHAR_W*3; x++)
+			{
+				if (srcPtr[x] != 0)
+					dstPtr[x] = color;
+			}
+
+			srcPtr += FONT7_WIDTH;
+			dstPtr += SCREEN_W;
+		}
 	}
 }
 
@@ -917,18 +1045,31 @@ static void drawNoteSmall(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32_
 static void drawEmptyNoteMedium(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
-	const uint8_t *srcPtr = &font4Ptr[43 * FONT4_CHAR_W];
 
-	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
+	if (config.ptnAlternativeLayout)
 	{
-		for (int32_t x = 0; x < FONT4_CHAR_W*3; x++)
-		{
-			if (srcPtr[x] != 0)
-				dstPtr[x] = color;
-		}
+		dstPtr += (3 * SCREEN_W) + 3;
+		*dstPtr = color;
+		dstPtr += 8;
+		*dstPtr = color;
+		dstPtr += 8;
+		*dstPtr = color;
+	}
+	else
+	{
+		const uint8_t *srcPtr = &font4Ptr[43 * FONT4_CHAR_W];
 
-		srcPtr += FONT4_WIDTH;
-		dstPtr += SCREEN_W;
+		for (int32_t y = 0; y < FONT4_CHAR_H; y++)
+		{
+			for (int32_t x = 0; x < FONT4_CHAR_W*3; x++)
+			{
+				if (srcPtr[x] != 0)
+					dstPtr[x] = color;
+			}
+
+			srcPtr += FONT4_WIDTH;
+			dstPtr += SCREEN_W;
+		}
 	}
 }
 
@@ -993,19 +1134,32 @@ static void drawNoteMedium(uint32_t xPos, uint32_t yPos, int32_t noteNum, uint32
 
 static void drawEmptyNoteBig(uint32_t xPos, uint32_t yPos, uint32_t color)
 {
-	const uint8_t *srcPtr = &font4Ptr[67 * FONT4_CHAR_W];
 	uint32_t *dstPtr = &video.frameBuffer[(yPos * SCREEN_W) + xPos];
 
-	for (int32_t y = 0; y < FONT4_CHAR_H; y++)
+	if (config.ptnAlternativeLayout)
 	{
-		for (int32_t x = 0; x < FONT4_CHAR_W*6; x++)
-		{
-			if (srcPtr[x] != 0)
-				dstPtr[x] = color;
-		}
+		dstPtr += (3 * SCREEN_W) + 7;
+		*dstPtr = color;
+		dstPtr += 16;
+		*dstPtr = color;
+		dstPtr += 16;
+		*dstPtr = color;
+	}
+	else
+	{
+		const uint8_t *srcPtr = &font4Ptr[67 * FONT4_CHAR_W];
 
-		srcPtr += FONT4_WIDTH;
-		dstPtr += SCREEN_W;
+		for (int32_t y = 0; y < FONT4_CHAR_H; y++)
+		{
+			for (int32_t x = 0; x < FONT4_CHAR_W*6; x++)
+			{
+				if (srcPtr[x] != 0)
+					dstPtr[x] = color;
+			}
+
+			srcPtr += FONT4_WIDTH;
+			dstPtr += SCREEN_W;
+		}
 	}
 }
 
