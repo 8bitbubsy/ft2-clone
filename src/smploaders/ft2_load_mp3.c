@@ -52,11 +52,14 @@ bool detectMP3(FILE *f)
 
 	// we can now test if this is an MP3 file
 
-	return h[0] == 0xFF &&
+	bool result = h[0] == 0xFF &&
 	    ((h[1] & 0xF0) == 0xF0 || (h[1] & 0xFE) == 0xE2) &&
 	    (HDR_GET_LAYER(h) != 0) &&
 	    (HDR_GET_BITRATE(h) != 15) &&
 	    (HDR_GET_SAMPLE_RATE(h) != 3);
+	
+	rewind(f);
+	return result;
 }
 
 bool loadMP3(FILE *f, uint32_t filesize)
@@ -88,7 +91,6 @@ bool loadMP3(FILE *f, uint32_t filesize)
 
 	int32_t result = mp3dec_load_buf(&mp3d, buf, filesize, &info, NULL, NULL);
 	free(buf);
-	// 'f' is closed later in ft2_sample_loader.c
 
 	if (result != 0)
 	{
@@ -110,9 +112,7 @@ bool loadMP3(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	int16_t *src16 = (int16_t *)info.buffer;
 	uint32_t sampleLength = (uint32_t)info.samples;
-
 	if (mp3IsStereo)
 		sampleLength >>= 1;
 
@@ -122,38 +122,31 @@ bool loadMP3(FILE *f, uint32_t filesize)
 		return false;
 	}
 
-	int16_t *out16 = (int16_t *)s->dataPtr;
+	int16_t *dst16 = (int16_t *)s->dataPtr;
 	if (mp3IsStereo)
 	{
-		switch (stereoAction)
+		if (stereoAction == STEREO_SAMPLE_MIX_TO_MONO)
 		{
-			case STEREO_SAMPLE_READ_LEFT_CHANNEL:
-			{
-				for (uint32_t i = 1; i < sampleLength; i++, src16 += 2)
-					out16[i] = src16[0];
-			}
-			break;
+			int16_t *src16 = (int16_t *)info.buffer;
+			for (uint32_t i = 0; i < sampleLength; i++, src16 += 2)
+				dst16[i] = (src16[0] + src16[1]) >> 1;
+		}
+		else
+		{
+			int16_t *src16;
+			if (stereoAction == STEREO_SAMPLE_READ_LEFT_CHANNEL)
+				src16 = (int16_t *)info.buffer + 0;
+			else
+				src16 = (int16_t *)info.buffer + 1;
 
-			case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
-			{
-				for (uint32_t i = 0; i < sampleLength; i++, src16 += 2)
-					out16[i] = src16[1];
-			}
-			break;
-
-			default:
-			case STEREO_SAMPLE_MIX_TO_MONO:
-			{
-				for (uint32_t i = 0; i < sampleLength; i++, src16 += 2)
-					out16[i] = (src16[0] + src16[1]) >> 1;
-			}
-			break;
+			for (uint32_t i = 1; i < sampleLength; i++, src16 += 2)
+				dst16[i] = *src16;
 		}
 	}
 	else
 	{
 		// mono
-		memcpy(out16, src16, sampleLength * sizeof (uint16_t));
+		memcpy(dst16, info.buffer, sampleLength * sizeof (uint16_t));
 	}
 
 	free(info.buffer);

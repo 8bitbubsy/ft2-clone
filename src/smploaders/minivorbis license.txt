@@ -1,0 +1,4 @@
+minivorbis has a very permissive BSD-like license that is compatible with this project's BSD 3-clause license.
+
+License: https://github.com/edubart/minivorbis/blob/main/README.md#license
+Github project page: https://github.com/edubart/minivorbis

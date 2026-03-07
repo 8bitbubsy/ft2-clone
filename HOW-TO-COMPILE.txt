@@ -17,7 +17,7 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
     ./make-linux-appimage.sh
 
  Note: If you don't have libstdc++ and/or can't compile rtmidi, try running
-       make-linux-nomidi-noflac.sh or make-linux-appimage-nomidi-noflac.sh
+       make-linux-nomidi.sh or make-linux-appimage-nomidi.sh
        instead.
        
  Known issues: Audio recording (sampling) can update VERY slowly or not work at

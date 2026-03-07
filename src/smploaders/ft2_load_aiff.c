@@ -148,10 +148,10 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 	uint32_t sampleLength = ssndLen;
 
-	int16_t stereoSampleLoadMode = -1;
+	int16_t stereoAction = -1;
 	if (aiffIsStereo(f))
 	{
-		stereoSampleLoadMode = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
+		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
 		setMouseBusy(true);
 	}
 
@@ -183,7 +183,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 		{
 			sampleLength /= 2;
 
-			switch (stereoSampleLoadMode)
+			switch (stereoAction)
 			{
 				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
@@ -243,7 +243,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 		{
 			sampleLength /= 2;
 
-			switch (stereoSampleLoadMode)
+			switch (stereoAction)
 			{
 				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
@@ -310,7 +310,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 		{
 			sampleLength /= 2;
 
-			switch (stereoSampleLoadMode)
+			switch (stereoAction)
 			{
 				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
@@ -381,7 +381,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 		{
 			sampleLength /= 2;
 
-			switch (stereoSampleLoadMode)
+			switch (stereoAction)
 			{
 				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
@@ -453,7 +453,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 		if (numChannels == 2)
 		{
 			sampleLength /= 2;
-			switch (stereoSampleLoadMode)
+			switch (stereoAction)
 			{
 				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{
@@ -525,7 +525,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 		if (numChannels == 2)
 		{
 			sampleLength /= 2;
-			switch (stereoSampleLoadMode)
+			switch (stereoAction)
 			{
 				case STEREO_SAMPLE_READ_LEFT_CHANNEL:
 				{

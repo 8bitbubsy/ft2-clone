@@ -1,0 +1,4 @@
+miniflac has a very permissive BSD 0-clause license that is compatible with this project's BSD 3-clause license.
+
+License: https://github.com/jprjr/miniflac/blob/main/LICENSE
+Github project page: https://github.com/jprjr/miniflac

@@ -16,15 +16,17 @@
 #include "ft2_diskop.h"
 #include "ft2_structs.h"
 
-#ifdef HAS_LIBFLAC
+bool detectFLAC(FILE *f);
 bool loadFLAC(FILE *f, uint32_t filesize);
-#endif
 
-bool detectBRR(FILE *f);
-bool loadBRR(FILE *f, uint32_t filesize);
+bool detectOGG(FILE *f);
+bool loadOGG(FILE *f, uint32_t filesize);
 
 bool detectMP3(FILE *f);
 bool loadMP3(FILE *f, uint32_t filesize);
+
+bool detectBRR(FILE *f);
+bool loadBRR(FILE *f, uint32_t filesize);
 
 bool loadAIFF(FILE *f, uint32_t filesize);
 bool loadIFF(FILE *f, uint32_t filesize);
@@ -38,15 +40,16 @@ enum
 	FORMAT_WAV = 2,
 	FORMAT_AIFF = 3,
 	FORMAT_FLAC = 4,
-	FORMAT_MP3 = 5,
-	FORMAT_BRR = 6
+	FORMAT_OGG = 5,
+	FORMAT_MP3 = 6,
+	FORMAT_BRR = 7
 };
 
 // file extensions accepted by Disk Op. in sample mode
 char *supportedSmpExtensions[] =
 {
 	"iff", "raw", "wav", "snd", "smp", "sam", "aif", "pat",
-	"aiff", "flac", "mp3", "brr", // IMPORTANT: Remember comma after last entry!!!
+	"aiff", "flac", "ogg", "mp3", "brr", // IMPORTANT: Remember comma after last entry!
 
 	"END_OF_LIST" // do NOT move, remove or edit this line!
 };
@@ -74,8 +77,14 @@ static int8_t detectSample(FILE *f)
 	fread(D, 1, sizeof (D), f);
 	fseek(f, oldPos, SEEK_SET);
 
-	if (!memcmp("fLaC", &D[0], 4)) // XXX: Kinda lousy detection...
+	if (detectFLAC(f))
 		return FORMAT_FLAC;
+
+	if (detectOGG(f))
+		return FORMAT_OGG;
+
+	if (detectMP3(f))
+		return FORMAT_MP3;
 
 	if (!memcmp("FORM", &D[0], 4) && (!memcmp("8SVX", &D[8], 4) || !memcmp("16SV", &D[8], 4)))
 		return FORMAT_IFF;
@@ -85,9 +94,6 @@ static int8_t detectSample(FILE *f)
 
 	if (!memcmp("FORM", &D[0], 4) && (!memcmp("AIFF", &D[8], 4) || !memcmp("AIFC", &D[8], 4)))
 		return FORMAT_AIFF;
-
-	if (detectMP3(f))
-		return FORMAT_MP3;
 
 	if (detectBRR(f))
 		return FORMAT_BRR;
@@ -126,19 +132,11 @@ static int32_t SDLCALL loadSampleThread(void *ptr)
 	rewind(f);
 	switch (format)
 	{
-		case FORMAT_FLAC:
-		{
-#ifdef HAS_LIBFLAC
-			sampleLoaded = loadFLAC(f, filesize);
-#else
-			loaderMsgBox("Can't load sample: Program is not compiled with FLAC support!");
-#endif
-		}
-		break;
-
 		case FORMAT_IFF: sampleLoaded = loadIFF(f, filesize); break;
 		case FORMAT_WAV: sampleLoaded = loadWAV(f, filesize); break;
 		case FORMAT_AIFF: sampleLoaded = loadAIFF(f, filesize); break;
+		case FORMAT_FLAC: sampleLoaded = loadFLAC(f, filesize); break;
+		case FORMAT_OGG: sampleLoaded = loadOGG(f, filesize); break;
 		case FORMAT_MP3: sampleLoaded = loadMP3(f, filesize); break;
 		case FORMAT_BRR: sampleLoaded = loadBRR(f, filesize); break;
 		default: sampleLoaded = loadRAW(f, filesize); break;

@@ -110,46 +110,7 @@
     <ClCompile Include="..\..\src\smploaders\ft2_load_flac.c">
       <Filter>smploaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libflac\bitmath.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\bitreader.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\crc.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\fixed.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\format.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\lpc.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\md5.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\memory.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\metadata_iterators.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\metadata_object.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\stream_decoder.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libflac\window.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\ft2_help.c" />
-    <ClCompile Include="..\..\src\libflac\windows_unicode_filenames.c">
-      <Filter>libflac</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\scopes\ft2_scopedraw.c">
       <Filter>scopes</Filter>
     </ClCompile>
@@ -173,6 +134,9 @@
       <Filter>mixer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\smploaders\ft2_load_mp3.c">
+      <Filter>smploaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\smploaders\ft2_load_ogg.c">
       <Filter>smploaders</Filter>
     </ClCompile>
   </ItemGroup>
@@ -339,6 +303,12 @@
     <ClInclude Include="..\..\src\smploaders\minimp3_ex.h">
       <Filter>smploaders</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\smploaders\miniflac.h">
+      <Filter>smploaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\smploaders\minivorbis.h">
+      <Filter>smploaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="mixer">
@@ -352,9 +322,6 @@
     </Filter>
     <Filter Include="rtmidi">
       <UniqueIdentifier>{95e882a1-e589-4684-a3cb-48e0a1d073aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="libflac">
-      <UniqueIdentifier>{13e9047f-28ee-414f-9e23-4ad54deb281e}</UniqueIdentifier>
     </Filter>
     <Filter Include="scopes">
       <UniqueIdentifier>{8ac888cf-e1a5-4633-bcca-240a8eae2e23}</UniqueIdentifier>

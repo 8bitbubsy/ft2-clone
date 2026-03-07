@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.7)
 
 project(ft2-clone)
 
-option(EXTERNAL_LIBFLAC "use external(system) flac library" OFF)
-
 find_package(SDL2 REQUIRED)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ft2-clone_SOURCE_DIR}/release/other/")
 
@@ -39,7 +37,6 @@ target_link_libraries(ft2-clone
 
 target_compile_definitions(ft2-clone
     PRIVATE HAS_MIDI
-    PRIVATE HAS_LIBFLAC)
 
 if(UNIX)
     if(APPLE)
@@ -62,19 +59,6 @@ if(UNIX)
         target_compile_definitions(ft2-clone
             PRIVATE __LINUX_ALSA__)
     endif()
-endif()
-
-if(EXTERNAL_LIBFLAC)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(FLAC REQUIRED IMPORTED_TARGET flac)
-    target_compile_definitions(ft2-clone
-        PRIVATE EXTERNAL_LIBFLAC)
-    target_link_libraries(ft2-clone
-        PRIVATE PkgConfig::FLAC)
-else()
-    file(GLOB flac_SRCS
-        "${ft2-clone_SOURCE_DIR}/src/libflac/*.c")
-    target_sources(ft2-clone PRIVATE ${flac_SRCS})
 endif()
 
 install(TARGETS ft2-clone

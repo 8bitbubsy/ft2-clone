@@ -3,15 +3,13 @@ This project uses the following licenses:
 Source code (BSD 3-clause):
 src\LICENSE.txt
 
-libFLAC:
-src\libflac\COPYING.txt
-
-rtmidi:
-src\rtmidi\LICENSE.txt
+rtmidi: src\rtmidi\LICENSE.txt
+minivorbis: "src\smploaders\minivorbis license.txt"
+minimp3: "src\smploaders\minimp3 license.txt"
+miniflac:" src\smploaders\miniflac license.txt"
+SDL2: vs2019_project\ft2-clone\sdl\LICENSE.txt
 
 Graphics, except a few bitmaps: by Magnus Högdahl
 (CC BY-NC-SA 4.0):
 src\gfxdata\bmp\LICENSE.txt
 
-SDL2:
-vs2019_project\ft2-clone\sdl\LICENSE.txt

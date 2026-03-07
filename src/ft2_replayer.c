@@ -150,6 +150,9 @@ void setSampleC4Hz(sample_t *s, double dC4Hz)
 	** tracker that *does* support the full 8 finetune bits.
 	*/
 
+	if (dC4Hz <= 0.0)
+		dC4Hz = 44100.0;
+
 	const double dC4PeriodOffset = (NOTE_C4 * 16) + 16;
 	int32_t note = (int32_t)round(dC4PeriodOffset + (log2(dC4Hz / C4_FREQ) * (12.0 * 16.0)));
 
