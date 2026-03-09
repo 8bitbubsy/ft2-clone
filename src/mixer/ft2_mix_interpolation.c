@@ -20,10 +20,10 @@ static sincKernel_t sincKernelConfig[SINC_KERNELS] =
 	** Higher beta = more treble cut off, less aliasing (wider mainlobe, weaker sidelobe)
 	*/
 
-	//   beta, cutoff
-	{  9.6377, 1.000 }, // kernel #1 (lower beta results in audible ringing in some cases)
-	{  8.5000, 0.750 }, // kernel #2
-	{  7.3000, 0.425 }  // kernel #3
+	//beta, cutoff
+	{  9.6, 1.000 }, // kernel #1 (lower beta results in audible ringing in some cases)
+	{  8.5, 0.750 }, // kernel #2
+	{  7.3, 0.425 }  // kernel #3
 };
 
 // globalized
