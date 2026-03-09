@@ -36,7 +36,7 @@ target_link_libraries(ft2-clone
     PRIVATE m Threads::Threads ${SDL2_LIBRARIES})
 
 target_compile_definitions(ft2-clone
-    PRIVATE HAS_MIDI
+    PRIVATE HAS_MIDI)
 
 if(UNIX)
     if(APPLE)
