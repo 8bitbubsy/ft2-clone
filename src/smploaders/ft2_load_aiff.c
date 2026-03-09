@@ -28,7 +28,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 	uint16_t numChannels, bitDepth;
 	int32_t *audioDataS32;
 	uint32_t i, blockName, blockSize;
-	uint32_t offset, len32;
+	uint32_t offset;
 	sample_t *s = &tmpSmp;
 
 	fseek(f, 8, SEEK_SET);
@@ -194,8 +194,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 						audioDataS8[i] = audioDataS8[(i * 2) + 1];
 
 					audioDataS8[i] = 0;
@@ -205,8 +204,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				default:
 				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 					{
 						smp16 = (audioDataS8[(i * 2) + 0] + audioDataS8[(i * 2) + 1]) >> 1;
 						audioDataS8[i] = (int8_t)smp16;
@@ -254,8 +252,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 						audioDataS16[i] = audioDataS16[(i * 2) + 1];
 
 					audioDataS16[i] = 0;
@@ -265,8 +262,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				default:
 				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 					{
 						int32_t smp32 = (audioDataS16[(i * 2) + 0] + audioDataS16[(i * 2) + 1]) >> 1;
 						audioDataS16[i] = (int16_t)smp32;
@@ -321,8 +317,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 						audioDataS32[i] = audioDataS32[(i * 2) + 1];
 
 					audioDataS32[i] = 0;
@@ -332,8 +327,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				default:
 				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 					{
 						int64_t smp64 = audioDataS32[(i * 2) + 0];
 						smp64 += audioDataS32[(i * 2) + 1];
@@ -392,8 +386,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 						audioDataS32[i] = audioDataS32[(i * 2) + 1];
 
 					audioDataS32[i] = 0;
@@ -403,8 +396,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				default:
 				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 					{
 						int64_t smp64 = audioDataS32[(i * 2) + 0];
 						smp64 += audioDataS32[(i * 2) + 1];
@@ -466,8 +458,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
 					// remove left channel data
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 						fAudioDataFloat[i] = fAudioDataFloat[(i * 2) + 1];
 
 					fAudioDataFloat[i] = 0.0f;
@@ -478,8 +469,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
 					// mix stereo to mono
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 						fAudioDataFloat[i] = (fAudioDataFloat[(i * 2) + 0] + fAudioDataFloat[(i * 2) + 1]) * 0.5f;
 
 					fAudioDataFloat[i] = 0.0f;
@@ -538,8 +528,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				case STEREO_SAMPLE_READ_RIGHT_CHANNEL:
 				{
 					// remove left channel data
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 						dAudioDataDouble[i] = dAudioDataDouble[(i * 2) + 1];
 
 					dAudioDataDouble[i] = 0.0;
@@ -550,8 +539,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 				case STEREO_SAMPLE_MIX_TO_MONO:
 				{
 					// mix stereo to mono
-					len32 = sampleLength - 1;
-					for (i = 0; i < len32; i++)
+					for (i = 0; i < sampleLength; i++)
 						dAudioDataDouble[i] = (dAudioDataDouble[(i * 2) + 0] + dAudioDataDouble[(i * 2) + 1]) * 0.5;
 
 					dAudioDataDouble[i] = 0.0;
