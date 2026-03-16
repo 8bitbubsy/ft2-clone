@@ -378,7 +378,6 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	freeTextBoxes();
 	freeMouseCursors();
 	freeBMPs();
-	freeScopeIntrpLUT();
 
 	if (editor.audioDevConfigFileLocationU != NULL)
 	{

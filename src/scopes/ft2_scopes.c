@@ -5,10 +5,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <math.h> // modf()
-#ifndef _WIN32
-#include <unistd.h> // usleep()
-#endif
 #include "../ft2_header.h"
 #include "../ft2_events.h"
 #include "../ft2_config.h"
@@ -519,9 +515,9 @@ void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatu
 	}
 }
 
-static int32_t SDLCALL scopeThreadFunc(void *ptr)
+static int32_t scopeThreadFunc(void *ptr)
 {
-	// this is needed for scope stability (confirmed)
+	// this is confirmed to be needed for scope stability
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
 
 	hpc_SetDurationInHz(&scopeHpc, SCOPE_HZ);
@@ -546,12 +542,6 @@ bool initScopes(void)
 	if (scopeThread == NULL)
 	{
 		showErrorMsgBox("Couldn't create channel scope thread!");
-		return false;
-	}
-
-	if (!calcScopeIntrpLUT())
-	{
-		showErrorMsgBox("Not enough memory!");
 		return false;
 	}
 
