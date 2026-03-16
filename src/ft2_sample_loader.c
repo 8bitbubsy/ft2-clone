@@ -101,7 +101,7 @@ static int8_t detectSample(FILE *f)
 	return FORMAT_UNKNOWN;
 }
 
-static int32_t SDLCALL loadSampleThread(void *ptr)
+static int32_t loadSampleThread(void *ptr)
 {
 	if (editor.tmpFilenameU == NULL)
 	{

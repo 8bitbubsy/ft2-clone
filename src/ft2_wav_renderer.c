@@ -327,7 +327,7 @@ static void updateVisuals(void)
 	ui.updatePatternEditor = true;
 }
 
-static int32_t SDLCALL renderWavThread(void *ptr)
+static int32_t renderWavThread(void *ptr)
 {
 	(void)ptr;
 
@@ -431,7 +431,7 @@ static int32_t SDLCALL renderWavThread(void *ptr)
 	return true;
 }
 
-static int32_t SDLCALL renderWavIndividualTracksThread(void *ptr)
+static int32_t renderWavIndividualTracksThread(void *ptr)
 {
 	bool overflow = false;
 

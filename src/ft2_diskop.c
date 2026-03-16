@@ -1895,7 +1895,7 @@ static DirRec *bufferCreateEmptyDir(void) // special case: creates a dir entry w
 	return dirEntry;
 }
 
-static int32_t SDLCALL diskOp_ReadDirectoryThread(void *ptr)
+static int32_t diskOp_ReadDirectoryThread(void *ptr)
 {
 	DirRec tmp;
 

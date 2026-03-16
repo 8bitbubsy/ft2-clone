@@ -645,7 +645,7 @@ modSaveError:
 	return false;
 }
 
-static int32_t SDLCALL saveMusicThread(void *ptr)
+static int32_t saveMusicThread(void *ptr)
 {
 	ASSERT(editor.tmpFilenameU != NULL);
 	if (editor.tmpFilenameU == NULL)

@@ -85,7 +85,7 @@
 */
 
 /* ----------------------------------------------------------------------- */
-/*                  NO INTERPOLATION (NEAREST NEIGHBOR)                    */
+/*                            NO INTERPOLATION                             */
 /* ----------------------------------------------------------------------- */
 
 #define RENDER_8BIT_SMP \
@@ -122,35 +122,8 @@
 
 
 /* ----------------------------------------------------------------------- */
-/*                     QUADRATIC SPLINE INTERPOLATION                      */
-/* ----------------------------------------------------------------------- */
-
-// through LUT: mixer/ft2_quadratic_spline.c
-
-#define QUADRATIC_SPLINE_INTERPOLATION(s, f, scale) \
-{ \
-	const float *t = fQuadraticSplineLUT + (((uint32_t)(f) >> QUADRATIC_SPLINE_FRACSHIFT) * QUADRATIC_SPLINE_WIDTH); \
-	fSample = ((s[0] * t[0]) + \
-	           (s[1] * t[1]) + \
-	           (s[2] * t[2])) * (1.0f / scale); \
-}
-
-#define RENDER_8BIT_SMP_QINTRP \
-	QUADRATIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 128) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
-
-#define RENDER_16BIT_SMP_QINTRP \
-	QUADRATIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 32768) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
-
-
-/* ----------------------------------------------------------------------- */
 /*                       CUBIC SPLINE INTERPOLATION                        */
 /* ----------------------------------------------------------------------- */
-
-// through LUT: mixer/ft2_cubic_spline.c
 
 #define CUBIC_SPLINE_INTERPOLATION(s, f, scale) \
 { \
@@ -192,8 +165,6 @@
 /* ----------------------------------------------------------------------- */
 /*                       WINDOWED-SINC INTERPOLATION                       */
 /* ----------------------------------------------------------------------- */
-
-// through LUTs: mixer/ft2_windowed_sinc.c
 
 #define WINDOWED_SINC8_INTERPOLATION(s, f, scale) \
 { \
@@ -314,9 +285,7 @@
 #define LIMIT_MIX_NUM_RAMP \
 	if (v->volumeRampLength == 0) \
 	{ \
-		fVolumeLDelta = 0.0f; \
-		fVolumeRDelta = 0.0f; \
-		\
+		fVolumeLDelta = fVolumeRDelta = 0.0f; \
 		if (v->isFadeOutVoice) \
 		{ \
 			v->active = false; /* volume ramp fadeout-voice is done, shut it down */ \

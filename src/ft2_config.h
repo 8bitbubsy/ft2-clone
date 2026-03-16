@@ -205,7 +205,6 @@ void rbConfigAudio16Bit(void);
 void rbConfigAudio32BitFloat(void);
 void rbConfigAudioIntrpDisabled(void);
 void rbConfigAudioIntrpLinear(void);
-void rbConfigAudioIntrpQuadratic(void);
 void rbConfigAudioIntrpCubic(void);
 void rbConfigAudioIntrpSinc8(void);
 void rbConfigAudioIntrpSinc16(void);

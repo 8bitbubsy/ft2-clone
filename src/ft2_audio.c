@@ -336,7 +336,7 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 		return;
 	}
 
-	v->mixFuncOffset = ((int32_t)sample16Bit * 18) + (audio.interpolationType * 3) + loopType;
+	v->mixFuncOffset = ((int32_t)sample16Bit * 15) + (audio.interpolationType * 3) + loopType;
 	v->active = true;
 }
 
@@ -822,7 +822,7 @@ static void fillVisualsSyncBuffer(void)
 	}
 }
 
-static void SDLCALL audioCallback(void *userdata, Uint8 *stream, int len)
+static void audioCallback(void *userdata, Uint8 *stream, int len)
 {
 	if (editor.wavIsRendering)
 	{

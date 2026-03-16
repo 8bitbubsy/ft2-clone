@@ -38,7 +38,7 @@ static uint32_t samplingRate;
 static sample_t *smpL, *smpR;
 static SDL_AudioDeviceID recordDev;
 
-static void SDLCALL stereoSamplingCallback(void *userdata, Uint8 *stream, int len)
+static void stereoSamplingCallback(void *userdata, Uint8 *stream, int len)
 {
 	const int32_t samples = len >> 2;
 	if (instr[editor.curInstr] == NULL || samples < 0 || samples > samplingBufferSize)
@@ -100,7 +100,7 @@ static void SDLCALL stereoSamplingCallback(void *userdata, Uint8 *stream, int le
 	(void)userdata;
 }
 
-static void SDLCALL monoSamplingCallback(void *userdata, Uint8 *stream, int len)
+static void monoSamplingCallback(void *userdata, Uint8 *stream, int len)
 {
 	const int32_t samples = len >> 1;
 	if (instr[editor.curInstr] == NULL || samples < 0 || samples > samplingBufferSize)

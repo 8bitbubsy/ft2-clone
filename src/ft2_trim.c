@@ -828,7 +828,7 @@ static int64_t calculateTrimSize(void)
 	return bytes64;
 }
 
-static int32_t SDLCALL trimThreadFunc(void *ptr)
+static int32_t trimThreadFunc(void *ptr)
 {
 	int16_t i, j, k;
 

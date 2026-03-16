@@ -813,21 +813,15 @@ right choice. For modules with lo-fi samples, the better the filter the
 more dull it sounds. In such cases, a worse interpolator may allow
 for more "fun" listening by allowing some aliasing.
 >
->@X052@C001No interpolation:
->@X060@C002Also known as "nearest neighbor". The absolute worst option, but
-may be preferred by some people when playing chiptune styled
-tunes. Be prepared for a ton of aliasing (distortion).
+>@X052@C001Disabled:
+>@X060@C002The absolute worst option, but may be preferred by some people
+when playing chiptune styled tunes. Be prepared for a ton of
+aliasing (distortion).
 
 >@X052@C001Linear (FT2):
 >@X060@C002Same interpolator as original Fasttracker II. Not a particularly good
 option, but may be nostalgic to a lot of people, including those that
 used a Gravis Ultrasound sound card.
-
->@X052@C001Quadratic spline:
->@X060@C0023-point quadratic spline interpolation. If you prefer the soft sound
-of linear interpolation, but want just a tad bit more treble, then this
-may be a good option. Like linear interpolation, this one isn't too
-harsh on lo-fi samples.
 
 >@X052@C001Cubic spline:
 >@X060@C0024-point cubic Hermite spline interpolation. A good trade-off between

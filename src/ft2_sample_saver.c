@@ -498,7 +498,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 	return true;
 }
 
-static int32_t SDLCALL saveSampleThread(void *ptr)
+static int32_t saveSampleThread(void *ptr)
 {
 	if (editor.tmpFilenameU == NULL)
 	{

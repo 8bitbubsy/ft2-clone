@@ -235,7 +235,7 @@ static void clearTmpModule(void)
 		patternNumRowsTmp[i] = 64;
 }
 
-static int32_t SDLCALL loadMusicThread(void *ptr)
+static int32_t loadMusicThread(void *ptr)
 {
 	return doLoadMusic(true);
 	(void)ptr;

@@ -15,19 +15,30 @@ typedef struct
 
 static sincKernel_t sincKernelConfig[SINC_KERNELS] =
 {
-	/* Some notes on the Kaiser-Bessel beta parameter:
-	** Lower beta = less treble cut off, more aliasing (narrower mainlobe, stronger sidelobe)
-	** Higher beta = more treble cut off, less aliasing (wider mainlobe, weaker sidelobe)
+	/* These parameters have been borrowed from OpenMPT.
+	** Only modification done was to change the cutoff from
+	** 0.97 to 1.0 for the first kernel, which after some
+	** testing was determined to be a good change; more
+	** sharpness, and no increase in audible aliasing
+	** (to me, at least).
+	**
+	** It's quite difficult to tweak these numbers without
+	** causing either ringing or aliasing in some cases.
+	** If someone has good experience on designing
+	** windowed-sinc kernels for a use case like this,
+	** and knows of a good way to figure out what numbers
+	** to use here, PLEASE contact me (contact details can
+	**  be found on the bottom of 16-bits.org).
 	*/
 
-	//beta, cutoff
-	{  9.6, 1.000 }, // kernel #1 (lower beta results in audible ringing in some cases)
-	{  8.5, 0.750 }, // kernel #2
-	{  7.3, 0.425 }  // kernel #3
+	// beta,  cutoff
+	{ 9.6377, 1.000 }, // kernel #1
+	{ 8.5000, 0.500 }, // kernel #2
+	{ 7.0000, 0.425 }  // kernel #3
 };
 
 // globalized
-float *fQuadraticSplineLUT, *fCubicSplineLUT, *fSinc[SINC_KERNELS], *fSinc8[SINC_KERNELS], *fSinc16[SINC_KERNELS];
+float *fCubicSplineLUT, *fSinc[SINC_KERNELS], *fSinc8[SINC_KERNELS], *fSinc16[SINC_KERNELS];
 uint64_t sincRatio1, sincRatio2;
 // ----------
 
@@ -35,45 +46,19 @@ static void makeSincKernel(float *fOut, int32_t numPoints, int32_t numPhases, do
 
 bool setupMixerInterpolationTables(void)
 {
-	float *fPtr;
-
-	// quadratic spline (3-point)
-
-	fQuadraticSplineLUT = (float *)malloc(QUADRATIC_SPLINE_WIDTH * QUADRATIC_SPLINE_PHASES * sizeof (float));
-	if (fQuadraticSplineLUT == NULL)
-	{
-		showErrorMsgBox("Not enough memory!");
-		return false;
-	}
-
-	fPtr = fQuadraticSplineLUT;
-	for (int32_t i = 0; i < QUADRATIC_SPLINE_PHASES; i++)
-	{
-		const double x1 = i * (1.0 / QUADRATIC_SPLINE_PHASES);
-		const double x2 = x1 * x1; // x^2
-
-		const double t1 = (x1 * -1.5) + (x2 *  0.5) + 1.0;
-		const double t2 = (x1 *  2.0) + (x2 * -1.0);
-		const double t3 = (x1 * -0.5) + (x2 *  0.5);
-
-		*fPtr++ = (float)t1; // tap #1 at sample offset 0 (center)
-		*fPtr++ = (float)t2; // tap #2 at sample offset 1
-		*fPtr++ = (float)t3; // tap #3 at sample offset 2
-	}
-	
 	// cubic spline (4-point)
 
-	fCubicSplineLUT = (float *)malloc(CUBIC_SPLINE_WIDTH * CUBIC_SPLINE_PHASES * sizeof (float));
+	fCubicSplineLUT = (float *)malloc(CUBIC_SPLINE_WIDTH * INTRP_PHASES * sizeof (float));
 	if (fCubicSplineLUT == NULL)
 	{
 		showErrorMsgBox("Not enough memory!");
 		return false;
 	}
 
-	fPtr = fCubicSplineLUT;
-	for (int32_t i = 0; i < CUBIC_SPLINE_PHASES; i++)
+	float *fPtr = fCubicSplineLUT;
+	for (int32_t i = 0; i < INTRP_PHASES; i++)
 	{
-		const double x1 = i * (1.0 / CUBIC_SPLINE_PHASES);
+		const double x1 = i * (1.0 / INTRP_PHASES);
 		const double x2 = x1 * x1; // x^2
 		const double x3 = x2 * x1; // x^3
 
@@ -93,8 +78,8 @@ bool setupMixerInterpolationTables(void)
 	sincKernel_t *k = sincKernelConfig;
 	for (int32_t i = 0; i < SINC_KERNELS; i++, k++)
 	{
-		 fSinc8[i] = (float *)malloc( 8 * SINC_PHASES * sizeof (float));
-		fSinc16[i] = (float *)malloc(16 * SINC_PHASES * sizeof (float));
+		 fSinc8[i] = (float *)malloc(SINC8_WIDTH  * INTRP_PHASES * sizeof (float));
+		fSinc16[i] = (float *)malloc(SINC16_WIDTH * INTRP_PHASES * sizeof (float));
 
 		if (fSinc8[i] == NULL || fSinc16[i] == NULL)
 		{
@@ -102,8 +87,8 @@ bool setupMixerInterpolationTables(void)
 			return false;
 		}
 
-		makeSincKernel( fSinc8[i],  8, SINC_PHASES, k->kaiserBeta, k->sincCutoff);
-		makeSincKernel(fSinc16[i], 16, SINC_PHASES, k->kaiserBeta, k->sincCutoff);
+		makeSincKernel( fSinc8[i], SINC8_WIDTH,  INTRP_PHASES, k->kaiserBeta, k->sincCutoff);
+		makeSincKernel(fSinc16[i], SINC16_WIDTH, INTRP_PHASES, k->kaiserBeta, k->sincCutoff);
 	}
 
 	// resampling ratios for sinc kernel selection
@@ -115,12 +100,6 @@ bool setupMixerInterpolationTables(void)
 
 void freeMixerInterpolationTables(void)
 {
-	if (fQuadraticSplineLUT != NULL)
-	{
-		free(fQuadraticSplineLUT);
-		fQuadraticSplineLUT = NULL;
-	}
-
 	if (fCubicSplineLUT != NULL)
 	{
 		free(fCubicSplineLUT);

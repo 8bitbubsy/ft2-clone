@@ -167,7 +167,7 @@ static instr_t *getCurDispInstr(void)
 	return instr[editor.curInstr];
 }
 
-static int32_t SDLCALL copyInstrThread(void *ptr)
+static int32_t copyInstrThread(void *ptr)
 {
 	const int16_t dstIns = editor.curInstr;
 	const int16_t srcIns = editor.srcInstr;
@@ -2923,7 +2923,7 @@ bool testInstrSwitcherMouseDown(void)
 		return testInstrSwitcherNormal();
 }
 
-static int32_t SDLCALL saveInstrThread(void *ptr)
+static int32_t saveInstrThread(void *ptr)
 {
 	xiHdr_t ih;
 	sample_t *s;
@@ -3113,7 +3113,7 @@ static int16_t getPATNote(uint32_t freq)
 	return (int16_t)round(NOTE_C4 + dNote);
 }
 
-static int32_t SDLCALL loadInstrThread(void *ptr)
+static int32_t loadInstrThread(void *ptr)
 {
 	int16_t a, b;
 	int32_t i, j, numLoadedSamples;

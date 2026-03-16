@@ -79,7 +79,7 @@ static void pbResampleTonesUp(void)
 		smpEd_RelReSmp++;
 }
 
-static int32_t SDLCALL resampleThread(void *ptr)
+static int32_t resampleThread(void *ptr)
 {
 	smpPtr_t sp;
 
@@ -403,7 +403,7 @@ static void pbEchoFadeoutUp(void)
 		echo_VolChange++;
 }
 
-static int32_t SDLCALL createEchoThread(void *ptr)
+static int32_t createEchoThread(void *ptr)
 {
 	smpPtr_t sp;
 
@@ -799,7 +799,7 @@ void pbSampleEcho(void)
 		okBox(0, "System message", "Not enough memory!", NULL);
 }
 
-static int32_t SDLCALL mixThread(void *ptr)
+static int32_t mixThread(void *ptr)
 {
 	smpPtr_t sp;
 
@@ -1155,7 +1155,7 @@ static void pbSampEndVolUp(void)
 	dVol_EndVol = floor(dVol_EndVol);
 }
 
-static int32_t SDLCALL applyVolumeThread(void *ptr)
+static int32_t applyVolumeThread(void *ptr)
 {
 	int32_t x1, x2;
 
@@ -1272,7 +1272,7 @@ static void pbApplyVolume(void)
 	SDL_DetachThread(thread);
 }
 
-static int32_t SDLCALL getMaxScaleThread(void *ptr)
+static int32_t getMaxScaleThread(void *ptr)
 {
 	int32_t x1, x2;
 

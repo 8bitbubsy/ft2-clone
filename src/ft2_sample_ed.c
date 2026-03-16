@@ -702,7 +702,7 @@ static bool getCopyBuffer(int32_t size, bool sample16Bit)
 	return true;
 }
 
-static int32_t SDLCALL copySampleThread(void *ptr)
+static int32_t copySampleThread(void *ptr)
 {
 	pauseAudio();
 
@@ -1980,7 +1980,7 @@ static bool cutRange(bool cropMode, int32_t r1, int32_t r2)
 	return true;
 }
 
-static int32_t SDLCALL sampCutThread(void *ptr)
+static int32_t sampCutThread(void *ptr)
 {
 	if (!cutRange(false, smpEd_Rx1, smpEd_Rx2))
 		okBoxThreadSafe(0, "System message", "Not enough memory! (Disable \"cut to buffer\")", NULL);
@@ -2009,7 +2009,7 @@ void sampCut(void)
 	SDL_DetachThread(thread);
 }
 
-static int32_t SDLCALL sampCopyThread(void *ptr)
+static int32_t sampCopyThread(void *ptr)
 {
 	sample_t *s = getCurSample();
 
@@ -2143,7 +2143,7 @@ static void pasteCopiedData(int8_t *dataPtr, int32_t offset, int32_t length, boo
 	}
 }
 
-static int32_t SDLCALL sampPasteThread(void *ptr)
+static int32_t sampPasteThread(void *ptr)
 {
 	smpPtr_t sp;
 
@@ -2268,7 +2268,7 @@ void sampPaste(void)
 	SDL_DetachThread(thread);
 }
 
-static int32_t SDLCALL sampCropThread(void *ptr)
+static int32_t sampCropThread(void *ptr)
 {
 	sample_t *s = getCurSample();
 
@@ -2643,7 +2643,7 @@ void rbSamplePingpongLoop(void)
 	setSongModifiedFlag();
 }
 
-static int32_t SDLCALL convSmp8Bit(void *ptr)
+static int32_t convSmp8Bit(void *ptr)
 {
 	sample_t *s = getCurSample();
 	ASSERT(s->dataPtr != NULL);
@@ -2708,7 +2708,7 @@ void rbSample8bit(void)
 	}
 }
 
-static int32_t SDLCALL convSmp16Bit(void *ptr)
+static int32_t convSmp16Bit(void *ptr)
 {
 	sample_t *s = getCurSample();
 
@@ -3534,7 +3534,7 @@ void toggleSampleEditorExt(void)
 		showSampleEditorExt();
 }
 
-static int32_t SDLCALL sampleBackwardsThread(void *ptr)
+static int32_t sampleBackwardsThread(void *ptr)
 {
 	int8_t tmp8, *ptrStart, *ptrEnd;
 	int16_t tmp16, *ptrStart16, *ptrEnd16;
@@ -3622,7 +3622,7 @@ void sampleBackwards(void)
 	SDL_DetachThread(thread);
 }
 
-static int32_t SDLCALL sampleChangeSignThread(void *ptr)
+static int32_t sampleChangeSignThread(void *ptr)
 {
 	sample_t *s = getCurSample();
 
@@ -3671,7 +3671,7 @@ void sampleChangeSign(void)
 	SDL_DetachThread(thread);
 }
 
-static int32_t SDLCALL sampleByteSwapThread(void *ptr)
+static int32_t sampleByteSwapThread(void *ptr)
 {
 	sample_t *s = getCurSample();
 
@@ -3725,7 +3725,7 @@ void sampleByteSwap(void)
 	SDL_DetachThread(thread);
 }
 
-static int32_t SDLCALL fixDCThread(void *ptr)
+static int32_t fixDCThread(void *ptr)
 {
 	int8_t *ptr8;
 	int16_t *ptr16;
