@@ -6733,13 +6733,13 @@ void mdct_init(mdct_lookup *lookup,int n){
   /* _bitreverse lookup... */
 
   {
-    int mask=(1<<(log2n-1))-1,i,j;
+    int mymask=(1<<(log2n-1))-1,j;
     int msb=1<<(log2n-2);
     for(i=0;i<n/8;i++){
       int acc=0;
       for(j=0;msb>>j;j++)
         if((msb>>j)&i)acc|=1<<j;
-      bitrev[i*2]=((~acc)&mask)-1;
+      bitrev[i*2]=((~acc)&mymask)-1;
       bitrev[i*2+1]=acc;
 
     }
@@ -7092,10 +7092,10 @@ void mdct_backward(mdct_lookup *init, DATA_TYPE *in, DATA_TYPE *out){
   /* roatate + window */
 
   {
-    DATA_TYPE *oX1=out+n2+n4;
-    DATA_TYPE *oX2=out+n2+n4;
-    DATA_TYPE *iX =out;
-    T             =init->trig+n2;
+    DATA_TYPE *oX1	=out+n2+n4;
+    DATA_TYPE *oX2	=out+n2+n4;
+    iX				=out;
+    T             	=init->trig+n2;
 
     do{
       oX1-=4;
@@ -8726,7 +8726,7 @@ static int _vds_shared_init(vorbis_dsp_state *v,vorbis_info *vi,int encp){
   v->pcm=_ogg_malloc(vi->channels*sizeof(*v->pcm));
   v->pcmret=_ogg_malloc(vi->channels*sizeof(*v->pcmret));
   {
-    int i;
+  	//int i;
     for(i=0;i<vi->channels;i++)
       v->pcm[i]=_ogg_calloc(v->pcm_storage,sizeof(*v->pcm[i]));
   }
@@ -8866,9 +8866,9 @@ float **vorbis_analysis_buffer(vorbis_dsp_state *v, int vals){
   private_state *b=v->backend_state;
 
   /* free header, header1, header2 */
-  if(b->header)_ogg_free(b->header);b->header=NULL;
-  if(b->header1)_ogg_free(b->header1);b->header1=NULL;
-  if(b->header2)_ogg_free(b->header2);b->header2=NULL;
+  if(b->header) 	{_ogg_free(b->header); b->header=NULL;}
+  if(b->header1) 	{_ogg_free(b->header1); b->header1=NULL;}
+  if(b->header2) 	{_ogg_free(b->header2); b->header2=NULL;}
 
   /* Do we have enough storage space for the requested buffer? If not,
      expand the PCM (and envelope) storage */
@@ -9499,7 +9499,6 @@ int vorbis_synthesis_lapout(vorbis_dsp_state *v,float ***pcm){
   }
 
   if(pcm){
-    int i;
     for(i=0;i<vi->channels;i++)
       v->pcmret[i]=v->pcm[i]+v->pcm_returned;
     *pcm=v->pcmret;
@@ -13175,7 +13174,7 @@ static float ***setup_tone_curves(float curveatt_dB[P_BANDS],float binHz,int n,
 
 
       for(j=0;j<EHMER_MAX;j++){
-        int bin=fromOC(j*.125+i*.5-2.)/binHz;
+        bin=fromOC(j*.125+i*.5-2.)/binHz;
         if(bin<0){
           ret[i][m][j+2]=-999.;
         }else{
@@ -13644,7 +13643,8 @@ void _vp_noisemask(vorbis_look_psy *p,
                    float *logmask){
 
   int i,n=p->n;
-  float *work=alloca(n*sizeof(*work));
+  float *work;
+  work=alloca(n*sizeof(*work));
 
   bark_noise_hybridmp(n,p->bark,logmdct,logmask,
                       140.,-1);
@@ -15062,6 +15062,8 @@ static vorbis_look_floor *floor1_look(vorbis_dsp_state *vd,
   case 4: /* 1024 -> 64 */
     look->quant_q=64;
     break;
+  default:
+  	break;
   }
 
   /* discover our neighbors for decode where we don't use fit flags
@@ -15329,10 +15331,10 @@ static int fit_line(lsfit_acc *a,int fits,int *y0,int *y1,
     double denom=(bn*x2b-xb*xb);
 
     if(denom>0.){
-      double a=(yb*x2b-xyb*xb)/denom;
-      double b=(bn*xyb-xb*yb)/denom;
-      *y0=rint(a+b*x0);
-      *y1=rint(a+b*x1);
+      double mya=(yb*x2b-xyb*xb)/denom;
+      double myb=(bn*xyb-xb*yb)/denom;
+      *y0=rint(mya+myb*x0);
+      *y1=rint(mya+myb*x1);
 
       /* limit to our range! */
       if(*y0>1023)*y0=1023;
@@ -15349,7 +15351,7 @@ static int fit_line(lsfit_acc *a,int fits,int *y0,int *y1,
   }
 }
 
-static int inspect_error(int x0,int x1,int y0,int y1,const float *mask,
+static int inspect_error(int x0,int x1,int y0,int y1,const float *fmask,
                          const float *mdct,
                          vorbis_info_floor1 *info){
   int dy=y1-y0;
@@ -15360,7 +15362,7 @@ static int inspect_error(int x0,int x1,int y0,int y1,const float *mask,
   int x=x0;
   int y=y0;
   int err=0;
-  int val=vorbis_dBquant(mask+x);
+  int val=vorbis_dBquant(fmask+x);
   int mse=0;
   int n=0;
 
@@ -15369,7 +15371,7 @@ static int inspect_error(int x0,int x1,int y0,int y1,const float *mask,
   mse=(y-val);
   mse*=mse;
   n++;
-  if(mdct[x]+info->twofitatten>=mask[x]){
+  if(mdct[x]+info->twofitatten>=fmask[x]){
     if(y+info->maxover<val)return(1);
     if(y-info->maxunder>val)return(1);
   }
@@ -15383,10 +15385,10 @@ static int inspect_error(int x0,int x1,int y0,int y1,const float *mask,
       y+=base;
     }
 
-    val=vorbis_dBquant(mask+x);
+    val=vorbis_dBquant(fmask+x);
     mse+=((y-val)*(y-val));
     n++;
-    if(mdct[x]+info->twofitatten>=mask[x]){
+    if(mdct[x]+info->twofitatten>=fmask[x]){
       if(val){
         if(y+info->maxover<val)return(1);
         if(y-info->maxunder>val)return(1);
@@ -15546,8 +15548,8 @@ int *floor1_fit(vorbis_block *vb,vorbis_look_floor1 *look,
       int hn=look->hineighbor[i-2];
       int x0=info->postlist[ln];
       int x1=info->postlist[hn];
-      int y0=output[ln];
-      int y1=output[hn];
+      y0=output[ln];
+      y1=output[hn];
 
       int predicted=render_point(x0,x1,y0,y1,info->postlist[i]);
       int vx=post_Y(fit_valueA,fit_valueB,i);
@@ -15614,6 +15616,8 @@ int floor1_encode(oggpack_buffer *opb,vorbis_block *vb,
         break;
       case 4: /* 1024 -> 64 */
         val>>=4;
+        break;
+      default:
         break;
       }
       post[i]=val | (post[i]&0x8000);
@@ -18127,6 +18131,8 @@ static_codebook *vorbis_staticbook_unpack(oggpack_buffer *opb){
       case 2:
         quantvals=s->entries*s->dim;
         break;
+      default:
+        break;
       }
 
       /* quantized values */
@@ -18609,6 +18615,7 @@ float *_book_unquantize(const static_codebook *b,int n,int *sparsemap){
         }
       }
       break;
+    default: break;
     }
 
     return(r);
@@ -18762,14 +18769,14 @@ int vorbis_book_init_decode(codebook *c,const static_codebook *s){
       /* now fill in 'unused' entries in the firsttable with hi/lo search
          hints for the non-direct-hits */
       {
-        ogg_uint32_t mask=0xfffffffeUL<<(31-c->dec_firsttablen);
+        ogg_uint32_t oggmask=0xfffffffeUL<<(31-c->dec_firsttablen);
         long lo=0,hi=0;
 
         for(i=0;i<tabn;i++){
           ogg_uint32_t word=i<<(32-c->dec_firsttablen);
           if(c->dec_firsttable[bitreverse(word)]==0){
             while((lo+1)<n && c->codelist[lo+1]<=word)lo++;
-            while(    hi<n && word>=(c->codelist[hi]&mask))hi++;
+            while(    hi<n && word>=(c->codelist[hi]&oggmask))hi++;
 
             /* we only actually have 15 bits per hint to play with here.
                In order to overflow gracefully (nothing breaks, efficiency
@@ -20403,10 +20410,10 @@ long ov_bitrate(OggVorbis_File *vf,int i){
   if(!vf->seekable && i!=0)return(ov_bitrate(vf,0));
   if(i<0){
     ogg_int64_t bits=0;
-    int i;
+    int ii;
     float br;
-    for(i=0;i<vf->links;i++)
-      bits+=(vf->offsets[i+1]-vf->dataoffsets[i])*8;
+    for(ii=0;ii<vf->links;ii++)
+      bits+=(vf->offsets[ii+1]-vf->dataoffsets[ii])*8;
     /* This once read: return(rint(bits/ov_time_total(vf,-1)));
      * gcc 3.x on x86 miscompiled this at optimisation level 2 and above,
      * so this is slightly transformed to make it work.
@@ -20471,9 +20478,9 @@ ogg_int64_t ov_raw_total(OggVorbis_File *vf,int i){
   if(!vf->seekable || i>=vf->links)return(OV_EINVAL);
   if(i<0){
     ogg_int64_t acc=0;
-    int i;
-    for(i=0;i<vf->links;i++)
-      acc+=ov_raw_total(vf,i);
+    int ii;
+    for(ii=0;i<vf->links;ii++)
+      acc+=ov_raw_total(vf,ii);
     return(acc);
   }else{
     return(vf->offsets[i+1]-vf->offsets[i]);
@@ -20509,9 +20516,9 @@ double ov_time_total(OggVorbis_File *vf,int i){
   if(!vf->seekable || i>=vf->links)return(OV_EINVAL);
   if(i<0){
     double acc=0;
-    int i;
-    for(i=0;i<vf->links;i++)
-      acc+=ov_time_total(vf,i);
+    int ii;
+    for(ii=0;ii<vf->links;ii++)
+      acc+=ov_time_total(vf,ii);
     return(acc);
   }else{
     return((double)(vf->pcmlengths[i*2+1])/vf->vi[i].rate);
@@ -20885,7 +20892,7 @@ int ov_pcm_seek_page(OggVorbis_File *vf,ogg_int64_t pos){
       /* Bisection found our page. seek to it, update pcm offset. Easier case than
          raw_seek, don't keep packets preceding granulepos. */
 
-      ogg_page og;
+	  //ogg_page og;
       ogg_packet op;
 
       /* seek */
@@ -20980,7 +20987,7 @@ int ov_pcm_seek(OggVorbis_File *vf,ogg_int64_t pos){
     ogg_packet op;
     ogg_page og;
 
-    int ret=ogg_stream_packetpeek(&vf->os,&op);
+    ret=ogg_stream_packetpeek(&vf->os,&op);
     if(ret>0){
       thisblock=vorbis_packet_blocksize(vf->vi+vf->current_link,&op);
       if(thisblock<0){
@@ -21360,7 +21367,7 @@ long ov_read_filter(OggVorbis_File *vf,char *buffer,int length,
           vorbis_fpu_restore(fpu);
 
         }else{
-          int val;
+          //int val;
           vorbis_fpu_setround(&fpu);
           for(j=0;j<samples;j++)
             for(i=0;i<channels;i++){

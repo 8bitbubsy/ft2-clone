@@ -2307,6 +2307,7 @@ miniflac_init(miniflac_t* pFlac, MINIFLAC_CONTAINER container) {
             miniflac_reset(pFlac, MINIFLAC_OGGHEADER);
             break;
         }
+        default: break;
     }
 }
 
@@ -2384,6 +2385,7 @@ miniflac_sync_internal(miniflac_t* pFlac, miniflac_bitreader_t* br) {
 
             return miniflac_frame_sync(&pFlac->frame,br,&pFlac->metadata.streaminfo);
         }
+        default: return MINIFLAC_ERROR; break;
     }
 
     miniflac_abort();
@@ -3384,6 +3386,7 @@ miniflac_ogg_sync(miniflac_ogg_t* ogg,miniflac_bitreader_t* br) {
             ogg->state = MINIFLAC_OGG_DATA;
             return MINIFLAC_OK;
         }
+        default: return MINIFLAC_ERROR; break;
     }
     return MINIFLAC_ERROR;
 }
@@ -3751,6 +3754,7 @@ miniflac_frame_header_decode(miniflac_frame_header_t* header, miniflac_bitreader
                     miniflac_abort();
                     return MINIFLAC_FRAME_RESERVED_SAMPLE_SIZE;
                 }
+                default: break;
             }
             header->state = MINIFLAC_FRAME_HEADER_RESERVEBIT_2;
         }
@@ -5419,6 +5423,7 @@ miniflac_residual_decode(miniflac_residual_t* residual, miniflac_bitreader_t* br
                     residual->rice_parameter_size = 5;
                     break;
                 }
+                default: break;
             }
             residual->msb = 0;
             residual->state = MINIFLAC_RESIDUAL_PARTITION_ORDER;
