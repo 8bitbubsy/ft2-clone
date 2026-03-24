@@ -11,15 +11,24 @@
 #pragma warning(disable: 4267)
 #pragma warning(disable: 4456)
 #pragma warning(disable: 4706)
+#define MINIMP3_ONLY_MP3
+#define MINIMP3_NO_STDIO
+#define MINIMP3_IMPLEMENTATION
+#include "minimp3_ex.h"
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+#define MINIFLAC_IMPLEMENTATION
+#define MINIMP3_ONLY_MP3
+#define MINIMP3_NO_STDIO
+#define MINIMP3_IMPLEMENTATION
+#include "minimp3_ex.h"
+#pragma GCC diagnostic pop
 #endif
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#define MINIMP3_ONLY_MP3
-#define MINIMP3_NO_STDIO
-#define MINIMP3_IMPLEMENTATION
-#include "minimp3_ex.h"
 #include "../ft2_header.h"
 #include "../ft2_mouse.h"
 #include "../ft2_sample_ed.h"

@@ -13,13 +13,20 @@
 #pragma warning(disable: 4245)
 #pragma warning(disable: 4267)
 #pragma warning(disable: 4334)
+#define MINIFLAC_IMPLEMENTATION
+#include "miniflac.h"
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#define MINIFLAC_IMPLEMENTATION
+#include "miniflac.h"
+#pragma GCC diagnostic pop
 #endif
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#define MINIFLAC_IMPLEMENTATION
-#include "miniflac.h"
 #include "../ft2_header.h"
 #include "../ft2_mouse.h"
 #include "../ft2_audio.h"
@@ -53,7 +60,7 @@ bool detectFLAC(FILE *f)
 
 bool loadFLAC(FILE *f, uint32_t filesize)
 {
-	int32_t *samples[2];
+	int32_t *samples[2] = { NULL };
 	uint32_t sampleRate = 44100;
 	uint64_t totalSamples = 0;
 	miniflac_t decoder;

@@ -15,14 +15,25 @@
 #pragma warning(disable: 4457)
 #pragma warning(disable: 4459)
 #pragma warning(disable: 4706)
+#define OGG_IMPL
+#define VORBIS_IMPL
+#include "minivorbis.h"
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wshadow"
+#pragma GCC diagnostic ignored "-Wswitch-default"
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#define OGG_IMPL
+#define VORBIS_IMPL
+#include "minivorbis.h"
+#pragma GCC diagnostic pop
 #endif
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#define OGG_IMPL
-#define VORBIS_IMPL
-#include "minivorbis.h"
 #include "../ft2_header.h"
 #include "../ft2_mouse.h"
 #include "../ft2_audio.h"
