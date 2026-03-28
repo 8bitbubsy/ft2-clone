@@ -5,6 +5,10 @@
 ** Do NOT close the file handle!
 */
 
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+
 // hide minimp3 compiler warnings
 #ifdef _MSC_VER
 #pragma warning(disable: 4244)
@@ -26,9 +30,6 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include "../ft2_header.h"
 #include "../ft2_mouse.h"
 #include "../ft2_sample_ed.h"
