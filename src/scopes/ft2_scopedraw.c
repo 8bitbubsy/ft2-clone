@@ -153,12 +153,12 @@ static void linedScopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, ui
 static void linedScopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
 	LINED_SCOPE_INIT
-	LINED_SCOPE_PREPARE_SMP8_LOOP
+	LINED_SCOPE_PREPARE_SMP8
 	SCOPE_HANDLE_POS_LOOP
 
 	for (; x < width; x++)
 	{
-		SCOPE_GET_INTERPOLATED_SMP8_LOOP
+		SCOPE_GET_INTERPOLATED_SMP8
 		LINED_SCOPE_DRAW_SMP
 		SCOPE_UPDATE_READPOS
 		SCOPE_HANDLE_POS_LOOP
@@ -198,12 +198,12 @@ static void linedScopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, u
 static void linedScopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
 {
 	LINED_SCOPE_INIT
-	LINED_SCOPE_PREPARE_SMP16_LOOP
+	LINED_SCOPE_PREPARE_SMP16
 	SCOPE_HANDLE_POS_LOOP
 
 	for (; x < width; x++)
 	{
-		SCOPE_GET_INTERPOLATED_SMP16_LOOP
+		SCOPE_GET_INTERPOLATED_SMP16
 		LINED_SCOPE_DRAW_SMP
 		SCOPE_UPDATE_READPOS
 		SCOPE_HANDLE_POS_LOOP

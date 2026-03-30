@@ -75,22 +75,6 @@
 	          ( s16[1] * (t[0]         ))) >> SCOPE_INTRP_SCALE_BITS; \
 }
 
-#define COS_INTERPOLATION8_LOOP(pos, frac) \
-{ \
-	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
-		s8 = s->leftEdgeTaps8 + (pos - s->loopStart); \
-	\
-	COS_INTERPOLATION8(frac) \
-} \
-
-#define COS_INTERPOLATION16_LOOP(pos, frac) \
-{ \
-	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
-		s16 = s->leftEdgeTaps16 + (pos - s->loopStart); \
-	\
-	COS_INTERPOLATION16(frac) \
-} \
-
 #define INTERPOLATE_SMP8(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
@@ -109,26 +93,6 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		COS_INTERPOLATION16(frac) \
-	sample = (sample * s->volume) >> (16+2);
-
-#define INTERPOLATE_SMP8_LOOP(pos, frac) \
-	const int8_t *s8 = s->base8 + pos; \
-	if (config.interpolation == INTERPOLATION_DISABLED) \
-		NEAREST_NEIGHGBOR8 \
-	else if (config.interpolation == INTERPOLATION_LINEAR) \
-		LINEAR_INTERPOLATION8(frac) \
-	else \
-		COS_INTERPOLATION8_LOOP(pos, frac) \
-	sample = (sample * s->volume) >> (16+2);
-
-#define INTERPOLATE_SMP16_LOOP(pos, frac) \
-	const int16_t *s16 = s->base16 + pos; \
-	if (config.interpolation == INTERPOLATION_DISABLED) \
-		NEAREST_NEIGHGBOR16 \
-	else if (config.interpolation == INTERPOLATION_LINEAR) \
-		LINEAR_INTERPOLATION16(frac) \
-	else \
-		COS_INTERPOLATION16_LOOP(pos, frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define SCOPE_GET_SMP8 \
@@ -215,7 +179,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP8_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
+		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -226,7 +190,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP16_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
+		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
