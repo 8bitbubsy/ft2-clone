@@ -59,46 +59,36 @@
 	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
 } \
 
-#define CUBIC_SMP8(frac) \
-	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
-	\
-	sample = ((s8[-1] * t[0]) + \
-	          ( s8[0] * t[1]) + \
-	          ( s8[1] * t[2]) + \
-	          ( s8[2] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8);
-
-#define CUBIC_SMP16(frac) \
-	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
-	\
-	sample = ((s16[-1] * t[0]) + \
-	          ( s16[0] * t[1]) + \
-	          ( s16[1] * t[2]) + \
-	          ( s16[2] * t[3])) >> SCOPE_INTRP_SCALE_BITS;
-
-#define CUBIC_INTERPOLATION8(frac) \
+#define COS_INTERPOLATION8(frac) \
 { \
-	CUBIC_SMP8(frac) \
-} \
+	const int16_t *t = scopeIntrpLUT + ((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)); \
+	\
+	sample = (( s8[0] * (t[0] ^ 0x7FFF)) + \
+	          ( s8[1] * (t[0]         ))) >> (SCOPE_INTRP_SCALE_BITS-8); \
+}
 
-#define CUBIC_INTERPOLATION16(frac) \
+#define COS_INTERPOLATION16(frac) \
 { \
-	CUBIC_SMP16(frac) \
-} \
+	const int16_t *t = scopeIntrpLUT + ((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)); \
+	\
+	sample = (( s16[0] * (t[0] ^ 0x7FFF)) + \
+	          ( s16[1] * (t[0]         ))) >> SCOPE_INTRP_SCALE_BITS; \
+}
 
-#define CUBIC_INTERPOLATION8_LOOP(pos, frac) \
+#define COS_INTERPOLATION8_LOOP(pos, frac) \
 { \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
 		s8 = s->leftEdgeTaps8 + (pos - s->loopStart); \
 	\
-	CUBIC_SMP8(frac) \
+	COS_INTERPOLATION8(frac) \
 } \
 
-#define CUBIC_INTERPOLATION16_LOOP(pos, frac) \
+#define COS_INTERPOLATION16_LOOP(pos, frac) \
 { \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
 		s16 = s->leftEdgeTaps16 + (pos - s->loopStart); \
 	\
-	CUBIC_SMP16(frac) \
+	COS_INTERPOLATION16(frac) \
 } \
 
 #define INTERPOLATE_SMP8(pos, frac) \
@@ -108,7 +98,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION8(frac) \
 	else \
-		CUBIC_INTERPOLATION8(frac) \
+		COS_INTERPOLATION8(frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16(pos, frac) \
@@ -118,7 +108,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION16(frac) \
 	else \
-		CUBIC_INTERPOLATION16(frac) \
+		COS_INTERPOLATION16(frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP8_LOOP(pos, frac) \
@@ -128,7 +118,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION8(frac) \
 	else \
-		CUBIC_INTERPOLATION8_LOOP(pos, frac) \
+		COS_INTERPOLATION8_LOOP(pos, frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16_LOOP(pos, frac) \
@@ -138,7 +128,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION16(frac) \
 	else \
-		CUBIC_INTERPOLATION16_LOOP(pos, frac) \
+		COS_INTERPOLATION16_LOOP(pos, frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define SCOPE_GET_SMP8 \
