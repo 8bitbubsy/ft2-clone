@@ -21,6 +21,7 @@
 #include "minimp3_ex.h"
 #else
 #pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-warning-option"
 #pragma GCC diagnostic ignored "-Wshadow"
 #define MINIFLAC_IMPLEMENTATION
 #define MINIMP3_ONLY_MP3
