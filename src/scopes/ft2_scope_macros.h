@@ -4,10 +4,6 @@
 #include "../ft2_header.h"
 #include "ft2_scopes.h"
 
-/* ----------------------------------------------------------------------- */
-/*                          SCOPE DRAWING MACROS                           */
-/* ----------------------------------------------------------------------- */
-
 #define SCOPE_INIT \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
@@ -61,14 +57,14 @@
 
 #define COS_INTERPOLATION8(frac) \
 { \
-	const int16_t t = scopeIntrpLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
+	const int16_t t = scopeCosLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
 	sample = (( s8[0] * (t ^ 0x7FFF)) + \
 	          ( s8[1] * (t         ))) >> (SCOPE_INTRP_SCALE_BITS-8); \
 }
 
 #define COS_INTERPOLATION16(frac) \
 { \
-	const int16_t t = scopeIntrpLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
+	const int16_t t = scopeCosLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
 	sample = (( s16[0] * (t ^ 0x7FFF)) + \
 	          ( s16[1] * (t         ))) >> SCOPE_INTRP_SCALE_BITS; \
 }

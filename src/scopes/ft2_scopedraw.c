@@ -17,7 +17,7 @@
 **
 ** Ideally, first value should be 0 and last value should be 32767.
 */
-static const int16_t scopeIntrpLUT[SCOPE_INTRP_PHASES] =
+static const int16_t scopeCosLUT[SCOPE_INTRP_PHASES] =
 {
 	    0,     1,     5,    11,    20,    31,    44,    60,    79,   100,
 	  123,   149,   177,   208,   241,   277,   315,   355,   398,   443,
