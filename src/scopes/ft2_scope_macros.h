@@ -37,48 +37,46 @@
 ** so that out-of-bounds reads get the correct interpolation tap data.
 */
 
-#define NEAREST_NEIGHGBOR8 \
+#define NO_INTERPOLATION8 \
 { \
 	sample = s8[0] << 8; \
-} \
+}
+
+#define NO_INTERPOLATION16 \
+{ \
+	sample = s16[0]; \
+}
 
 #define LINEAR_INTERPOLATION8(frac) \
 { \
 	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
 	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
-} \
-
-#define NEAREST_NEIGHGBOR16 \
-{ \
-	sample = s16[0]; \
-} \
+}
 
 #define LINEAR_INTERPOLATION16(frac) \
 { \
 	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
 	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
-} \
+}
 
 #define COS_INTERPOLATION8(frac) \
 { \
-	const int16_t *t = scopeIntrpLUT + ((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)); \
-	\
-	sample = (( s8[0] * (t[0] ^ 0x7FFF)) + \
-	          ( s8[1] * (t[0]         ))) >> (SCOPE_INTRP_SCALE_BITS-8); \
+	const int16_t t = scopeIntrpLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
+	sample = (( s8[0] * (t ^ 0x7FFF)) + \
+	          ( s8[1] * (t         ))) >> (SCOPE_INTRP_SCALE_BITS-8); \
 }
 
 #define COS_INTERPOLATION16(frac) \
 { \
-	const int16_t *t = scopeIntrpLUT + ((frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)); \
-	\
-	sample = (( s16[0] * (t[0] ^ 0x7FFF)) + \
-	          ( s16[1] * (t[0]         ))) >> SCOPE_INTRP_SCALE_BITS; \
+	const int16_t t = scopeIntrpLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
+	sample = (( s16[0] * (t ^ 0x7FFF)) + \
+	          ( s16[1] * (t         ))) >> SCOPE_INTRP_SCALE_BITS; \
 }
 
 #define INTERPOLATE_SMP8(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
-		NEAREST_NEIGHGBOR8 \
+		NO_INTERPOLATION8 \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION8(frac) \
 	else \
@@ -88,7 +86,7 @@
 #define INTERPOLATE_SMP16(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
-		NEAREST_NEIGHGBOR16 \
+		NO_INTERPOLATION16 \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION16(frac) \
 	else \
