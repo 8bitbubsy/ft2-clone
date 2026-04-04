@@ -18,8 +18,8 @@
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
 
 #define SCOPE_INTRP_SCALE_BITS 15
-#define SCOPE_INTRP_PHASES 256 /* good enough */
-#define SCOPE_INTRP_PHASES_BITS 8 /* log2(SCOPE_INTRP_PHASES) */
+#define SCOPE_INTRP_PHASES 64 /* good enough */
+#define SCOPE_INTRP_PHASES_BITS 6 /* log2(SCOPE_INTRP_PHASES) */
 
 int32_t getSamplePositionFromScopes(uint8_t ch);
 void stopAllScopes(void);
