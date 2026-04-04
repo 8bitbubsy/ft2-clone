@@ -14,8 +14,6 @@
 ** Formula:
 ** for (int32_t i = 0; i < 256; i++)
 **     LUT[i] = round(32768.0 * (0.5 - (0.5 * cos(i * (PI / 256.0)))));
-**
-** Ideally, first value should be 0 and last value should be 32767.
 */
 static const int16_t scopeCosLUT[SCOPE_INTRP_PHASES] =
 {

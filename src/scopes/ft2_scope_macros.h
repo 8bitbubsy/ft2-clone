@@ -57,16 +57,14 @@
 
 #define COS_INTERPOLATION8(frac) \
 { \
-	const int16_t t = scopeCosLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
-	sample = (( s8[0] * (t ^ 0x7FFF)) + \
-	          ( s8[1] * (t         ))) >> (SCOPE_INTRP_SCALE_BITS-8); \
+	const int16_t c = scopeCosLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
+	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * c) >> SCOPE_INTRP_SCALE_BITS); \
 }
 
 #define COS_INTERPOLATION16(frac) \
 { \
-	const int16_t t = scopeCosLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
-	sample = (( s16[0] * (t ^ 0x7FFF)) + \
-	          ( s16[1] * (t         ))) >> SCOPE_INTRP_SCALE_BITS; \
+	const int16_t c = scopeCosLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
+	sample = s16[0] + (((s16[1] - s16[0]) * c) >> SCOPE_INTRP_SCALE_BITS); \
 }
 
 #define INTERPOLATE_SMP8(pos, frac) \
