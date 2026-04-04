@@ -103,20 +103,25 @@
 /*                          LINEAR INTERPOLATION                           */
 /* ----------------------------------------------------------------------- */
 
-#define LINEAR_INTERPOLATION(s, f, scale) \
+#define LINEAR_INTERPOLATION8(s, f) \
 { \
-	const int32_t frac = (uint32_t)(f) >> 1; /* uint32 -> int32 range, faster int->float conv. (x86/x86_64) */ \
-	const float fFrac = (int32_t)frac * (1.0f / (MIXER_FRAC_SCALE/2)); /* 0.0f .. 0.9999999f */ \
-	fSample = (s[0] + ((s[1] - s[0]) * fFrac)) * (1.0f / scale); \
+	const int16_t frac = (int16_t)((uint32_t)(f) >> (MIXER_FRAC_BITS-15)); /* 0..32767 */ \
+	fSample = ((s[0] << 8) + ((((s[1] - s[0]) << 8) * frac) >> 15)) * (1.0f / 32768.0f); \
+}
+
+#define LINEAR_INTERPOLATION16(s, f) \
+{ \
+	const int16_t frac = (int16_t)((uint32_t)(f) >> (MIXER_FRAC_BITS-15)); /* 0..32767 */ \
+	fSample = (s[0] + (((s[1] - s[0]) * frac) >> 15)) * (1.0f / 32768.0f); \
 }
 
 #define RENDER_8BIT_SMP_LINTRP \
-	LINEAR_INTERPOLATION(smpPtr, positionFrac, 128) \
+	LINEAR_INTERPOLATION8(smpPtr, positionFrac) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
 #define RENDER_16BIT_SMP_LINTRP \
-	LINEAR_INTERPOLATION(smpPtr, positionFrac, 32768) \
+	LINEAR_INTERPOLATION16(smpPtr, positionFrac) \
 	*fMixBufferL++ += fSample * fVolumeL; \
 	*fMixBufferR++ += fSample * fVolumeR;
 
