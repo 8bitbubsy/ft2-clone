@@ -211,9 +211,14 @@ void audioSetInterpolationType(uint8_t interpolationType)
 
 void calcPanningTable(void)
 {
-	// same formula as FT2's panning table (with 0.0 .. 1.0 scale)
 	for (int32_t i = 0; i <= 256; i++)
-		fSqrtPanningTable[i] = (float)sqrt(i / 256.0);
+	{
+		// bit-accurate to how FT2 calculates it
+		int32_t ft2SqrtPan = (int32_t)round(65536.0 * sqrt(i / 256.0));
+
+		// scale to 0.0 .. 1.0f for our float mixer
+		fSqrtPanningTable[i] = (float)ft2SqrtPan / 65536.0f;
+	}
 }
 
 static void voiceUpdateVolumes(int32_t i, uint8_t status)

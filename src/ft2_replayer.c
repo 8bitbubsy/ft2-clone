@@ -375,8 +375,20 @@ void resetVolumes(channel_t *ch)
 
 void triggerInstrument(channel_t *ch)
 {
-	if (!(ch->vibTremCtrl & 0x04)) ch->vibratoPos = 0;
-	if (!(ch->vibTremCtrl & 0x40)) ch->tremoloPos = 0;
+	// reset vibrato pos
+	if (!(ch->vibTremCtrl & 0x04))
+		ch->vibratoPos = 0;
+
+	/* In original FT2, if the sixth bit of "ch->vibTremCtrl" is set
+	** (from effect E7x where x is $4..$7 or $C..$F) and you trigger a note,
+	** the replayer interrupt will freeze / lock up. This is because of a
+	** label bug in the original code, causing it to jump back to itself
+	** indefinitely.
+	*/
+
+	// safely reset tremolo position ;)
+	if (!(ch->vibTremCtrl & 0x40))
+		ch->tremoloPos = 0;
 
 	ch->noteRetrigCounter = 0;
 	ch->tremorPos = 0;
@@ -400,7 +412,9 @@ void triggerInstrument(channel_t *ch)
 		}
 
 		// reset fadeout
-		ch->fadeoutSpeed = ins->fadeout; // warning: FT2 doesn't check if fadeout is more than 4095!
+		ch->fadeoutSpeed = ins->fadeout;
+
+		// final fadeout range is in fact 0..32768, and not 0..65536 like the XM format doc says
 		ch->fadeoutVol = 32768;
 
 		// reset auto-vibrato
@@ -572,7 +586,7 @@ void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch)
 
 	if (note != 0)
 	{
-		const uint16_t noteIndex = ((note-1) * 16) + (((int8_t)ch->finetune >> 3) + 16); // 0..1920
+		const uint16_t noteIndex = ((note-1) * 16) + (((int8_t)ch->finetune >> 3) + 16); // 0..1935
 
 		ASSERT(note2PeriodLUT != NULL);
 		ch->outPeriod = ch->realPeriod = note2PeriodLUT[noteIndex];
@@ -824,12 +838,10 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 	instr_t *ins = ch->instrPtr;
 	ASSERT(ins != NULL);
 
-	// (envelope precision has been upgraded from .8fp to single-precision float)
-
 	// *** VOLUME ENVELOPE ***
 	if (ins->volEnvFlags & ENV_ENABLED)
 	{
-		ch->volEnvTick = param-1;
+		ch->volEnvTick = param - 1;
 
 		point = 0;
 		envUpdate = true;
@@ -851,19 +863,23 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 						break;
 					}
 
-					const int32_t xDiff = ins->volEnvPoints[point+1][0] - ins->volEnvPoints[point+0][0];
+					const int16_t x0 = ins->volEnvPoints[point+0][0];
+					const int16_t x1 = ins->volEnvPoints[point+1][0];
+
+					const int16_t xDiff = x1 - x0;
 					if (xDiff <= 0)
 					{
 						envUpdate = true;
 						break;
 					}
 
-					const int32_t y0 = ins->volEnvPoints[point+0][1] & 0xFF;
-					const int32_t y1 = ins->volEnvPoints[point+1][1] & 0xFF;
-					const int32_t yDiff = y1 - y0;
+					const int16_t y0 = ins->volEnvPoints[point+0][1];
+					const int16_t y1 = ins->volEnvPoints[point+1][1];
 
-					ch->fVolEnvDelta = (float)yDiff / (float)xDiff;
-					ch->fVolEnvValue = (float)y0 + (ch->fVolEnvDelta * (tick-1));
+					const int8_t yDiff = (int8_t)(y1 - y0);
+					ch->volEnvDelta = (yDiff << 8) / xDiff;
+
+					ch->volEnvValue = ((int8_t)y0 << 8) + (int16_t)(ch->volEnvDelta * (tick-1));
 
 					point++;
 
@@ -880,13 +896,13 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 
 		if (envUpdate)
 		{
-			ch->fVolEnvDelta = 0.0f;
-			ch->fVolEnvValue = (float)(int32_t)(ins->volEnvPoints[point][1] & 0xFF);
+			ch->volEnvDelta = 0;
+			ch->volEnvValue = (int8_t)ins->volEnvPoints[point][1] << 8;
 		}
 
 		if (point >= ins->volEnvLength)
 		{
-			point = ins->volEnvLength-1;
+			point = ins->volEnvLength - 1;
 			if (point < 0)
 				point = 0;
 		}
@@ -897,7 +913,7 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 	// *** PANNING ENVELOPE ***
 	if (ins->volEnvFlags & ENV_SUSTAIN) // FT2 logic bug: should've been ins->panEnvFlags
 	{
-		ch->panEnvTick = param-1;
+		ch->panEnvTick = param - 1;
 
 		point = 0;
 		envUpdate = true;
@@ -919,19 +935,23 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 						break;
 					}
 
-					const int32_t xDiff = ins->panEnvPoints[point+1][0] - ins->panEnvPoints[point+0][0];
+					const int16_t x0 = ins->panEnvPoints[point+0][0];
+					const int16_t x1 = ins->panEnvPoints[point+1][0];
+
+					const int16_t xDiff = x1 - x0;
 					if (xDiff <= 0)
 					{
 						envUpdate = true;
 						break;
 					}
 
-					const int32_t y0 = ins->panEnvPoints[point+0][1] & 0xFF;
-					const int32_t y1 = ins->panEnvPoints[point+1][1] & 0xFF;
-					const int32_t yDiff = y1 - y0;
+					const int16_t y0 = ins->panEnvPoints[point+0][1];
+					const int16_t y1 = ins->panEnvPoints[point+1][1];
 
-					ch->fPanEnvDelta = (float)yDiff / (float)xDiff;
-					ch->fPanEnvValue = (float)y0 + (ch->fPanEnvDelta * (tick-1));
+					const int8_t yDiff = (int8_t)(y1 - y0);
+					ch->panEnvDelta = (yDiff << 8) / xDiff;
+
+					ch->panEnvValue = ((int8_t)y0 << 8) + (int16_t)(ch->panEnvDelta * (tick-1));
 
 					point++;
 
@@ -948,13 +968,13 @@ static void setEnvelopePos(channel_t *ch, uint8_t param)
 
 		if (envUpdate)
 		{
-			ch->fPanEnvDelta = 0.0f;
-			ch->fPanEnvValue = (float)(int32_t)(ins->panEnvPoints[point][1] & 0xFF);
+			ch->panEnvDelta = 0;
+			ch->panEnvValue = (int8_t)ins->panEnvPoints[point][1] << 8;
 		}
 
 		if (point >= ins->panEnvLength)
 		{
-			point = ins->panEnvLength-1;
+			point = ins->panEnvLength - 1;
 			if (point < 0)
 				point = 0;
 		}
@@ -1439,7 +1459,8 @@ void updateVolPanAutoVib(channel_t *ch)
 {
 	bool envInterpolateFlag, envDidInterpolate;
 	uint8_t envPos;
-	float fEnvVal, fVol;
+	int16_t envVal;
+	float fVol;
 
 	instr_t *ins = ch->instrPtr;
 	ASSERT(ins != NULL);
@@ -1447,14 +1468,14 @@ void updateVolPanAutoVib(channel_t *ch)
 	// *** FADEOUT ON KEY OFF ***
 	if (ch->keyOff)
 	{
-		if (ch->fadeoutSpeed > 0) // 0..4095
+		if (ch->fadeoutSpeed > ch->fadeoutVol) // ch->fadeoutVol-ch->fadeoutSpeed < 0?
+		{
+			ch->fadeoutVol = 0;
+			ch->fadeoutSpeed = 0;
+		}
+		else
 		{
 			ch->fadeoutVol -= ch->fadeoutSpeed;
-			if (ch->fadeoutVol <= 0)
-			{
-				ch->fadeoutVol = 0;
-				ch->fadeoutSpeed = 0;
-			}
 		}
 
 		ch->status |= CS_UPDATE_VOL; // always update volume, even if fadeout has reached 0
@@ -1464,10 +1485,8 @@ void updateVolPanAutoVib(channel_t *ch)
 
 	if (!ch->mute)
 	{
-		// (envelope precision has been upgraded from .8fp to single-precision float)
-
 		// *** VOLUME ENVELOPE ***
-		fEnvVal = 0.0f;
+		envVal = 0;
 		if (ins->volEnvFlags & ENV_ENABLED)
 		{
 			envDidInterpolate = false;
@@ -1477,7 +1496,7 @@ void updateVolPanAutoVib(channel_t *ch)
 
 			if (ch->volEnvTick == ins->volEnvPoints[envPos][0])
 			{
-				ch->fVolEnvValue = (float)(int32_t)(ins->volEnvPoints[envPos][1] & 0xFF);
+				ch->volEnvValue = (int8_t)ins->volEnvPoints[envPos][1] << 8;
 
 				envPos++;
 				if (ins->volEnvFlags & ENV_LOOP)
@@ -1490,7 +1509,7 @@ void updateVolPanAutoVib(channel_t *ch)
 						{
 							envPos = ins->volEnvLoopStart;
 							ch->volEnvTick = ins->volEnvPoints[envPos][0];
-							ch->fVolEnvValue = (float)(int32_t)(ins->volEnvPoints[envPos][1] & 0xFF);
+							ch->volEnvValue = (int8_t)ins->volEnvPoints[envPos][1] << 8;
 						}
 					}
 
@@ -1505,7 +1524,7 @@ void updateVolPanAutoVib(channel_t *ch)
 						if (envPos-1 == ins->volEnvSustain)
 						{
 							envPos--;
-							ch->fVolEnvDelta = 0.0f;
+							ch->volEnvDelta = 0;
 							envInterpolateFlag = false;
 						}
 					}
@@ -1514,70 +1533,87 @@ void updateVolPanAutoVib(channel_t *ch)
 					{
 						ch->volEnvPos = envPos;
 
-						const int32_t x0 = ins->volEnvPoints[envPos-1][0];
-						const int32_t x1 = ins->volEnvPoints[envPos-0][0];
+						const int16_t x0 = ins->volEnvPoints[envPos-1][0];
+						const int16_t x1 = ins->volEnvPoints[envPos-0][0];
 
-						const int32_t xDiff = x1 - x0;
+						const int16_t xDiff = x1 - x0;
 						if (xDiff > 0)
 						{
-							const int32_t y0 = ins->volEnvPoints[envPos-1][1] & 0xFF;
-							const int32_t y1 = ins->volEnvPoints[envPos-0][1] & 0xFF;
+							const int16_t y0 = ins->volEnvPoints[envPos-1][1];
+							const int16_t y1 = ins->volEnvPoints[envPos-0][1];
 
-							const int32_t yDiff = y1 - y0;
-							ch->fVolEnvDelta = (float)yDiff / (float)xDiff;
+							const int8_t yDiff = (int8_t)(y1 - y0);
+							ch->volEnvDelta = (yDiff << 8) / xDiff;
 
-							fEnvVal = ch->fVolEnvValue;
+							envVal = ch->volEnvValue;
 							envDidInterpolate = true;
 						}
 						else
 						{
-							ch->fVolEnvDelta = 0.0f;
+							ch->volEnvDelta = 0;
 						}
 					}
 				}
 				else
 				{
-					ch->fVolEnvDelta = 0.0f;
+					ch->volEnvDelta = 0;
 				}
 			}
 
 			if (!envDidInterpolate)
 			{
-				ch->fVolEnvValue += ch->fVolEnvDelta;
+				ch->volEnvValue += ch->volEnvDelta;
+				envVal = ch->volEnvValue;
 
-				fEnvVal = ch->fVolEnvValue;
-				if (fEnvVal < 0.0f || fEnvVal > 64.0f)
+				// FT2 tests the upper byte here (unsigned test!)
+				const uint8_t envHiByte = (uint8_t)(envVal >> 8);
+				if (envHiByte > 64)
 				{
-					fEnvVal = CLAMP(fEnvVal, 0.0f, 64.0f);
-					ch->fVolEnvDelta = 0.0f;
+					if (envHiByte <= 160) // 160 unsigned is -64 signed
+						envVal = 64*256;
+					else
+						envVal = 0;
+
+					ch->volEnvDelta = 0;
 				}
 			}
 
-			const int32_t vol = song.globalVolume * ch->outVol * ch->fadeoutVol;
+			// FT2 shifts envVal to the right by 8 here, but we prefer to keep all the bits :)
 
+			// calculate in single-precision float instead of bit-reduced integer arithmetics
+
+			float fEnvVal = (uint16_t)envVal * (1.0f / (64.0f * 256.f));
+			if (fEnvVal > 1.0f) // can happen when we don't shift envVal to the right by 8 first
+				fEnvVal = 1.0f;
+
+			const int32_t vol = song.globalVolume * ch->outVol * ch->fadeoutVol;
 			fVol = vol * (1.0f / (64.0f * 64.0f * 32768.0f));
-			fVol *= fEnvVal * (1.0f / 64.0f); // volume envelope value
+			fVol *= fEnvVal;
 
 			ch->status |= CS_UPDATE_VOL; // update mixer vol every tick when vol envelope is enabled
 		}
 		else
 		{
+			// calculate in single-precision float instead of bit-reduced integer arithmetics
 			const int32_t vol = song.globalVolume * ch->outVol * ch->fadeoutVol;
-
 			fVol = vol * (1.0f / (64.0f * 64.0f * 32768.0f));
 		}
 
-		// FT2 doesn't clamp the volume, but let's do it anyway
-		ch->fFinalVol = CLAMP(fVol, 0.0f, 1.0f);
+		// FT2 doesn't clamp the volume, but let's do it just in case
+		if (fVol > 1.0f)
+			fVol = 1.0f;
+
+		ch->fFinalVol = fVol;
 	}
 	else
 	{
+		// instrument muted, zero out volume
 		ch->fFinalVol = 0.0f;
 	}
 
 	// *** PANNING ENVELOPE ***
 
-	fEnvVal = 0.0f;
+	envVal = 0;
 	if (ins->panEnvFlags & ENV_ENABLED)
 	{
 		envDidInterpolate = false;
@@ -1587,7 +1623,7 @@ void updateVolPanAutoVib(channel_t *ch)
 
 		if (ch->panEnvTick == ins->panEnvPoints[envPos][0])
 		{
-			ch->fPanEnvValue = (float)(int32_t)(ins->panEnvPoints[envPos][1] & 0xFF);
+			ch->panEnvValue = (int8_t)ins->panEnvPoints[envPos][1] << 8;
 
 			envPos++;
 			if (ins->panEnvFlags & ENV_LOOP)
@@ -1601,7 +1637,7 @@ void updateVolPanAutoVib(channel_t *ch)
 						envPos = ins->panEnvLoopStart;
 
 						ch->panEnvTick = ins->panEnvPoints[envPos][0];
-						ch->fPanEnvValue = (float)(int32_t)(ins->panEnvPoints[envPos][1] & 0xFF);
+						ch->panEnvValue = (int8_t)ins->panEnvPoints[envPos][1] << 8;
 					}
 				}
 
@@ -1616,7 +1652,7 @@ void updateVolPanAutoVib(channel_t *ch)
 					if (envPos-1 == ins->panEnvSustain)
 					{
 						envPos--;
-						ch->fPanEnvDelta = 0.0f;
+						ch->panEnvDelta = 0;
 						envInterpolateFlag = false;
 					}
 				}
@@ -1625,53 +1661,61 @@ void updateVolPanAutoVib(channel_t *ch)
 				{
 					ch->panEnvPos = envPos;
 
-					const int32_t x0 = ins->panEnvPoints[envPos-1][0];
-					const int32_t x1 = ins->panEnvPoints[envPos-0][0];
+					const int16_t x0 = ins->panEnvPoints[envPos-1][0];
+					const int16_t x1 = ins->panEnvPoints[envPos-0][0];
 
-					const int32_t xDiff = x1 - x0;
+					const int16_t xDiff = x1 - x0;
 					if (xDiff > 0)
 					{
-						const int32_t y0 = ins->panEnvPoints[envPos-1][1] & 0xFF;
-						const int32_t y1 = ins->panEnvPoints[envPos-0][1] & 0xFF;
+						const int16_t y0 = ins->panEnvPoints[envPos-1][1];
+						const int16_t y1 = ins->panEnvPoints[envPos-0][1];
 
-						const int32_t yDiff = y1 - y0;
-						ch->fPanEnvDelta = (float)yDiff / (float)xDiff;
+						const int8_t yDiff = (int8_t)(y1 - y0);
+						ch->panEnvDelta = (yDiff << 8) / xDiff;
 
-						fEnvVal = ch->fPanEnvValue;
+						envVal = ch->panEnvValue;
 						envDidInterpolate = true;
 					}
 					else
 					{
-						ch->fPanEnvDelta = 0.0f;
+						ch->panEnvDelta = 0;
 					}
 				}
 			}
 			else
 			{
-				ch->fPanEnvDelta = 0.0f;
+				ch->panEnvDelta = 0;
 			}
 		}
 
 		if (!envDidInterpolate)
 		{
-			ch->fPanEnvValue += ch->fPanEnvDelta;
+			ch->panEnvValue += ch->panEnvDelta;
+			envVal = ch->panEnvValue;
 
-			fEnvVal = ch->fPanEnvValue;
-			if (fEnvVal < 0.0f || fEnvVal > 64.0f)
+			// FT2 tests the upper byte here (unsigned test!)
+			const uint8_t envHiByte = (uint8_t)(envVal >> 8);
+			if (envHiByte > 64)
 			{
-				fEnvVal = CLAMP(fEnvVal, 0.0f, 64.0f);
-				ch->fPanEnvDelta = 0.0f;
+				if (envHiByte <= 160) // 160 unsigned is -64 signed
+					envVal = 64*256;
+				else
+					envVal = 0;
+
+				ch->panEnvDelta = 0;
 			}
 		}
 
-		fEnvVal -= 32.0f; // center panning envelope value (0..64 -> -32..32)
+		int16_t panMul = ch->outPan - 128;
+		if (panMul >= 0)
+			panMul = 0 - panMul;
+		panMul += 128;
+		panMul <<= 3;
 
-		const int32_t pan = 128 - ABS(ch->outPan - 128);
-		const float fPanAdd = (pan * fEnvVal) * (1.0f / 32.0f);
-		const int32_t newPan = (int32_t)(ch->outPan + fPanAdd); // truncate here, do not round
+		envVal -= 32*256; // center pan env. value (0*256..64*256 -> -32*256..32*256)
+		const int8_t panAdd = (int8_t)((envVal * panMul) >> 16);
 
-		ch->finalPan = (uint8_t)CLAMP(newPan, 0, 255); // FT2 doesn't clamp the pan, but let's do it anyway
-
+		ch->finalPan = (uint8_t)(ch->outPan + panAdd);
 		ch->status |= CS_UPDATE_PAN; // update pan every tick because pan envelope is enabled
 	}
 	else
@@ -2317,13 +2361,12 @@ void resumeMusic(void) // starts reading pattern data
 
 void tickReplayer(void) // periodically called from audio callback
 {
-	int32_t i;
 	channel_t *ch;
 
 	if (!songPlaying)
 	{
 		ch = channel;
-		for (i = 0; i < song.numChannels; i++, ch++)
+		for (int32_t i = 0; i < song.numChannels; i++, ch++)
 			updateVolPanAutoVib(ch);
 
 		return;
@@ -2363,7 +2406,7 @@ void tickReplayer(void) // periodically called from audio callback
 			p = &pattern[song.pattNum][song.row * MAX_CHANNELS];
 
 		ch = channel;
-		for (i = 0; i < song.numChannels; i++, ch++, p++)
+		for (int32_t i = 0; i < song.numChannels; i++, ch++, p++)
 		{
 			getNewNote(ch, p);
 			updateVolPanAutoVib(ch);
@@ -2372,7 +2415,7 @@ void tickReplayer(void) // periodically called from audio callback
 	else
 	{
 		ch = channel;
-		for (i = 0; i < song.numChannels; i++, ch++)
+		for (int32_t i = 0; i < song.numChannels; i++, ch++)
 		{
 			handleEffects_TickNonZero(ch);
 			updateVolPanAutoVib(ch);

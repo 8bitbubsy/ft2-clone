@@ -247,14 +247,12 @@ typedef struct channel_t
 	uint8_t pitchSlideUpSpeed, pitchSlideDownSpeed, noteRetrigSpeed, noteRetrigCounter, noteRetrigVol;
 	uint8_t volColumnVol, noteNum, panEnvPos, autoVibPos, volEnvPos, realVol, oldVol, outVol;
 	uint8_t oldPan, outPan, finalPan;
-	int16_t midiPitch;
+	int16_t midiPitch, volEnvDelta, volEnvValue, panEnvDelta, panEnvValue;
 	uint16_t outPeriod, realPeriod, finalPeriod, copyOfInstrAndNote, portamentoTargetPeriod, portamentoSpeed;
 	uint16_t volEnvTick, panEnvTick, autoVibAmp, autoVibSweep;
-	uint16_t midiVibDepth;
-	int32_t fadeoutVol, fadeoutSpeed;
+	uint16_t midiVibDepth, fadeoutVol, fadeoutSpeed;
 	int32_t smpStartPos;
-
-	float fFinalVol, fVolEnvDelta, fPanEnvDelta, fVolEnvValue, fPanEnvValue;
+	float fFinalVol;
 
 	sample_t *smpPtr;
 	instr_t *instrPtr;
