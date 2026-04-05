@@ -11,7 +11,6 @@
 #include "ft2_random.h"
 
 #define NUM_STARS 1500
-#define LOGO_ALPHA_PERCENTAGE 80
 #define STARSHINE_ALPHA_PERCENTAGE 33
 #define ABOUT_SCREEN_X 3
 #define ABOUT_SCREEN_Y 3
@@ -36,20 +35,9 @@ static char *customText2 = "https://16-bits.org";
 static char customText3[128];
 static int16_t customText0X, customText0Y, customText1X, customText1Y;
 static int16_t customText2X, customText2Y, customText3X, customText3Y;
-static const uint16_t logoAlpha16 = (65535 * LOGO_ALPHA_PERCENTAGE) / 100;
 static const uint16_t starShineAlpha16 = (65535 * STARSHINE_ALPHA_PERCENTAGE) / 100;
 static vector_t starPoints[NUM_STARS], starRotation;
 static matrix_t starMatrix;
-
-static uint32_t blendPixels(uint32_t pixelA, uint32_t pixelB, uint16_t alpha)
-{
-	const uint16_t invAlpha = alpha ^ 0xFFFF;
-
-	const int32_t r = ((RGB32_R(pixelA) * invAlpha) + (RGB32_R(pixelB) * alpha)) >> 16;
-	const int32_t g = ((RGB32_G(pixelA) * invAlpha) + (RGB32_G(pixelB) * alpha)) >> 16;
-	const int32_t b = ((RGB32_B(pixelA) * invAlpha) + (RGB32_B(pixelB) * alpha)) >> 16;
-	return RGB32(r, g, b);
-}
 
 static void blendPixelsXY(uint32_t x, uint32_t y, uint32_t pixelB_r, uint32_t pixelB_g, uint32_t pixelB_b, uint16_t alpha)
 {
@@ -170,19 +158,7 @@ void renderAboutScreenFrame(void)
 	rotateStarfieldMatrix();
 
 	// FT2 logo
-
-	uint32_t *srcPtr = bmp.ft2AboutLogo;
-	uint32_t *dstPtr = &video.frameBuffer[(30 * SCREEN_W) + ((SCREEN_W - ABOUT_LOGO_W) / 2)];
-
-	for (int32_t y = 0; y < ABOUT_LOGO_H; y++, srcPtr += ABOUT_LOGO_W, dstPtr += SCREEN_W)
-	{
-		for (int32_t x = 0; x < ABOUT_LOGO_W; x++)
-		{
-			const uint32_t logoPixel = srcPtr[x];
-			if (logoPixel != 0x00FF00) // transparency
-				dstPtr[x] = blendPixels(dstPtr[x], logoPixel, logoAlpha16);
-		}
-	}
+	blit32((SCREEN_W - ABOUT_LOGO_W) / 2, 30, bmp.ft2AboutLogo, ABOUT_LOGO_W, ABOUT_LOGO_H);
 
 	// render static texts
 	textOut(customText0X, customText0Y, PAL_FORGRND, customText0);
