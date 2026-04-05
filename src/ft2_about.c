@@ -11,14 +11,14 @@
 #include "ft2_random.h"
 
 #define NUM_STARS 1500
-#define LOGO_ALPHA_PERCENTAGE 75
+#define LOGO_ALPHA_PERCENTAGE 80
 #define STARSHINE_ALPHA_PERCENTAGE 33
 #define ABOUT_SCREEN_X 3
 #define ABOUT_SCREEN_Y 3
 #define ABOUT_SCREEN_W 626
 #define ABOUT_SCREEN_H 167
-#define ABOUT_LOGO_W 449
-#define ABOUT_LOGO_H 75
+#define ABOUT_LOGO_W 541
+#define ABOUT_LOGO_H 78
 
 typedef struct
 {
