@@ -66,6 +66,9 @@ static void setChannelMute(int32_t chNr, bool off)
 {
 	channel_t *ch = &channel[chNr];
 
+	if (!audio.locked)
+		lockAudio();
+
 	ch->channelOff = off;
 	if (ch->channelOff)
 	{
@@ -82,6 +85,9 @@ static void setChannelMute(int32_t chNr, bool off)
 
 		ch->keyOff = true; // non-FT2 bug fix for stuck piano keys
 	}
+
+	if (audio.locked)
+		unlockAudio();
 
 	scope[chNr].wasCleared = false;
 }
