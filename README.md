@@ -20,7 +20,7 @@ If these don't work for you, you'll have to compile the code manually.
 - It contains a new "Trim" feature, which will remove unused stuff to potentially make the module smaller
 - Drag n' drop of modules/samples
 - The waveform display in the sample editor shows peak based data when zoomed out
-- Text boxes has a text marking option, where you can cut/copy/paste
+- Textboxes have a text marking option, where you can cut/copy/paste
 - MOD/STM/S3M import has been slightly improved (S3M import is still not ideal, as it's not compatible with XM)
 - Supports loading DIGI Booster (non-Pro) modules
 - Supports loading Impulse Tracker modules (Awful support! Don't use this for playback)
