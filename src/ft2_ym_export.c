@@ -34,6 +34,107 @@ static void write32BE(FILE *f, uint32_t v)
 	fwrite(buf, 1, 4, f);
 }
 
+static void write16LE(FILE *f, uint16_t v)
+{
+	uint8_t buf[2];
+	buf[0] = (uint8_t)(v & 0xFF);
+	buf[1] = (uint8_t)(v >> 8);
+	fwrite(buf, 1, 2, f);
+}
+
+static void write32LE(FILE *f, uint32_t v)
+{
+	uint8_t buf[4];
+	buf[0] = (uint8_t)(v & 0xFF);
+	buf[1] = (uint8_t)((v >> 8)  & 0xFF);
+	buf[2] = (uint8_t)((v >> 16) & 0xFF);
+	buf[3] = (uint8_t)(v >> 24);
+	fwrite(buf, 1, 4, f);
+}
+
+/*
+ * Write a minimal LHA level-0 "store" (no compression, method "-lh0-") header
+ * followed by the raw data bytes, then a zero end-of-archive marker.
+ *
+ * LHA level-0 header layout (all multi-byte fields are little-endian):
+ *   1  headerSize   = bytes from method[0] to osType (inclusive), does NOT count
+ *                     headerSize or checksum bytes themselves
+ *   1  checksum     = sum of the header bytes (from method[0] through osType)
+ *                     mod 256
+ *   5  method       = "-lh0-"
+ *   4  compressedSz = same as originalSz (no compression)
+ *   4  originalSz
+ *   2  modTime      = 0
+ *   2  modDate      = 0
+ *   1  attribute    = 0x20
+ *   1  level        = 0
+ *   1  fileNameLen
+ *   N  fileName
+ *   2  crc16        = 0 (skipped; many players do not verify)
+ *   1  osType       = 0
+ */
+static void writeLha0Block(FILE *f, const void *data, uint32_t len,
+                           const char *internalName)
+{
+	if (internalName == NULL)
+		internalName = "song.ym";
+
+	uint8_t nameLen = (uint8_t)strlen(internalName);
+
+	/* Build the portion of the header that enters the checksum calculation.
+	   That starts at method[0] and goes through osType (inclusive). */
+	uint8_t hdr[5 + 4 + 4 + 2 + 2 + 1 + 1 + 1 + 255 + 2 + 1]; // generous max
+	int hdrPos = 0;
+
+	// method
+	memcpy(hdr + hdrPos, "-lh0-", 5); hdrPos += 5;
+	// compressedSize (LE)
+	hdr[hdrPos++] = (uint8_t)(len & 0xFF);
+	hdr[hdrPos++] = (uint8_t)((len >> 8)  & 0xFF);
+	hdr[hdrPos++] = (uint8_t)((len >> 16) & 0xFF);
+	hdr[hdrPos++] = (uint8_t)((len >> 24) & 0xFF);
+	// originalSize (LE)
+	hdr[hdrPos++] = (uint8_t)(len & 0xFF);
+	hdr[hdrPos++] = (uint8_t)((len >> 8)  & 0xFF);
+	hdr[hdrPos++] = (uint8_t)((len >> 16) & 0xFF);
+	hdr[hdrPos++] = (uint8_t)((len >> 24) & 0xFF);
+	// modTime, modDate
+	hdr[hdrPos++] = 0; hdr[hdrPos++] = 0;
+	hdr[hdrPos++] = 0; hdr[hdrPos++] = 0;
+	// attribute
+	hdr[hdrPos++] = 0x20;
+	// level
+	hdr[hdrPos++] = 0;
+	// fileNameLen
+	hdr[hdrPos++] = nameLen;
+	// fileName
+	memcpy(hdr + hdrPos, internalName, nameLen); hdrPos += nameLen;
+	// CRC16 = 0
+	hdr[hdrPos++] = 0; hdr[hdrPos++] = 0;
+	// osType = 0
+	hdr[hdrPos++] = 0;
+
+	uint8_t headerSize = (uint8_t)hdrPos;
+
+	// compute checksum = sum of hdr[0..hdrPos-1] mod 256
+	uint8_t checksum = 0;
+	for (int i = 0; i < hdrPos; i++)
+		checksum = (uint8_t)(checksum + hdr[i]);
+
+	// Write the two preamble bytes
+	fputc(headerSize, f);
+	fputc(checksum,   f);
+
+	// Write the header body
+	fwrite(hdr, 1, hdrPos, f);
+
+	// Write the raw data
+	fwrite(data, 1, len, f);
+
+	// End-of-archive marker
+	fputc(0, f);
+}
+
 #define YM_MAX_FRAMES     200000
 #define YM_NUM_REGS_EXPORT 14
 
@@ -83,7 +184,6 @@ bool ymExportToFile(const char *path, const ymExportSettings_t *settings)
 	atariReplayer_init(&ar);
 
 	// Render: for each VBL frame, run enough replayer ticks then snapshot regs.
-	// ticksPerFrame = BPM * speed / (2.5 * playerHz)  → use fixed-point 16.16
 	uint32_t numFrames = 0;
 	bool     songAlive = true;
 
@@ -132,55 +232,85 @@ bool ymExportToFile(const char *path, const ymExportSettings_t *settings)
 	song.posJumpFlag = savedPosJumpFlag;
 	song.currNumRows = savedCurrNumRows;
 
-	// Write YM6 file
-	FILE *f = fopen(path, "wb");
-	if (f == NULL)
+	/* Build the interleaved register data block that will be LHA-wrapped */
+	uint32_t regDataLen = (uint32_t)YM_NUM_REGS_EXPORT * numFrames;
+	uint8_t *regData = (uint8_t *)malloc(regDataLen > 0 ? regDataLen : 1);
+	if (regData == NULL)
 	{
 		free(frames);
 		return false;
 	}
 
-	// Header identifiers
-	fwrite("YM6!", 1, 4, f);
-	fwrite("LeOnArD!", 1, 8, f);
-
-	// Frame count
-	write32BE(f, numFrames);
-
-	// Attributes: bit0 = interleaved (1), bit1 = hasLoop (0)
-	write32BE(f, 0x00000001);
-
-	// Number of digidrums
-	write32BE(f, 0);
-
-	// YM master clock (2 MHz Atari ST)
-	write32BE(f, 2000000);
-
-	// Player frame rate
-	write16BE(f, playerHz);
-
-	// Loop frame (0 = no loop)
-	write32BE(f, 0);
-
-	// Additional data size
-	write16BE(f, 0);
-
-	// Metadata strings (NUL-terminated)
-	fwrite(settings->title,   1, strlen(settings->title)   + 1, f);
-	fwrite(settings->author,  1, strlen(settings->author)  + 1, f);
-	fwrite(settings->comment, 1, strlen(settings->comment) + 1, f);
-
-	// Interleaved register data: all R0 values, then all R1, ..., then all R13
 	for (int r = 0; r < YM_NUM_REGS_EXPORT; r++)
-	{
 		for (uint32_t fr = 0; fr < numFrames; fr++)
-			fputc(frames[fr][r], f);
+			regData[r * numFrames + fr] = frames[fr][r];
+
+	free(frames);
+
+	/* Build YM6 header + metadata into a memory buffer, then wrap with LHA */
+	/* We write the whole YM6 payload (header + reg data + End!) as one block */
+	FILE *f = fopen(path, "wb");
+	if (f == NULL)
+	{
+		free(regData);
+		return false;
 	}
 
-	// End marker
-	fwrite("End!", 1, 4, f);
+	/* Compute total YM6 payload size to build a memory block for LHA wrap */
+	size_t titleLen   = strlen(settings->title)   + 1;
+	size_t authorLen  = strlen(settings->author)  + 1;
+	size_t commentLen = strlen(settings->comment) + 1;
+	size_t payloadSize = 4 + 8          /* YM6! + LeOnArD! */
+	                   + 4 + 4 + 4 + 4 + 2 + 4 + 2  /* header fields */
+	                   + titleLen + authorLen + commentLen
+	                   + regDataLen
+	                   + 4;             /* End! */
+
+	uint8_t *payload = (uint8_t *)malloc(payloadSize);
+	if (payload == NULL)
+	{
+		fclose(f);
+		free(regData);
+		return false;
+	}
+
+	uint8_t *p = payload;
+
+	// "YM6!"
+	memcpy(p, "YM6!", 4); p += 4;
+	// "LeOnArD!"
+	memcpy(p, "LeOnArD!", 8); p += 8;
+	// numFrames (BE)
+	p[0] = (uint8_t)(numFrames >> 24); p[1] = (uint8_t)(numFrames >> 16);
+	p[2] = (uint8_t)(numFrames >>  8); p[3] = (uint8_t)(numFrames & 0xFF);
+	p += 4;
+	// attributes: bit0=interleaved (BE)
+	p[0]=0; p[1]=0; p[2]=0; p[3]=1; p += 4;
+	// numDigidrums (BE)
+	p[0]=0; p[1]=0; p[2]=0; p[3]=0; p += 4;
+	// YM clock 2000000 (BE)
+	p[0]=0; p[1]=0x1E; p[2]=0x84; p[3]=0x80; p += 4;
+	// playerHz (BE)
+	p[0] = (uint8_t)(playerHz >> 8); p[1] = (uint8_t)(playerHz & 0xFF); p += 2;
+	// loopFrame (BE)
+	p[0]=0; p[1]=0; p[2]=0; p[3]=0; p += 4;
+	// additionalDataSz (BE)
+	p[0]=0; p[1]=0; p += 2;
+	// metadata strings
+	memcpy(p, settings->title,   titleLen);   p += titleLen;
+	memcpy(p, settings->author,  authorLen);  p += authorLen;
+	memcpy(p, settings->comment, commentLen); p += commentLen;
+	// interleaved register data
+	memcpy(p, regData, regDataLen); p += regDataLen;
+	// "End!"
+	memcpy(p, "End!", 4); p += 4;
+
+	free(regData);
+
+	// Wrap in LHA level-0 store
+	writeLha0Block(f, payload, (uint32_t)(p - payload), "song.ym");
 
 	fclose(f);
-	free(frames);
+	free(payload);
 	return true;
 }

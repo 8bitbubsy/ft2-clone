@@ -163,7 +163,7 @@ typedef struct atariReplayer_t
 // ymPeriodTable[note] gives the 12-bit YM period for tracker notes 0-95
 // (C-0 through B-7 in standard XM notation).
 // Values of 0 mean the note is out of the YM's audible range.
-extern const uint16_t ymPeriodTable[10*12]; // 10 octaves (same size as XM note space)
+extern uint16_t ymPeriodTable[10*12]; // 10 octaves (same size as XM note space)
 
 // ---------------------------------------------------------------------------
 // Public API

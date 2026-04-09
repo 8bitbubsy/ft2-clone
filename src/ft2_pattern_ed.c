@@ -22,6 +22,7 @@
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#include "ft2_atari_mode.h"
 
 // for pattern marking w/ keyboard
 static int8_t lastChMark;
@@ -1836,6 +1837,9 @@ void pbDecAdd(void)
 
 void pbAddChan(void)
 {
+	if (atariMode_isActive())
+		return; // PSG has exactly 3 channels
+
 	if (song.numChannels > 30)
 		return;
 
@@ -1855,6 +1859,9 @@ void pbAddChan(void)
 
 void pbSubChan(void)
 {
+	if (atariMode_isActive())
+		return; // PSG has exactly 3 channels
+
 	if (song.numChannels < 4)
 		return;
 

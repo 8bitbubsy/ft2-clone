@@ -4,6 +4,7 @@
 #endif
 
 #include <stdio.h>
+#include <string.h>
 #include <stdbool.h>
 #include "ft2_header.h"
 #include "ft2_audio.h"
@@ -13,6 +14,11 @@
 #include "ft2_module_loader.h"
 #include "ft2_tables.h"
 #include "ft2_structs.h"
+#include "ft2_replayer.h"
+#include "ft2_ym_export.h"
+#include "ft2_sndh_export.h"
+#include "ft2_unicode.h"
+#include "ft2_diskop.h"
 
 static int8_t smpChunkBuf[1024];
 static uint8_t packedPattData[65536], modPattData[64*32*4];
@@ -645,6 +651,73 @@ modSaveError:
 	return false;
 }
 
+static void saveYM6(UNICHAR *filenameU)
+{
+	ymExportSettings_t settings;
+	memset(&settings, 0, sizeof (settings));
+
+	if (song.name[0] != '\0')
+	{
+		strncpy(settings.title, song.name, YM_EXPORT_MAX_TITLE - 1);
+		settings.title[YM_EXPORT_MAX_TITLE - 1] = '\0';
+	}
+	else
+	{
+		strncpy(settings.title, "Untitled", YM_EXPORT_MAX_TITLE - 1);
+	}
+
+	strncpy(settings.author,  "Unknown",                  YM_EXPORT_MAX_AUTHOR  - 1);
+	strncpy(settings.comment, "Exported from ft2-clone",  YM_EXPORT_MAX_COMMENT - 1);
+
+	settings.startPos = 0;
+	settings.stopPos  = (uint8_t)(song.songLength > 0 ? song.songLength - 1 : 0);
+	settings.playerHz = 50;
+
+#ifdef _WIN32
+	// Convert wchar_t path to UTF-8
+	char pathBuf[PATH_MAX];
+	WideCharToMultiByte(CP_UTF8, 0, filenameU, -1, pathBuf, PATH_MAX, NULL, NULL);
+	ymExportToFile(pathBuf, &settings);
+#else
+	ymExportToFile(filenameU, &settings);
+#endif
+
+	setMouseBusy(false);
+}
+
+static void saveSNDH(UNICHAR *filenameU)
+{
+	sndhExportSettings_t settings;
+	memset(&settings, 0, sizeof (settings));
+
+	if (song.name[0] != '\0')
+	{
+		strncpy(settings.title, song.name, SNDH_EXPORT_MAX_TITLE - 1);
+		settings.title[SNDH_EXPORT_MAX_TITLE - 1] = '\0';
+	}
+	else
+	{
+		strncpy(settings.title, "Untitled", SNDH_EXPORT_MAX_TITLE - 1);
+	}
+
+	strncpy(settings.author, "Unknown", SNDH_EXPORT_MAX_AUTHOR - 1);
+	strncpy(settings.year,   "2026",    SNDH_EXPORT_MAX_YEAR   - 1);
+
+	settings.startPos = 0;
+	settings.stopPos  = (uint8_t)(song.songLength > 0 ? song.songLength - 1 : 0);
+	settings.timerHz  = 50;
+
+#ifdef _WIN32
+	char pathBuf[PATH_MAX];
+	WideCharToMultiByte(CP_UTF8, 0, filenameU, -1, pathBuf, PATH_MAX, NULL, NULL);
+	sndhExportToFile(pathBuf, &settings);
+#else
+	sndhExportToFile(filenameU, &settings);
+#endif
+
+	setMouseBusy(false);
+}
+
 static int32_t saveMusicThread(void *ptr)
 {
 	ASSERT(editor.tmpFilenameU != NULL);
@@ -653,8 +726,12 @@ static int32_t saveMusicThread(void *ptr)
 
 	pauseAudio();
 
-	if (editor.moduleSaveMode == 1)
+	if (editor.moduleSaveMode == MOD_SAVE_MODE_XM)
 		saveXM(editor.tmpFilenameU);
+	else if (editor.moduleSaveMode == MOD_SAVE_MODE_YM6)
+		saveYM6(editor.tmpFilenameU);
+	else if (editor.moduleSaveMode == MOD_SAVE_MODE_SNDH)
+		saveSNDH(editor.tmpFilenameU);
 	else
 		saveMOD(editor.tmpFilenameU);
 

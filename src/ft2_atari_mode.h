@@ -17,6 +17,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// Forward declaration of atariReplayer_t (avoid circular includes)
+typedef struct atariReplayer_t atariReplayer_t;
+
 // Initialize Atari mode subsystem (call once at startup)
 void atariMode_init(void);
 
@@ -43,3 +46,6 @@ void atariMode_drawIndicator(void);
 
 // Update Atari mode state (called per frame)
 void atariMode_update(void);
+
+// Get pointer to internal Atari replayer (may be NULL if not initialized)
+atariReplayer_t *atariMode_getReplayer(void);
