@@ -473,35 +473,25 @@ static void drawPanning(void)
 	hexOutBg(505, 191, PAL_FORGRND, PAL_DESKTOP, s->panning, 2);
 }
 
-void drawC4Rate(void)
+void drawSampleC4Hz(void)
 {
-	fillRect(472, 299, 64, 8, PAL_DESKTOP);
+	char str[16];
 
-	double dC4Hz = 0.0;
+	fillRect(472, 299, 56, 8, PAL_DESKTOP);
+
+	int32_t C4Hz = 0;
 	if (editor.curInstr != 0)
 	{
 		instr_t *ins = instr[editor.curInstr];
 		if (ins != NULL)
-			dC4Hz = getSampleC4Rate(&ins->smp[editor.curSmp]);
+		{
+			C4Hz = getSampleC4Hz(&ins->smp[editor.curSmp]);
+			if (C4Hz > 999999)
+				C4Hz = 999999;
+		}
 	}
-
-	if (dC4Hz <= 0.0) // can happen in several cases
-	{
-		textOut(472, 299, PAL_FORGRND, "0Hz");
-		return;
-	}
-
-	// display rate with as many digits as we can fit
-	char str[32];
-	if (dC4Hz < 1000.0)
-		sprintf(str, "%.3fHz", dC4Hz);
-	else if (dC4Hz < 10000.0)
-		sprintf(str, "%.2fHz", dC4Hz);
-	else if (dC4Hz < 100000.0)
-		sprintf(str, "%.1fHz", dC4Hz);
-	else
-		sprintf(str, "%dHz", (int32_t)(dC4Hz + 0.5)); // rounded
-
+	
+	sprintf(str, "%dHz", C4Hz);
 	textOut(472, 299, PAL_FORGRND, str);
 }
 
@@ -790,7 +780,7 @@ void relativeNoteOctUp(void)
 		s->relativeNote = 71;
 
 	drawRelativeNote();
-	drawC4Rate();
+	drawSampleC4Hz();
 	setSongModifiedFlag();
 }
 
@@ -807,7 +797,7 @@ void relativeNoteOctDown(void)
 		s->relativeNote = -48;
 
 	drawRelativeNote();
-	drawC4Rate();
+	drawSampleC4Hz();
 	setSongModifiedFlag();
 }
 
@@ -822,7 +812,7 @@ void relativeNoteUp(void)
 	{
 		s->relativeNote++;
 		drawRelativeNote();
-		drawC4Rate();
+		drawSampleC4Hz();
 		setSongModifiedFlag();
 	}
 }
@@ -838,7 +828,7 @@ void relativeNoteDown(void)
 	{
 		s->relativeNote--;
 		drawRelativeNote();
-		drawC4Rate();
+		drawSampleC4Hz();
 		setSongModifiedFlag();
 	}
 }
@@ -1354,7 +1344,7 @@ void setFinetuneScroll(uint32_t pos)
 	{
 		s->finetune = (int8_t)(pos - 128);
 		drawFineTune();
-		drawC4Rate();
+		drawSampleC4Hz();
 		setSongModifiedFlag();
 	}
 }
@@ -2222,7 +2212,7 @@ void updateInstEditor(void)
 	drawVibSpeed();
 	drawVibDepth();
 	drawVibSweep();
-	drawC4Rate();
+	drawSampleC4Hz();
 	drawRelativeNote();
 
 	// set scroll bars

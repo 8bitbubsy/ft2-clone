@@ -29,9 +29,9 @@
 #include "ft2_structs.h"
 #include "mixer/ft2_mix_interpolation.h"
 
-static uint64_t logTab[4*12*16], scopeLogTab[4*12*16], scopeDrawLogTab[4*12*16];
-static uint64_t amigaPeriodDiv, scopeAmigaPeriodDiv, scopeDrawAmigaPeriodDiv;
-static double dLogTab[4*12*16], dExp2MulTab[32];
+static uint32_t logTab[4*12*16], frequencyMulFactor, frequencyDivFactor;
+static uint64_t songTickDuration52fp[(MAX_BPM-MIN_BPM)+1];
+static double dDeltaMul, dScopeDeltaMul, dScopeDrawDeltaMul;
 static bool bxxOverflow;
 static note_t nilPatternLine[MAX_CHANNELS];
 
@@ -236,30 +236,10 @@ int16_t getRealUsedSamples(int16_t smpNum)
 	return i+1;
 }
 
-double dPeriod2Hz(uint32_t period)
+static int32_t period2Ft2Delta(uint32_t period) // returns a 16.16fp value at 44000Hz (max FT2 mix rate for SB16)
 {
-	period &= 0xFFFF; // just in case (actual period range is 0..65535)
+	uint32_t ft2Delta;
 
-	if (period == 0)
-		return 0.0; // in FT2, a period of 0 results in 0Hz
-
-	if (audio.linearPeriodsFlag)
-	{
-		const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
-
-		const uint32_t quotient  = invPeriod / (12 * 16 * 4);
-		const uint32_t remainder = invPeriod % (12 * 16 * 4);
-
-		return dLogTab[remainder] * dExp2MulTab[(14-quotient) & 31]; // x = y >> ((14-quotient) & 31);
-	}
-	else
-	{
-		return (8363.0 * 1712.0) / (int32_t)period;
-	}
-}
-
-uint64_t period2VoiceDelta(uint32_t period)
-{
 	period &= 0xFFFF; // just in case (actual period range is 0..65535)
 
 	if (period == 0)
@@ -271,73 +251,65 @@ uint64_t period2VoiceDelta(uint32_t period)
 
 		const uint32_t quotient  = invPeriod / (12 * 16 * 4);
 		const uint32_t remainder = invPeriod % (12 * 16 * 4);
+		const uint8_t shiftValue = (14 - quotient) & 31;
 
-		return logTab[remainder] >> ((14-quotient) & 31);
+		ft2Delta = (uint32_t)(((uint64_t)logTab[remainder] * (uint32_t)frequencyMulFactor) >> 24);
+		ft2Delta >>= shiftValue;
 	}
 	else
 	{
-		return amigaPeriodDiv / period;
+		ft2Delta = frequencyDivFactor / period;
 	}
+
+	return (int32_t)ft2Delta;
 }
 
-uint64_t period2ScopeDelta(uint32_t period)
+int64_t period2VoiceDelta(uint32_t period)
 {
-	period &= 0xFFFF; // just in case (actual period range is 0..65535)
-
-	if (period == 0)
-		return 0; // in FT2, a period of 0 results in 0Hz
-
-	if (audio.linearPeriodsFlag)
-	{
-		const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
-
-		const uint32_t quotient  = invPeriod / (12 * 16 * 4);
-		const uint32_t remainder = invPeriod % (12 * 16 * 4);
-
-		return scopeLogTab[remainder] >> ((14-quotient) & 31);
-	}
-	else
-	{
-		return scopeAmigaPeriodDiv / period;
-	}
+	const int32_t ft2Delta = period2Ft2Delta(period);
+	return (int64_t)((ft2Delta * dDeltaMul) + 0.5);
 }
 
-uint64_t period2ScopeDrawDelta(uint32_t period)
+int64_t period2ScopeDelta(uint32_t period)
 {
-	period &= 0xFFFF; // just in case (actual period range is 0..65535)
-
-	if (period == 0)
-		return 0; // in FT2, a period of 0 results in 0Hz
-
-	if (audio.linearPeriodsFlag)
-	{
-		const uint32_t invPeriod = ((12 * 192 * 4) - period) & 0xFFFF; // mask needed for FT2 period overflow quirk
-
-		const uint32_t quotient  = invPeriod / (12 * 16 * 4);
-		const uint32_t remainder = invPeriod % (12 * 16 * 4);
-
-		return scopeDrawLogTab[remainder] >> ((14-quotient) & 31);
-	}
-	else
-	{
-		return scopeDrawAmigaPeriodDiv / period;
-	}
+	const int32_t ft2Delta = period2Ft2Delta(period);
+	return (int64_t)((ft2Delta * dScopeDeltaMul) + 0.5);
 }
 
-// returns *exact* FT2 C-4 voice rate (depending on finetune, relativeNote and linear/Amiga period mode)
-double getSampleC4Rate(sample_t *s)
+int32_t period2ScopeDrawDelta(uint32_t period)
+{
+	const int32_t ft2Delta = period2Ft2Delta(period);
+	return (int32_t)((ft2Delta * dScopeDrawDeltaMul) + 0.5);
+}
+
+// returns nominal FT2 C-4 voice rate (depending on finetune, relativeNote and linear/Amiga period mode)
+int32_t getSampleC4Hz(sample_t *s)
 {
 	int32_t note = NOTE_C4 + s->relativeNote;
-	if (note < 0)
-		return -1; // shouldn't happen (just in case...)
-
-	if (note >= (10*12)-1)
-		return -1; // B-9 (after relativeNote calculation) = illegal! (won't play in replayer)
+	if (note < 0 || note >= (10*12)-1) // also returns 0 for B-9 (note is bugged in FT2)
+		return 0;
 
 	const int32_t C4Period = (note << 4) + (((int8_t)s->finetune >> 3) + 16);
 
-	const int32_t period = audio.linearPeriodsFlag ? linearPeriodLUT[C4Period] : amigaPeriodLUT[C4Period];
-	return dPeriod2Hz(period);
+	const uint32_t period = audio.linearPeriodsFlag ? linearPeriodLUT[C4Period] : amigaPeriodLUT[C4Period];
+	if (period == 0)
+		return 0;
+
+	int32_t hz;
+	if (audio.linearPeriodsFlag)
+	{
+		const int32_t invPeriod = (6 * 12 * 16 * 4) - (int32_t)period;
+		hz = (int32_t)round(8363.0 * exp2(invPeriod / (12.0 * 16.0 * 4.0)));
+	}
+	else
+	{
+		hz = (int32_t)round((8363.0 * 1712.0) / period);
+	}
+
+	if (hz < 0)
+		hz = 0;
+
+	return hz;
 }
 
 void setLinearPeriods(bool linearPeriodsFlag)
@@ -359,9 +331,9 @@ void setLinearPeriods(bool linearPeriodsFlag)
 		setConfigAudioRadioButtonStates();
 	}
 
-	// update mid-C freq. in instr. editor (it can slightly differ between Amiga/linear)
+	// update mid-C freq. in instr. editor (it can differ between Amiga/linear)
 	if (ui.instEditorShown)
-		drawC4Rate();
+		drawSampleC4Hz();
 }
 
 void resetVolumes(channel_t *ch)
@@ -462,36 +434,63 @@ void keyOff(channel_t *ch)
 	}
 }
 
-void calcReplayerVars(int32_t audioFreq)
+void calcReplayerVars(int32_t referenceFt2AudioFreq, int32_t audioFreq)
 {
 	ASSERT(audioFreq > 0);
 	if (audioFreq <= 0)
 		return;
 
-	const double logTabMul = (UINT32_MAX+1.0) / audioFreq;
-	for (int32_t i = 0; i < 4*12*16; i++)
-		logTab[i] = (uint64_t)round(dLogTab[i] * logTabMul);
+#define FT2_MIX_FRAC_SCALE 65536
+#define FT2_MID_C_RATE 8363
+#define FT2_MID_C_AMIGA_PERIOD 1712
 
-	amigaPeriodDiv = (uint64_t)round((MIXER_FRAC_SCALE * (1712.0*8363.0)) / audioFreq);
+	/* referenceFt2AudioFreq is the reference FT2 audio output rate.
+	** 44000Hz for tracker in live mode (matches FT2+SB16 at max rate)
+	** and actual WAV render rate (up to 48kHz) for WAV render mode.
+	*/
 
-	audio.quickVolRampSamples = (uint32_t)round(audioFreq / (1000.0 / FT2_QUICK_VOLRAMP_MILLISECONDS));
+	// max rate possible in FT2 (WAV render mode)
+	if (referenceFt2AudioFreq > 48000)
+		referenceFt2AudioFreq = 48000;
+	
+	const double dRefFreq = referenceFt2AudioFreq;
+
+	// "Boy, what a mess."
+	frequencyMulFactor = (uint32_t)round(256.0 * FT2_MIX_FRAC_SCALE / dRefFreq * FT2_MID_C_RATE);
+	frequencyDivFactor = (uint32_t)round(FT2_MIX_FRAC_SCALE * FT2_MID_C_AMIGA_PERIOD / dRefFreq * FT2_MID_C_RATE);
+	dScopeDeltaMul = ((SCOPE_FRAC_SCALE / (double)FT2_MIX_FRAC_SCALE) * dRefFreq) / SCOPE_HZ;
+	dScopeDrawDeltaMul = ((SCOPE_DRAW_FRAC_SCALE / (double)FT2_MIX_FRAC_SCALE) * dRefFreq) / (FT2_MID_C_RATE / 2.0);
+	dDeltaMul = ((MIXER_FRAC_SCALE / (double)FT2_MIX_FRAC_SCALE) * dRefFreq) / audioFreq;
+
+	const double dQuickVolRampSamples = (double)referenceFt2AudioFreq / (int32_t)(referenceFt2AudioFreq / 200);
+	audio.quickVolRampSamples = (uint32_t)round(audioFreq / dQuickVolRampSamples);
 	audio.fQuickVolRampSamplesMul = (float)(1.0 / audio.quickVolRampSamples);
 
 	for (int32_t bpm = MIN_BPM; bpm <= MAX_BPM; bpm++)
 	{
-		const int32_t i = bpm - MIN_BPM; // index for tables
-		const double dBpmHz = bpm / 2.5;
+		double dFt2BPMHz;
+		if (config.specialFlags2 & PRECISE_BPM)
+		{
+			dFt2BPMHz = bpm / 2.5; // what you see is what you get ;)
+		}
+		else
+		{
+			// use same lower BPM precision as FT2 w/ SB16 at 44000Hz (max rate)
+			const int32_t ft2SamplesPerTick = ((referenceFt2AudioFreq << 1) + (referenceFt2AudioFreq >> 1)) / bpm;
+			dFt2BPMHz = referenceFt2AudioFreq / (double)ft2SamplesPerTick;
+		}
 
-		const double dSamplesPerTick = audioFreq / dBpmHz;
+		const double dSamplesPerTick = audioFreq / dFt2BPMHz;
 		double dSamplesPerTickInt, dSamplesPerTickFrac = modf(dSamplesPerTick, &dSamplesPerTickInt);
 
-		audio.samplesPerTickIntTab[i] = (uint32_t)dSamplesPerTickInt;
-		audio.samplesPerTickFracTab[i] = (uint64_t)(dSamplesPerTickFrac * BPM_FRAC_SCALE);
-
 		// for performance counter (syncing visuals to audio)
-		double dTickTime = (double)hpcFreq.freq64 / dBpmHz;
+		double dTickTime = (double)hpcFreq.freq64 / dFt2BPMHz;
 		double dTickTimeInt, dTickTimeFrac = modf(dTickTime, &dTickTimeInt);
 
+		const int32_t i = bpm - MIN_BPM;
+		audio.samplesPerTickIntTab[i] = (uint32_t)dSamplesPerTickInt;
+		audio.samplesPerTickFracTab[i] = (uint64_t)(dSamplesPerTickFrac * BPM_FRAC_SCALE);
+		songTickDuration52fp[i] = (uint64_t)round((1ULL << 52ULL) / dFt2BPMHz);
 		audio.tickTimeIntTab[i] = (uint32_t)dTickTimeInt;
 		audio.tickTimeFracTab[i] = (uint64_t)(dTickTimeFrac * TICK_TIME_FRAC_SCALE);
 	}
@@ -2375,10 +2374,10 @@ void tickReplayer(void) // periodically called from audio callback
 	// for song playback counter (hh:mm:ss)
 	if (song.BPM >= MIN_BPM && song.BPM <= MAX_BPM) // just in case
 	{
-		song.playbackSecondsFrac += songTickDuration35fp[song.BPM-MIN_BPM];
-		if (song.playbackSecondsFrac >= 1ULL << 35)
+		song.playbackSecondsFrac += songTickDuration52fp[song.BPM-MIN_BPM];
+		if (song.playbackSecondsFrac >= 1ULL << 52)
 		{
-			song.playbackSecondsFrac &= (1ULL << 35)-1;
+			song.playbackSecondsFrac &= (1ULL << 52)-1;
 			song.playbackSeconds++;
 		}
 	}
@@ -2906,18 +2905,8 @@ void closeReplayer(void)
 
 void calcMiscReplayerVars(void)
 {
-	for (int32_t i = 0; i < 32; i++)
-		dExp2MulTab[i] = 1.0 / exp2(i); // 1/(2^i)
-
 	for (int32_t i = 0; i < 4*12*16; i++)
-	{
-		dLogTab[i] = (8363.0 * 256.0) * exp2(i / (4.0 * 12.0 * 16.0));
-		scopeLogTab[i] = (uint64_t)round(dLogTab[i] * (SCOPE_FRAC_SCALE / SCOPE_HZ));
-		scopeDrawLogTab[i] = (uint64_t)round(dLogTab[i] * (SCOPE_FRAC_SCALE / (C4_FREQ/2.0)));
-	}
-
-	scopeAmigaPeriodDiv = (uint64_t)round((SCOPE_FRAC_SCALE * (1712.0*8363.0)) / SCOPE_HZ);
-	scopeDrawAmigaPeriodDiv = (uint64_t)round((SCOPE_FRAC_SCALE * (1712.0*8363.0)) / (C4_FREQ/2.0));
+		logTab[i] = (uint32_t)round(16777216.0 * exp2(i * (1.0 / 768.0)));
 }
 
 bool setupReplayer(void)

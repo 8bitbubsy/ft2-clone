@@ -192,7 +192,7 @@ void exitWavRenderer(void)
 static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 {
 	int32_t bytesPerSample = (WDBitDepth / 8) * 2; // 2 channels
-	int32_t maxSamplesPerTick = (int32_t)ceil(frq / (MIN_BPM / 2.5)) + 1;
+	int32_t maxSamplesPerTick = (int32_t)ceil(frq / (MIN_BPM / 2.5)) + 2; // +2 needed
 
 	// *2 for stereo
 	wavRenderBuffer = (uint8_t *)malloc((TICKS_PER_RENDER_CHUNK * maxSamplesPerTick) * bytesPerSample);
@@ -438,7 +438,7 @@ static int32_t renderWavIndividualTracksThread(void *ptr)
 	(void)ptr;
 
 	int32_t bytesPerSample = (WDBitDepth / 8) * 2; // 2 channels
-	int32_t maxSamplesPerTick = (int32_t)ceil(WDFrequency / (MIN_BPM / 2.5)) + 1;
+	int32_t maxSamplesPerTick = (int32_t)ceil(WDFrequency / (MIN_BPM / 2.5)) + 2; // +2 because some headroom is needed
 
 	// *2 for stereo
 	wavRenderBuffer = (uint8_t *)malloc((TICKS_PER_RENDER_CHUNK * maxSamplesPerTick) * bytesPerSample);
@@ -723,7 +723,12 @@ void pbWavFreqUp(void)
 {
 	if (WDFrequency < MAX_WAV_RENDER_FREQ)
 	{
-		     if (WDFrequency ==  44100) WDFrequency = 48000;
+		     if (WDFrequency ==   8000) WDFrequency = 11025;
+		else if (WDFrequency ==  11025) WDFrequency = 16000;
+		else if (WDFrequency ==  16000) WDFrequency = 22050;
+		else if (WDFrequency ==  22050) WDFrequency = 32000;
+		else if (WDFrequency ==  32000) WDFrequency = 44100;
+		else if (WDFrequency ==  44100) WDFrequency = 48000;
 		else if (WDFrequency ==  48000) WDFrequency = 96000;
 		else if (WDFrequency ==  96000) WDFrequency = 192000;
 		else if (WDFrequency == 192000) WDFrequency = 384000;
@@ -740,6 +745,11 @@ void pbWavFreqDown(void)
 		else if (WDFrequency == 192000) WDFrequency = 96000;
 		else if (WDFrequency ==  96000) WDFrequency = 48000;
 		else if (WDFrequency ==  48000) WDFrequency = 44100;
+		else if (WDFrequency ==  44100) WDFrequency = 32000;
+		else if (WDFrequency ==  32000) WDFrequency = 22050;
+		else if (WDFrequency ==  22050) WDFrequency = 16000;
+		else if (WDFrequency ==  16000) WDFrequency = 11025;
+		else if (WDFrequency ==  11025) WDFrequency = 8000;
 
 		updateWavRenderer();
 	}

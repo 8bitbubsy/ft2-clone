@@ -88,6 +88,7 @@ checkBox_t checkBoxes[NUM_CHECKBOXES] =
 	// ------ CONFIG CHECKBOXES ------
 	//x,   y,   w,   h,  funcOnUp
 	{   3,  91,  77, 12, cbToggleAutoSaveConfig },
+	{ 389, 158,  89, 12, cbPreciseBPM },
 	{ 512, 158, 107, 12, cbConfigVolRamp },
 	{ 113,  14, 108, 12, cbConfigPattStretch },
 	{ 113,  27, 117, 12, cbConfigHexCount },

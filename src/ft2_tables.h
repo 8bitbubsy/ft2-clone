@@ -17,7 +17,6 @@ extern const uint16_t linearPeriodLUT[1936];
 extern const uint16_t amigaPeriodLUT[1936];
 extern const uint16_t ptPeriods[3 * 12];
 extern const uint16_t modPeriods[8 * 12];
-extern const uint32_t songTickDuration35fp[(MAX_BPM-MIN_BPM)+1];
 
 extern const char *dec2StrTab[100];
 extern const char *dec3StrTab[256];

@@ -25,7 +25,6 @@ void fixSample(sample_t *s); // modifies samples before index 0, and after loop/
 void unfixSample(sample_t *s); // restores samples after loop/end
 void clearSample(void);
 void clearCopyBuffer(void);
-int32_t getSampleMiddleCRate(sample_t *s);
 int32_t getSampleRangeStart(void);
 int32_t getSampleRangeEnd(void);
 int32_t getSampleRangeLength(void);

@@ -879,6 +879,9 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 
 static void setConfigAudioCheckButtonStates(void)
 {
+	checkBoxes[CB_CONF_PRECISE_BPM].checked = (config.specialFlags2 & PRECISE_BPM) ? true : false;
+	showCheckBox(CB_CONF_PRECISE_BPM);
+
 	checkBoxes[CB_CONF_VOL_RAMP].checked = (config.specialFlags & NO_VOLRAMP_FLAG) ? false : true;
 	showCheckBox(CB_CONF_VOL_RAMP);
 }
@@ -1169,12 +1172,12 @@ void showConfigScreen(void)
 			textOutShadow(405,  74, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
 			textOutShadow(468,  74, PAL_FORGRND, PAL_DSKTOP2, "32-bit");
 
-			textOutShadow(390,  90, PAL_FORGRND, PAL_DSKTOP2, "Mixer interpolation:");
-			textOutShadow(405, 104, PAL_FORGRND, PAL_DSKTOP2, "Disabled");
-			textOutShadow(405, 118, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
-			textOutShadow(405, 132, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
-			textOutShadow(405, 146, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
-			textOutShadow(405, 160, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
+			textOutShadow(405,  90, PAL_FORGRND, PAL_DSKTOP2, "No interpolation");
+			textOutShadow(405, 104, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
+			textOutShadow(405, 118, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
+			textOutShadow(405, 132, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
+			textOutShadow(405, 146, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
+			textOutShadow(405, 160, PAL_FORGRND, PAL_DSKTOP2, "Precise BPM");
 
 			textOutShadow(513,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
 			textOutShadow(528,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
@@ -1702,6 +1705,23 @@ void cbToggleAutoSaveConfig(void)
 {
 	config.cfg_AutoSave ^= 1;
 }
+
+void cbPreciseBPM(void)
+{
+	config.specialFlags2 ^= PRECISE_BPM;
+
+	if (config.specialFlags2 & PRECISE_BPM)
+		checkBoxes[CB_CONF_PRECISE_BPM].checked = true;
+	else
+		checkBoxes[CB_CONF_PRECISE_BPM].checked = false;
+
+	drawCheckBox(CB_CONF_PRECISE_BPM);
+
+	lockMixerCallback();
+	calcReplayerVars(FT2_REF_AUDIO_RATE, audio.freq);
+	unlockMixerCallback();
+}
+
 void cbConfigVolRamp(void)
 {
 	config.specialFlags ^= NO_VOLRAMP_FLAG;
@@ -1799,15 +1819,11 @@ void cbSoftwareMouse(void)
 		okBox(0, "System message", "Error: Couldn't create/show mouse cursor!", NULL);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
-	{
 		checkBoxes[CB_CONF_SOFTWARE_MOUSE].checked = false;
-		drawCheckBox(CB_CONF_SOFTWARE_MOUSE);
-	}
 	else
-	{
 		checkBoxes[CB_CONF_SOFTWARE_MOUSE].checked = true;
-		drawCheckBox(CB_CONF_SOFTWARE_MOUSE);
-	}
+
+	drawCheckBox(CB_CONF_SOFTWARE_MOUSE);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
 		SDL_ShowCursor(SDL_TRUE);

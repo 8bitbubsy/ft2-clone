@@ -38,6 +38,8 @@ enum
 	CURSOR_EFX2 = 7
 };
 
+#define FT2_REF_AUDIO_RATE 44000
+
 // do not touch these!
 #define MIN_BPM 32
 #define MAX_BPM 255
@@ -272,7 +274,8 @@ typedef struct song_t
 	uint64_t playbackSecondsFrac;
 } song_t;
 
-double getSampleC4Rate(sample_t *s);
+int32_t getSampleC4Hz(sample_t *s);
+void setSampleC4Hz(sample_t *s, double dC4Hz);
 
 void setNewSongPos(int32_t pos);
 
@@ -280,13 +283,11 @@ void fixString(char *str, int32_t lastChrPos); // removes leading spaces and 0x1
 void fixSongName(void);
 void fixInstrAndSampleNames(int16_t insNum);
 
-void calcReplayerVars(int32_t rate);
-void setSampleC4Hz(sample_t *s, double dC4Hz);
+void calcReplayerVars(int32_t referenceFt2AudioFreq, int32_t audioFreq);
 
-double dPeriod2Hz(uint32_t period);
-uint64_t period2VoiceDelta(uint32_t period);
-uint64_t period2ScopeDelta(uint32_t period);
-uint64_t period2ScopeDrawDelta(uint32_t period);
+int64_t period2VoiceDelta(uint32_t period);
+int64_t period2ScopeDelta(uint32_t period);
+int32_t period2ScopeDrawDelta(uint32_t period);
 
 int32_t getPianoKey(int32_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
 void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch);

@@ -73,6 +73,7 @@ enum
 	HARDWARE_MOUSE = 2,
 	STRETCH_IMAGE = 4,
 	USE_OS_MOUSE_POINTER = 8,
+	PRECISE_BPM = 16,
 
 	// windowFlags
 	WINSIZE_AUTO = 1,
@@ -240,6 +241,7 @@ void rbWinSize2x(void);
 void rbWinSize3x(void);
 void rbWinSize4x(void);
 void cbToggleAutoSaveConfig(void);
+void cbPreciseBPM(void);
 void cbConfigVolRamp(void);
 void cbConfigPattStretch(void);
 void cbConfigHexCount(void);
