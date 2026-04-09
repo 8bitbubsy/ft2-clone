@@ -169,11 +169,8 @@ void atariMode_drawIndicator(void)
 	if (!atariModeActive)
 		return;
 
-	// Draw a simple indicator showing Atari mode is active
-	// In a real implementation, this would render text or an icon on the UI
-	// For now, this is a placeholder that can be integrated with the GUI system
-
-	// Example: textOut(x, y, PAL_FORGRND, "ATARI");
+	textOut(511, 1, PAL_FORGRND, "ATARI");
+	drawPushButton(PB_ATARI_MODE_TOGGLE);
 }
 
 void atariMode_update(void)
