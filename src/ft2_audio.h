@@ -1,5 +1,9 @@
 #pragma once
 
+// Note: YM2149/AY-3-8910 PSG emulation for future chip music (SNDH/Atari ST)
+// integration is provided in ym2149.h / ym2149.c. The SNDH header parser is
+// in ft2_sndh.h / ft2_sndh.c. Neither module has any dependency on this file.
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <SDL2/SDL.h>
