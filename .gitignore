@@ -25,3 +25,4 @@ vs2019_project/ft2-clone/Debug/ft2-clone.vcxproj.FileListAbsolute.txt
 *.enc
 release/macos/ft2-clone-macos.app/Contents/MacOS/ft2-clone-macos
 release/other/ft2-clone
+build/
