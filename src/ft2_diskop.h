@@ -16,6 +16,8 @@ enum
 	MOD_SAVE_MODE_MOD = 0,
 	MOD_SAVE_MODE_XM = 1,
 	MOD_SAVE_MODE_WAV = 2,
+	MOD_SAVE_MODE_YM6 = 3,
+	MOD_SAVE_MODE_SNDH = 4,
 	SMP_SAVE_MODE_RAW = 0,
 	SMP_SAVE_MODE_IFF = 1,
 	SMP_SAVE_MODE_WAV = 2
@@ -78,6 +80,8 @@ void rbDiskOpTrack(void);
 void rbDiskOpModSaveXm(void);
 void rbDiskOpModSaveMod(void);
 void rbDiskOpModSaveWav(void);
+void rbDiskOpModSaveYM6(void);
+void rbDiskOpModSaveSNDH(void);
 void rbDiskOpSmpSaveWav(void);
 void rbDiskOpSmpSaveRaw(void);
 void rbDiskOpSmpSaveIff(void);

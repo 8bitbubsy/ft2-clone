@@ -40,6 +40,7 @@
 #include "ft2_video.h"
 #include "ft2_inst_ed.h"
 #include "ft2_structs.h"
+#include "ft2_atari_mode.h"
 
 // hide POSIX warnings for chdir()
 #ifdef _MSC_VER
@@ -668,6 +669,10 @@ void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 				changeFilenameExt(modTmpFName, ".xm", PATH_MAX);
 			else if (editor.moduleSaveMode == MOD_SAVE_MODE_WAV)
 				changeFilenameExt(modTmpFName, ".wav", PATH_MAX);
+			else if (editor.moduleSaveMode == MOD_SAVE_MODE_YM6)
+				changeFilenameExt(modTmpFName, ".ym", PATH_MAX);
+			else if (editor.moduleSaveMode == MOD_SAVE_MODE_SNDH)
+				changeFilenameExt(modTmpFName, ".sndh", PATH_MAX);
 
 			updateWindowTitle(true);
 		}
@@ -897,9 +902,11 @@ static void diskOpSave(bool checkOverwrite)
 		{
 			switch (editor.moduleSaveMode)
 			{
-				         case MOD_SAVE_MODE_MOD: diskOpChangeFilenameExt(".mod"); break;
-				default: case MOD_SAVE_MODE_XM:  diskOpChangeFilenameExt(".xm");  break;
-				         case MOD_SAVE_MODE_WAV: diskOpChangeFilenameExt(".wav"); break;
+				         case MOD_SAVE_MODE_MOD:  diskOpChangeFilenameExt(".mod");  break;
+				default: case MOD_SAVE_MODE_XM:   diskOpChangeFilenameExt(".xm");   break;
+				         case MOD_SAVE_MODE_WAV:  diskOpChangeFilenameExt(".wav");  break;
+				         case MOD_SAVE_MODE_YM6:  diskOpChangeFilenameExt(".ym");   break;
+				         case MOD_SAVE_MODE_SNDH: diskOpChangeFilenameExt(".sndh"); break;
 			}
 
 			// enter WAV renderer if needed
@@ -907,6 +914,20 @@ static void diskOpSave(bool checkOverwrite)
 			{
 				exitDiskOpScreen();
 				showWavRenderer();
+				return;
+			}
+
+			// export YM6 format
+			if (editor.moduleSaveMode == MOD_SAVE_MODE_YM6)
+			{
+				atariMode_exportYM6();
+				return;
+			}
+
+			// export SNDH format
+			if (editor.moduleSaveMode == MOD_SAVE_MODE_SNDH)
+			{
+				atariMode_exportSNDH();
 				return;
 			}
 
@@ -1317,6 +1338,12 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 			{
 				if (editor.moduleSaveMode == MOD_SAVE_MODE_WAV && !_stricmp("wav", extPtr))
 					break; // show .wav files when save mode is "WAV"
+
+				if (editor.moduleSaveMode == MOD_SAVE_MODE_YM6 && !_stricmp("ym", extPtr))
+					break; // show .ym files when save mode is "YM6"
+
+				if (editor.moduleSaveMode == MOD_SAVE_MODE_SNDH && !_stricmp("sndh", extPtr))
+					break; // show .sndh files when save mode is "SNDH"
 
 				if (!moduleExtensionAccepted(extPtr))
 					goto skipEntry;
@@ -2002,6 +2029,8 @@ static void drawSaveAsElements(void)
 			textOutShadow(19, 101, PAL_FORGRND, PAL_DSKTOP2, "MOD");
 			textOutShadow(19, 115, PAL_FORGRND, PAL_DSKTOP2, "XM");
 			textOutShadow(19, 129, PAL_FORGRND, PAL_DSKTOP2, "WAV");
+			textOutShadow(19, 143, PAL_FORGRND, PAL_DSKTOP2, "YM6");
+			textOutShadow(19, 157, PAL_FORGRND, PAL_DSKTOP2, "SNDH");
 		}
 		break;
 
@@ -2041,8 +2070,8 @@ static void setDiskOpItemRadioButtons(void)
 	hideRadioButtonGroup(RB_GROUP_DISKOP_PAT_SAVEAS);
 	hideRadioButtonGroup(RB_GROUP_DISKOP_TRK_SAVEAS);
 
-	if (editor.moduleSaveMode > 3)
-		editor.moduleSaveMode = 3;
+	if (editor.moduleSaveMode > MOD_SAVE_MODE_SNDH)
+		editor.moduleSaveMode = MOD_SAVE_MODE_SNDH;
 
 	if (editor.sampleSaveMode > 3)
 		editor.sampleSaveMode = 3;
@@ -2518,6 +2547,26 @@ void rbDiskOpModSaveWav(void)
 	updateWindowTitle(true);
 
 	editor.diskOpReadDir = true;
+}
+
+void rbDiskOpModSaveYM6(void)
+{
+	editor.moduleSaveMode = MOD_SAVE_MODE_YM6;
+	checkRadioButton(RB_DISKOP_MOD_SAVEAS_YM6);
+	diskOpChangeFilenameExt(".ym");
+
+	updateCurrSongFilename(); // for window title
+	updateWindowTitle(true);
+}
+
+void rbDiskOpModSaveSNDH(void)
+{
+	editor.moduleSaveMode = MOD_SAVE_MODE_SNDH;
+	checkRadioButton(RB_DISKOP_MOD_SAVEAS_SNDH);
+	diskOpChangeFilenameExt(".sndh");
+
+	updateCurrSongFilename(); // for window title
+	updateWindowTitle(true);
 }
 
 void rbDiskOpSmpSaveRaw(void)

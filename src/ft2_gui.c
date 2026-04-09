@@ -22,6 +22,7 @@
 #include "ft2_tables.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#include "ft2_atari_mode.h"
 
 static void releaseMouseStates(void)
 {
@@ -1165,6 +1166,7 @@ void showTopRightMainScreen(void)
 	showPushButton(PB_SMP_ED);
 	showPushButton(PB_CONFIG);
 	showPushButton(PB_HELP);
+	showPushButton(PB_ATARI_MODE_TOGGLE);
 
 	// instrument switcher
 	ui.instrSwitcherShown = true;
@@ -1188,6 +1190,7 @@ void hideTopRightMainScreen(void)
 	hidePushButton(PB_SMP_ED);
 	hidePushButton(PB_CONFIG);
 	hidePushButton(PB_HELP);
+	hidePushButton(PB_ATARI_MODE_TOGGLE);
 
 	// instrument switcher
 	hideInstrumentSwitcher();

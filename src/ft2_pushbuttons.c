@@ -31,6 +31,7 @@
 #include "ft2_palette.h"
 #include "ft2_structs.h"
 #include "ft2_bmp.h"
+#include "ft2_atari_mode.h"
 
 #define BUTTON_GFX_BMP_WIDTH 90
 
@@ -414,7 +415,11 @@ pushButton_t pushButtons[NUM_PUSHBUTTONS] =
 	{ 138, 142, 18, 13, 1, 4, ARROW_UP_STRING,   NULL,    pbWavSongStartUp,   NULL },
 	{ 155, 142, 18, 13, 1, 4, ARROW_DOWN_STRING, NULL,    pbWavSongStartDown, NULL },
 	{ 253, 142, 18, 13, 1, 4, ARROW_UP_STRING,   NULL,    pbWavSongEndUp,     NULL },
-	{ 270, 142, 18, 13, 1, 4, ARROW_DOWN_STRING, NULL,    pbWavSongEndDown,   NULL }
+	{ 270, 142, 18, 13, 1, 4, ARROW_DOWN_STRING, NULL,    pbWavSongEndDown,   NULL },
+
+	// ------ ATARI MODE TOGGLE ------
+	//x,   y,  w,  h,  p, d, text #1, text #2, funcOnDown, funcOnUp
+	{ 511, 0, 56, 11, 0, 0, "ATARI", NULL,    NULL,       atariMode_toggle }
 };
 
 static uint32_t tmpCounter;
