@@ -23,7 +23,7 @@ typedef struct sndh_info_t
 	char  author[SNDH_AUTHOR_LEN];  // composer    (COMM tag)
 	char  year[SNDH_YEAR_LEN];      // year string (YEAR tag)
 	int   numSubTunes;              // number of sub-tunes (## tag)
-	int   defaultSubTune;           // default sub-tune index (1-based, 0 = unspecified)
+	int   defaultSubTune;           // default sub-tune index (1-based, defaults to 1 if !# tag is absent)
 	float timerFreqHz;              // replay rate in Hz (TC tag, default 50.0 Hz PAL VBL)
 } sndh_info_t;
 

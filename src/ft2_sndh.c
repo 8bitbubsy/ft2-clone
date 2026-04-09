@@ -13,16 +13,19 @@
 #include <stdbool.h>
 #include "ft2_sndh.h"
 
-// Copy a NUL-terminated string from src into dst, limiting to dstLen-1 chars.
-static void safeCopy(char *dst, const char *src, size_t dstLen)
+// Copy a NUL-terminated string from src into dst, reading at most maxSrc bytes
+// from src.  Writes at most dstLen-1 characters plus a NUL terminator.
+// Returns false if no NUL terminator was found within maxSrc bytes (truncated).
+static bool safeCopy(char *dst, const char *src, size_t dstLen, size_t maxSrc)
 {
 	size_t i = 0;
-	while (i < dstLen - 1 && src[i] != '\0')
+	while (i < dstLen - 1 && i < maxSrc && src[i] != '\0')
 	{
 		dst[i] = src[i];
 		i++;
 	}
 	dst[i] = '\0';
+	return (i < maxSrc && src[i] == '\0');
 }
 
 bool sndh_parseHeader(const uint8_t *data, uint32_t dataLen, sndh_info_t *info)
@@ -74,7 +77,7 @@ bool sndh_parseHeader(const uint8_t *data, uint32_t dataLen, sndh_info_t *info)
 		{
 			pos += 4;
 			const char *str = (const char *)&data[pos];
-			safeCopy(info->title, str, sizeof(info->title));
+			safeCopy(info->title, str, sizeof(info->title), dataLen - pos);
 			// Advance past the NUL-terminated string
 			while (pos < dataLen && data[pos] != '\0')
 				pos++;
@@ -87,7 +90,7 @@ bool sndh_parseHeader(const uint8_t *data, uint32_t dataLen, sndh_info_t *info)
 		{
 			pos += 4;
 			const char *str = (const char *)&data[pos];
-			safeCopy(info->author, str, sizeof(info->author));
+			safeCopy(info->author, str, sizeof(info->author), dataLen - pos);
 			while (pos < dataLen && data[pos] != '\0')
 				pos++;
 			pos++;
@@ -99,7 +102,7 @@ bool sndh_parseHeader(const uint8_t *data, uint32_t dataLen, sndh_info_t *info)
 		{
 			pos += 4;
 			const char *str = (const char *)&data[pos];
-			safeCopy(info->year, str, sizeof(info->year));
+			safeCopy(info->year, str, sizeof(info->year), dataLen - pos);
 			while (pos < dataLen && data[pos] != '\0')
 				pos++;
 			pos++;
@@ -150,9 +153,13 @@ bool sndh_parseHeader(const uint8_t *data, uint32_t dataLen, sndh_info_t *info)
 			continue;
 		}
 
-		// Unknown tag — scan forward to the next NUL or non-ASCII byte
-		// to stay in sync with the stream.
-		pos++;
+		// Unknown tag — skip the 4-byte tag, then advance past any NUL-terminated
+		// string payload to reach the next tag boundary.
+		pos += 4;
+		while (pos < dataLen && data[pos] != '\0')
+			pos++;
+		if (pos < dataLen)
+			pos++; // skip the NUL
 	}
 
 	return true;

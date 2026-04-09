@@ -68,7 +68,7 @@ typedef struct ym2149_t
 	uint8_t  noiseOutput;   // current noise output bit
 
 	// Envelope generator
-	uint32_t envPeriod;     // 16-bit envelope period (0 treated as 1 in counting)
+	uint32_t envPeriod;     // 16-bit envelope period (0 treated as 0x10000 in counting)
 	uint32_t envCounter;    // envelope counter
 	uint8_t  envShape;      // 4-bit shape register
 	uint8_t  envStep;       // current step (0..15 for AY, 0..31 for YM)

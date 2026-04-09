@@ -18,7 +18,7 @@
 // The resistor-ladder DAC values below are taken from Furnace's measured
 // parameters (ym2149_param and ym2149_param_env in ay8910.cpp, MAME-derived).
 // The "res" arrays are proportional resistances; a lower value = louder level.
-// We normalise so that the maximum (index 0, highest level) maps to INT16_MAX.
+// We normalise so that the maximum (last index, highest level) maps to INT16_MAX.
 // ---------------------------------------------------------------------------
 
 // AY-3-8910 — 16 volume levels, same table used for envelope steps.
@@ -258,13 +258,11 @@ uint8_t ym2149_read(const ym2149_t *ym, uint8_t reg)
 }
 
 // ---------------------------------------------------------------------------
-// Internal: clock one "chip cycle" (one tone-counter tick = clock/2 for tone,
-// /16 for noise, /256 for envelope — matching AY/YM hardware dividers).
+// Internal: clock one PSG base tick.
 //
-// In the real chip the master clock is divided by 8 before the tone counters,
-// by 16 for noise, and the envelope runs on the same base as tone.
-// We advance one tone-counter step per call; noise and envelope have their own
-// counters relative to that.
+// The real chip divides the master clock by 8 to derive the PSG base clock.
+// Tone counters advance one step per PSG tick and toggle their output every
+// `period` steps.  Noise and envelope share the same base clock.
 // ---------------------------------------------------------------------------
 
 static inline void ymClockTone(ym2149_t *ym, int ch)
@@ -319,17 +317,21 @@ static inline void ymClockEnvelope(ym2149_t *ym)
 
 				if (!cont)
 				{
-					// No continue: hold at silence (or high for some shapes)
-					ym->envHold  = 1;
-					if (!ym->envAttack)
-						ym->envStep = 0;                 // decay → hold at lowest
-					else
-						ym->envStep = ym->envStepMask;   // attack → hold at highest
+					// One-shot shapes (0x00-0x07): always terminate at silence.
+					// This matches the canonical AY/YM envelope shapes \___  and /___.
+					ym->envHold = 1;
+					ym->envStep = 0;
 				}
 				else if (hold)
 				{
-					// Continue + hold: stay at current extreme
+					// Continue + hold: latch at the appropriate extreme.
+					// ALT flips the effective direction for choosing the hold level:
+					//   shape 0x09 (ATK=0,ALT=0): hold low  \___ → step=0
+					//   shape 0x0B (ATK=0,ALT=1): hold high \¯¯¯ → step=mask
+					//   shape 0x0D (ATK=1,ALT=0): hold high /¯¯¯ → step=mask
+					//   shape 0x0F (ATK=1,ALT=1): hold low  /___ → step=0
 					ym->envHold = 1;
+					ym->envStep = (ym->envAttack ^ alt) ? ym->envStepMask : 0;
 				}
 				else if (alt)
 				{
@@ -368,21 +370,21 @@ static inline uint16_t ymChannelAmplitude(const ym2149_t *ym, int ch)
 // ---------------------------------------------------------------------------
 // ym2149_generate — render numSamples of 16-bit signed PCM per channel
 //
-// The YM2149 tone counter is clocked at clockFreq/2 (the chip internally
-// divides by 2 before the tone generators).  We model this by accumulating
-// a fixed-point fraction: each output sample advances the chip by
-// (clockFreq/2) / sampleRate tone-counter steps.
+// The AY/YM PSG base clock is the master clock divided by 8.  Tone counters
+// advance one step per PSG base tick; the tone output toggles every `period`
+// steps, giving: output frequency = clockFreq / (8 * 2 * period).
+// Noise and envelope counters run at the same PSG base clock rate.
 //
-// Noise is clocked at the same base rate as tone.
-// The envelope is also clocked at the same base rate as tone.
+// We model this by accumulating a fixed-point fraction: each output sample
+// advances the PSG base counter by (clockFreq/8) / sampleRate steps.
 // ---------------------------------------------------------------------------
 
 void ym2149_generate(ym2149_t *ym,
                      int16_t *outA, int16_t *outB, int16_t *outC,
                      uint32_t numSamples, uint32_t sampleRate)
 {
-	// Half-clock: the tone counters run at clockFreq/2
-	uint32_t halfClock = ym->clockFreq / 2;
+	// PSG base clock: tone/noise/envelope counters run at clockFreq/8
+	const uint32_t psgClock = ym->clockFreq / 8;
 
 	uint8_t mixer = ym->regs[YM_REG_MIXER];
 
@@ -390,7 +392,7 @@ void ym2149_generate(ym2149_t *ym,
 	{
 		// Advance the accumulator and clock the chip as many times as needed
 		// to stay in sync with the output sample rate.
-		ym->accumulator += halfClock;
+		ym->accumulator += psgClock;
 		while (ym->accumulator >= sampleRate)
 		{
 			ym->accumulator -= sampleRate;
@@ -425,7 +427,8 @@ void ym2149_generate(ym2149_t *ym,
 			uint8_t gate = toneGate & noiseGate;
 
 			uint16_t amp = ymChannelAmplitude(ym, ch);
-			int16_t sample = gate ? (int16_t)amp : -(int16_t)amp;
+			// A low gate mutes the DAC contribution; do not phase-invert it.
+			int16_t sample = gate ? (int16_t)amp : 0;
 
 			(*out)[s] = sample;
 		}
