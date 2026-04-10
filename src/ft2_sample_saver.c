@@ -252,7 +252,7 @@ static bool saveIFFSample(UNICHAR *filenameU, bool saveRangedData)
 	iffWriteUint32(f, 0); // samplesPerHiCycle
 
 	// samplesPerSec
-	uint32_t tmp32 = getSampleMiddleCRate(smp);
+	uint32_t tmp32 = getSampleC4Hz(smp);
 	if (tmp32 == 0 || tmp32 > 65535) tmp32 = 16726;
 	iffWriteUint16(f, (uint16_t)tmp32);
 
@@ -365,7 +365,7 @@ static bool saveWAVSample(UNICHAR *filenameU, bool saveRangedData)
 	wavHeader.subchunk1Size = 16;
 	wavHeader.audioFormat = 1;
 	wavHeader.numChannels = 1;
-	wavHeader.sampleRate = getSampleMiddleCRate(smp);
+	wavHeader.sampleRate = getSampleC4Hz(smp);
 	wavHeader.byteRate = (wavHeader.sampleRate * wavHeader.numChannels * sampleBitDepth) / 8;
 	wavHeader.blockAlign = (wavHeader.numChannels * sampleBitDepth) / 8;
 	wavHeader.bitsPerSample = sampleBitDepth;

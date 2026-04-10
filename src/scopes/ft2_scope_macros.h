@@ -9,14 +9,14 @@
 	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t position = s->position; \
-	uint64_t positionFrac = s->positionFrac;
+	uint32_t positionFrac = (uint32_t)s->positionFrac >> (SCOPE_FRAC_BITS-SCOPE_DRAW_FRAC_BITS);
 
 #define SCOPE_INIT_PINGPONG \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t actualPos, position = s->position; \
-	uint64_t positionFrac = s->positionFrac; \
+	uint32_t positionFrac = (uint32_t)s->positionFrac >> (SCOPE_FRAC_BITS-SCOPE_DRAW_FRAC_BITS); \
 	bool samplingBackwards = s->samplingBackwards;
 
 #define LINED_SCOPE_INIT \
@@ -45,25 +45,25 @@
 
 #define LINEAR_INTERPOLATION8(frac) \
 { \
-	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
+	const int32_t f = (frac) >> (SCOPE_DRAW_FRAC_BITS-15); \
 	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
 }
 
 #define LINEAR_INTERPOLATION16(frac) \
 { \
-	const int32_t f = (frac) >> (SCOPE_FRAC_BITS-15); \
+	const int32_t f = (frac) >> (SCOPE_DRAW_FRAC_BITS-15); \
 	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
 }
 
 #define COS_INTERPOLATION8(frac) \
 { \
-	const int16_t c = scopeCosLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
+	const int16_t c = scopeCosLUT[(frac) >> (SCOPE_DRAW_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
 	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * c) >> SCOPE_INTRP_SCALE_BITS); \
 }
 
 #define COS_INTERPOLATION16(frac) \
 { \
-	const int16_t c = scopeCosLUT[(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
+	const int16_t c = scopeCosLUT[(frac) >> (SCOPE_DRAW_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
 	sample = s16[0] + (((s16[1] - s16[0]) * c) >> SCOPE_INTRP_SCALE_BITS); \
 }
 
@@ -124,7 +124,7 @@
 #define SCOPE_GET_INTERPOLATED_SMP8 \
 	if (s->active) \
 	{ \
-		INTERPOLATE_SMP8(position, (uint32_t)positionFrac) \
+		INTERPOLATE_SMP8(position, (uint16_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -134,7 +134,7 @@
 #define SCOPE_GET_INTERPOLATED_SMP16 \
 	if (s->active) \
 	{ \
-		INTERPOLATE_SMP16(position, (uint32_t)positionFrac) \
+		INTERPOLATE_SMP16(position, (uint16_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -144,7 +144,7 @@
 #define SCOPE_GET_INTERPOLATED_SMP8_LOOP \
 	if (s->active) \
 	{ \
-		INTERPOLATE_SMP8_LOOP(position, (uint32_t)positionFrac) \
+		INTERPOLATE_SMP8_LOOP(position, (uint16_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -154,7 +154,7 @@
 #define SCOPE_GET_INTERPOLATED_SMP16_LOOP \
 	if (s->active) \
 	{ \
-		INTERPOLATE_SMP16_LOOP(position, (uint32_t)positionFrac) \
+		INTERPOLATE_SMP16_LOOP(position, (uint16_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -171,7 +171,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
+		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint16_t)positionFrac ^ UINT16_MAX) : (uint16_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -182,7 +182,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ UINT32_MAX) : (uint32_t)positionFrac) \
+		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint16_t)positionFrac ^ UINT16_MAX) : (uint16_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -191,8 +191,8 @@
 
 #define SCOPE_UPDATE_READPOS \
 	positionFrac += s->drawDelta; \
-	position += positionFrac >> 32; \
-	positionFrac &= UINT32_MAX;
+	position += positionFrac >> SCOPE_DRAW_FRAC_BITS; \
+	positionFrac &= SCOPE_DRAW_FRAC_MASK;
 
 #define SCOPE_DRAW_SMP \
 	video.frameBuffer[((lineY - sample) * SCREEN_W) + x] = color;

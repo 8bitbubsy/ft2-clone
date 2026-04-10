@@ -148,19 +148,13 @@ void setNewAudioFreq(uint32_t freq) // for song-to-WAV rendering
 	oldAudioFreq = audio.freq;
 	audio.freq = freq;
 
-	const bool mustRecalcTables = audio.freq != oldAudioFreq;
-	if (mustRecalcTables)
-		calcReplayerVars(audio.freq);
+	calcReplayerVars(audio.freq, audio.freq);
 }
 
 void setBackOldAudioFreq(void) // for song-to-WAV rendering
 {
-	const bool mustRecalcTables = audio.freq != oldAudioFreq;
-
 	audio.freq = oldAudioFreq;
-
-	if (mustRecalcTables)
-		calcReplayerVars(audio.freq);
+	calcReplayerVars(FT2_REF_AUDIO_RATE, audio.freq);
 }
 
 void setMixerBPM(int32_t bpm)
@@ -1133,9 +1127,9 @@ bool setupAudio(bool showErrorMsg)
 	stopAllScopes();
 
 	// zero tick sample counter so that it will instantly initiate a tick
-	audio.tickSampleCounterFrac  = audio.tickSampleCounter = 0;
+	audio.tickSampleCounterFrac = audio.tickSampleCounter = 0;
 
-	calcReplayerVars(audio.freq);
+	calcReplayerVars(FT2_REF_AUDIO_RATE, audio.freq);
 
 	if (song.BPM == 0)
 		song.BPM = 125;

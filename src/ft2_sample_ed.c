@@ -530,11 +530,6 @@ void clearCopyBuffer(void)
 	smpCopyDidCopyWholeSample = false;
 }
 
-int32_t getSampleMiddleCRate(sample_t *s)
-{
-	return (int32_t)(getSampleC4Rate(s) + 0.5); // rounded
-}
-
 int32_t getSampleRangeStart(void)
 {
 	return smpEd_Rx1;

@@ -6,7 +6,7 @@
 #include "ft2_audio.h"
 #include "ft2_unicode.h"
 
-void drawC4Rate(void);
+void drawSampleC4Hz(void);
 void sanitizeInstrument(instr_t *ins);
 bool fileIsInstr(UNICHAR *filenameU);
 void saveInstr(UNICHAR *filenameU, int16_t insNum);

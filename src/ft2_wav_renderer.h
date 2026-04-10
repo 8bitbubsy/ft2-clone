@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "ft2_header.h"
 
-#define MIN_WAV_RENDER_FREQ 44100
+#define MIN_WAV_RENDER_FREQ 8000
 #define MAX_WAV_RENDER_FREQ 384000
 
 void cbToggleWavRenderIndividualTracks(void);

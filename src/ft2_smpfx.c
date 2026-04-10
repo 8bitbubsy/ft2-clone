@@ -430,7 +430,7 @@ static void setupResoLpFilter(sample_t *s, resoFilter_t *f, double cutoff, uint3
 
 	if (!absoluteCutoff)
 	{
-		const double sampleFreq = getSampleC4Rate(s);
+		const double sampleFreq = getSampleC4Hz(s);
 		if (cutoff >= sampleFreq/2.0)
 			cutoff = (sampleFreq/2.0) - CUTOFF_EPSILON;
 
@@ -462,7 +462,7 @@ static void setupResoHpFilter(sample_t *s, resoFilter_t *f, double cutoff, uint3
 
 	if (!absoluteCutoff)
 	{
-		const double sampleFreq = getSampleC4Rate(s);
+		const double sampleFreq = getSampleC4Hz(s);
 		if (cutoff >= sampleFreq/2.0)
 			cutoff = (sampleFreq/2.0) - CUTOFF_EPSILON;
 
