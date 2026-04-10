@@ -41,15 +41,11 @@ The code is partly my own, partly based on the original FT2 code.
 - It has some small additions to make life easier (C4/middle-C Hz display in Instr. Ed., envelope point coordinate display, etc).
 
 # Releases
-Windows/macOS binary releases of the original ft2-clone can always be found at [16-bits.org](https://16-bits.org/ft2.php).
-
-Linux binaries can be found [here](https://repology.org/project/fasttracker2/versions). \ 
-If these don't work for you, you'll have to compile the code manually.
+none yet
 
 # Screenshots
 
-![Example #1](https://16-bits.org/ft2-clone-3.png)
-![Example #2](https://16-bits.org/ft2-clone-4.png)
+
 
 # Compiling the code
 Full build instructions can be found in the repository (`HOW-TO-COMPILE.txt`).
