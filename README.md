@@ -55,7 +55,6 @@ Open `vs2019_project/ft2-clone.sln` in Visual Studio. The solution file is VS 20
 
 **Linux:**
 Keep in mind that the program may fail to compile on Linux, depending on your distribution and GCC version. \ 
-Try using the Linux packages linked from [16-bits.org](https://16-bits.org/ft2.php) if compilation fails.
 
 PS: The source code is quite hackish and hardcoded. \ 
 My first priority is to make an accurate clone, and not to make flexible and easily modifiable code.
