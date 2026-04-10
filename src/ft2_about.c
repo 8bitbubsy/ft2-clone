@@ -31,7 +31,7 @@ typedef struct
 
 static char *customText0 = "Original FT2 by Magnus \"Vogue\" H\224gdahl & Fredrik \"Mr.H\" Huss";
 static char *customText1 = "Clone by Olav \"8bitbubsy\" S\233rensen";
-static char *customText2 = "https://16-bits.org";
+static char *customText2 = "Atari ST YM/SNDH Edition - added by Qumran";
 static char customText3[128];
 static int16_t customText0X, customText0Y, customText1X, customText1Y;
 static int16_t customText2X, customText2Y, customText3X, customText3Y;

@@ -22,27 +22,27 @@
     <ProjectGuid>{6C633792-F87D-4F1C-AB02-C25202FFEDE6}</ProjectGuid>
     <RootNamespace>ft2-clone</RootNamespace>
     <ProjectName>ft2-clone</ProjectName>
-    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -295,6 +295,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\ft2_about.c" />
+    <ClCompile Include="..\..\src\ft2_atari_config.c" />
+    <ClCompile Include="..\..\src\ft2_atari_mode.c" />
+    <ClCompile Include="..\..\src\ft2_atari_replayer.c" />
     <ClCompile Include="..\..\src\ft2_audio.c" />
     <ClCompile Include="..\..\src\ft2_audioselector.c" />
     <ClCompile Include="..\..\src\ft2_bmp.c" />
@@ -336,6 +339,7 @@
     <ClCompile Include="..\..\src\ft2_unicode.c" />
     <ClCompile Include="..\..\src\ft2_video.c" />
     <ClCompile Include="..\..\src\ft2_wav_renderer.c" />
+    <ClCompile Include="..\..\src\ft2_ym_export.c" />
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_fonts.c" />
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_gui.c" />
     <ClCompile Include="..\..\src\gfxdata\ft2_bmp_logo.c" />
@@ -370,6 +374,8 @@
     </ClCompile>
     <ClCompile Include="..\..\src\scopes\ft2_scopedraw.c" />
     <ClCompile Include="..\..\src\scopes\ft2_scopes.c" />
+    <ClCompile Include="..\..\src\ft2_sndh.c" />
+    <ClCompile Include="..\..\src\ft2_sndh_export.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_aiff.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_brr.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_flac.c" />
@@ -378,9 +384,13 @@
     <ClCompile Include="..\..\src\smploaders\ft2_load_ogg.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_raw.c" />
     <ClCompile Include="..\..\src\smploaders\ft2_load_wav.c" />
+    <ClCompile Include="..\..\src\ym2149.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\ft2_about.h" />
+    <ClInclude Include="..\..\src\ft2_atari_config.h" />
+    <ClInclude Include="..\..\src\ft2_atari_mode.h" />
+    <ClInclude Include="..\..\src\ft2_atari_replayer.h" />
     <ClInclude Include="..\..\src\ft2_audio.h" />
     <ClInclude Include="..\..\src\ft2_audioselector.h" />
     <ClInclude Include="..\..\src\ft2_bmp.h" />
@@ -423,6 +433,7 @@
     <ClInclude Include="..\..\src\ft2_unicode.h" />
     <ClInclude Include="..\..\src\ft2_video.h" />
     <ClInclude Include="..\..\src\ft2_wav_renderer.h" />
+    <ClInclude Include="..\..\src\ft2_ym_export.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix_interpolation.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix.h" />
     <ClInclude Include="..\..\src\mixer\ft2_mix_macros.h" />
@@ -432,10 +443,13 @@
     <ClInclude Include="..\..\src\scopes\ft2_scopedraw.h" />
     <ClInclude Include="..\..\src\scopes\ft2_scopes.h" />
     <ClInclude Include="..\..\src\scopes\ft2_scope_macros.h" />
+    <ClInclude Include="..\..\src\ft2_sndh.h" />
+    <ClInclude Include="..\..\src\ft2_sndh_export.h" />
     <ClInclude Include="..\..\src\smploaders\miniflac.h" />
     <ClInclude Include="..\..\src\smploaders\minimp3.h" />
     <ClInclude Include="..\..\src\smploaders\minimp3_ex.h" />
     <ClInclude Include="..\..\src\smploaders\minivorbis.h" />
+    <ClInclude Include="..\..\src\ym2149.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\src\ft2-clone.rc" />
