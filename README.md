@@ -8,8 +8,14 @@ This is a fork of the excellent [Fasttracker II clone by 8bitbubsy](https://gith
 *What is Fasttracker II? Read about it on [Wikipedia](https://en.wikipedia.org/wiki/FastTracker_2).*
 
 # Features
-- **Atari ST YM2149 support** — compose music targeting the Atari ST's iconic YM sound chip
-- **SNDH export** — export your tracks in the SNDH format, the standard for Atari ST music
+- **YM2149/AY-3-8910 PSG emulation** — full software emulation of the Atari ST sound chip with support for both AY and YM modes
+- **Atari ST mode** — toggle between standard PCM tracker mode and Atari PSG mode; channels are locked to 3 and PSG-specific effects become available (noise period, mixer control, hardware envelope)
+- **YM6 export** — export to YM6 format with proper LHA level-0 compression wrapper, compatible with standard YM players
+- **SNDH export** — export to SNDH format with an embedded pre-assembled 68000 replayer, proper BRA dispatch table, TC50/TC60 timer tags, and HDNS padding
+- **PSG instrument editor** — text-mode UI for editing PSG instruments: volume envelope, arpeggio table, pitch envelope, mixer flags, hardware envelope settings, noise period, and loop points
+- **Disk Op integration** — YM6 and SNDH export radio buttons in the Disk Op save dialog
+- **Atari-specific effects** — full set of mapped XM effects plus Atari-specific: `7xx` (noise period), `8xx` (mixer control), `9xx` (HW envelope shape), `Exx`/`Gxx` (envelope period)
+- **Sidecar configuration** — Atari mode settings persisted separately as `FT2-ATARI.CFG`
 - **Fasttracker II workflow** — all the familiar FT2 editing, instruments, and pattern-based composing you know and love
 - Everything from the original ft2-clone (see below)
 
@@ -46,10 +52,14 @@ If these don't work for you, you'll have to compile the code manually.
 ![Example #2](https://16-bits.org/ft2-clone-4.png)
 
 # Compiling the code
-Build instructions can be found in the repository (HOW-TO-COMPILE.txt).
+Full build instructions can be found in the repository (`HOW-TO-COMPILE.txt`).
 
+**Windows (Visual Studio):**
+Open `vs2019_project/ft2-clone.sln` in Visual Studio. The solution file is VS 2019 format but can be opened in newer versions (2022+). When opening in Visual Studio 2022 or later, VS will offer to retarget/upgrade the project — accept this to use modern, updated platform toolsets and Windows SDK versions. The solution targets both **x86** and **x64** in Debug and Release configurations.
+
+**Linux:**
 Keep in mind that the program may fail to compile on Linux, depending on your distribution and GCC version. \ 
-Please don't nag me about it, and try to use the Linux packages linked to from [16-bits.org](https://16-bits.org/ft2.php) instead.
+Try using the Linux packages linked from [16-bits.org](https://16-bits.org/ft2.php) if compilation fails.
 
 PS: The source code is quite hackish and hardcoded. \ 
 My first priority is to make an accurate clone, and not to make flexible and easily modifiable code.
@@ -59,3 +69,4 @@ Big parts of the code (except GUI) are directly ported from the original FT2 sou
 # Credits
 - Original Fasttracker II clone by [8bitbubsy](https://github.com/8bitbubsy/ft2-clone)
 - Atari ST YM/SNDH extensions by [georgeflower](https://github.com/georgeflower)
+- Atari ST YM/SNDH support informed by code and research from [tildearrow/furnace](https://github.com/tildearrow/furnace) — the YM2149 emulation references the Furnace/MAME AY-3-8910 implementation
