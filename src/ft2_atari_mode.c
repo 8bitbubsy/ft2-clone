@@ -20,9 +20,10 @@
 #include "ft2_diskop.h"
 #include "ft2_replayer.h"
 #include "ft2_structs.h"
+#include "ft2_audio.h"
+#include "ft2_atari_config.h"
 
-// Global Atari mode state
-static bool atariModeActive = false;
+// Global Atari mode state (replayer pointer; flag is in editor.atariMode)
 static atariReplayer_t *atariReplayer = NULL;
 
 void atariMode_init(void)
@@ -36,7 +37,7 @@ void atariMode_init(void)
 	atariReplayer_init(atariReplayer);
 
 	// Atari mode is disabled by default
-	atariModeActive = false;
+	editor.atariMode = false;
 }
 
 void atariMode_free(void)
@@ -50,12 +51,15 @@ void atariMode_free(void)
 
 void atariMode_toggle(void)
 {
-	atariModeActive = !atariModeActive;
+	editor.atariMode = !editor.atariMode;
 
-	if (atariModeActive && atariReplayer != NULL)
+	if (editor.atariMode && atariReplayer != NULL)
 	{
-		// Entering Atari mode: reset replayer
+		// Entering Atari mode: reset replayer and lock to 3 channels
 		atariReplayer_reset(atariReplayer);
+		lockMixerCallback();
+		song.numChannels = ATARI_PSG_CHANNELS;
+		unlockMixerCallback();
 	}
 
 	// Redraw UI to show mode change
@@ -64,20 +68,29 @@ void atariMode_toggle(void)
 
 bool atariMode_isActive(void)
 {
-	return atariModeActive;
+	return editor.atariMode;
 }
 
 void atariMode_setActive(bool active)
 {
-	if (atariModeActive != active)
+	if (editor.atariMode != active)
 	{
-		atariModeActive = active;
+		editor.atariMode = active;
+		atariConfig.atariMode = active; // sync to config sidecar
 
-		if (atariModeActive && atariReplayer != NULL)
+		if (editor.atariMode && atariReplayer != NULL)
 		{
 			atariReplayer_reset(atariReplayer);
+			lockMixerCallback();
+			song.numChannels = ATARI_PSG_CHANNELS;
+			unlockMixerCallback();
 		}
 	}
+}
+
+atariReplayer_t *atariMode_getReplayer(void)
+{
+	return atariReplayer;
 }
 
 void atariMode_exportYM6(void)
@@ -102,8 +115,11 @@ void atariMode_exportYM6(void)
 		strncpy(settings.title, "Untitled", YM_EXPORT_MAX_TITLE - 1);
 	}
 
-	// Set author (could be extended to read from module metadata)
-	strncpy(settings.author, "Unknown", YM_EXPORT_MAX_AUTHOR - 1);
+	// Set author (from config sidecar if set, otherwise "Unknown")
+	if (atariConfig.sndhAuthor[0] != '\0')
+		strncpy(settings.author, atariConfig.sndhAuthor, YM_EXPORT_MAX_AUTHOR - 1);
+	else
+		strncpy(settings.author, "Unknown", YM_EXPORT_MAX_AUTHOR - 1);
 	strncpy(settings.comment, "Exported from ft2-clone", YM_EXPORT_MAX_COMMENT - 1);
 
 	// Export full song
@@ -144,8 +160,11 @@ void atariMode_exportSNDH(void)
 		strncpy(settings.title, "Untitled", SNDH_EXPORT_MAX_TITLE - 1);
 	}
 
-	// Set author
-	strncpy(settings.author, "Unknown", SNDH_EXPORT_MAX_AUTHOR - 1);
+	// Set author (from config sidecar if set, otherwise "Unknown")
+	if (atariConfig.sndhAuthor[0] != '\0')
+		strncpy(settings.author, atariConfig.sndhAuthor, SNDH_EXPORT_MAX_AUTHOR - 1);
+	else
+		strncpy(settings.author, "Unknown", SNDH_EXPORT_MAX_AUTHOR - 1);
 	strncpy(settings.year, "2026", SNDH_EXPORT_MAX_YEAR - 1);
 
 	// Export full song
@@ -166,7 +185,7 @@ void atariMode_exportSNDH(void)
 
 void atariMode_drawIndicator(void)
 {
-	if (!atariModeActive)
+	if (!editor.atariMode)
 		return;
 
 	textOut(511, 1, PAL_FORGRND, "ATARI");
@@ -175,7 +194,7 @@ void atariMode_drawIndicator(void)
 
 void atariMode_update(void)
 {
-	if (!atariModeActive || atariReplayer == NULL)
+	if (!editor.atariMode || atariReplayer == NULL)
 		return;
 
 	// Update Atari replayer if song is playing

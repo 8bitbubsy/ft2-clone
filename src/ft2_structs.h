@@ -32,6 +32,8 @@ typedef struct editor_t
 	uint8_t srcInstr, curInstr, srcSmp, curSmp, currHelpScreen, currConfigScreen, textCursorBlinkCounter;
 	uint8_t keyOnTab[MAX_CHANNELS], editRowSkip, curOctave;
 	uint8_t sampleSaveMode, moduleSaveMode, ptnJumpPos[4];
+	bool atariMode;           // global Atari PSG mode toggle
+	uint8_t ymExportFormat;   // 0=YM6, 1=SNDH
 	int16_t globalVolume, songPos, row;
 	uint16_t tmpPattern, editPattern, BPM, speed, tick, ptnCursorY;
 	int32_t keyOffNr, keyOffTime[MAX_CHANNELS];
@@ -67,6 +69,7 @@ typedef struct ui_t
 	bool _nibblesShown, _transposeShown, _instEditorShown;
 	bool _instEditorExtShown, _sampleEditorExtShown, _sampleEditorEffectsShown, _patternEditorShown;
 	bool _sampleEditorShown, _advEditShown, _wavRendererShown, _trimScreenShown;
+	bool atariExportShown;
 	// -------------------------------------------------------------------------
 } ui_t;
 

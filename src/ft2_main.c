@@ -38,6 +38,8 @@
 #include "ft2_structs.h"
 #include "ft2_hpc.h"
 #include "ft2_smpfx.h"
+#include "ft2_atari_config.h"
+#include "ft2_atari_mode.h"
 
 static void initializeVars(void);
 static void cleanUpAndExit(void); // never call this inside the main loop
@@ -164,6 +166,7 @@ int main(int argc, char *argv[])
 	}
 
 	loadConfigOrSetDefaults(); // config must be loaded at this exact point
+	loadAtariConfig();         // load Atari sidecar config (after main config)
 
 	if (!setupWindow() || !setupRenderer())
 	{
@@ -215,6 +218,8 @@ int main(int argc, char *argv[])
 		cleanUpAndExit();
 		return 1;
 	}
+
+	atariMode_init(); // initialize Atari PSG replayer subsystem
 
 	pauseAudio();
 	resumeAudio();
@@ -332,6 +337,7 @@ static void initializeVars(void)
 	midi.enable = true;
 #endif
 
+	resetAtariConfig(); // initialise Atari sidecar config to defaults
 	editor.programRunning = true;
 }
 
@@ -366,6 +372,7 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	}
 #endif
 
+	atariMode_free(); // free Atari PSG replayer resources
 	closeAudio();
 	closeReplayer();
 	closeVideo();
@@ -378,6 +385,8 @@ static void cleanUpAndExit(void) // never call this inside the main loop!
 	freeTextBoxes();
 	freeMouseCursors();
 	freeBMPs();
+
+	saveAtariConfig(); // save Atari sidecar config before freeing paths
 
 	if (editor.audioDevConfigFileLocationU != NULL)
 	{

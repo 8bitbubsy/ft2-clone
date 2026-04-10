@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <math.h>
 #include "ft2_header.h"
 #include "ft2_config.h"
 #include "scopes/ft2_scopes.h"
@@ -17,6 +18,8 @@
 #include "ft2_audioselector.h"
 #include "mixer/ft2_mix.h"
 #include "mixer/ft2_silence_mix.h"
+#include "ft2_atari_mode.h"
+#include "ft2_atari_replayer.h"
 
 // hide POSIX warnings
 #ifdef _MSC_VER
@@ -796,21 +799,64 @@ static void fillVisualsSyncBuffer(void)
 	channel_t *s = channel;
 	voice_t *v = voice;
 
-	for (int32_t i = 0; i < song.numChannels; i++, c++, s++, v++)
+	if (atariMode_isActive())
 	{
-		c->scopeVolume = v->scopeVolume;
-		c->period = s->finalPeriod;
-		c->instrNum = s->instrNum;
-		c->smpNum = s->smpNum;
-		c->status = s->tmpStatus;
-		c->smpStartPos = s->smpStartPos;
+		atariReplayer_t *ar = atariMode_getReplayer();
 
-		c->pianoNoteNum = 255; // no piano key
-		if (songPlaying && ui.instEditorShown && (c->status & CF_UPDATE_PERIOD) && !s->keyOff)
+		// Populate PSG channel data for scopes and piano
+		for (int32_t i = 0; i < MAX_CHANNELS; i++, c++, s++, v++)
 		{
-			const int32_t note = getPianoKey(s->finalPeriod, s->finetune, s->relativeNote);
-			if (note >= 0 && note <= 95)
-				c->pianoNoteNum = (uint8_t)note;
+			if (ar != NULL && i < ATARI_PSG_CHANNELS)
+			{
+				const psgChannel_t *pch = &ar->ch[i];
+				c->period     = pch->finalPeriod;
+				c->scopeVolume = (uint8_t)(pch->volume * (SCOPE_HEIGHT * 4 / 15));
+				c->instrNum   = 0;
+				c->smpNum     = 0;
+				c->smpStartPos = 0;
+				c->status     = pch->noteOn ? (CF_UPDATE_PERIOD | CS_UPDATE_VOL) : 0;
+
+				c->pianoNoteNum = 255;
+				if (songPlaying && ui.instEditorShown &&
+				    (c->status & CF_UPDATE_PERIOD) && pch->finalPeriod > 0)
+				{
+					double freq = 2000000.0 / (16.0 * pch->finalPeriod);
+					int note = (int)round(12.0 * log2(freq / 440.0) + 57.0);
+					if (note >= 0 && note <= 95)
+						c->pianoNoteNum = (uint8_t)note;
+				}
+			}
+			else
+			{
+				// silence non-PSG channels
+				c->scopeVolume = 0;
+				c->status      = 0;
+				c->pianoNoteNum = 255;
+				c->period      = 0;
+				c->instrNum    = 0;
+				c->smpNum      = 0;
+				c->smpStartPos = 0;
+			}
+		}
+	}
+	else
+	{
+		for (int32_t i = 0; i < song.numChannels; i++, c++, s++, v++)
+		{
+			c->scopeVolume = v->scopeVolume;
+			c->period = s->finalPeriod;
+			c->instrNum = s->instrNum;
+			c->smpNum = s->smpNum;
+			c->status = s->tmpStatus;
+			c->smpStartPos = s->smpStartPos;
+
+			c->pianoNoteNum = 255; // no piano key
+			if (songPlaying && ui.instEditorShown && (c->status & CF_UPDATE_PERIOD) && !s->keyOff)
+			{
+				const int32_t note = getPianoKey(s->finalPeriod, s->finetune, s->relativeNote);
+				if (note >= 0 && note <= 95)
+					c->pianoNoteNum = (uint8_t)note;
+			}
 		}
 	}
 
@@ -855,7 +901,17 @@ static void audioCallback(void *userdata, Uint8 *stream, int len)
 					resetRampVolumes();
 
 				tickReplayer();
-				updateVoices();
+				if (atariMode_isActive())
+				{
+					// PSG path: tick the Atari replayer; YM audio will replace PCM
+					atariReplayer_t *ar = atariMode_getReplayer();
+					if (ar != NULL)
+						atariReplayer_tick(ar);
+				}
+				else
+				{
+					updateVoices();
+				}
 				fillVisualsSyncBuffer();
 			}
 			replayerBusy = false;
@@ -874,9 +930,9 @@ static void audioCallback(void *userdata, Uint8 *stream, int len)
 		if (samplesToMix > audio.tickSampleCounter)
 			samplesToMix = audio.tickSampleCounter;
 
-		doChannelMixing(bufferPosition, samplesToMix);
+		if (!atariMode_isActive())
+			doChannelMixing(bufferPosition, samplesToMix);
 		bufferPosition += samplesToMix;
-		
 		audio.tickSampleCounter -= samplesToMix;
 		samplesLeft -= samplesToMix;
 	}
