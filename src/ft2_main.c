@@ -231,8 +231,7 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef HAS_MIDI
-#ifdef __APPLE__
-	// MIDI init can take several seconds on Mac, use thread
+	// MIDI init can take several seconds, use thread
 	midi.initMidiThread = SDL_CreateThread(initMidiFunc, "MIDI init thread", NULL);
 	if (midi.initMidiThread == NULL)
 	{
@@ -240,9 +239,6 @@ int main(int argc, char *argv[])
 		cleanUpAndExit();
 		return 1;
 	}
-#else
-	initMidiFunc(NULL);
-#endif
 #endif
 
 	hpc_ResetCounters(&video.vblankHpc); // quirk: this is needed for potential okBox() calls in handleModuleLoadFromArg()
@@ -338,16 +334,15 @@ static void initializeVars(void)
 static void cleanUpAndExit(void) // never call this inside the main loop!
 {
 #ifdef HAS_MIDI
-#ifdef __APPLE__
-	// on Mac we used a thread to init MIDI (as it could take several seconds)
+	// we used a thread to init MIDI (as it could take several seconds)
 	if (midi.initMidiThread != NULL)
 	{
 		SDL_WaitThread(midi.initMidiThread, NULL);
 		midi.initMidiThread = NULL;
 	}
-#endif
+
 	midi.enable = false; // stop MIDI callback from doing things
-	while (midi.callbackBusy) SDL_Delay(1); // wait for MIDI callback to finish
+	while (midi.callbackBusy) SDL_Delay(10); // wait for MIDI callback to finish
 
 	closeMidiInDevice();
 	freeMidiIn();

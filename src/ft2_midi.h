@@ -16,9 +16,7 @@ typedef struct midi_t
 	bool rescanDevicesFlag;
 	uint32_t inputDevice, numInputDevices;
 	int16_t currMIDIVibDepth, currMIDIPitch;
-#ifdef __APPLE__
 	SDL_Thread *initMidiThread;
-#endif
 } midi_t;
 
 extern midi_t midi; // ft2_midi.c
