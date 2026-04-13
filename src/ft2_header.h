@@ -14,7 +14,7 @@
 #endif
 #include "ft2_replayer.h"
 
-#define PROG_VER_STR "2.15"
+#define PROG_VER_STR "2.16"
 
 // do NOT change these! It will only mess things up...
 
