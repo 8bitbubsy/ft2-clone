@@ -82,15 +82,15 @@ static void starfield(void)
 
 		// add a tint of blue to the star pixel
 
-		int32_t r = intensity255 - 90;
+		int32_t r = intensity255 - 92;
 		if (r < 0)
 			r = 0;
 
-		int32_t g = intensity255 - 38;
+		int32_t g = intensity255 - 36;
 		if (g < 0)
 			g = 0;
 
-		int32_t b = intensity255 + 60;
+		int32_t b = intensity255 + 62;
 		if (b > 255)
 			b = 255;
 
