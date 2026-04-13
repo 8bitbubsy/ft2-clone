@@ -9,11 +9,11 @@
 #define SINC16_WIDTH 16
 #define CUBIC_SPLINE_WIDTH 4
 
-// note: more than 4096 phases barely makes any audible difference
-#define INTRP_PHASES 4096
+// 8192 phases is optimal, aliasing should be below (or close to) 16-bit noise floor
+#define INTRP_PHASES 8192
 
 // log2(INTRP_PHASES)
-#define INTRP_PHASES_BITS 12
+#define INTRP_PHASES_BITS 13
 
 // log2(CUBIC_SPLINE_WIDTH)
 #define CUBIC_SPLINE_WIDTH_BITS 2
