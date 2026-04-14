@@ -1,7 +1,5 @@
 // 8bitbubsy: taken from Github at 13.04.2026, and edited with WinMM lock fix + compiler warning
 
-
-
 #include <string.h>
 #include <stdlib.h>
 #include "rtmidi_c.h"
@@ -9,6 +7,7 @@
 
 // Fixes build error C4996 on Windows 11 with VS2022
 #ifdef _MSC_VER
+#pragma warning(disable: 4005) // 8bitbubsy: added this
 #define strdup _strdup
 #endif
 
