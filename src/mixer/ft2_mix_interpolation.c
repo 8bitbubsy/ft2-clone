@@ -15,20 +15,20 @@ typedef struct
 
 static sincKernel_t sincKernelConfig[SINC_KERNELS] =
 {
-	/* These parameters have been borrowed from OpenMPT.
-	** Only modification done was to change the cutoff from
-	** 0.97 to 1.0 for the first kernel, which after some
-	** testing was determined to be a good change; more
-	** sharpness, and no increase in audible aliasing
-	** (to me, at least).
+	/* These parameters have been borrowed from the OpenMPT project
+	** (with cutoff edit for kernel #1).
 	**
-	** It's quite difficult to tweak these numbers without
-	** causing either ringing or aliasing in some cases.
-	** If someone has good experience on designing
-	** windowed-sinc kernels for a use case like this,
-	** and knows of a good way to figure out what numbers
-	** to use here, PLEASE contact me (contact details can
-	**  be found on the bottom of 16-bits.org).
+	** The beta for kernel #1 is based on a stopband attenuation close to
+	** the 16-bit audio noise floor (~96.33dB).
+	**
+	** It's quite difficult to tweak these numbers without causing either
+	** ringing or aliasing in some cases. If anyone has good experience on
+	** designing low-tap windowed-sinc kernels for a use case like this, and
+	** knows of a good way to figure out what numbers to use here, PLEASE
+	** contact me (contact details can be found at the bottom of 16-bits.org).
+	**
+	** The beta for kernel #1 is based on a stopband attenuation close to
+	** the 16-bit audio noise floor (~96.33dB).
 	*/
 
 	// beta,  cutoff
@@ -42,13 +42,13 @@ float *fCubicSplineLUT, *fSinc[SINC_KERNELS], *fSinc8[SINC_KERNELS], *fSinc16[SI
 uint64_t sincRatio1, sincRatio2;
 // ----------
 
-static void makeSincKernel(float *fOut, int32_t numPoints, int32_t numPhases, double kaiserBeta, double cutoff);
+static void calcPolyphaseSincLUT(float *fOut, int32_t numTaps, double kaiserBeta, double sincCutoff);
 
 bool setupMixerInterpolationTables(void)
 {
 	// cubic spline (4-point)
 
-	fCubicSplineLUT = (float *)malloc(CUBIC_SPLINE_WIDTH * INTRP_PHASES * sizeof (float));
+	fCubicSplineLUT = (float *)malloc(CUBIC_SPLINE_TAPS * INTRP_PHASES * sizeof (float));
 	if (fCubicSplineLUT == NULL)
 	{
 		showErrorMsgBox("Not enough memory!");
@@ -78,8 +78,8 @@ bool setupMixerInterpolationTables(void)
 	sincKernel_t *k = sincKernelConfig;
 	for (int32_t i = 0; i < SINC_KERNELS; i++, k++)
 	{
-		 fSinc8[i] = (float *)malloc(SINC8_WIDTH  * INTRP_PHASES * sizeof (float));
-		fSinc16[i] = (float *)malloc(SINC16_WIDTH * INTRP_PHASES * sizeof (float));
+		 fSinc8[i] = (float *)malloc(INTRP_PHASES * SINC8_TAPS  * sizeof (float));
+		fSinc16[i] = (float *)malloc(INTRP_PHASES * SINC16_TAPS * sizeof (float));
 
 		if (fSinc8[i] == NULL || fSinc16[i] == NULL)
 		{
@@ -87,8 +87,8 @@ bool setupMixerInterpolationTables(void)
 			return false;
 		}
 
-		makeSincKernel( fSinc8[i], SINC8_WIDTH,  INTRP_PHASES, k->kaiserBeta, k->sincCutoff);
-		makeSincKernel(fSinc16[i], SINC16_WIDTH, INTRP_PHASES, k->kaiserBeta, k->sincCutoff);
+		calcPolyphaseSincLUT( fSinc8[i], SINC8_TAPS,  k->kaiserBeta, k->sincCutoff);
+		calcPolyphaseSincLUT(fSinc16[i], SINC16_TAPS, k->kaiserBeta, k->sincCutoff);
 	}
 
 	// resampling ratios for sinc kernel selection
@@ -152,25 +152,23 @@ static inline double sinc(double x, double cutoff)
 	}
 }
 
-// note: numPoints/numPhases must be 2^n!
-static void makeSincKernel(float *fOut, int32_t numPoints, int32_t numPhases, double kaiserBeta, double cutoff)
+// note: numTaps must be 2^n!
+static void calcPolyphaseSincLUT(float *fOut, int32_t numTaps, double kaiserBeta, double sincCutoff)
 {
-	const int32_t kernelLen = numPhases * numPoints;
-	const int32_t pointBits = (int32_t)log2(numPoints);
-	const int32_t pointMask = numPoints - 1;
-	const int32_t centerPoint = (numPoints / 2) - 1;
-	const double besselI0Beta = 1.0 / besselI0(kaiserBeta);
-	const double phaseMul = 1.0 / numPhases;
-	const double xMul = 1.0 / (numPoints / 2);
+	const double besselI0BetaMul = 1.0 / besselI0(kaiserBeta);
+	const int32_t pointBits = (int32_t)log2(numTaps);
+	const int32_t pointMask = numTaps - 1;
+	const int32_t centerPoint = (numTaps / 2) - 1;
+	const double xMul = 1.0 / (numTaps / 2);
 
-	for (int32_t i = 0; i < kernelLen; i++)
+	for (int32_t i = 0; i < numTaps * INTRP_PHASES; i++)
 	{
-		const double x = ((i & pointMask) - centerPoint) - ((i >> pointBits) * phaseMul);
+		const double x = ((i & pointMask) - centerPoint) - ((i >> pointBits) * (1.0 / INTRP_PHASES));
 
 		// Kaiser-Bessel window
 		const double n = x * xMul;
-		const double window = besselI0(kaiserBeta * sqrt(1.0 - n * n)) * besselI0Beta;
+		const double window = besselI0(kaiserBeta * sqrt(1.0 - n * n)) * besselI0BetaMul;
 
-		fOut[i] = (float)(sinc(x, cutoff) * window);
+		fOut[i] = (float)(sinc(x, sincCutoff) * window);
 	}
 }
