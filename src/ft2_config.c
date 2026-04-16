@@ -1427,6 +1427,7 @@ void hideConfigScreen(void)
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INPUT_FREQ);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_FREQ_SLIDES);
+	hideCheckBox(CB_CONF_PRECISE_BPM);
 	hideCheckBox(CB_CONF_VOL_RAMP);
 	hidePushButton(PB_CONFIG_AUDIO_RESCAN);
 	hidePushButton(PB_CONFIG_AUDIO_OUTPUT_DOWN);
