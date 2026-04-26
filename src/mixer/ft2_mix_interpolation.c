@@ -18,17 +18,11 @@ static sincKernel_t sincKernelConfig[SINC_KERNELS] =
 	/* These parameters have been borrowed from the OpenMPT project
 	** (with cutoff edit for kernel #1).
 	**
-	** The beta for kernel #1 is based on a stopband attenuation close to
-	** the 16-bit audio noise floor (~96.33dB).
-	**
 	** It's quite difficult to tweak these numbers without causing either
 	** ringing or aliasing in some cases. If anyone has good experience on
 	** designing low-tap windowed-sinc kernels for a use case like this, and
 	** knows of a good way to figure out what numbers to use here, PLEASE
 	** contact me (contact details can be found at the bottom of 16-bits.org).
-	**
-	** The beta for kernel #1 is based on a stopband attenuation close to
-	** the 16-bit audio noise floor (~96.33dB).
 	*/
 
 	// beta,  cutoff
@@ -48,7 +42,7 @@ bool setupMixerInterpolationTables(void)
 {
 	// cubic spline (4-point)
 
-	fCubicSplineLUT = (float *)malloc(CUBIC_SPLINE_TAPS * INTRP_PHASES * sizeof (float));
+	fCubicSplineLUT = (float *)malloc(INTRP_PHASES * CUBIC_SPLINE_TAPS * sizeof (float));
 	if (fCubicSplineLUT == NULL)
 	{
 		showErrorMsgBox("Not enough memory!");
@@ -62,6 +56,7 @@ bool setupMixerInterpolationTables(void)
 		const double x2 = x1 * x1; // x^2
 		const double x3 = x2 * x1; // x^3
 
+		// Catmull-Rom algorithm (has unity gain)
 		const double t1 = (x1 * -0.5) + (x2 *  1.0) + (x3 * -0.5);
 		const double t2 =               (x2 * -2.5) + (x3 *  1.5) + 1.0;
 		const double t3 = (x1 *  0.5) + (x2 *  2.0) + (x3 * -1.5);

@@ -9,7 +9,7 @@
 #define SINC16_TAPS 16
 #define CUBIC_SPLINE_TAPS 4
 
-// 8192 phases is optimal, aliasing should be below (or close to) 16-bit noise floor
+// 8192 phases has a decent trade-off between low aliasing and cache usage
 #define INTRP_PHASES 8192
 
 // log2(INTRP_PHASES)
