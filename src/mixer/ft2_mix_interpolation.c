@@ -152,23 +152,36 @@ static inline double sinc(double x, double cutoff)
 	}
 }
 
-// note: numTaps must be 2^n!
+// note: numTaps must be even!
 static void calcPolyphaseSincLUT(float *fOut, int32_t numTaps, double kaiserBeta, double sincCutoff)
 {
+	double tapBuffer[MAX_TAPS];
 	const double besselI0BetaMul = 1.0 / besselI0(kaiserBeta);
-	const int32_t pointBits = (int32_t)log2(numTaps);
-	const int32_t pointMask = numTaps - 1;
 	const int32_t centerPoint = (numTaps / 2) - 1;
 	const double xMul = 1.0 / (numTaps / 2);
 
-	for (int32_t i = 0; i < numTaps * INTRP_PHASES; i++)
+	for (int32_t i = 0; i < INTRP_PHASES; i++)
 	{
-		const double x = ((i & pointMask) - centerPoint) - ((i >> pointBits) * (1.0 / INTRP_PHASES));
+		const double phase = i * (1.0 / INTRP_PHASES);
 
-		// Kaiser-Bessel window
-		const double n = x * xMul;
-		const double window = besselI0(kaiserBeta * sqrt(1.0 - n * n)) * besselI0BetaMul;
+		double tapSum = 0.0;
+		for (int32_t j = 0; j < numTaps; j++)
+		{
+			const double x = (j - centerPoint) - phase;
 
-		fOut[i] = (float)(sinc(x, sincCutoff) * window);
+			// Kaiser-Bessel window
+			const double n = x * xMul;
+			const double window = besselI0(kaiserBeta * sqrt(1.0 - n * n)) * besselI0BetaMul;
+
+			const double wsinc = sinc(x, sincCutoff) * window;
+			tapBuffer[j] = wsinc;
+
+			tapSum += wsinc;
+		}
+
+		// normalize for unity gain before storing taps
+		const double tapMul = 1.0 / tapSum;
+		for (int32_t j = 0; j < numTaps; j++)
+			*fOut++ = (float)(tapBuffer[j] * tapMul);
 	}
 }
