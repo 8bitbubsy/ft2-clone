@@ -55,17 +55,47 @@
 	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
 }
 
-#define COS_INTERPOLATION8(frac) \
-{ \
-	const int16_t c = scopeCosLUT[(frac) >> (SCOPE_DRAW_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
-	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * c) >> SCOPE_INTRP_SCALE_BITS); \
-}
+#define WSINC_SMP8(frac) \
+	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_DRAW_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+	\
+	sample = ((s8[-1] * t[0]) + \
+	          ( s8[0] * t[1]) + \
+	          ( s8[1] * t[2]) + \
+	          ( s8[2] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8);
 
-#define COS_INTERPOLATION16(frac) \
+#define WSINC_SMP16(frac) \
+	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_DRAW_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+	\
+	sample = ((s16[-1] * t[0]) + \
+	          ( s16[0] * t[1]) + \
+	          ( s16[1] * t[2]) + \
+	          ( s16[2] * t[3])) >> SCOPE_INTRP_SCALE_BITS;
+
+#define WSINC_INTERPOLATION8(frac) \
 { \
-	const int16_t c = scopeCosLUT[(frac) >> (SCOPE_DRAW_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)]; \
-	sample = s16[0] + (((s16[1] - s16[0]) * c) >> SCOPE_INTRP_SCALE_BITS); \
-}
+	WSINC_SMP8(frac) \
+} \
+
+#define WSINC_INTERPOLATION16(frac) \
+{ \
+	WSINC_SMP16(frac) \
+} \
+
+#define WSINC_INTERPOLATION8_LOOP(pos, frac) \
+{ \
+	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
+		s8 = s->leftEdgeTaps8 + (pos - s->loopStart); \
+	\
+	WSINC_SMP8(frac) \
+} \
+
+#define WSINC_INTERPOLATION16_LOOP(pos, frac) \
+{ \
+	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
+		s16 = s->leftEdgeTaps16 + (pos - s->loopStart); \
+	\
+	WSINC_SMP16(frac) \
+} \
 
 #define INTERPOLATE_SMP8(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
@@ -74,7 +104,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION8(frac) \
 	else \
-		COS_INTERPOLATION8(frac) \
+		WSINC_INTERPOLATION8(frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16(pos, frac) \
@@ -84,7 +114,27 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION16(frac) \
 	else \
-		COS_INTERPOLATION16(frac) \
+		WSINC_INTERPOLATION16(frac) \
+	sample = (sample * s->volume) >> (16+2);
+
+#define INTERPOLATE_SMP8_LOOP(pos, frac) \
+	const int8_t *s8 = s->base8 + pos; \
+	if (config.interpolation == INTERPOLATION_DISABLED) \
+		NO_INTERPOLATION8 \
+	else if (config.interpolation == INTERPOLATION_LINEAR) \
+		LINEAR_INTERPOLATION8(frac) \
+	else \
+		WSINC_INTERPOLATION8_LOOP(pos, frac) \
+	sample = (sample * s->volume) >> (16+2);
+
+#define INTERPOLATE_SMP16_LOOP(pos, frac) \
+	const int16_t *s16 = s->base16 + pos; \
+	if (config.interpolation == INTERPOLATION_DISABLED) \
+		NO_INTERPOLATION16 \
+	else if (config.interpolation == INTERPOLATION_LINEAR) \
+		LINEAR_INTERPOLATION16(frac) \
+	else \
+		WSINC_INTERPOLATION16_LOOP(pos, frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define SCOPE_GET_SMP8 \
@@ -171,7 +221,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP8(actualPos, samplingBackwards ? ((uint16_t)positionFrac ^ UINT16_MAX) : (uint16_t)positionFrac) \
+		INTERPOLATE_SMP8_LOOP(actualPos, samplingBackwards ? ((uint16_t)positionFrac ^ UINT16_MAX) : (uint16_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -182,7 +232,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP16(actualPos, samplingBackwards ? ((uint16_t)positionFrac ^ UINT16_MAX) : (uint16_t)positionFrac) \
+		INTERPOLATE_SMP16_LOOP(actualPos, samplingBackwards ? ((uint16_t)positionFrac ^ UINT16_MAX) : (uint16_t)positionFrac) \
 	} \
 	else \
 	{ \
