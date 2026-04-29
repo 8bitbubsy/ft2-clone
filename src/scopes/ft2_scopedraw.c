@@ -18,7 +18,7 @@
 **      Phases: 64 (good enough for the scopes)
 **       Scale: 32768 (truncated, no rounding)
 ** Window type: Kaiser-Bessel (beta = 9.0)
-** Sinc cutoff: 0.5
+** Sinc cutoff: 0.5 (50%)
 **
 ** Calculated with unity gain.
 */
