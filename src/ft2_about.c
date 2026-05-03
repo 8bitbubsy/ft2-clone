@@ -213,5 +213,5 @@ void hideAboutScreen(void)
 void exitAboutScreen(void)
 {
 	hideAboutScreen();
-	showTopScreen(true);
+	showTopScreen(RESTORE_SCREENS);
 }

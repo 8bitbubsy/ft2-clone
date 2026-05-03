@@ -705,7 +705,7 @@ void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 		drawTextBox(TB_DISKOP_FILENAME);
 }
 
-static void openFile(UNICHAR *filenameU, bool songModifiedCheck)
+static void openFile(UNICHAR *filenameU)
 {
 	// first check if we can actually open the requested file
 	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
@@ -735,7 +735,7 @@ static void openFile(UNICHAR *filenameU, bool songModifiedCheck)
 		default:
 		case DISKOP_ITEM_MODULE:
 		{
-			if (songModifiedCheck && song.isModified)
+			if (song.isModified)
 			{
 				// remove file selection before okBox() opens up
 				FReq_EntrySelected = -1;
@@ -861,7 +861,8 @@ void createFileOverwriteText(char *filename, char *buffer)
 	memcpy(nameTmp, filename, (nameLen >= sizeof (nameTmp)) ? sizeof (nameTmp) : (nameLen + 1));
 	nameTmp[sizeof (nameTmp) - 1] = '\0';
 
-	trimEntryName(nameTmp, false);
+	const bool isDir = false;
+	trimEntryName(nameTmp, isDir);
 
 	sprintf(buffer, "Overwrite file \"%s\"?", nameTmp);
 }
@@ -1065,7 +1066,7 @@ static void fileListPressed(int32_t index)
 			if (dirEntry->isDir)
 				openDirectory(dirEntry->nameU);
 			else
-				openFile(dirEntry->nameU, true);
+				openFile(dirEntry->nameU);
 		}
 		break;
 
@@ -1871,7 +1872,7 @@ void diskOp_DrawDirectory(void)
 #endif
 
 	setScrollBarEnd(SB_DISKOP_LIST, FReq_FileCount);
-	setScrollBarPos(SB_DISKOP_LIST, FReq_DirPos, false);
+	setScrollBarPos(SB_DISKOP_LIST, FReq_DirPos, DONT_TRIGGER_CALLBACK);
 
 	diskOp_DrawFilelist();
 }
@@ -2330,7 +2331,7 @@ void exitDiskOpScreen(void)
 {
 	hideDiskOpScreen();
 	ui.oldTopLeftScreen = 0; // disk op. ignores previously opened top screens
-	showTopScreen(true);
+	showTopScreen(RESTORE_SCREENS);
 }
 
 void toggleDiskOpScreen(void)

@@ -912,7 +912,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 					if (ui.extendedPatternEditor) // yet another kludge...
 						exitPatternEditorExtended();
 
-					showTopScreen(false);
+					showTopScreen(DONT_RESTORE_SCREENS);
 				}
 			}
 			else if (keyb.leftAltPressed)
@@ -1179,7 +1179,7 @@ static bool checkModifiedKeys(SDL_Keycode keycode)
 				if (ui.wavRendererShown)     hideWavRenderer();
 				if (ui.trimScreenShown)      hideTrimScreen();
 
-				showTopScreen(false);
+				showTopScreen(DONT_RESTORE_SCREENS);
 				showBottomScreen();
 
 				showPatternEditor();

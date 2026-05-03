@@ -454,9 +454,10 @@ void rescanAudioDevices(void)
 	}
 
 	setScrollBarEnd(SB_AUDIO_OUTPUT_SCROLL, audio.outputDeviceNum);
-	setScrollBarPos(SB_AUDIO_OUTPUT_SCROLL, 0, false);
+	setScrollBarPos(SB_AUDIO_OUTPUT_SCROLL, 0, DONT_TRIGGER_CALLBACK);
+
 	setScrollBarEnd(SB_AUDIO_INPUT_SCROLL, audio.inputDeviceNum);
-	setScrollBarPos(SB_AUDIO_INPUT_SCROLL, 0, false);
+	setScrollBarPos(SB_AUDIO_INPUT_SCROLL, 0, DONT_TRIGGER_CALLBACK);
 
 	// DRAW LISTS
 

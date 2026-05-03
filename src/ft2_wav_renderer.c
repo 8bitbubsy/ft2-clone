@@ -152,7 +152,7 @@ void showWavRenderer(void)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
-	showTopScreen(false);
+	showTopScreen(DONT_RESTORE_SCREENS);
 
 	ui.wavRendererShown = true;
 	ui.scopesShown = false;
@@ -204,7 +204,7 @@ static bool dump_Init(uint32_t frq, int16_t amp, int16_t songPos)
 	while (audio.callbackOngoing)
 		SDL_Delay(5);
 
-	setPos(songPos, 0, true);
+	setSongPos(songPos, 0, RESET_SONG_TICK);
 	playMode = PLAYMODE_SONG;
 	songPlaying = true;
 
@@ -505,7 +505,7 @@ static int32_t renderWavIndividualTracksThread(void *ptr)
 		fseek(f, sizeof (wavHeader_t), SEEK_SET);
 
 		resetChannels();
-		setPos(WDStartPos, 0, true);
+		setSongPos(WDStartPos, 0, RESET_SONG_TICK);
 		playMode = PLAYMODE_SONG;
 		songPlaying = true;
 		stopVoices();

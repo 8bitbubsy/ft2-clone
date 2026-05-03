@@ -54,7 +54,7 @@ static void windowClose(bool rewriteSample)
 	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 
 	if (exitFlag || rewriteSample)
-		writeSample(true);
+		writeSample(FORCE_SAMPLE_REDRAW);
 	else
 		updateNewSample();
 
@@ -327,7 +327,7 @@ void pbSampleResample(void)
 		handleRedrawing();
 
 		drawResampleBox();
-		setScrollBarPos(0, smpEd_RelReSmp + 36, false);
+		setScrollBarPos(0, smpEd_RelReSmp + 36, DONT_TRIGGER_CALLBACK);
 		drawCheckBox(0);
 		for (i = 0; i < 4; i++) drawPushButton(i);
 		drawScrollBar(0);
@@ -779,9 +779,9 @@ void pbSampleEcho(void)
 		handleRedrawing();
 
 		drawEchoBox();
-		setScrollBarPos(0, echo_nEcho, false);
-		setScrollBarPos(1, echo_Distance, false);
-		setScrollBarPos(2, echo_VolChange, false);
+		setScrollBarPos(0, echo_nEcho,     DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(1, echo_Distance,  DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(2, echo_VolChange, DONT_TRIGGER_CALLBACK);
 		drawCheckBox(0);
 		for (uint16_t i = 0; i < 8; i++) drawPushButton(i);
 		for (uint16_t i = 0; i < 3; i++) drawScrollBar(i);
@@ -1081,7 +1081,7 @@ void pbSampleMix(void)
 		handleRedrawing();
 
 		drawMixSampleBox();
-		setScrollBarPos(0, mix_Balance, false);
+		setScrollBarPos(0, mix_Balance, DONT_TRIGGER_CALLBACK);
 		for (i = 0; i < 4; i++) drawPushButton(i);
 		drawScrollBar(0);
 
@@ -1578,7 +1578,7 @@ static void setupVolumeBoxWidgets(void)
 	s->visible = true;
 	setScrollBarPageLength(0, 1);
 	setScrollBarEnd(0, 200 * 2);
-	setScrollBarPos(0, 200, false);
+	setScrollBarPos(0, 200, DONT_TRIGGER_CALLBACK);
 
 	// volume end scrollbar
 	s = &scrollBars[1];
@@ -1591,7 +1591,7 @@ static void setupVolumeBoxWidgets(void)
 	s->visible = true;
 	setScrollBarPageLength(1, 1);
 	setScrollBarEnd(1, 200 * 2);
-	setScrollBarPos(1, 200, false);
+	setScrollBarPos(1, 200, DONT_TRIGGER_CALLBACK);
 }
 
 void pbSampleVolume(void)
@@ -1629,8 +1629,8 @@ void pbSampleVolume(void)
 		const int32_t startVol = (int32_t)dVol_StartVol;
 		const int32_t endVol = (int32_t)dVol_EndVol;
 
-		setScrollBarPos(0, 200 + startVol, false);
-		setScrollBarPos(1, 200 + endVol, false);
+		setScrollBarPos(0, 200 + startVol, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(1, 200 + endVol, DONT_TRIGGER_CALLBACK);
 		for (i = 0; i < 7; i++) drawPushButton(i);
 		for (i = 0; i < 2; i++) drawScrollBar(i);
 

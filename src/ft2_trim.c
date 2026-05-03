@@ -938,7 +938,7 @@ static int32_t trimThreadFunc(void *ptr)
 void trimThreadDone(void)
 {
 	if (removePatt)
-		setPos(song.songPos, song.row, false);
+		setSongPos(song.songPos, song.row, DONT_RESET_SONG_TICK);
 
 	if (removeInst)
 	{
@@ -949,7 +949,7 @@ void trimThreadDone(void)
 	updateTextBoxPointers();
 
 	hideTopScreen();
-	showTopScreen(true);
+	showTopScreen(RESTORE_SCREENS);
 	showBottomScreen();
 
 	if (removeChans)
@@ -957,7 +957,7 @@ void trimThreadDone(void)
 		if (ui.patternEditorShown)
 		{
 			if (ui.channelOffset > song.numChannels-ui.numChannelsShown)
-				setScrollBarPos(SB_CHAN_SCROLL, song.numChannels - ui.numChannelsShown, true);
+				setScrollBarPos(SB_CHAN_SCROLL, song.numChannels - ui.numChannelsShown, TRIGGER_CALLBACK);
 		}
 
 		if (cursor.ch >= ui.channelOffset+ui.numChannelsShown)
@@ -1103,7 +1103,7 @@ void showTrimScreen(void)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
-	showTopScreen(false);
+	showTopScreen(DONT_RESTORE_SCREENS);
 
 	ui.trimScreenShown = true;
 	ui.scopesShown = false;

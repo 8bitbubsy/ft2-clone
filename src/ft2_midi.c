@@ -403,7 +403,7 @@ void rescanMidiInputDevices(void)
 	}
 
 	setScrollBarEnd(SB_MIDI_INPUT_SCROLL, midi.numInputDevices);
-	setScrollBarPos(SB_MIDI_INPUT_SCROLL, 0, false);
+	setScrollBarPos(SB_MIDI_INPUT_SCROLL, 0, DONT_TRIGGER_CALLBACK);
 }
 
 void drawMidiInputList(void)

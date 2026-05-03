@@ -327,7 +327,7 @@ void sbMidiChPos(uint32_t pos)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_EXT_MIDI_CH, 0, false);
+		setScrollBarPos(SB_INST_EXT_MIDI_CH, 0, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
@@ -344,7 +344,7 @@ void sbMidiPrgPos(uint32_t pos)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_EXT_MIDI_PRG, 0, false);
+		setScrollBarPos(SB_INST_EXT_MIDI_PRG, 0, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
@@ -361,7 +361,7 @@ void sbMidiBendPos(uint32_t pos)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_EXT_MIDI_BEND, 0, false);
+		setScrollBarPos(SB_INST_EXT_MIDI_BEND, 0, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
@@ -1298,9 +1298,9 @@ void setVolumeScroll(uint32_t pos)
 	if (instr[editor.curInstr] == NULL || editor.curInstr == 0)
 	{
 		if (editor.curInstr == 0 && editor.curSmp != 0)
-			setScrollBarPos(SB_INST_VOL, 0x40, false);
+			setScrollBarPos(SB_INST_VOL, 0x40, DONT_TRIGGER_CALLBACK);
 		else
-			setScrollBarPos(SB_INST_VOL, 0, false);
+			setScrollBarPos(SB_INST_VOL, 0x00, DONT_TRIGGER_CALLBACK);
 
 		return;
 	}
@@ -1318,7 +1318,7 @@ void setPanningScroll(uint32_t pos)
 {
 	if (instr[editor.curInstr] == NULL || editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_PAN, 0x80, false);
+		setScrollBarPos(SB_INST_PAN, 0x80, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
@@ -1335,7 +1335,7 @@ void setFinetuneScroll(uint32_t pos)
 {
 	if (instr[editor.curInstr] == NULL || editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_FTUNE, 128, false); // finetune 0
+		setScrollBarPos(SB_INST_FTUNE, 128, DONT_TRIGGER_CALLBACK); // finetune 0
 		return;
 	}
 
@@ -1354,13 +1354,13 @@ void setFadeoutScroll(uint32_t pos)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL)
 	{
-		setScrollBarPos(SB_INST_FADEOUT, 0, false);
+		setScrollBarPos(SB_INST_FADEOUT, 0x00, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
 	if (editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_FADEOUT, 0x80, false);
+		setScrollBarPos(SB_INST_FADEOUT, 0x80, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
@@ -1377,7 +1377,7 @@ void setVibSpeedScroll(uint32_t pos)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_VIBSPEED, 0, false);
+		setScrollBarPos(SB_INST_VIBSPEED, 0, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
@@ -1394,7 +1394,7 @@ void setVibDepthScroll(uint32_t pos)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_VIBDEPTH, 0, false);
+		setScrollBarPos(SB_INST_VIBDEPTH, 0, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
@@ -1411,7 +1411,7 @@ void setVibSweepScroll(uint32_t pos)
 	instr_t *ins = instr[editor.curInstr];
 	if (ins == NULL || editor.curInstr == 0)
 	{
-		setScrollBarPos(SB_INST_VIBSWEEP, 0, false);
+		setScrollBarPos(SB_INST_VIBSWEEP, 0, DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
@@ -2182,11 +2182,11 @@ void updateInstEditor(void)
 	if (ui.instEditorExtShown)
 	{
 		checkBoxes[CB_INST_EXT_MIDI].checked = ins->midiOn ? true : false;
-		checkBoxes[CB_INST_EXT_MUTE].checked = ins->mute ? true : false;
+		checkBoxes[CB_INST_EXT_MUTE].checked = ins->mute   ? true : false;
 
-		setScrollBarPos(SB_INST_EXT_MIDI_CH, ins->midiChannel, false);
-		setScrollBarPos(SB_INST_EXT_MIDI_PRG, ins->midiProgram, false);
-		setScrollBarPos(SB_INST_EXT_MIDI_BEND, ins->midiBend, false);
+		setScrollBarPos(SB_INST_EXT_MIDI_CH,   ins->midiChannel, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(SB_INST_EXT_MIDI_PRG,  ins->midiProgram, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(SB_INST_EXT_MIDI_BEND, ins->midiBend,    DONT_TRIGGER_CALLBACK);
 
 		drawCheckBox(CB_INST_EXT_MIDI);
 		drawCheckBox(CB_INST_EXT_MUTE);
@@ -2216,13 +2216,13 @@ void updateInstEditor(void)
 	drawRelativeNote();
 
 	// set scroll bars
-	setScrollBarPos(SB_INST_VOL, s->volume, false);
-	setScrollBarPos(SB_INST_PAN, s->panning, false);
-	setScrollBarPos(SB_INST_FTUNE, 128 + s->finetune, false);
-	setScrollBarPos(SB_INST_FADEOUT, ins->fadeout, false);
-	setScrollBarPos(SB_INST_VIBSPEED, ins->autoVibRate, false);
-	setScrollBarPos(SB_INST_VIBDEPTH, ins->autoVibDepth, false);
-	setScrollBarPos(SB_INST_VIBSWEEP, ins->autoVibSweep, false);
+	setScrollBarPos(SB_INST_VOL,      s->volume,         DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_INST_PAN,      s->panning,        DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_INST_FTUNE,    128 + s->finetune, DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_INST_FADEOUT,  ins->fadeout,      DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_INST_VIBSPEED, ins->autoVibRate,  DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_INST_VIBDEPTH, ins->autoVibDepth, DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_INST_VIBSWEEP, ins->autoVibSweep, DONT_TRIGGER_CALLBACK);
 
 	// set radio buttons
 
@@ -2640,17 +2640,19 @@ void drawInstEditorExt(void)
 	{
 		checkBoxes[CB_INST_EXT_MIDI].checked = false;
 		checkBoxes[CB_INST_EXT_MUTE].checked = false;
-		setScrollBarPos(SB_INST_EXT_MIDI_CH, 0, false);
-		setScrollBarPos(SB_INST_EXT_MIDI_PRG, 0, false);
-		setScrollBarPos(SB_INST_EXT_MIDI_BEND, 0, false);
+
+		setScrollBarPos(SB_INST_EXT_MIDI_CH,   0, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(SB_INST_EXT_MIDI_PRG,  0, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(SB_INST_EXT_MIDI_BEND, 0, DONT_TRIGGER_CALLBACK);
 	}
 	else
 	{
 		checkBoxes[CB_INST_EXT_MIDI].checked = ins->midiOn ? true : false;
-		checkBoxes[CB_INST_EXT_MUTE].checked = ins->mute ? true : false;
-		setScrollBarPos(SB_INST_EXT_MIDI_CH, ins->midiChannel, false);
-		setScrollBarPos(SB_INST_EXT_MIDI_PRG, ins->midiProgram, false);
-		setScrollBarPos(SB_INST_EXT_MIDI_BEND, ins->midiBend, false);
+		checkBoxes[CB_INST_EXT_MUTE].checked = ins->mute   ? true : false;
+
+		setScrollBarPos(SB_INST_EXT_MIDI_CH,   ins->midiChannel, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(SB_INST_EXT_MIDI_PRG,  ins->midiProgram, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(SB_INST_EXT_MIDI_BEND, ins->midiBend,    DONT_TRIGGER_CALLBACK);
 	}
 
 	showCheckBox(CB_INST_EXT_MIDI);
@@ -2678,7 +2680,7 @@ void showInstEditorExt(void)
 		exitPatternEditorExtended();
 
 	hideTopScreen();
-	showTopScreen(false);
+	showTopScreen(DONT_RESTORE_SCREENS);
 
 	ui.instEditorExtShown = true;
 	ui.scopesShown = false;

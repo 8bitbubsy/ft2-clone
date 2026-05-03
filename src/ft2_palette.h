@@ -3,6 +3,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+enum
+{
+	// for setPalette()
+	DONT_REDRAW_SCREEN = false,
+	REDRAW_SCREEN = true
+};
+
 #define RGB32_R(x) (((x) >> 16) & 0xFF)
 #define RGB32_G(x) (((x) >> 8) & 0xFF)
 #define RGB32_B(x) ((x) & 0xFF)
@@ -56,8 +63,7 @@ pal16;
 #pragma pack(pop)
 #endif
 
-uint8_t palMax(int32_t c);
-void setPal16(pal16 *p, bool redrawScreen);
+void setPalette(pal16 *p, bool redrawScreen);
 
 void sbPalRPos(uint32_t pos);
 void sbPalGPos(uint32_t pos);

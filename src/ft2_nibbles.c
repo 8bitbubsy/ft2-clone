@@ -823,7 +823,7 @@ void hideNibblesScreen(void)
 void exitNibblesScreen(void)
 {
 	hideNibblesScreen();
-	showTopScreen(true);
+	showTopScreen(RESTORE_SCREENS);
 }
 
 // PUSH BUTTONS

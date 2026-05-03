@@ -669,13 +669,13 @@ static void fixSampleScrollbar(void)
 	{
 		setScrollBarPageLength(SB_SAMP_SCROLL, 0);
 		setScrollBarEnd(SB_SAMP_SCROLL, 0);
-		setScrollBarPos(SB_SAMP_SCROLL, 0, false);
+		setScrollBarPos(SB_SAMP_SCROLL, 0,  DONT_TRIGGER_CALLBACK);
 		return;
 	}
 
 	setScrollBarPageLength(SB_SAMP_SCROLL, smpEd_ViewSize);
 	setScrollBarEnd(SB_SAMP_SCROLL, instr[editor.curInstr]->smp[editor.curSmp].length);
-	setScrollBarPos(SB_SAMP_SCROLL, smpEd_ScrPos, false);
+	setScrollBarPos(SB_SAMP_SCROLL, smpEd_ScrPos, DONT_TRIGGER_CALLBACK);
 }
 
 static bool getCopyBuffer(int32_t size, bool sample16Bit)
@@ -1444,7 +1444,7 @@ void updateSampleEditorSample(void)
 
 	updateViewSize();
 
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void updateSampleEditor(void)
@@ -2563,7 +2563,7 @@ void sampXFade(void)
 		resumeAudio();
 	}
 
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 	setSongModifiedFlag();
 }
 
@@ -2582,7 +2582,7 @@ void rbSampleNoLoop(void)
 	unlockMixerCallback();
 
 	updateSampleEditor();
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 	setSongModifiedFlag();
 }
 
@@ -2608,7 +2608,7 @@ void rbSampleForwardLoop(void)
 	unlockMixerCallback();
 
 	updateSampleEditor();
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 	setSongModifiedFlag();
 }
 
@@ -2634,7 +2634,7 @@ void rbSamplePingpongLoop(void)
 	unlockMixerCallback();
 
 	updateSampleEditor();
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 	setSongModifiedFlag();
 }
 
@@ -3014,7 +3014,7 @@ void showSampleEditor(void)
 	hLine(0, 328, SAMPLE_AREA_WIDTH, PAL_BCKGRND);
 
 	updateSampleEditor();
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 
 	if (ui.sampleEditorEffectsShown)
 		pbEffects();
@@ -3100,11 +3100,11 @@ void handleSamplerRedrawing(void)
 	if (writeSampleFlag)
 	{
 		writeSampleFlag = false;
-		writeSample(true);
+		writeSample(FORCE_SAMPLE_REDRAW);
 	}
 	else if (smpEd_Rx1 != old_Rx1 || smpEd_Rx2 != old_Rx2 || smpEd_ScrPos != old_SmpScrPos || smpEd_ViewSize != old_ViewSize)
 	{
-		writeSample(false);
+		writeSample(DONT_FORCE_SAMPLE_REDRAW);
 	}
 
 	writeSamplePosLine();
@@ -3322,7 +3322,7 @@ static void editSampleData(bool mouseButtonHeld)
 	lastDrawY = rvl;
 	lastDrawX = r;
 
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void handleSampleDataMouseDown(bool mouseButtonHeld)
@@ -3487,7 +3487,7 @@ void drawSampleEditorExt(void)
 void showSampleEditorExt(void)
 {
 	hideTopScreen();
-	showTopScreen(false);
+	showTopScreen(DONT_RESTORE_SCREENS);
 
 	if (ui.extendedPatternEditor)
 		exitPatternEditorExtended();
@@ -3857,7 +3857,7 @@ void testSmpEdMouseUp(void) // used for setting new loop points
 			unlockMixerCallback();
 
 			setSongModifiedFlag();
-			writeSample(true);
+			writeSample(FORCE_SAMPLE_REDRAW);
 		}
 	}
 }

@@ -267,7 +267,7 @@ void loadMusic(UNICHAR *filenameU)
 	SDL_DetachThread(thread);
 }
 
-bool loadMusicUnthreaded(UNICHAR *filenameU, bool autoPlay)
+static bool loadMusicUnthreaded(UNICHAR *filenameU)
 {
 	if (filenameU == NULL)
 		return false;
@@ -281,8 +281,7 @@ bool loadMusicUnthreaded(UNICHAR *filenameU, bool autoPlay)
 	if (moduleLoaded)
 	{
 		setupLoadedModule();
-		if (autoPlay)
-			startPlaying(PLAYMODE_SONG, 0);
+		startPlaying(PLAYMODE_SONG, 0);
 
 		return true;
 	}
@@ -476,10 +475,10 @@ static void setupLoadedModule(void)
 	}
 
 	setScrollBarEnd(SB_POS_ED, (song.songLength - 1) + 5);
-	setScrollBarPos(SB_POS_ED, 0, false);
+	setScrollBarPos(SB_POS_ED, 0, DONT_TRIGGER_CALLBACK);
 
 	resetChannels();
-	setPos(0, 0, true);
+	setSongPos(0, 0, RESET_SONG_TICK);
 	setMixerBPM(song.BPM);
 
 	editor.tmpPattern = editor.editPattern; // set kludge variable
@@ -518,7 +517,7 @@ static void setupLoadedModule(void)
 	{
 		// redraw top screen
 		hideTopScreen();
-		showTopScreen(true);
+		showTopScreen(RESTORE_SCREENS);
 	}
 
 	updateSampleEditorSample();
@@ -589,7 +588,7 @@ bool handleModuleLoadFromArg(int argc, char **argv)
 		return false;
 	}
 
-	bool result = loadMusicUnthreaded(filenameU, true);
+	bool result = loadMusicUnthreaded(filenameU);
 
 	free(filenameU);
 	UNICHAR_CHDIR(tmpPathU); // set old path back
@@ -656,7 +655,7 @@ static bool fileIsModule(UNICHAR *pathU)
 	return (modFormat != FORMAT_UNKNOWN);
 }
 
-void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
+void loadDroppedFile(char *fullPathUTF8)
 {
 	if (ui.sysReqShown || fullPathUTF8 == NULL)
 		return;
@@ -708,7 +707,7 @@ void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck)
 	}
 	else if (fileIsModule(fullPathU))
 	{
-		if (songModifiedCheck && song.isModified)
+		if (song.isModified)
 		{
 			if (!askUnsavedChanges(ASK_TYPE_LOAD_SONG))
 			{

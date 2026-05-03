@@ -37,6 +37,13 @@
 
 enum
 {
+	DONT_RESTORE_SCREENS = false,
+	RESTORE_SCREENS = true,
+
+	// for setScrollBarPos()
+	DONT_TRIGGER_CALLBACK = false,
+	TRIGGER_CALLBACK = true,
+
 	FRAMEWORK_TYPE1 = 0,
 	FRAMEWORK_TYPE2 = 1,
 

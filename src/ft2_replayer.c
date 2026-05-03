@@ -2436,16 +2436,16 @@ void resetMusic(void)
 	if (audioWasntLocked)
 		unlockAudio();
 
-	setPos(0, 0, false);
+	setSongPos(0, 0, DONT_RESET_SONG_TICK);
 
 	if (!songPlaying)
 	{
 		setScrollBarEnd(SB_POS_ED, (song.songLength - 1) + 5);
-		setScrollBarPos(SB_POS_ED, 0, false);
+		setScrollBarPos(SB_POS_ED, 0, DONT_TRIGGER_CALLBACK);
 	}
 }
 
-void setPos(int16_t songPos, int16_t row, bool resetTimer)
+void setSongPos(int16_t songPos, int16_t row, bool resetTick)
 {
 	const bool audioWasntLocked = !audio.locked;
 	if (audioWasntLocked)
@@ -2488,7 +2488,7 @@ void setPos(int16_t songPos, int16_t row, bool resetTimer)
 		}
 	}
 
-	if (resetTimer)
+	if (resetTick)
 		song.tick = 1;
 
 	if (audioWasntLocked)
@@ -2799,7 +2799,7 @@ void updateChanNums(void)
 	if (ui.patternEditorShown)
 	{
 		if (ui.channelOffset > song.numChannels-ui.numChannelsShown)
-			setScrollBarPos(SB_CHAN_SCROLL, song.numChannels - ui.numChannelsShown, true);
+			setScrollBarPos(SB_CHAN_SCROLL, song.numChannels - ui.numChannelsShown, TRIGGER_CALLBACK);
 	}
 
 	if (ui.pattChanScrollShown)
@@ -2820,7 +2820,7 @@ void updateChanNums(void)
 		hidePushButton(PB_CHAN_SCROLL_LEFT);
 		hidePushButton(PB_CHAN_SCROLL_RIGHT);
 
-		setScrollBarPos(SB_CHAN_SCROLL, 0, false);
+		setScrollBarPos(SB_CHAN_SCROLL, 0, DONT_TRIGGER_CALLBACK);
 
 		ui.channelOffset = 0;
 	}
@@ -2933,7 +2933,7 @@ bool setupReplayer(void)
 
 	calcPanningTable();
 
-	setPos(0, 0, true); // important!
+	setSongPos(0, 0, RESET_SONG_TICK); // important!
 
 	if (!allocateInstr(0))
 	{
@@ -2969,9 +2969,9 @@ void startPlaying(int8_t mode, int16_t row)
 
 	ASSERT(mode != PLAYMODE_IDLE && mode != PLAYMODE_EDIT);
 	if (mode == PLAYMODE_PATT || mode == PLAYMODE_RECPATT)
-		setPos(-1, row, true);
+		setSongPos(-1, row, RESET_SONG_TICK);
 	else
-		setPos(editor.songPos, row, true);
+		setSongPos(editor.songPos, row, RESET_SONG_TICK);
 
 	playMode = mode;
 	songPlaying = true;
@@ -3255,7 +3255,7 @@ void stopVoices(void)
 void setNewSongPos(int32_t pos)
 {
 	resetReplayerState(); // FT2 bugfix
-	setPos((int16_t)pos, 0, true);
+	setSongPos((int16_t)pos, 0, RESET_SONG_TICK);
 
 	// FT2 fix: if song speed was 0, set it back to initial speed
 	if (song.speed == 0)
@@ -3339,7 +3339,7 @@ void decCurSmp(void)
 
 	editor.curSmp--;
 	editor.sampleBankOffset = (editor.curSmp / 5) * 5;
-	setScrollBarPos(SB_SAMPLE_LIST, editor.sampleBankOffset, true);
+	setScrollBarPos(SB_SAMPLE_LIST, editor.sampleBankOffset, TRIGGER_CALLBACK);
 
 	updateTextBoxPointers();
 	updateNewSample();
@@ -3356,7 +3356,7 @@ void incCurSmp(void)
 	if (editor.sampleBankOffset > MAX_SMP_PER_INST-5)
 		editor.sampleBankOffset = MAX_SMP_PER_INST-5;
 
-	setScrollBarPos(SB_SAMPLE_LIST, editor.sampleBankOffset, true);
+	setScrollBarPos(SB_SAMPLE_LIST, editor.sampleBankOffset, TRIGGER_CALLBACK);
 
 	updateTextBoxPointers();
 	updateNewSample();

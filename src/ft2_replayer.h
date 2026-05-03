@@ -7,6 +7,10 @@
 
 enum
 {
+	// for setSongPos()
+	DONT_RESET_SONG_TICK = false,
+	RESET_SONG_TICK = true,
+
 	// channel/voice status flags
 	CS_UPDATE_VOL = 1,
 	CF_UPDATE_PERIOD = 2,
@@ -307,7 +311,7 @@ void resetMusic(void);
 void startPlaying(int8_t mode, int16_t row);
 void stopPlaying(void);
 void stopVoices(void);
-void setPos(int16_t songPos, int16_t row, bool resetTimer);
+void setSongPos(int16_t songPos, int16_t row, bool resetTick);
 void pauseMusic(void); // stops reading pattern data
 void resumeMusic(void); // starts reading pattern data
 void setSongModifiedFlag(void);

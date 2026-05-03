@@ -653,7 +653,7 @@ void pbSfxLowPass(void)
 	setupResoLpFilter(s, &f, lastLpCutoff, filterResonance, false);
 	fillSampleUndo(KEEP_SAMPLE_MARK);
 	applyResoFilter(s, &f);
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void pbSfxHighPass(void)
@@ -685,7 +685,7 @@ void pbSfxHighPass(void)
 	setupResoHpFilter(s, &f, lastHpCutoff, filterResonance, false);
 	fillSampleUndo(KEEP_SAMPLE_MARK);
 	applyResoFilter(s, &f);
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void sfxPreviewFilter(uint32_t cutoff)
@@ -802,7 +802,7 @@ void pbSfxSubBass(void)
 	setupResoHpFilter(s, &f, 0.001, 0, true);
 	fillSampleUndo(KEEP_SAMPLE_MARK);
 	applyResoFilter(s, &f);
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void pbSfxAddBass(void)
@@ -965,7 +965,7 @@ void pbSfxAddBass(void)
 	fixSample(s);
 	resumeAudio();
 
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void pbSfxSubTreble(void)
@@ -979,7 +979,7 @@ void pbSfxSubTreble(void)
 	setupResoLpFilter(s, &f, 0.33, 0, true);
 	fillSampleUndo(KEEP_SAMPLE_MARK);
 	applyResoFilter(s, &f);
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void pbSfxAddTreble(void)
@@ -1142,7 +1142,7 @@ void pbSfxAddTreble(void)
 	fixSample(s);
 	resumeAudio();
 
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void pbSfxSetAmp(void)
@@ -1218,7 +1218,7 @@ void pbSfxSetAmp(void)
 	fixSample(s);
 	resumeAudio();
 
-	writeSample(true);
+	writeSample(FORCE_SAMPLE_REDRAW);
 }
 
 void pbSfxUndo(void)
@@ -1263,7 +1263,7 @@ void pbSfxUndo(void)
 	{
 		smpEd_Rx1 = oldRx1;
 		smpEd_Rx2 = oldRx2;
-		writeSample(false); // redraw sample mark only
+		writeSample(DONT_FORCE_SAMPLE_REDRAW); // redraw sample mark only
 	}
 
 	sampleUndo.keepSampleMark = false;

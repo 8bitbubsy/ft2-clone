@@ -239,7 +239,7 @@ static void handleSysMsg(SDL_Event inputEvent)
 					SDL_RaiseWindow(video.window);
 				}
 
-				loadDroppedFile((char *)sharedMemBuf, true);
+				loadDroppedFile((char *)sharedMemBuf);
 
 				UnmapViewOfFile(sharedMemBuf);
 				sharedMemBuf = NULL;
@@ -462,7 +462,7 @@ static void handleSDLEvents(void)
 				SDL_RaiseWindow(video.window);
 			}
 
-			loadDroppedFile(event.drop.file, true);
+			loadDroppedFile(event.drop.file);
 			SDL_free(event.drop.file);
 		}
 		else if (event.type == SDL_QUIT)

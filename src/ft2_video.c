@@ -1042,7 +1042,7 @@ void handleRedrawing(void)
 					drawGlobalVol(editor.globalVolume);
 
 					if (!songPlaying || editor.wavIsRendering)
-						setScrollBarPos(SB_POS_ED, editor.songPos, false);
+						setScrollBarPos(SB_POS_ED, editor.songPos, DONT_TRIGGER_CALLBACK);
 
 					// draw current mode text
 
@@ -1079,7 +1079,7 @@ void handleRedrawing(void)
 			if (ui.updatePosEdScrollBar)
 			{
 				ui.updatePosEdScrollBar = false;
-				setScrollBarPos(SB_POS_ED, song.songPos, false);
+				setScrollBarPos(SB_POS_ED, song.songPos, DONT_TRIGGER_CALLBACK);
 				setScrollBarEnd(SB_POS_ED, (song.songLength - 1) + 5);
 			}
 
@@ -1166,7 +1166,7 @@ static void drawReplayerData(void)
 			{
 				ui.drawPosEdFlag = false;
 				drawPosEdNums(editor.songPos);
-				setScrollBarPos(SB_POS_ED, editor.songPos, false);
+				setScrollBarPos(SB_POS_ED, editor.songPos, DONT_TRIGGER_CALLBACK);
 			}
 
 			if (ui.drawPattNumLenFlag)

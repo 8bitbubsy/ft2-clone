@@ -438,7 +438,7 @@ void setScrollBarEnd(uint16_t scrollBarID, uint32_t end)
 	{
 		if (setPos)
 		{
-			setScrollBarPos(scrollBarID, scrollBar->pos, false);
+			setScrollBarPos(scrollBarID, scrollBar->pos, DONT_TRIGGER_CALLBACK);
 			// this will also call setScrollBarThumbCoords() and drawScrollBar()
 		}
 		else
@@ -460,7 +460,7 @@ void setScrollBarPageLength(uint16_t scrollBarID, uint32_t pageLength)
 	scrollBar->page = pageLength;
 	if (scrollBar->end > 0)
 	{
-		setScrollBarPos(scrollBarID, scrollBar->pos, false);
+		setScrollBarPos(scrollBarID, scrollBar->pos, DONT_TRIGGER_CALLBACK);
 		setScrollBarThumbCoords(scrollBarID);
 		drawScrollBar(scrollBarID);
 	}
@@ -532,7 +532,7 @@ bool testScrollBarMouseDown(void)
 					dTmp = ((double)scrollPos * scrollBar->end) / length;
 					scrollPos = (int32_t)(dTmp + 0.5);
 
-					setScrollBarPos(mouse.lastUsedObjectID, scrollPos, true);
+					setScrollBarPos(mouse.lastUsedObjectID, scrollPos, TRIGGER_CALLBACK);
 				}
 			}
 			else
@@ -565,7 +565,7 @@ bool testScrollBarMouseDown(void)
 					dTmp = ((double)scrollPos * scrollBar->end) / length;
 					scrollPos = (int32_t)(dTmp + 0.5);
 
-					setScrollBarPos(mouse.lastUsedObjectID, scrollPos, true);
+					setScrollBarPos(mouse.lastUsedObjectID, scrollPos, TRIGGER_CALLBACK);
 				}
 			}
 
@@ -630,7 +630,7 @@ void handleScrollBarsWhileMouseDown(void)
 			dTmp = ((double)scrollPos * scrollBar->end) / length;
 			scrollPos = (int32_t)(dTmp + 0.5);
 
-			setScrollBarPos(mouse.lastUsedObjectID, scrollPos, true);
+			setScrollBarPos(mouse.lastUsedObjectID, scrollPos, TRIGGER_CALLBACK);
 
 			if (mouse.lastUsedObjectID != OBJECT_ID_NONE) // this can change in the callback in setScrollBarPos()
 				drawScrollBar(mouse.lastUsedObjectID);
@@ -656,7 +656,7 @@ void handleScrollBarsWhileMouseDown(void)
 			dTmp = ((double)scrollPos * scrollBar->end) / length;
 			scrollPos = (int32_t)(dTmp + 0.5);
 
-			setScrollBarPos(mouse.lastUsedObjectID, scrollPos, true);
+			setScrollBarPos(mouse.lastUsedObjectID, scrollPos, TRIGGER_CALLBACK);
 
 			if (mouse.lastUsedObjectID != OBJECT_ID_NONE) // this can change in the callback in setScrollBarPos()
 				drawScrollBar(mouse.lastUsedObjectID);

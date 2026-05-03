@@ -10,9 +10,8 @@ void clearUnusedChannels(note_t *p, int16_t numRows, int32_t numChannels);
 bool allocateTmpInstr(int32_t insNum);
 bool allocateTmpPatt(int32_t pattNum, uint16_t numRows);
 void loadMusic(UNICHAR *filenameU);
-bool loadMusicUnthreaded(UNICHAR *filenameU, bool autoPlay);
 bool handleModuleLoadFromArg(int argc, char **argv);
-void loadDroppedFile(char *fullPathUTF8, bool songModifiedCheck);
+void loadDroppedFile(char *fullPathUTF8);
 void handleLoadMusicEvents(void);
 
 // file extensions accepted by Disk Op. in module mode

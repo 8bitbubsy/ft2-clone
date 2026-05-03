@@ -21,7 +21,7 @@ static uint8_t palContrast[12][2] = // palette desktop/button contrasts
 	{66, 62}, {68, 57}, {58, 42}, {57, 55}, {62, 57}, {52, 57}
 };
 
-void setPal16(pal16 *p, bool redrawScreen)
+void setPalette(pal16 *p, bool redrawScreen)
 {
 #define LOOP_PIN_COL_SUB 96
 #define TEXT_MARK_COLOR 0x0078D7
@@ -36,7 +36,7 @@ void setPal16(pal16 *p, bool redrawScreen)
 		g8 = COLOR_6BIT_TO_8BIT(p[i].g);
 		b8 = COLOR_6BIT_TO_8BIT(p[i].b);
 
-		// MSB is used for palette number
+		// MSB (0xXX000000) is used for palette number
 		video.palette[i] = (i << 24) | RGB32(r8, g8, b8);
 	}
 
@@ -73,22 +73,6 @@ static void showMouseColorErrorMsg(void)
 	okBox(0, "System message", "Mouse color can only be changed when \"Software mouse\" is enabled.", NULL);
 }
 
-static double palPow(double dX, double dY)
-{
-	if (dY == 1.0)
-		return dX;
-
-	dY *= log(fabs(dX));
-	dY = CLAMP(dY, -86.0, 86.0);
-
-	return exp(dY);
-}
-
-uint8_t palMax(int32_t c)
-{
-	return (uint8_t)CLAMP(c, 0, 63);
-}
-
 static void drawCurrentPaletteColor(void)
 {
 	const uint8_t palIndex = FTC_EditOrder[cfg_ColorNum];
@@ -116,12 +100,23 @@ static void updatePaletteEditor(void)
 	else
 		cfg_Contrast = 0;
 
-	setScrollBarPos(SB_PAL_R, cfg_Red, false);
-	setScrollBarPos(SB_PAL_G, cfg_Green, false);
-	setScrollBarPos(SB_PAL_B, cfg_Blue, false);
-	setScrollBarPos(SB_PAL_CONTRAST, cfg_Contrast, false);
+	setScrollBarPos(SB_PAL_R, cfg_Red, DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_PAL_G, cfg_Green, DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_PAL_B, cfg_Blue, DONT_TRIGGER_CALLBACK);
+	setScrollBarPos(SB_PAL_CONTRAST, cfg_Contrast, DONT_TRIGGER_CALLBACK);
 
 	drawCurrentPaletteColor();
+}
+
+static float fPalPow(float x, float y)
+{
+	if (y == 1.0f)
+		return x;
+
+	y *= logf(fabsf(x));
+	y = CLAMP(y, -86.0f, 86.0f);
+
+	return expf(y);
 }
 
 static void paletteDragMoved(void)
@@ -141,50 +136,52 @@ static void paletteDragMoved(void)
 	}
 
 	const uint8_t colorNum = FTC_EditOrder[cfg_ColorNum];
-	const uint8_t p = (uint8_t)config.cfg_StdPalNum;
+	const uint8_t layout = (uint8_t)config.cfg_StdPalNum;
 
-	palTable[p][colorNum].r = cfg_Red;
-	palTable[p][colorNum].g = cfg_Green;
-	palTable[p][colorNum].b = cfg_Blue;
+	palTable[layout][colorNum].r = cfg_Red;
+	palTable[layout][colorNum].g = cfg_Green;
+	palTable[layout][colorNum].b = cfg_Blue;
 
 	if (cfg_ColorNum == 4 || cfg_ColorNum == 5)
 	{
-		double dRed = cfg_Red;
-		double dGreen = cfg_Green;
-		double dBlue = cfg_Blue;
-
 		int32_t contrast = cfg_Contrast;
 		if (contrast < 1)
 			contrast = 1;
 
-		const double dContrast = contrast * (1.0 / 40.0);
+		const float fR = (float)cfg_Red;
+		const float fG = (float)cfg_Green;
+		const float fB = (float)cfg_Blue;
+		const float fContrast = (float)contrast * (1.0f / 40.0f);
 
 		for (int32_t i = 0; i < 3; i++)
 		{
-			const int32_t k = scaleOrder[i] + (cfg_ColorNum - 4) * 2;
+			const int32_t pal = scaleOrder[i] + (cfg_ColorNum - 4) * 2;
+			const float fMul = fPalPow((float)(i + 1) * 0.5f, fContrast);
 
-			double dMul = palPow((i + 1) * (1.0 / 2.0), dContrast);
+			int32_t r6 = (int32_t)((fR * fMul) + 0.5f);
+			int32_t g6 = (int32_t)((fG * fMul) + 0.5f);
+			int32_t b6 = (int32_t)((fB * fMul) + 0.5f);
 
-			palTable[p][k].r = palMax((int32_t)((dRed * dMul) + 0.5));
-			palTable[p][k].g = palMax((int32_t)((dGreen * dMul) + 0.5));
-			palTable[p][k].b = palMax((int32_t)((dBlue * dMul) + 0.5));
+			palTable[layout][pal].r = (uint8_t)(CLAMP(r6, 0, 63));
+			palTable[layout][pal].g = (uint8_t)(CLAMP(g6, 0, 63));
+			palTable[layout][pal].b = (uint8_t)(CLAMP(b6, 0, 63));
 		}
 
-		palContrast[p][cfg_ColorNum-4] = cfg_Contrast;
+		palContrast[layout][cfg_ColorNum-4] = cfg_Contrast;
 	}
 	else
 	{
 		cfg_Contrast = 0;
 
-		setScrollBarPos(SB_PAL_R, cfg_Red, false);
-		setScrollBarPos(SB_PAL_G, cfg_Green, false);
-		setScrollBarPos(SB_PAL_B, cfg_Blue, false);
+		setScrollBarPos(SB_PAL_R, cfg_Red, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(SB_PAL_G, cfg_Green, DONT_TRIGGER_CALLBACK);
+		setScrollBarPos(SB_PAL_B, cfg_Blue, DONT_TRIGGER_CALLBACK);
 	}
 
-	setScrollBarPos(SB_PAL_CONTRAST, cfg_Contrast, false);
-
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setScrollBarPos(SB_PAL_CONTRAST, cfg_Contrast, DONT_TRIGGER_CALLBACK);
 	drawCurrentPaletteColor();
+
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 }
 
 void sbPalRPos(uint32_t pos)
@@ -375,7 +372,7 @@ void rbConfigPalArctic(void)
 {
 	config.cfg_StdPalNum = PAL_ARCTIC;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_ARCTIC);
 }
 
@@ -383,7 +380,7 @@ void rbConfigPalLitheDark(void)
 {
 	config.cfg_StdPalNum = PAL_LITHE_DARK;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_LITHE_DARK);
 }
 
@@ -391,7 +388,7 @@ void rbConfigPalAuroraBorealis(void)
 {
 	config.cfg_StdPalNum = PAL_AURORA_BOREALIS;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_AURORA_BOREALIS);
 }
 
@@ -399,7 +396,7 @@ void rbConfigPalRose(void)
 {
 	config.cfg_StdPalNum = PAL_ROSE;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_ROSE);
 }
 
@@ -407,7 +404,7 @@ void rbConfigPalBlues(void)
 {
 	config.cfg_StdPalNum = PAL_BLUES;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_BLUES);
 }
 
@@ -415,7 +412,7 @@ void rbConfigPalDarkMode(void)
 {
 	config.cfg_StdPalNum = PAL_DARK_MODE;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_DARK_MODE);
 }
 
@@ -423,7 +420,7 @@ void rbConfigPalGold(void)
 {
 	config.cfg_StdPalNum = PAL_GOLD;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_GOLD);
 }
 
@@ -431,7 +428,7 @@ void rbConfigPalViolent(void)
 {
 	config.cfg_StdPalNum = PAL_VIOLENT;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_VIOLENT);
 }
 
@@ -439,7 +436,7 @@ void rbConfigPalHeavyMetal(void)
 {
 	config.cfg_StdPalNum = PAL_HEAVY_METAL;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_HEAVY_METAL);
 }
 
@@ -447,7 +444,7 @@ void rbConfigPalWhyColors(void)
 {
 	config.cfg_StdPalNum = PAL_WHY_COLORS;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_WHY_COLORS);
 }
 
@@ -455,7 +452,7 @@ void rbConfigPalJungle(void)
 {
 	config.cfg_StdPalNum = PAL_JUNGLE;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_JUNGLE);
 }
 
@@ -463,6 +460,6 @@ void rbConfigPalUserDefined(void)
 {
 	config.cfg_StdPalNum = PAL_USER_DEFINED;
 	updatePaletteEditor();
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	checkRadioButton(RB_CONFIG_PAL_USER_DEFINED);
 }

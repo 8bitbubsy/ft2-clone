@@ -94,9 +94,9 @@ static void loadConfigFromBuffer(bool defaults)
 	// clamp user palette values
 	for (int32_t i = 0; i < 16; i++)
 	{
-		config.userPal->r = palMax(config.userPal->r);
-		config.userPal->g = palMax(config.userPal->g);
-		config.userPal->b = palMax(config.userPal->b);
+		if (config.userPal->r > 63) config.userPal->r = 63;
+		if (config.userPal->g > 63) config.userPal->g = 63;
+		if (config.userPal->b > 63) config.userPal->b = 63;
 	}
 
 	// copy over user palette
@@ -187,7 +187,7 @@ static void loadConfigFromBuffer(bool defaults)
 	changeLogoType(config.id_FastLogo);
 	changeBadgeType(config.id_TritonProd);
 	ui.maxVisibleChannels = (uint8_t)(2 + ((config.ptnMaxChannels + 1) * 2));
-	setPal16(palTable[config.cfg_StdPalNum], true);
+	setPalette(palTable[config.cfg_StdPalNum], REDRAW_SCREEN);
 	updatePattFontPtrs();
 
 	unlockMixerCallback();
@@ -256,7 +256,7 @@ void resetConfig(void)
 	saveConfig(false);
 
 	// redraw new changes
-	showTopScreen(false);
+	showTopScreen(DONT_RESTORE_SCREENS);
 	showBottomScreen();
 
 	setWindowSizeFromConfig(true);
@@ -366,7 +366,7 @@ void loadConfig2(void) // called by "Load config" button
 	loadConfig(CONFIG_SHOW_ERRORS);
 
 	// redraw new changes
-	showTopScreen(false);
+	showTopScreen(DONT_RESTORE_SCREENS);
 	showBottomScreen();
 
 	setWindowSizeFromConfig(true);
@@ -1199,8 +1199,8 @@ void showConfigScreen(void)
 			configDrawAmp();
 			configDrawMasterVol();
 
-			setScrollBarPos(SB_AMP_SCROLL,       config.boostLevel - 1, false);
-			setScrollBarPos(SB_MASTERVOL_SCROLL, config.masterVol,      false);
+			setScrollBarPos(SB_AMP_SCROLL,       config.boostLevel - 1, DONT_TRIGGER_CALLBACK);
+			setScrollBarPos(SB_MASTERVOL_SCROLL, config.masterVol,      DONT_TRIGGER_CALLBACK);
 
 			showScrollBar(SB_AUDIO_INPUT_SCROLL);
 			showScrollBar(SB_AUDIO_OUTPUT_SCROLL);
@@ -1383,7 +1383,7 @@ void showConfigScreen(void)
 			drawTextBox(TB_CONF_DEF_PATTS_DIR);
 			drawTextBox(TB_CONF_DEF_TRACKS_DIR);
 
-			setScrollBarPos(SB_MIDI_SENS, config.recMIDIVolSens, false);
+			setScrollBarPos(SB_MIDI_SENS, config.recMIDIVolSens, DONT_TRIGGER_CALLBACK);
 			showScrollBar(SB_MIDI_SENS);
 		}
 		break;
@@ -1525,7 +1525,7 @@ void hideConfigScreen(void)
 void exitConfigScreen(void)
 {
 	hideConfigScreen();
-	showTopScreen(true);
+	showTopScreen(RESTORE_SCREENS);
 }
 
 // CONFIG AUDIO

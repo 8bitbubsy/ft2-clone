@@ -201,7 +201,7 @@ bool setupGUI(void)
 		s->thumbH = 0;
 	}
 
-	setPal16(palTable[config.cfg_StdPalNum], false);
+	setPalette(palTable[config.cfg_StdPalNum], DONT_REDRAW_SCREEN);
 	initAboutScreen();
 	setupInitialTextBoxPointers();
 	setInitialTrimFlags();
@@ -1274,9 +1274,9 @@ void showBottomScreen(void)
 
 void drawGUIOnRunTime(void)
 {
-	setScrollBarPos(SB_POS_ED, 0, false);
+	setScrollBarPos(SB_POS_ED, 0, DONT_TRIGGER_CALLBACK);
 
-	showTopScreen(false); // false = don't restore screens
+	showTopScreen(DONT_RESTORE_SCREENS); // false = don't restore screens
 	showPatternEditor();
 
 	ui.updatePosSections = true;

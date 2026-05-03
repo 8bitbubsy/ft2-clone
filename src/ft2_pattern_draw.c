@@ -171,7 +171,7 @@ void drawPatternBorders(void)
 		hidePushButton(PB_CHAN_SCROLL_LEFT);
 		hidePushButton(PB_CHAN_SCROLL_RIGHT);
 
-		setScrollBarPos(SB_CHAN_SCROLL, 0, false);
+		setScrollBarPos(SB_CHAN_SCROLL, 0, DONT_TRIGGER_CALLBACK);
 	}
 }
 

@@ -439,7 +439,7 @@ static void mouseWheelDecRow(void)
 	if (row < 0)
 		row = patternNumRows[editor.editPattern] - 1;
 
-	setPos(-1, row, true);
+	setSongPos(-1, row, RESET_SONG_TICK);
 }
 
 static void mouseWheelIncRow(void)
@@ -451,7 +451,7 @@ static void mouseWheelIncRow(void)
 	if (row >= patternNumRows[editor.editPattern])
 		row = 0;
 
-	setPos(-1, row, true);
+	setSongPos(-1, row, RESET_SONG_TICK);
 }
 
 void mouseWheelHandler(bool directionUp)
@@ -631,7 +631,7 @@ void mouseButtonUpHandler(uint8_t mouseButton)
 			resumeAudio();
 
 			if (ui.sampleEditorShown)
-				writeSample(true);
+				writeSample(FORCE_SAMPLE_REDRAW);
 
 			setSongModifiedFlag();
 
@@ -760,10 +760,11 @@ void mouseButtonDownHandler(uint8_t mouseButton)
 	if (ui.sysReqShown)
 		return;
 
-	if (testInstrVolEnvMouseDown(false)) return;
-	if (testInstrPanEnvMouseDown(false)) return;
-	if (testDiskOpMouseDown(false)) return;
-	if (testPianoKeysMouseDown(false)) return;
+	const bool mouseButtonHeldDown = false;
+	if (testInstrVolEnvMouseDown(mouseButtonHeldDown)) return;
+	if (testInstrPanEnvMouseDown(mouseButtonHeldDown)) return;
+	if (testDiskOpMouseDown(mouseButtonHeldDown)) return;
+	if (testPianoKeysMouseDown(mouseButtonHeldDown)) return;
 	if (testSamplerDataMouseDown()) return;
 	if (testPatternDataMouseDown()) return;
 	if (testScopesMouseDown()) return;
@@ -796,26 +797,28 @@ void handleLastGUIObjectDown(void)
 		{
 			switch (mouse.lastUsedObjectType)
 			{
-				case OBJECT_PUSHBUTTON: handlePushButtonsWhileMouseDown(); break;
+				case OBJECT_PUSHBUTTON:  handlePushButtonsWhileMouseDown();  break;
 				case OBJECT_RADIOBUTTON: handleRadioButtonsWhileMouseDown(); break;
-				case OBJECT_CHECKBOX: handleCheckBoxesWhileMouseDown(); break;
-				case OBJECT_SCROLLBAR: handleScrollBarsWhileMouseDown(); break;
-				case OBJECT_TEXTBOX: handleTextBoxWhileMouseDown(); break;
+				case OBJECT_CHECKBOX:    handleCheckBoxesWhileMouseDown();   break;
+				case OBJECT_SCROLLBAR:   handleScrollBarsWhileMouseDown();   break;
+				case OBJECT_TEXTBOX:     handleTextBoxWhileMouseDown();      break;
 				default: break;
 			}
 		}
 		else
 		{
+			const bool mouseButtonHeldDown = true;
+
 			// test non-standard GUI elements
 			switch (mouse.lastUsedObjectType)
 			{
-				case OBJECT_INSTRSWITCH: testInstrSwitcherMouseDown(); break;
-				case OBJECT_PATTERNMARK: handlePatternDataMouseDown(true); break;
-				case OBJECT_DISKOPLIST: testDiskOpMouseDown(true); break;
-				case OBJECT_SMPDATA: handleSampleDataMouseDown(true); break;
-				case OBJECT_PIANO: testPianoKeysMouseDown(true); break;
-				case OBJECT_INSVOLENV: testInstrVolEnvMouseDown(true); break;
-				case OBJECT_INSPANENV: testInstrPanEnvMouseDown(true); break;
+				case OBJECT_INSTRSWITCH: testInstrSwitcherMouseDown();                    break;
+				case OBJECT_PATTERNMARK: handlePatternDataMouseDown(mouseButtonHeldDown); break;
+				case OBJECT_DISKOPLIST:  testDiskOpMouseDown(mouseButtonHeldDown);        break;
+				case OBJECT_SMPDATA:     handleSampleDataMouseDown(mouseButtonHeldDown);  break;
+				case OBJECT_PIANO:       testPianoKeysMouseDown(mouseButtonHeldDown);     break;
+				case OBJECT_INSVOLENV:   testInstrVolEnvMouseDown(mouseButtonHeldDown);   break;
+				case OBJECT_INSPANENV:   testInstrPanEnvMouseDown(mouseButtonHeldDown);   break;
 				default: break;
 			}
 		}
