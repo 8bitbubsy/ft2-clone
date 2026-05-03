@@ -12,6 +12,7 @@
 #include "ft2_video.h"
 #include "ft2_sampling.h"
 #include "ft2_structs.h"
+#include "ft2_audioselector.h"
 
 #define STEREO_SAMPLE_HEIGHT (SAMPLE_AREA_HEIGHT/2)
 #define SAMPLE_L_CENTER (SAMPLE_AREA_Y_CENTER - (STEREO_SAMPLE_HEIGHT/2))
@@ -355,7 +356,11 @@ void startSampling(void)
 	want.callback = sampleInStereo ? stereoSamplingCallback : monoSamplingCallback;
 	want.samples = SAMPLING_BUFFER_SIZE;
 
-	recordDev = SDL_OpenAudioDevice(audio.currInputDevice, true, &want, &have, 0);
+	char *device = audio.currInputDevice;
+	if (device != NULL && strcmp(device, DEFAULT_AUDIO_DEV_STR) == 0)
+		device = NULL; // force default device
+
+	recordDev = SDL_OpenAudioDevice(device, true, &want, &have, 0);
 	if (recordDev == 0)
 	{
 		okBox(0, "System message", "Couldn't open the input device! Try adjusting the input rate at the config screen.", NULL);
