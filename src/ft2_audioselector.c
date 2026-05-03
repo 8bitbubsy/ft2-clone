@@ -361,16 +361,7 @@ void setToDefaultAudioOutputDevice(void)
 		audio.currOutputDevice = NULL;
 	}
 
-	/* If we have more than one device, we can't know which one
-	** is the default (and thus not get its device name).
-	** SDL2 ought to have a function for this!
-	*/
-	if (SDL_GetNumAudioDevices(false) == 1)
-	{
-		const char *devName = SDL_GetAudioDeviceName(0, false);
-		if (devName != NULL)
-			audio.currOutputDevice = strdup(devName);
-	}
+	audio.currOutputDevice = strdup(DEFAULT_AUDIO_DEV_STR);
 }
 
 void setToDefaultAudioInputDevice(void)
@@ -381,16 +372,7 @@ void setToDefaultAudioInputDevice(void)
 		audio.currInputDevice = NULL;
 	}
 
-	/* If we have more than one device, we can't know which one
-	** is the default (and thus not get its device name).
-	** SDL2 ought to have a function for this!
-	*/
-	if (SDL_GetNumAudioDevices(true) == 1)
-	{
-		const char *devName = SDL_GetAudioDeviceName(0, true);
-		if (devName != NULL)
-			audio.currInputDevice = strdup(devName);
-	}
+	audio.currInputDevice = strdup(DEFAULT_AUDIO_DEV_STR);
 }
 
 void rescanAudioDevices(void)
