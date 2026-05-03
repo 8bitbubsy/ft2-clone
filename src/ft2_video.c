@@ -590,7 +590,7 @@ void renderSprites(void)
 
 					if (*src8 != PAL_TRANSPR)
 					{
-						if (!(*dst32 & 0xFFFFFF) || *dst32 == video.palette[PAL_TEXTMRK])
+						if (!(*dst32 & 0x00FFFFFF) || *dst32 == video.palette[PAL_TEXTMRK])
 							*dst32 = 0xB3DBF6;
 						else
 							*dst32 = 0x004ECE;
@@ -919,11 +919,10 @@ bool setupWindow(void)
 	video.dMonitorRefreshRate = (double)dm.refresh_rate;
 
 #ifndef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
-/* older SDL2 versions don't define this, don't fail the build for it */
+// older SDL2 versions don't define this, don't fail the build for it
 #define SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR "SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"
 #endif
 	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
-
 
 	if (dm.refresh_rate >= 59 && dm.refresh_rate <= 61)
 		video.vsync60HzPresent = true;

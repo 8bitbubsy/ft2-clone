@@ -27,16 +27,17 @@ void setPal16(pal16 *p, bool redrawScreen)
 #define TEXT_MARK_COLOR 0x0078D7
 #define BOX_SELECT_COLOR 0x7F7F7F
 
-	int16_t r, g, b;
+	int16_t r8, g8, b8;
 
-	// set main palette w/ 18-bit -> 24-bit conversion
+	// set main palette (w/ 6-bit -> 8-bit conversion)
 	for (int32_t i = 0; i < 16; i++)
 	{
-		r = P6_TO_P8(p[i].r); // 0..63 -> 0..255
-		g = P6_TO_P8(p[i].g);
-		b = P6_TO_P8(p[i].b);
+		r8 = COLOR_6BIT_TO_8BIT(p[i].r);
+		g8 = COLOR_6BIT_TO_8BIT(p[i].g);
+		b8 = COLOR_6BIT_TO_8BIT(p[i].b);
 
-		video.palette[i] = (i << 24) | RGB32(r, g, b);
+		// MSB is used for palette number
+		video.palette[i] = (i << 24) | RGB32(r8, g8, b8);
 	}
 
 	// set custom FT2 clone palette entries
@@ -44,15 +45,15 @@ void setPal16(pal16 *p, bool redrawScreen)
 	video.palette[PAL_TEXTMRK] = (PAL_TEXTMRK << 24) | TEXT_MARK_COLOR;
 	video.palette[PAL_BOXSLCT] = (PAL_BOXSLCT << 24) | BOX_SELECT_COLOR;
 
-	r = RGB32_R(video.palette[PAL_PATTEXT]);
-	g = RGB32_G(video.palette[PAL_PATTEXT]);
-	b = RGB32_B(video.palette[PAL_PATTEXT]);
+	r8 = RGB32_R(video.palette[PAL_PATTEXT]);
+	g8 = RGB32_G(video.palette[PAL_PATTEXT]);
+	b8 = RGB32_B(video.palette[PAL_PATTEXT]);
 
-	r = MAX(r - LOOP_PIN_COL_SUB, 0);
-	g = MAX(g - LOOP_PIN_COL_SUB, 0);
-	b = MAX(b - LOOP_PIN_COL_SUB, 0);
+	r8 = MAX(r8 - LOOP_PIN_COL_SUB, 0);
+	g8 = MAX(g8 - LOOP_PIN_COL_SUB, 0);
+	b8 = MAX(b8 - LOOP_PIN_COL_SUB, 0);
 
-	video.palette[PAL_LOOPPIN] = (PAL_LOOPPIN << 24) | RGB32(r, g, b);
+	video.palette[PAL_LOOPPIN] = (PAL_LOOPPIN << 24) | RGB32(r8, g8, b8);
 
 	// update framebuffer pixels with new palette
 	if (redrawScreen && video.frameBuffer != NULL)
@@ -92,12 +93,12 @@ static void drawCurrentPaletteColor(void)
 {
 	const uint8_t palIndex = FTC_EditOrder[cfg_ColorNum];
 
-	const uint8_t r = P6_TO_P8(cfg_Red);
-	const uint8_t g = P6_TO_P8(cfg_Green);
-	const uint8_t b = P6_TO_P8(cfg_Blue);
+	const uint8_t r8 = COLOR_6BIT_TO_8BIT(cfg_Red);
+	const uint8_t g8 = COLOR_6BIT_TO_8BIT(cfg_Green);
+	const uint8_t b8 = COLOR_6BIT_TO_8BIT(cfg_Blue);
 
 	textOutShadow(516, 3, PAL_FORGRND, PAL_DSKTOP2, "Palette:");
-	hexOutBg(573, 3, PAL_FORGRND, PAL_DESKTOP, RGB32(r, g, b) & 0xFFFFFF, 6);
+	hexOutBg(573, 3, PAL_FORGRND, PAL_DESKTOP, RGB32(r8, g8, b8) & 0xFFFFFF, 6);
 	clearRect(616, 2, 12, 10);
 	fillRect(617, 3, 10, 8, palIndex);
 }
