@@ -887,6 +887,7 @@ bool recreateTexture(void)
 	else
 		SDL_SetHint("SDL_RENDER_SCALE_QUALITY", "nearest");
 
+	// SDL_PIXELFORMAT_ARGB8888 is the fastest mode when using texture streaming
 	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H);
 	if (video.texture == NULL)
 	{
@@ -894,6 +895,7 @@ bool recreateTexture(void)
 		return false;
 	}
 
+	// disable alpha blending as we store the palette number in the MSB (0xXX000000)
 	SDL_SetTextureBlendMode(video.texture, SDL_BLENDMODE_NONE);
 	return true;
 }
