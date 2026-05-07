@@ -36,7 +36,8 @@ float *fCubicSplineLUT, *fSinc[SINC_KERNELS], *fSinc8[SINC_KERNELS], *fSinc16[SI
 uint64_t sincRatio1, sincRatio2;
 // ----------
 
-static void calcPolyphaseSincLUT(float *fOut, int32_t numTaps, double kaiserBeta, double sincCutoff);
+static void calcPolyphaseCubicSplineLUT(float *fOut, int32_t numPhases);
+static bool calcPolyphaseSincLUT(float *fOut, int32_t numTaps, int32_t numPhases, double kaiserBeta, double sincCutoff);
 
 bool setupMixerInterpolationTables(void)
 {
@@ -49,24 +50,7 @@ bool setupMixerInterpolationTables(void)
 		return false;
 	}
 
-	float *fPtr = fCubicSplineLUT;
-	for (int32_t i = 0; i < INTRP_PHASES; i++)
-	{
-		const double x1 = i * (1.0 / INTRP_PHASES);
-		const double x2 = x1 * x1; // x^2
-		const double x3 = x2 * x1; // x^3
-
-		// Catmull-Rom algorithm (has unity gain)
-		const double t1 = (x1 * -0.5) + (x2 *  1.0) + (x3 * -0.5);
-		const double t2 =               (x2 * -2.5) + (x3 *  1.5) + 1.0;
-		const double t3 = (x1 *  0.5) + (x2 *  2.0) + (x3 * -1.5);
-		const double t4 =               (x2 * -0.5) + (x3 *  0.5);
-
-		*fPtr++ = (float)t1; // tap #1 at sample offset -1
-		*fPtr++ = (float)t2; // tap #2 at sample offset  0 (center)
-		*fPtr++ = (float)t3; // tap #3 at sample offset  1
-		*fPtr++ = (float)t4; // tap #4 at sample offset  2
-	}
+	calcPolyphaseCubicSplineLUT(fCubicSplineLUT, INTRP_PHASES);
 
 	// windowed-sinc (8-point/16-point)
 
@@ -82,11 +66,20 @@ bool setupMixerInterpolationTables(void)
 			return false;
 		}
 
-		calcPolyphaseSincLUT( fSinc8[i], SINC8_TAPS,  k->kaiserBeta, k->sincCutoff);
-		calcPolyphaseSincLUT(fSinc16[i], SINC16_TAPS, k->kaiserBeta, k->sincCutoff);
+		if (!calcPolyphaseSincLUT(fSinc8[i], SINC8_TAPS, INTRP_PHASES, k->kaiserBeta, k->sincCutoff))
+		{
+			showErrorMsgBox("Not enough memory!");
+			return false;
+		}
+
+		if (!calcPolyphaseSincLUT(fSinc16[i], SINC16_TAPS, INTRP_PHASES, k->kaiserBeta, k->sincCutoff))
+		{
+			showErrorMsgBox("Not enough memory!");
+			return false;
+		}
 	}
 
-	// resampling ratios for sinc kernel selection
+	// fixed-point resampling ratios for sinc kernel selection (to get a gradual cut-off curve)
 	sincRatio1 = (uint64_t)(1.1875 * MIXER_FRAC_SCALE); // fSinc[0] if <=
 	sincRatio2 = (uint64_t)(1.5000 * MIXER_FRAC_SCALE); // fSinc[1] if <=, else fSinc[2] if >
 
@@ -114,6 +107,28 @@ void freeMixerInterpolationTables(void)
 			free(fSinc16[i]);
 			fSinc16[i] = NULL;
 		}
+	}
+}
+
+static void calcPolyphaseCubicSplineLUT(float *fOut, int32_t numPhases)
+{
+	const double phaseMul = 1.0 / numPhases;
+	for (int32_t i = 0; i < numPhases; i++)
+	{
+		const double x1 = i * phaseMul;
+		const double x2 = x1 * x1; // x^2
+		const double x3 = x2 * x1; // x^3
+
+		// Catmull-Rom algorithm (has unity gain)
+		const double t1 = (x1 * -0.5) + (x2 *  1.0) + (x3 * -0.5);
+		const double t2 =               (x2 * -2.5) + (x3 *  1.5) + 1.0;
+		const double t3 = (x1 *  0.5) + (x2 *  2.0) + (x3 * -1.5);
+		const double t4 =               (x2 * -0.5) + (x3 *  0.5);
+
+		*fOut++ = (float)t1; // tap #1 at sample offset -1
+		*fOut++ = (float)t2; // tap #2 at sample offset  0 (center)
+		*fOut++ = (float)t3; // tap #3 at sample offset  1
+		*fOut++ = (float)t4; // tap #4 at sample offset  2
 	}
 }
 
@@ -147,17 +162,25 @@ static inline double sinc(double x, double cutoff)
 	}
 }
 
-// note: numTaps must be even!
-static void calcPolyphaseSincLUT(float *fOut, int32_t numTaps, double kaiserBeta, double sincCutoff)
+/* Polyphase sinc LUT generator w/ Kaiser-Bessel window.
+**
+** Note #1: The 'sincCutoff' parameter ranges from 0.0 to 1.0, where 1.0 is no cutoff.
+** Note #2: The 'numTaps' parameter must be an even number.
+*/
+static bool calcPolyphaseSincLUT(float *fOut, int32_t numTaps, int32_t numPhases, double kaiserBeta, double sincCutoff)
 {
-	double tapBuffer[MAX_TAPS];
+	double *tapBuffer = (double *)malloc(numTaps * sizeof (double));
+	if (tapBuffer == NULL)
+		return false;
+
 	const double besselI0BetaMul = 1.0 / besselI0(kaiserBeta);
 	const int32_t centerPoint = (numTaps / 2) - 1;
-	const double xMul = 1.0 / (numTaps / 2);
+	const double phaseMul = 1.0 / numPhases;
+	const double kaiserXMul = 1.0 / (numTaps / 2);
 
-	for (int32_t i = 0; i < INTRP_PHASES; i++)
+	for (int32_t i = 0; i < numPhases; i++)
 	{
-		const double phase = i * (1.0 / INTRP_PHASES);
+		const double phase = i * phaseMul;
 
 		double tapSum = 0.0;
 		for (int32_t j = 0; j < numTaps; j++)
@@ -165,7 +188,7 @@ static void calcPolyphaseSincLUT(float *fOut, int32_t numTaps, double kaiserBeta
 			const double x = (j - centerPoint) - phase;
 
 			// Kaiser-Bessel window
-			const double n = x * xMul;
+			const double n = x * kaiserXMul;
 			const double window = besselI0(kaiserBeta * sqrt(1.0 - n * n)) * besselI0BetaMul;
 
 			const double wsinc = sinc(x, sincCutoff) * window;
@@ -179,4 +202,7 @@ static void calcPolyphaseSincLUT(float *fOut, int32_t numTaps, double kaiserBeta
 		for (int32_t j = 0; j < numTaps; j++)
 			*fOut++ = (float)(tapBuffer[j] * tapMul);
 	}
+
+	free(tapBuffer);
+	return true;
 }
