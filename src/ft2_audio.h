@@ -41,7 +41,8 @@ typedef struct audio_t
 	int32_t inputDeviceNum, outputDeviceNum, lastWorkingAudioFreq, lastWorkingAudioBits;
 	uint32_t quickVolRampSamples, freq;
 
-	uint32_t tickSampleCounter, samplesPerTickInt, samplesPerTickIntTab[(MAX_BPM-MIN_BPM)+1];
+	int32_t tickSampleCounter;
+	uint32_t samplesPerTickInt, samplesPerTickIntTab[(MAX_BPM-MIN_BPM)+1];
 	uint64_t tickSampleCounterFrac, samplesPerTickFrac, samplesPerTickFracTab[(MAX_BPM-MIN_BPM)+1];
 
 	uint32_t audLatencyPerfValInt, tickTimeIntTab[(MAX_BPM-MIN_BPM)+1];

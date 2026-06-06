@@ -840,7 +840,7 @@ static void audioCallback(void *userdata, Uint8 *stream, int len)
 	uint32_t samplesLeft = len;
 	while (samplesLeft > 0)
 	{
-		if (audio.tickSampleCounter == 0) // new replayer tick
+		if (audio.tickSampleCounter <= 0) // new replayer tick
 		{
 			replayerBusy = true;
 			if (!musicPaused) // important, don't remove this check! (also used for safety)
@@ -850,7 +850,9 @@ static void audioCallback(void *userdata, Uint8 *stream, int len)
 
 				tickReplayer();
 				updateVoices();
-				fillVisualsSyncBuffer();
+
+				if (audio.samplesPerTickInt != 0)
+					fillVisualsSyncBuffer();
 			}
 			replayerBusy = false;
 
@@ -864,13 +866,13 @@ static void audioCallback(void *userdata, Uint8 *stream, int len)
 			}
 		}
 
-		uint32_t samplesToMix = samplesLeft;
-		if (samplesToMix > audio.tickSampleCounter)
+		int32_t samplesToMix = samplesLeft;
+		if (audio.tickSampleCounter > 0 && samplesToMix > audio.tickSampleCounter)
 			samplesToMix = audio.tickSampleCounter;
 
 		doChannelMixing(bufferPosition, samplesToMix);
 		bufferPosition += samplesToMix;
-		
+
 		audio.tickSampleCounter -= samplesToMix;
 		samplesLeft -= samplesToMix;
 	}
