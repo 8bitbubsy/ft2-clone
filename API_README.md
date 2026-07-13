@@ -440,4 +440,5 @@ For issues and questions:
 
 ---
 
-**Made with ❤️ by the ft2-clone community**
+**Made with ❤ ️ by theFast Tracker IIe community**
+
