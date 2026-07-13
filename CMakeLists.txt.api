@@ -1,0 +1,61 @@
+# CMakeLists.txt - ft2-api build configuration
+# Add this to the existing ft2-clone CMakeLists.txt
+
+# Find required dependencies
+find_package(Microhttpd REQUIRED)  # For REST API
+find_package(SDL2 REQUIRED)
+find_package(Threads REQUIRED)
+
+# Include directories
+include_directories(${SDL2_INCLUDE_DIRS})
+include_directories(${MICROHTTPD_INCLUDE_DIRS})
+
+# Source files for API
+set(FT2_API_SOURCES
+    src/ft2_api_main.c
+    src/ft2_cli.c
+    src/ft2_rest_api.c
+    src/ft2_renderer.c
+    
+    # Core ft2-clone modules (link existing ones)
+    src/ft2_audio.c
+    src/ft2_replayer.c
+    src/ft2_wav_renderer.c
+    src/modloaders/ft2_load_mod.c
+    # ... other necessary core modules ...
+)
+
+# Create API executable
+add_executable(ft2-api ${FT2_API_SOURCES})
+
+# Link libraries
+target_link_libraries(ft2-api
+    PUBLIC
+        ${MICROHTTPD_LIBRARIES}
+        ${SDL2_LIBRARIES}
+        Threads::Threads
+        m  # math library
+)
+
+# Optional: Create separate CLI-only binary
+add_executable(ft2-cli
+    src/ft2_api_main.c
+    src/ft2_cli.c
+    src/ft2_renderer.c
+    # ... core ft2-clone modules ...
+)
+
+target_link_libraries(ft2-cli
+    PUBLIC
+        ${SDL2_LIBRARIES}
+        Threads::Threads
+        m
+)
+
+# Installation
+install(TARGETS ft2-api DESTINATION bin)
+install(TARGETS ft2-cli DESTINATION bin)
+
+# Optional: Install examples
+install(FILES examples/cli_examples.sh DESTINATION share/ft2-api)
+install(FILES examples/rest_examples.sh DESTINATION share/ft2-api)
