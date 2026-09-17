@@ -17,9 +17,19 @@
 
 static int16_t s1, s2;
 
-bool detectBRR(FILE *f)
+bool detectBRR(FILE *f, UNICHAR *filenameU, uint32_t filenameLen)
 {
 	if (f == NULL)
+		return false;
+
+	// test for .brr file extension (format detection is otherwise quite poor)
+	UNICHAR *testExt;
+#ifdef _WIN32
+	testExt = L".brr";
+#else
+	testExt = ".brr";
+#endif
+	if (filenameLen <= 4 || UNICHAR_STRICMP(&filenameU[filenameLen-4], testExt) != 0)
 		return false;
 
 	uint32_t oldPos = (uint32_t)ftell(f);

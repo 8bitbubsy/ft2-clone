@@ -47,8 +47,18 @@
 
 #define SAMPLE_BUFFER_SIZE 524208
 
-bool detectOGG(FILE *f)
+bool detectOGG(FILE *f, UNICHAR *filenameU, uint32_t filenameLen)
 {
+	// test for .ogg file extension (format detection is otherwise quite poor)
+	UNICHAR *testExt;
+#ifdef _WIN32
+	testExt = L".ogg";
+#else
+	testExt = ".ogg";
+#endif
+	if (filenameLen <= 4 || UNICHAR_STRICMP(&filenameU[filenameLen-4], testExt) != 0)
+		return false;
+
 	uint8_t h[4];
 	memset(h, 0, sizeof (h));
 	fread(h, 1, 4, f);

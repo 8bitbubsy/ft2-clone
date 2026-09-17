@@ -49,8 +49,18 @@ static sample_t *s;
 
 static bool writeSamples(int64_t sampleIndex, int32_t **samples, int32_t numSamples);
 
-bool detectFLAC(FILE *f)
+bool detectFLAC(FILE *f, UNICHAR *filenameU, uint32_t filenameLen)
 {
+	// test for .flac file extension (format detection is otherwise quite poor)
+	UNICHAR *testExt;
+#ifdef _WIN32
+	testExt = L".flac";
+#else
+	testExt = ".flac";
+#endif
+	if (filenameLen <= 5 || UNICHAR_STRICMP(&filenameU[filenameLen-5], testExt) != 0)
+		return false;
+
 	uint8_t h[4];
 	memset(h, 0, sizeof (h));
 	fread(h, 1, 4, f);

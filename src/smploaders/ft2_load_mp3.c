@@ -40,10 +40,19 @@
 
 static bool mp3IsStereo = true;
 
-bool detectMP3(FILE *f)
+bool detectMP3(FILE *f, UNICHAR *filenameU, uint32_t filenameLen)
 {
-	uint8_t h[10];
+	// test for .mp3 file extension (format detection is otherwise slightly poor)
+	UNICHAR *testExt;
+#ifdef _WIN32
+	testExt = L".mp3";
+#else
+	testExt = ".mp3";
+#endif
+	if (filenameLen <= 4 || UNICHAR_STRICMP(&filenameU[filenameLen-4], testExt) != 0)
+		return false;
 
+	uint8_t h[10];
 	memset(h, 0, sizeof (h));
 	fread(h, 1, 10, f);
 
