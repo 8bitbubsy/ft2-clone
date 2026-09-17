@@ -1,10 +1,10 @@
-
+.DS_Store
+release/macos/ft2-clone-macos.app/Contents/MacOS/ft2-clone-macos
 vs2026_project/.vs/*
 vs2026_project/enc_temp_folder/*
 vs2026_project/ft2-clone/Release/*
-vs2026_project/ft2-clone/x64/Debug/ft2-clone.vcxproj.FileListAbsolute.txt
 vs2026_project/ft2-clone/Debug/*
-.DS_Store
+vs2026_project/ft2-clone/x64/*
 *.exe
 *.db
 *.ilk
@@ -23,4 +23,3 @@ vs2026_project/ft2-clone/Debug/*
 *.recipe
 *.iobj
 *.enc
-release/macos/ft2-clone-macos.app/Contents/MacOS/ft2-clone-macos
