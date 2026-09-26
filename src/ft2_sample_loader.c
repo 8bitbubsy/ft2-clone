@@ -116,7 +116,7 @@ static int32_t loadSampleThread(void *ptr)
 		goto loadError;
 	}
 
-	int8_t format = detectSample(f, editor.tmpFilenameU, UNICHAR_STRLEN(editor.tmpFilenameU));
+	int8_t format = detectSample(f, editor.tmpFilenameU, (uint32_t)UNICHAR_STRLEN(editor.tmpFilenameU));
 	fseek(f, 0, SEEK_END);
 	uint32_t filesize = ftell(f);
 
