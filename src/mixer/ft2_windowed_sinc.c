@@ -84,7 +84,7 @@ void freeWindowedSincTables(void)
 
 void setWindowedSincIntrpTable(voice_t *v)
 {
-	const float **fSincLUT = (config.interpolation == INTERPOLATION_SINC16) ? fSinc16 : fSinc8;
+	float **fSincLUT = (config.interpolation == INTERPOLATION_SINC16) ? fSinc16 : fSinc8;
 
 	if (v->delta < (uint64_t)(KERNEL1_RATIO_LIMIT * MIXER_FRAC_SCALE))
 		v->fSincLUT = fSincLUT[0];
