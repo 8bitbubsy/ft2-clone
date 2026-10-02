@@ -170,7 +170,7 @@ static void starfield(void)
 
 static void rotateStarfieldMatrix(void)
 {
-#define F_2PI (float)(2.0 * PI)
+#define F_2PI (float)(2.0 * MY_PI)
 #define SCALE 32767.0f
 
 	const float rx2p = starRotation.x * F_2PI;

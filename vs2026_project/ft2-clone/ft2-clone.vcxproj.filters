@@ -74,9 +74,6 @@
     <ClCompile Include="..\..\src\mixer\ft2_mix.c">
       <Filter>mixer</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\mixer\ft2_silence_mix.c">
-      <Filter>mixer</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\modloaders\ft2_load_mod.c">
       <Filter>modloaders</Filter>
     </ClCompile>
@@ -268,9 +265,6 @@
       <Filter>mixer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\mixer\ft2_mix_macros.h">
-      <Filter>mixer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\mixer\ft2_silence_mix.h">
       <Filter>mixer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\scopes\ft2_scope_macros.h">

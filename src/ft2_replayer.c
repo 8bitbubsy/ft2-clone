@@ -276,10 +276,10 @@ int64_t period2ScopeDelta(uint32_t period)
 	return (int64_t)((ft2Delta * dScopeDeltaMul) + 0.5);
 }
 
-int32_t period2ScopeDrawDelta(uint32_t period)
+int64_t period2ScopeDrawDelta(uint32_t period)
 {
 	const int32_t ft2Delta = period2Ft2Delta(period);
-	return (int32_t)((ft2Delta * dScopeDrawDeltaMul) + 0.5);
+	return (int64_t)((ft2Delta * dScopeDrawDeltaMul) + 0.5);
 }
 
 // returns nominal FT2 C-4 voice rate (depending on finetune, relativeNote and linear/Amiga period mode)
@@ -459,7 +459,7 @@ void calcReplayerVars(int32_t referenceFt2AudioFreq, int32_t audioFreq)
 	frequencyMulFactor = (uint32_t)round(256.0 * FT2_MIX_FRAC_SCALE / dRefFreq * FT2_MID_C_RATE);
 	frequencyDivFactor = (uint32_t)round(FT2_MIX_FRAC_SCALE * FT2_MID_C_AMIGA_PERIOD / dRefFreq * FT2_MID_C_RATE);
 	dScopeDeltaMul = ((SCOPE_FRAC_SCALE / (double)FT2_MIX_FRAC_SCALE) * dRefFreq) / SCOPE_HZ;
-	dScopeDrawDeltaMul = ((SCOPE_DRAW_FRAC_SCALE / (double)FT2_MIX_FRAC_SCALE) * dRefFreq) / (FT2_MID_C_RATE / 2.0);
+	dScopeDrawDeltaMul = ((SCOPE_FRAC_SCALE / (double)FT2_MIX_FRAC_SCALE) * dRefFreq) / (FT2_MID_C_RATE / 2.0);
 	dDeltaMul = ((MIXER_FRAC_SCALE / (double)FT2_MIX_FRAC_SCALE) * dRefFreq) / audioFreq;
 
 	const double dQuickVolRampSamples = (double)referenceFt2AudioFreq / (int32_t)(referenceFt2AudioFreq / 200);

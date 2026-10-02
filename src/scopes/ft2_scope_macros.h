@@ -9,14 +9,14 @@
 	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t position = s->position; \
-	uint32_t positionFrac = (uint32_t)s->positionFrac >> (SCOPE_FRAC_BITS-SCOPE_DRAW_FRAC_BITS);
+	uint64_t positionFrac = s->positionFrac;
 
 #define SCOPE_INIT_PINGPONG \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
 	int32_t sample; \
 	int32_t actualPos, position = s->position; \
-	uint32_t positionFrac = (uint32_t)s->positionFrac >> (SCOPE_FRAC_BITS-SCOPE_DRAW_FRAC_BITS); \
+	uint64_t positionFrac = s->positionFrac; \
 	bool samplingBackwards = s->samplingBackwards;
 
 #define LINED_SCOPE_INIT \
@@ -45,56 +45,56 @@
 
 #define LINEAR_INTERPOLATION8(frac) \
 { \
-	const int32_t f = (frac) >> (SCOPE_DRAW_FRAC_BITS-15); \
+	const int32_t f = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-15); \
 	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
 }
 
 #define LINEAR_INTERPOLATION16(frac) \
 { \
-	const int32_t f = (frac) >> (SCOPE_DRAW_FRAC_BITS-15); \
+	const int32_t f = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-15); \
 	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
 }
 
-#define WSINC_SMP8(frac) \
-	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_DRAW_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+#define CUBIC_BSPLINE_SMP8(frac) \
+	const int16_t *t = scopeIntrpLUT + (((uint32_t)(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
 	\
 	sample = ((s8[-1] * t[0]) + \
 	          ( s8[0] * t[1]) + \
 	          ( s8[1] * t[2]) + \
 	          ( s8[2] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8);
 
-#define WSINC_SMP16(frac) \
-	const int16_t *t = scopeIntrpLUT + (((frac) >> (SCOPE_DRAW_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+#define CUBIC_BSPLINE_SMP16(frac) \
+	const int16_t *t = scopeIntrpLUT + (((uint32_t)(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
 	\
 	sample = ((s16[-1] * t[0]) + \
 	          ( s16[0] * t[1]) + \
 	          ( s16[1] * t[2]) + \
 	          ( s16[2] * t[3])) >> SCOPE_INTRP_SCALE_BITS;
 
-#define WSINC_INTERPOLATION8(frac) \
+#define CUBIC_BSPLINE_INTERPOLATION8(frac) \
 { \
-	WSINC_SMP8(frac) \
+	CUBIC_BSPLINE_SMP8(frac) \
 } \
 
-#define WSINC_INTERPOLATION16(frac) \
+#define CUBIC_BSPLINE_INTERPOLATION16(frac) \
 { \
-	WSINC_SMP16(frac) \
+	CUBIC_BSPLINE_SMP16(frac) \
 } \
 
-#define WSINC_INTERPOLATION8_LOOP(pos, frac) \
+#define CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, frac) \
 { \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
 		s8 = s->leftEdgeTaps8 + (pos - s->loopStart); \
 	\
-	WSINC_SMP8(frac) \
+	CUBIC_BSPLINE_SMP8(frac) \
 } \
 
-#define WSINC_INTERPOLATION16_LOOP(pos, frac) \
+#define CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, frac) \
 { \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
 		s16 = s->leftEdgeTaps16 + (pos - s->loopStart); \
 	\
-	WSINC_SMP16(frac) \
+	CUBIC_BSPLINE_SMP16(frac) \
 } \
 
 #define INTERPOLATE_SMP8(pos, frac) \
@@ -104,7 +104,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION8(frac) \
 	else \
-		WSINC_INTERPOLATION8(frac) \
+		CUBIC_BSPLINE_INTERPOLATION8(frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16(pos, frac) \
@@ -114,7 +114,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION16(frac) \
 	else \
-		WSINC_INTERPOLATION16(frac) \
+		CUBIC_BSPLINE_INTERPOLATION16(frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP8_LOOP(pos, frac) \
@@ -124,7 +124,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION8(frac) \
 	else \
-		WSINC_INTERPOLATION8_LOOP(pos, frac) \
+		CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define INTERPOLATE_SMP16_LOOP(pos, frac) \
@@ -134,7 +134,7 @@
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
 		LINEAR_INTERPOLATION16(frac) \
 	else \
-		WSINC_INTERPOLATION16_LOOP(pos, frac) \
+		CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, frac) \
 	sample = (sample * s->volume) >> (16+2);
 
 #define SCOPE_GET_SMP8 \
@@ -174,7 +174,7 @@
 #define SCOPE_GET_INTERPOLATED_SMP8 \
 	if (s->active) \
 	{ \
-		INTERPOLATE_SMP8(position, (uint16_t)positionFrac) \
+		INTERPOLATE_SMP8(position, (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -184,7 +184,7 @@
 #define SCOPE_GET_INTERPOLATED_SMP16 \
 	if (s->active) \
 	{ \
-		INTERPOLATE_SMP16(position, (uint16_t)positionFrac) \
+		INTERPOLATE_SMP16(position, (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -194,7 +194,7 @@
 #define SCOPE_GET_INTERPOLATED_SMP8_LOOP \
 	if (s->active) \
 	{ \
-		INTERPOLATE_SMP8_LOOP(position, (uint16_t)positionFrac) \
+		INTERPOLATE_SMP8_LOOP(position, (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -204,7 +204,7 @@
 #define SCOPE_GET_INTERPOLATED_SMP16_LOOP \
 	if (s->active) \
 	{ \
-		INTERPOLATE_SMP16_LOOP(position, (uint16_t)positionFrac) \
+		INTERPOLATE_SMP16_LOOP(position, (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -221,7 +221,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP8_LOOP(actualPos, samplingBackwards ? ((uint16_t)positionFrac ^ UINT16_MAX) : (uint16_t)positionFrac) \
+		INTERPOLATE_SMP8_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ SCOPE_FRAC_MASK) : (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -232,7 +232,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP16_LOOP(actualPos, samplingBackwards ? ((uint16_t)positionFrac ^ UINT16_MAX) : (uint16_t)positionFrac) \
+		INTERPOLATE_SMP16_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ SCOPE_FRAC_MASK) : (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -241,8 +241,8 @@
 
 #define SCOPE_UPDATE_READPOS \
 	positionFrac += s->drawDelta; \
-	position += positionFrac >> SCOPE_DRAW_FRAC_BITS; \
-	positionFrac &= SCOPE_DRAW_FRAC_MASK;
+	position += positionFrac >> SCOPE_FRAC_BITS; \
+	positionFrac &= SCOPE_FRAC_MASK;
 
 #define SCOPE_DRAW_SMP \
 	video.frameBuffer[((lineY - sample) * SCREEN_W) + x] = color;

@@ -449,7 +449,7 @@ static void setupResoLpFilter(sample_t *s, resoFilter_t *f, double cutoff, uint3
 			r = RESONANCE_MIN;
 	}
 
-	const double c = 1.0 / tan(PI * cutoff);
+	const double c = 1.0 / tan(MY_PI * cutoff);
 
 	f->a1 = 1.0 / (1.0 + r * c + c * c);
 	f->a2 = 2.0 * f->a1;
@@ -481,7 +481,7 @@ static void setupResoHpFilter(sample_t *s, resoFilter_t *f, double cutoff, uint3
 			r = RESONANCE_MIN;
 	}
 
-	const double c = tan(PI * cutoff);
+	const double c = tan(MY_PI * cutoff);
 
 	f->a1 = 1.0 / (1.0 + r * c + c * c);
 	f->a2 = -2.0 * f->a1;

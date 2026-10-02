@@ -809,11 +809,11 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 	// AUDIO BUFFER SIZE
 	uncheckRadioButtonGroup(RB_GROUP_CONFIG_SOUND_BUFF_SIZE);
 
-	tmpID = RB_CONFIG_SBS_1024;
+	tmpID = RB_CONFIG_MEDIUM_LATENCY;
 	if (config.specialFlags & BUFFSIZE_512)
-		tmpID = RB_CONFIG_SBS_512;
+		tmpID = RB_CONFIG_SMALLER_LATENCY;
 	else if (config.specialFlags & BUFFSIZE_2048)
-		tmpID = RB_CONFIG_SBS_2048;
+		tmpID = RB_CONFIG_BIGGER_LATENCY;
 
 	radioButtons[tmpID].state = RADIOBUTTON_CHECKED;
 
@@ -837,6 +837,8 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 		tmpID = RB_CONFIG_AUDIO_INTRP_SINC16;
 	else if (config.interpolation == INTERPOLATION_CUBIC)
 		tmpID = RB_CONFIG_AUDIO_INTRP_CUBIC;
+	else if (config.interpolation == INTERPOLATION_QUADRATIC)
+		tmpID = RB_CONFIG_AUDIO_INTRP_QUADRATIC;
 	else
 		tmpID = RB_CONFIG_AUDIO_INTRP_SINC8; // default case
 
@@ -879,8 +881,8 @@ void setConfigAudioRadioButtonStates(void) // accessed by other .c files
 
 static void setConfigAudioCheckButtonStates(void)
 {
-	checkBoxes[CB_CONF_PRECISE_BPM].checked = (config.specialFlags2 & PRECISE_BPM) ? true : false;
-	showCheckBox(CB_CONF_PRECISE_BPM);
+	checkBoxes[CB_CONF_MORE_PRECISE_BPM].checked = (config.specialFlags2 & PRECISE_BPM) ? true : false;
+	showCheckBox(CB_CONF_MORE_PRECISE_BPM);
 
 	checkBoxes[CB_CONF_VOL_RAMP].checked = (config.specialFlags & NO_VOLRAMP_FLAG) ? false : true;
 	showCheckBox(CB_CONF_VOL_RAMP);
@@ -1126,16 +1128,16 @@ void showConfigScreen(void)
 		default:
 		case CONFIG_SCREEN_AUDIO:
 		{
-			drawFramework(110,   0, 276, 87, FRAMEWORK_TYPE1);
-			drawFramework(110,  87, 276, 86, FRAMEWORK_TYPE1);
+			drawFramework(110,   0, 276,  87, FRAMEWORK_TYPE1);
+			drawFramework(110,  87, 276,  86, FRAMEWORK_TYPE1);
 
-			drawFramework(386,   0, 123, 58, FRAMEWORK_TYPE1);
-			drawFramework(386,  58, 123, 29, FRAMEWORK_TYPE1);
-			drawFramework(386,  87, 123, 86, FRAMEWORK_TYPE1);
+			drawFramework(386,   0, 133,  44, FRAMEWORK_TYPE1);
+			drawFramework(386,  44, 133,  29, FRAMEWORK_TYPE1);
+			drawFramework(386,  73, 133, 100, FRAMEWORK_TYPE1);
 
-			drawFramework(509,   0, 123, 58, FRAMEWORK_TYPE1);
-			drawFramework(509, 102, 123, 71, FRAMEWORK_TYPE1);
-			drawFramework(509,  58, 123, 44, FRAMEWORK_TYPE1);
+			drawFramework(519,   0, 113, 58, FRAMEWORK_TYPE1);
+			drawFramework(519, 102, 113, 71, FRAMEWORK_TYPE1);
+			drawFramework(519,  58, 113, 44, FRAMEWORK_TYPE1);
 
 			drawFramework(112,  16, AUDIO_SELECTORS_BOX_WIDTH+4, 69, FRAMEWORK_TYPE2);
 			drawFramework(112, 103, AUDIO_SELECTORS_BOX_WIDTH+4, 47, FRAMEWORK_TYPE2);
@@ -1163,35 +1165,35 @@ void showConfigScreen(void)
 			textOutShadow(265, 157, PAL_FORGRND, PAL_DSKTOP2, "48.0kHz");
 			textOutShadow(336, 157, PAL_FORGRND, PAL_DSKTOP2, "96.0kHz");
 
-			textOutShadow(390,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio buffer size:");
-			textOutShadow(405,  17, PAL_FORGRND, PAL_DSKTOP2, "Small");
-			textOutShadow(405,  31, PAL_FORGRND, PAL_DSKTOP2, "Medium (default)");
-			textOutShadow(405,  45, PAL_FORGRND, PAL_DSKTOP2, "Large");
+			textOutShadow(405,  3, PAL_FORGRND, PAL_DSKTOP2, "Smaller latency");
+			textOutShadow(405,  17, PAL_FORGRND, PAL_DSKTOP2, "Medium latency");
+			textOutShadow(405,  31, PAL_FORGRND, PAL_DSKTOP2, "Bigger latency");
 
-			textOutShadow(390,  61, PAL_FORGRND, PAL_DSKTOP2, "Audio bit depth:");
-			textOutShadow(405,  74, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
-			textOutShadow(468,  74, PAL_FORGRND, PAL_DSKTOP2, "32-bit");
+			textOutShadow(390,  47, PAL_FORGRND, PAL_DSKTOP2, "Audio bit depth:");
+			textOutShadow(405,  60, PAL_FORGRND, PAL_DSKTOP2, "16-bit");
+			textOutShadow(468,  60, PAL_FORGRND, PAL_DSKTOP2, "32-bit");
 
-			textOutShadow(405,  90, PAL_FORGRND, PAL_DSKTOP2, "No interpolation");
-			textOutShadow(405, 104, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
-			textOutShadow(405, 118, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
-			textOutShadow(405, 132, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
-			textOutShadow(405, 146, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
-			textOutShadow(405, 160, PAL_FORGRND, PAL_DSKTOP2, "Precise BPM");
+			textOutShadow(406,  76, PAL_FORGRND, PAL_DSKTOP2, "No interpolation");
+			textOutShadow(406,  90, PAL_FORGRND, PAL_DSKTOP2, "Linear (FT2)");
+			textOutShadow(406, 104, PAL_FORGRND, PAL_DSKTOP2, "Quadratic spline");
+			textOutShadow(406, 118, PAL_FORGRND, PAL_DSKTOP2, "Cubic spline");
+			textOutShadow(406, 132, PAL_FORGRND, PAL_DSKTOP2, "Sinc (8 point)");
+			textOutShadow(406, 146, PAL_FORGRND, PAL_DSKTOP2, "Sinc (16 point)");
+			textOutShadow(406, 160, PAL_FORGRND, PAL_DSKTOP2, "More precise BPM");
 
-			textOutShadow(513,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
-			textOutShadow(528,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
-			textOutShadow(528,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz");
-			textOutShadow(528,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
+			textOutShadow(523,   3, PAL_FORGRND, PAL_DSKTOP2, "Audio output rate:");
+			textOutShadow(538,  17, PAL_FORGRND, PAL_DSKTOP2, "44100Hz");
+			textOutShadow(538,  31, PAL_FORGRND, PAL_DSKTOP2, "48000Hz");
+			textOutShadow(538,  45, PAL_FORGRND, PAL_DSKTOP2, "96000Hz");
 
-			textOutShadow(513,  61, PAL_FORGRND, PAL_DSKTOP2, "Frequency slides:");
-			textOutShadow(528,  75, PAL_FORGRND, PAL_DSKTOP2, "Amiga");
-			textOutShadow(528,  89, PAL_FORGRND, PAL_DSKTOP2, "Linear (default)");
+			textOutShadow(523,  61, PAL_FORGRND, PAL_DSKTOP2, "Frequency slides:");
+			textOutShadow(538,  75, PAL_FORGRND, PAL_DSKTOP2, "Amiga");
+			textOutShadow(538,  89, PAL_FORGRND, PAL_DSKTOP2, "Linear (default)");
 
-			textOutShadow(513, 105, PAL_FORGRND, PAL_DSKTOP2, "Amplification:");
+			textOutShadow(523, 105, PAL_FORGRND, PAL_DSKTOP2, "Amplification:");
 			charOutShadow(621, 105, PAL_FORGRND, PAL_DSKTOP2, 'x');
-			textOutShadow(513, 133, PAL_FORGRND, PAL_DSKTOP2, "Master volume:");
-			textOutShadow(529, 160, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
+			textOutShadow(523, 133, PAL_FORGRND, PAL_DSKTOP2, "Master vol.:");
+			textOutShadow(538, 160, PAL_FORGRND, PAL_DSKTOP2, "Volume ramping");
 
 			setConfigAudioRadioButtonStates();
 			setConfigAudioCheckButtonStates();
@@ -1427,7 +1429,7 @@ void hideConfigScreen(void)
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_FREQ);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_AUDIO_INPUT_FREQ);
 	hideRadioButtonGroup(RB_GROUP_CONFIG_FREQ_SLIDES);
-	hideCheckBox(CB_CONF_PRECISE_BPM);
+	hideCheckBox(CB_CONF_MORE_PRECISE_BPM);
 	hideCheckBox(CB_CONF_VOL_RAMP);
 	hidePushButton(PB_CONFIG_AUDIO_RESCAN);
 	hidePushButton(PB_CONFIG_AUDIO_OUTPUT_DOWN);
@@ -1578,7 +1580,7 @@ void rbConfigMidiInput(void)
 }
 #endif
 
-void rbConfigAudioBuffSmall(void)
+void rbConfigAudioShorterLatency(void)
 {
 	config.specialFlags &= ~(BUFFSIZE_1024 + BUFFSIZE_2048);
 	config.specialFlags |= BUFFSIZE_512;
@@ -1586,7 +1588,7 @@ void rbConfigAudioBuffSmall(void)
 	setNewAudioSettings();
 }
 
-void rbConfigAudioBuffMedium(void)
+void rbConfigAudioMediumLatency(void)
 {
 	config.specialFlags &= ~(BUFFSIZE_512 + BUFFSIZE_2048);
 	config.specialFlags |= BUFFSIZE_1024;
@@ -1594,7 +1596,7 @@ void rbConfigAudioBuffMedium(void)
 	setNewAudioSettings();
 }
 
-void rbConfigAudioBuffLarge(void)
+void rbConfigAudioBiggerLatency(void)
 {
 	config.specialFlags &= ~(BUFFSIZE_512 + BUFFSIZE_1024);
 	config.specialFlags |= BUFFSIZE_2048;
@@ -1631,6 +1633,14 @@ void rbConfigAudioIntrpLinear(void)
 	audioSetInterpolationType(config.interpolation);
 	checkRadioButton(RB_CONFIG_AUDIO_INTRP_LINEAR);
 }
+
+void rbConfigAudioIntrpQuadratic(void)
+{
+	config.interpolation = INTERPOLATION_QUADRATIC;
+	audioSetInterpolationType(config.interpolation);
+	checkRadioButton(RB_CONFIG_AUDIO_INTRP_QUADRATIC);
+}
+
 void rbConfigAudioIntrpCubic(void)
 {
 	config.interpolation = INTERPOLATION_CUBIC;
@@ -1707,16 +1717,16 @@ void cbToggleAutoSaveConfig(void)
 	config.cfg_AutoSave ^= 1;
 }
 
-void cbPreciseBPM(void)
+void cbMorePreciseBPM(void)
 {
 	config.specialFlags2 ^= PRECISE_BPM;
 
 	if (config.specialFlags2 & PRECISE_BPM)
-		checkBoxes[CB_CONF_PRECISE_BPM].checked = true;
+		checkBoxes[CB_CONF_MORE_PRECISE_BPM].checked = true;
 	else
-		checkBoxes[CB_CONF_PRECISE_BPM].checked = false;
+		checkBoxes[CB_CONF_MORE_PRECISE_BPM].checked = false;
 
-	drawCheckBox(CB_CONF_PRECISE_BPM);
+	drawCheckBox(CB_CONF_MORE_PRECISE_BPM);
 
 	lockMixerCallback();
 	calcReplayerVars(FT2_REF_AUDIO_RATE, audio.freq);

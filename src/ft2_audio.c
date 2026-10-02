@@ -16,7 +16,7 @@
 #include "ft2_structs.h"
 #include "ft2_audioselector.h"
 #include "mixer/ft2_mix.h"
-#include "mixer/ft2_silence_mix.h"
+#include "mixer/ft2_windowed_sinc.h"
 
 // hide POSIX warnings
 #ifdef _MSC_VER
@@ -181,25 +181,6 @@ void audioSetInterpolationType(uint8_t interpolationType)
 {
 	lockMixerCallback();
 	audio.interpolationType = interpolationType;
-
-	audio.sincInterpolation = false;
-
-	// set sinc LUT pointers
-	if (config.interpolation == INTERPOLATION_SINC8)
-	{
-		for (int32_t i = 0; i < SINC_KERNELS; i++)
-			fSinc[i] = fSinc8[i];
-
-		audio.sincInterpolation = true;
-	}
-	else if (config.interpolation == INTERPOLATION_SINC16)
-	{
-		for (int32_t i = 0; i < SINC_KERNELS; i++)
-			fSinc[i] = fSinc16[i];
-
-		audio.sincInterpolation = true;
-	}
-
 	unlockMixerCallback();
 }
 
@@ -335,7 +316,7 @@ static void voiceTrigger(int32_t ch, sample_t *s, int32_t position)
 		return;
 	}
 
-	v->mixFuncOffset = ((int32_t)sample16Bit * 15) + (audio.interpolationType * 3) + loopType;
+	v->mixFuncOffset = ((int32_t)sample16Bit * 18) + (audio.interpolationType * 3) + loopType;
 	v->active = true;
 }
 
@@ -383,15 +364,8 @@ void updateVoices(void)
 		{
 			v->delta = period2VoiceDelta(ch->finalPeriod);
 
-			if (audio.sincInterpolation)
-			{
-				if (v->delta <= sincRatio1)
-					v->fSincLUT = fSinc[0];
-				else if (v->delta <= sincRatio2)
-					v->fSincLUT = fSinc[1];
-				else
-					v->fSincLUT = fSinc[2];
-			}
+			if (config.interpolation == INTERPOLATION_SINC8 || config.interpolation == INTERPOLATION_SINC16)
+				setWindowedSincIntrpTable(v);
 		}
 
 		if (status & CS_TRIGGER_VOICE)
@@ -465,6 +439,63 @@ static void sendSamples32BitFloatStereo(void *stream, uint32_t sampleBlockLength
 	}
 }
 
+// used when voice volume is zero and no volume ramp is ongoing
+static void updateSamplingPosition(voice_t *v, int32_t numSamples)
+{
+	const uint64_t samplesToMix = (uint64_t)v->delta * (uint32_t)numSamples; // fixed-point
+
+	const uint32_t samples = (uint32_t)(samplesToMix >> MIXER_FRAC_BITS);
+	const uint64_t samplesFrac = (samplesToMix & MIXER_FRAC_MASK) + v->positionFrac;
+
+	uint32_t position = v->position + samples + (uint32_t)(samplesFrac >> MIXER_FRAC_BITS);
+	uint64_t positionFrac = samplesFrac & MIXER_FRAC_MASK;
+
+	if (position < (uint32_t)v->sampleEnd) // we haven't reached the sample's end yet
+	{
+		v->positionFrac = positionFrac;
+		v->position = position;
+		return;
+	}
+
+	// end of sample (or loop) reached
+
+	if (v->loopType == LOOP_DISABLED)
+	{
+		v->active = false; // shut down voice
+		return;
+	}
+
+	if (v->loopType == LOOP_FORWARD)
+	{
+		if (v->loopLength >= 2)
+			position = v->loopStart + ((position - v->sampleEnd) % v->loopLength);
+		else
+			position = v->loopStart;
+	}
+	else // pingpong loop
+	{
+		if (v->loopLength >= 2)
+		{
+			// wrap as forward loop (position is inverted if sampling backwards, when needed)
+
+			const uint32_t overflow = position - v->sampleEnd;
+			const uint32_t cycles = overflow / v->loopLength;
+			const uint32_t phase = overflow % v->loopLength;
+
+			position = v->loopStart + phase;
+			v->samplingBackwards ^= !(cycles & 1);
+		}
+		else
+		{
+			position = v->loopStart;
+		}
+	}
+
+	v->hasLooped = true;
+	v->positionFrac = positionFrac;
+	v->position = position;
+}
+
 static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 {
 	voice_t *v = voice; // normal voices
@@ -478,9 +509,15 @@ static void doChannelMixing(int32_t bufferPosition, int32_t samplesToMix)
 		{
 			const bool volRampFlag = (v->volumeRampLength > 0);
 			if (!volRampFlag && v->fCurrVolumeL == 0.0f && v->fCurrVolumeR == 0.0f)
-				silenceMixRoutine(v, samplesToMix);
+			{
+				// voice volume is zero and no volume ramp is ongoing, update sampling positions only
+				updateSamplingPosition(v, samplesToMix);
+			}
 			else
+			{
+				// enter mixer
 				mixFuncTab[((int32_t)volRampFlag * mixOffsetBias) + v->mixFuncOffset](v, bufferPosition, samplesToMix);
+			}
 		}
 
 		if (r->active) // volume ramp fadeout-voice

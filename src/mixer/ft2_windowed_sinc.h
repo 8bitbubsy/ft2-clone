@@ -2,9 +2,10 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "../ft2_audio.h" // voice_t
 #include "ft2_mix.h" // MIXER_FRAC_BITS
 
-#define SINC_KERNELS 3
+#define SINC_KERNELS 4
 #define SINC8_TAPS 8
 #define SINC16_TAPS 16
 
@@ -24,8 +25,6 @@
 #define INTRP_PHASE_SCALE (1L << INTRP_PHASE_SHIFT)
 #define INTRP_PHASE_MASK (INTRP_PHASE_SCALE-1)
 
-extern float *fSinc[SINC_KERNELS], *fSinc8[SINC_KERNELS], *fSinc16[SINC_KERNELS];
-extern uint64_t sincRatio1, sincRatio2;
-
 bool setupWindowedSincTables(void);
 void freeWindowedSincTables(void);
+void setWindowedSincIntrpTable(voice_t *v);

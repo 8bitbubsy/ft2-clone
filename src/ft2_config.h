@@ -199,13 +199,14 @@ void rbConfigMiscellaneous(void);
 #ifdef HAS_MIDI
 void rbConfigMidiInput(void);
 #endif
-void rbConfigAudioBuffSmall(void);
-void rbConfigAudioBuffMedium(void);
-void rbConfigAudioBuffLarge(void);
+void rbConfigAudioShorterLatency(void);
+void rbConfigAudioMediumLatency(void);
+void rbConfigAudioBiggerLatency(void);
 void rbConfigAudio16Bit(void);
 void rbConfigAudio32BitFloat(void);
 void rbConfigAudioIntrpDisabled(void);
 void rbConfigAudioIntrpLinear(void);
+void rbConfigAudioIntrpQuadratic(void);
 void rbConfigAudioIntrpCubic(void);
 void rbConfigAudioIntrpSinc8(void);
 void rbConfigAudioIntrpSinc16(void);
@@ -241,7 +242,7 @@ void rbWinSize2x(void);
 void rbWinSize3x(void);
 void rbWinSize4x(void);
 void cbToggleAutoSaveConfig(void);
-void cbPreciseBPM(void);
+void cbMorePreciseBPM(void);
 void cbConfigVolRamp(void);
 void cbConfigPattStretch(void);
 void cbConfigHexCount(void);

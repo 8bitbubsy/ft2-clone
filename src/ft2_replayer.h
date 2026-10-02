@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "ft2_unicode.h"
-#include "mixer/ft2_windowed_sinc.h"
+#include "mixer/ft2_mix.h" // MAX_TAPS
 
 enum
 {
@@ -291,7 +291,7 @@ void calcReplayerVars(int32_t referenceFt2AudioFreq, int32_t audioFreq);
 
 int64_t period2VoiceDelta(uint32_t period);
 int64_t period2ScopeDelta(uint32_t period);
-int32_t period2ScopeDrawDelta(uint32_t period);
+int64_t period2ScopeDrawDelta(uint32_t period);
 
 int32_t getPianoKey(int32_t period, int8_t finetune, int8_t relativeNote); // for piano in Instr. Ed.
 void triggerNote(uint8_t note, uint8_t efx, uint8_t efxData, channel_t *ch);

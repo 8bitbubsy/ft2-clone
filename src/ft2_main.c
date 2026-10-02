@@ -38,6 +38,7 @@
 #include "ft2_structs.h"
 #include "ft2_hpc.h"
 #include "ft2_smpfx.h"
+#include "mixer/ft2_windowed_sinc.h"
 
 static void initializeVars(void);
 static void cleanUpAndExit(void); // never call this inside the main loop

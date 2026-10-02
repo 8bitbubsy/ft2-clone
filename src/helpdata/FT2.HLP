@@ -568,7 +568,7 @@ will run. 125 BPM <-> 50 Hz.
 >Note: Original FT2 has some precision loss in the way it calculates
 the actual song tempo based on the BPM, and the FT2 clone
 attempts to simulate this. If you want perfectly accurate BPM
-tempos, check out the "Precise BPM" option in Config -> Audio.
+tempos, check out the "More precise BPM" option in Config -> Audio.
 
 >@X040@C001Spd, Speed:
 >@X060@C002
@@ -824,14 +824,19 @@ when playing chiptune styled tunes. Be prepared for a ton of
 aliasing (distortion).
 
 >@X052@C001Linear (FT2):
->@X060@C002Same interpolator as original Fasttracker II. Not a particularly good
-option, but may be nostalgic to a lot of people, including those that
-used a Gravis Ultrasound sound card.
+>@X060@C0022-point linear interpolation. Same interpolation as original
+Fasttracker II. Not a particularly good option, but may be nostalgic
+to a lot of people, including those that used a Gravis Ultrasound
+sound card.
+
+>@X052@C001Quadratic spline:
+>@X060@C0023-point quadratic spline interpolation. A step up from linear, but not
+as good as cubic spline interpolation.
 
 >@X052@C001Cubic spline:
 >@X060@C0024-point cubic Hermite spline interpolation. A good trade-off between
 sharpness and "fun listening" for lo-fi samples.
->A pretty solid option if you play a wide selection of mixed modules.
+>A pretty solid option if you play a wide selection of modules.
 
 >@X052@C001Sinc (8 point):
 >@X060@C0028-point sinc interpolation with a Kaiser-Bessel window. If you mainly
@@ -847,7 +852,7 @@ lo-fi samples. if you only use (or play modules with) hi-fi samples,
 then this is going to give the best quality and sharpness.
 >
 
->@X040@C001Precise BPM:
+>@X040@C001More precise BPM:
 >@X060@C002
 Original FT2 has some precision loss in the way it calculates the
 song tempo (based on the tracker BPM value). Enabling this will
@@ -936,7 +941,7 @@ END
 >@C001Q: The song tempo (BPM) is not precise! It drifts over time...
 >@C002A: This is intentional to match the BPM precision loss in original FT2
 >@X035when used with an SB16 at max mixing rate (44000Hz).
->@X035If you want precise BPM, enable "Precise BPM" in Config -> Audio.
+>@X035If you want precise BPM, enable "More precise BPM" in Config -> Audio.
 >@X020
 >@C001Q: How can I toggle fullscreen mode?
 >@C002A: Press Alt+Enter (Ctrl+Cmd+F also works on Mac)
