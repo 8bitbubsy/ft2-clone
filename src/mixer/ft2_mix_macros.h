@@ -224,7 +224,7 @@
 /* Uses linear interpolation between the phases in the kernels to achieve
 ** very good precision at a low pre-computed phase count.
 **
-** It may look like we go out of bounds for fSinc_2[] and s[], but we have
+** It may look like we go out of bounds for fSinc[] and s[], but we have
 ** extra data at the correct places to account for this.
 */
 
@@ -234,14 +234,13 @@
 	const uint32_t lutPhase = frac32 >> INTRP_PHASE_SHIFT; \
 	const float fIntrpFrac = (int32_t)(frac32 & INTRP_PHASE_MASK) * (1.0f / INTRP_PHASE_SCALE); \
 	\
-	const float *fSinc_1 = v->fSincLUT + ( lutPhase    << SINC8_TAPS_BITS); \
-	const float *fSinc_2 = v->fSincLUT + ((lutPhase+1) << SINC8_TAPS_BITS); \
+	const float *fSinc = v->fSincLUT + (lutPhase << SINC8_TAPS_BITS); \
 	\
 	float fSum = 0.0f; \
 	for (int32_t j = 0; j < SINC8_TAPS; j++) \
 	{ \
-		const float y1 = fSinc_1[j]; \
-		const float y2 = fSinc_2[j]; \
+		const float y1 = fSinc[j]; \
+		const float y2 = fSinc[SINC8_TAPS+j]; \
 		\
 		fSum += s[j-((SINC8_TAPS/2)-1)] * (y1 + ((y2 - y1) * fIntrpFrac)); \
 	} \
@@ -282,14 +281,13 @@
 	const uint32_t lutPhase = frac32 >> INTRP_PHASE_SHIFT; \
 	const float fIntrpFrac = (int32_t)(frac32 & INTRP_PHASE_MASK) * (1.0f / INTRP_PHASE_SCALE); \
 	\
-	const float *fSinc_1 = v->fSincLUT + ( lutPhase    << SINC16_TAPS_BITS); \
-	const float *fSinc_2 = v->fSincLUT + ((lutPhase+1) << SINC16_TAPS_BITS); \
+	const float *fSinc = v->fSincLUT + (lutPhase << SINC16_TAPS_BITS); \
 	\
 	float fSum = 0.0f; \
 	for (int32_t j = 0; j < SINC16_TAPS; j++) \
 	{ \
-		const float y1 = fSinc_1[j]; \
-		const float y2 = fSinc_2[j]; \
+		const float y1 = fSinc[j]; \
+		const float y2 = fSinc[SINC16_TAPS+j]; \
 		\
 		fSum += s[j-((SINC16_TAPS/2)-1)] * (y1 + ((y2 - y1) * fIntrpFrac)); \
 	} \
