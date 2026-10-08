@@ -231,18 +231,19 @@
 #define WINDOWED_SINC8_INTERPOLATION(s, f, scale) \
 { \
 	const uint32_t frac32 = (uint32_t)f; \
-	const uint32_t lutPhase = frac32 >> INTRP_PHASE_SHIFT; \
-	const float fIntrpFrac = (int32_t)(frac32 & INTRP_PHASE_MASK) * (1.0f / INTRP_PHASE_SCALE); \
+	const uint32_t phaseInt = frac32 >> SINC_PHASE_SHIFT; \
+	const float fPhaseFrac = (int32_t)(frac32 & SINC_PHASE_MASK) * (1.0f / SINC_PHASE_SCALE); \
 	\
-	const float *fSinc = v->fSincLUT + (lutPhase << SINC8_TAPS_BITS); \
+	const float *fSinc = v->fSincLUT + (phaseInt << SINC8_TAPS_BITS); \
 	\
 	float fSum = 0.0f; \
-	for (int32_t j = 0; j < SINC8_TAPS; j++) \
+	for (int32_t tap = 0; tap < SINC8_TAPS; tap++) \
 	{ \
-		const float y1 = fSinc[j]; \
-		const float y2 = fSinc[SINC8_TAPS+j]; \
+		const float fY1 = fSinc[tap]; \
+		const float fY2 = fSinc[SINC8_TAPS+tap]; /* next phase */ \
 		\
-		fSum += s[j-((SINC8_TAPS/2)-1)] * (y1 + ((y2 - y1) * fIntrpFrac)); \
+		/* do linear interpolation between phases */ \
+		fSum += s[tap-SINC8_CENTER_TAP] * (fY1 + ((fY2 - fY1) * fPhaseFrac)); \
 	} \
 	\
 	fSample = fSum * (1.0f / scale); \
@@ -278,18 +279,19 @@
 #define WINDOWED_SINC16_INTERPOLATION(s, f, scale) \
 { \
 	const uint32_t frac32 = (uint32_t)f; \
-	const uint32_t lutPhase = frac32 >> INTRP_PHASE_SHIFT; \
-	const float fIntrpFrac = (int32_t)(frac32 & INTRP_PHASE_MASK) * (1.0f / INTRP_PHASE_SCALE); \
+	const uint32_t phaseInt = frac32 >> SINC_PHASE_SHIFT; \
+	const float fPhaseFrac = (int32_t)(frac32 & SINC_PHASE_MASK) * (1.0f / SINC_PHASE_SCALE); \
 	\
-	const float *fSinc = v->fSincLUT + (lutPhase << SINC16_TAPS_BITS); \
+	const float *fSinc = v->fSincLUT + (phaseInt << SINC16_TAPS_BITS); \
 	\
 	float fSum = 0.0f; \
-	for (int32_t j = 0; j < SINC16_TAPS; j++) \
+	for (int32_t tap = 0; tap < SINC16_TAPS; tap++) \
 	{ \
-		const float y1 = fSinc[j]; \
-		const float y2 = fSinc[SINC16_TAPS+j]; \
+		const float fY1 = fSinc[tap]; \
+		const float fY2 = fSinc[SINC16_TAPS+tap]; /* next phase */ \
 		\
-		fSum += s[j-((SINC16_TAPS/2)-1)] * (y1 + ((y2 - y1) * fIntrpFrac)); \
+		/* do linear interpolation between phases */ \
+		fSum += s[tap-SINC16_CENTER_TAP] * (fY1 + ((fY2 - fY1) * fPhaseFrac)); \
 	} \
 	\
 	fSample = fSum * (1.0f / scale); \
