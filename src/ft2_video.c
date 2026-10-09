@@ -1024,6 +1024,17 @@ static SDL_Renderer *createGLRenderer(void)
 		return NULL;
 	}
 
+	SDL_RendererInfo info;
+	if (SDL_GetRendererInfo(renderer, &info) == 0 &&
+		((info.max_texture_width  > 0 && info.max_texture_width  < SCREEN_W) ||
+		 (info.max_texture_height > 0 && info.max_texture_height < SCREEN_H)))
+	{
+		printf("OpenGL unusable: max texture size is %dx%d, need %dx%d\n",
+			info.max_texture_width, info.max_texture_height, SCREEN_W, SCREEN_H);
+		SDL_DestroyRenderer(renderer);
+		return NULL;
+	}
+
 	if (!video.vsync60HzPresent)
 	{
 		// SDL_CreateRenderer() is supposed to disable the swap interval itself when
