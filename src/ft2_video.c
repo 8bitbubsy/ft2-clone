@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 #include <math.h>
 #ifdef _WIN32
@@ -966,51 +967,63 @@ bool setupWindow(void)
 	return true;
 }
 
-bool setupRenderer(void)
+static SDL_Renderer *createRenderer(int32_t driverIndex, uint32_t rendererFlags)
 {
-	uint32_t rendererFlags = 0;
+	SDL_Renderer *renderer = SDL_CreateRenderer(video.window, driverIndex, rendererFlags);
+	if (renderer == NULL && (rendererFlags & SDL_RENDERER_PRESENTVSYNC))
+	{
+		// try again without vsync flag
+		video.vsync60HzPresent = false;
 
-#ifdef FT2_SDL2_HAS_GL_RENDERER
-	// only requested when built against an SDL2 with an actual OpenGL renderer driver (see CMakeLists.txt)
-	rendererFlags |= SDL_RENDERER_ACCELERATED;
-	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
-#endif
+		rendererFlags &= ~SDL_RENDERER_PRESENTVSYNC;
+		renderer = SDL_CreateRenderer(video.window, driverIndex, rendererFlags);
+	}
 
+	return renderer;
+}
+
+#ifdef __sgi
+static int32_t getRenderDriverIndex(const char *name)
+{
+	const int32_t numDrivers = SDL_GetNumRenderDrivers();
+	for (int32_t i = 0; i < numDrivers; i++)
+	{
+		SDL_RendererInfo info;
+		if (SDL_GetRenderDriverInfo(i, &info) == 0 && strcmp(info.name, name) == 0)
+			return i;
+	}
+
+	return -1;
+}
+
+static SDL_Renderer *createGLRenderer(void)
+{
+	const int32_t glDriverIndex = getRenderDriverIndex("opengl");
+	if (glDriverIndex < 0)
+	{
+		printf("OpenGL unavailable: SDL2 was built without the OpenGL renderer\n");
+		return NULL;
+	}
+
+	// check that a GL library can actually be loaded (no GLX on the display, missing libGL, etc.)
+	if (SDL_GL_LoadLibrary(NULL) != 0)
+	{
+		printf("OpenGL unavailable: %s\n", SDL_GetError());
+		return NULL;
+	}
+	SDL_GL_UnloadLibrary();
+
+	uint32_t rendererFlags = SDL_RENDERER_ACCELERATED;
 	if (video.vsync60HzPresent)
 		rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
 
-	video.renderer = SDL_CreateRenderer(video.window, -1, rendererFlags);
-	if (video.renderer == NULL)
+	SDL_Renderer *renderer = createRenderer(glDriverIndex, rendererFlags);
+	if (renderer == NULL)
 	{
-		if (video.vsync60HzPresent)
-		{
-			// try again without vsync flag
-			video.vsync60HzPresent = false;
-
-			rendererFlags &= ~SDL_RENDERER_PRESENTVSYNC;
-			video.renderer = SDL_CreateRenderer(video.window, -1, rendererFlags);
-		}
-
-#ifdef FT2_SDL2_HAS_GL_RENDERER
-		if (video.renderer == NULL)
-		{
-			// GL renderer unavailable for some reason, fall back to whatever SDL2 picks by default
-			rendererFlags &= ~SDL_RENDERER_ACCELERATED;
-			video.renderer = SDL_CreateRenderer(video.window, -1, rendererFlags);
-		}
-#endif
-
-		if (video.renderer == NULL)
-		{
-			showErrorMsgBox("Couldn't create SDL renderer:\n\"%s\"\n\nIs your GPU (+ driver) too old?",
-				SDL_GetError());
-			return false;
-		}
+		printf("OpenGL renderer failed: %s\n", SDL_GetError());
+		return NULL;
 	}
 
-	SDL_SetRenderDrawBlendMode(video.renderer, SDL_BLENDMODE_NONE);
-
-#ifdef FT2_SDL2_HAS_GL_RENDERER
 	if (!video.vsync60HzPresent)
 	{
 		// SDL_CreateRenderer() is supposed to disable the swap interval itself when
@@ -1020,7 +1033,51 @@ bool setupRenderer(void)
 		// of EXT_swap_control, leaving the default swap behavior in place otherwise.
 		SDL_GL_SetSwapInterval(0);
 	}
+
+	return renderer;
+}
 #endif
+
+static void printSelectedRenderer(void)
+{
+	SDL_RendererInfo info;
+	if (SDL_GetRendererInfo(video.renderer, &info) != 0)
+		return;
+
+	printf("Renderer: %s (%s)\n", info.name,
+		(info.flags & SDL_RENDERER_ACCELERATED) ? "hardware accelerated" : "software");
+	fflush(stdout);
+}
+
+bool setupRenderer(void)
+{
+	uint32_t rendererFlags = 0;
+
+	if (video.vsync60HzPresent)
+		rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
+
+#ifdef __sgi
+	// prefer OpenGL if this SDL2 build and the display support it, otherwise fall back to software
+	video.renderer = createGLRenderer();
+	if (video.renderer == NULL)
+	{
+		printf("Falling back to software renderer\n");
+		video.renderer = createRenderer(-1, rendererFlags | SDL_RENDERER_SOFTWARE);
+	}
+#else
+	video.renderer = createRenderer(-1, rendererFlags);
+#endif
+
+	if (video.renderer == NULL)
+	{
+		showErrorMsgBox("Couldn't create SDL renderer:\n\"%s\"\n\nIs your GPU (+ driver) too old?",
+			SDL_GetError());
+		return false;
+	}
+
+	printSelectedRenderer();
+
+	SDL_SetRenderDrawBlendMode(video.renderer, SDL_BLENDMODE_NONE);
 
 	if (!recreateTexture())
 	{

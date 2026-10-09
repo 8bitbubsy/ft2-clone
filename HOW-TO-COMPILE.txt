@@ -54,7 +54,11 @@ Notes:
 MIDI support (rtmidi) is disabled on IRIX.
 
 SDL2 software / hardware rendering:
- SGUG-RSE SDL2 does not support HW acceleration. The app will fall back to software rendering.
- If you're on SGUG-RSE and want to use HW acceleration, install flx-SDL2 from flexions SGUG-RSE repo and build with:
- cmake -DFT2_IRIX_USE_SGUGFLX_SDL2=ON ..
+ On startup the app uses SDL2's OpenGL renderer if it's available, otherwise it falls back to
+ software rendering. The selected renderer is printed to the terminal.
+ SGUG-RSE SDL2 does not support HW acceleration, so it will always use software rendering.
+
+Static SDL2:
+ To link against libSDL2.a instead of the shared library, build with:
+ cmake -DFT2_STATIC_SDL2=ON ..
  

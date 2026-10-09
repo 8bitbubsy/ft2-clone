@@ -15,50 +15,9 @@ if(CMAKE_SYSTEM_NAME MATCHES "^IRIX")
 	set(FT2_IRIX TRUE)
 endif()
 
-# The standard SGUG-RSE SDL2 package has no OpenGL renderer support (software renderer only).
-# SGUG-FLX ships an SDL2 build that does, but has to be manually enabled (cmake -DFT2_IRIX_USE_SGUGFLX_SDL2=ON)
-option(FT2_IRIX_USE_SGUGFLX_SDL2 "On IRIX, use the SGUG-FLX SDL2 build (adds OpenGL renderer support) instead of the standard SGUG-RSE SDL2 (software renderer only)" OFF)
+option(FT2_STATIC_SDL2 "Link SDL2 statically (libSDL2.a) instead of the shared library" OFF)
 
-set(FT2_USE_SGUGFLX_SDL2 FALSE)
-if(FT2_IRIX AND FT2_IRIX_USE_SGUGFLX_SDL2)
-	set(FT2_USE_SGUGFLX_SDL2 TRUE)
-endif()
-
-if(FT2_USE_SGUGFLX_SDL2)
-	message(STATUS "IRIX: using SGUG-FLX SDL2 (with OpenGL renderer support)")
-
-	# Priority 1: /usr/sgug-flx/lib32/. Priority 2: a bundled ./lib/ next to the binary.
-	set(SGUGFLX_SDL2 "/usr/sgug-flx/lib32/libSDL2-2.0.so.0")
-	if(EXISTS "${SGUGFLX_SDL2}")
-		set(FT2_SDL2_LIB "${SGUGFLX_SDL2}")
-	elseif(EXISTS "${CMAKE_SOURCE_DIR}/lib/libSDL2-2.0.so.0")
-		set(FT2_SDL2_LIB "${CMAKE_SOURCE_DIR}/lib/libSDL2-2.0.so.0")
-	else()
-		message(FATAL_ERROR "SDL2 not found in /usr/sgug-flx/lib32 or ${CMAKE_SOURCE_DIR}/lib")
-	endif()
-
-	message(STATUS "Using SDL2: ${FT2_SDL2_LIB}")
-	link_libraries("${FT2_SDL2_LIB}")
-	link_libraries(GLcore audio pthread)
-
-	add_compile_options(
-		-I/usr/sgug/lib/gcc/mips-sgi-irix6.5/9/include
-		-I/usr/include
-		-I/usr/sgug/include
-		-I/usr/sgug/include/SDL2
-		-D_GNU_SOURCE=1
-		-D_SGI_MP_SOURCE
-	)
-	add_link_options(
-		-Wl,--disable-new-dtags
-		-Wl,-rpath,$ORIGIN/lib
-		-Wl,--allow-shlib-undefined
-		-Wl,-rpath-link=/usr/lib32
-		-Wl,-rpath=/usr/sgug-flx/lib32:./lib:../lib:/usr/lib32:/usr/sgug/lib32
-	)
-else()
-	find_package(SDL2 REQUIRED)
-endif()
+find_package(SDL2 REQUIRED)
 
 file(GLOB ft2-clone_SRC
 	"${ft2-clone_SOURCE_DIR}/src/*.c"
@@ -78,13 +37,40 @@ add_executable(ft2-clone ${ft2-clone_SRC})
 
 find_package(Threads REQUIRED)
 
-if(FT2_USE_SGUGFLX_SDL2)
-	# SDL2 (+ GLcore/audio/pthread) is already linked directory-wide above via link_libraries().
-	target_link_libraries(ft2-clone PRIVATE m Threads::Threads)
-	target_compile_definitions(ft2-clone PRIVATE FT2_SDL2_HAS_GL_RENDERER)
-else()
-	target_include_directories(ft2-clone SYSTEM PRIVATE ${SDL2_INCLUDE_DIRS})
+target_include_directories(ft2-clone SYSTEM PRIVATE ${SDL2_INCLUDE_DIRS})
 
+if(FT2_STATIC_SDL2)
+	# sdl2-config lists the libraries a static SDL2 build depends on (X11, GL, audio, ...)
+	find_program(SDL2_CONFIG_EXECUTABLE sdl2-config)
+	if(NOT SDL2_CONFIG_EXECUTABLE)
+		message(FATAL_ERROR "FT2_STATIC_SDL2 needs sdl2-config to find SDL2's static dependencies")
+	endif()
+
+	execute_process(COMMAND ${SDL2_CONFIG_EXECUTABLE} --prefix OUTPUT_VARIABLE SDL2_CONFIG_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE)
+	execute_process(COMMAND ${SDL2_CONFIG_EXECUTABLE} --static-libs OUTPUT_VARIABLE SDL2_STATIC_FLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
+	separate_arguments(SDL2_STATIC_FLAGS UNIX_COMMAND "${SDL2_STATIC_FLAGS}")
+
+	# replace -lSDL2 with the full path to libSDL2.a, so the linker can't pick the shared library instead
+	set(SDL2_STATIC_LIBDIRS "")
+	set(SDL2_STATIC_DEPS "")
+	foreach(flag ${SDL2_STATIC_FLAGS})
+		if(flag MATCHES "^-L(.+)")
+			list(APPEND SDL2_STATIC_LIBDIRS "${CMAKE_MATCH_1}")
+			list(APPEND SDL2_STATIC_DEPS "${flag}")
+		elseif(NOT (flag STREQUAL "-lSDL2" OR flag STREQUAL "-lSDL2main"))
+			list(APPEND SDL2_STATIC_DEPS "${flag}")
+		endif()
+	endforeach()
+
+	find_library(SDL2_STATIC_LIBRARY NAMES libSDL2.a
+		HINTS ${SDL2_STATIC_LIBDIRS} "${SDL2_CONFIG_PREFIX}/lib32" "${SDL2_CONFIG_PREFIX}/lib")
+	if(NOT SDL2_STATIC_LIBRARY)
+		message(FATAL_ERROR "FT2_STATIC_SDL2 is ON, but libSDL2.a wasn't found")
+	endif()
+
+	message(STATUS "Linking SDL2 statically: ${SDL2_STATIC_LIBRARY}")
+	target_link_libraries(ft2-clone PRIVATE ${SDL2_STATIC_LIBRARY} ${SDL2_STATIC_DEPS} m Threads::Threads)
+else()
 	if("${SDL2_LIBRARIES}" STREQUAL "")
 		message(WARNING "SDL2_LIBRARIES wasn't set, manually setting to SDL2::SDL2")
 		set(SDL2_LIBRARIES "SDL2::SDL2")
