@@ -1153,18 +1153,22 @@ static SDL_Renderer *createGLRenderer(void)
 
 static SDL_Renderer *createSoftwareRenderer(uint32_t rendererFlags)
 {
-	/* The software renderer draws into the window's framebuffer. Get it here first, because if that
-	** fails, SDL_CreateRenderer() only reports "Couldn't find matching render driver" instead of the
-	** real reason (unsupported X11 visual, etc.)
-	*/
-	if (SDL_GetWindowSurface(video.window) == NULL)
+	SDL_Renderer *renderer = createRenderer(-1, rendererFlags | SDL_RENDERER_SOFTWARE);
+	if (renderer == NULL)
 	{
-		printf("Software renderer unavailable, couldn't get window framebuffer: %s\n", SDL_GetError());
-		fflush(stdout);
-		return NULL;
+		/* The software renderer draws into the window's framebuffer. If that fails, SDL_CreateRenderer()
+		** only reports "Couldn't find matching render driver", so get the framebuffer here to get the real
+		** reason (unsupported X11 visual, etc.). This must not be done before SDL_CreateRenderer(), as
+		** SDL 2.28+ refuses to create a renderer for a window that already has a framebuffer surface.
+		*/
+		if (SDL_GetWindowSurface(video.window) == NULL)
+		{
+			printf("Software renderer unavailable, couldn't get window framebuffer: %s\n", SDL_GetError());
+			fflush(stdout);
+		}
 	}
 
-	return createRenderer(-1, rendererFlags | SDL_RENDERER_SOFTWARE);
+	return renderer;
 }
 
 static void printSelectedRenderer(void)
