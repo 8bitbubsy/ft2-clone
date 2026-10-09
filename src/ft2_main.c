@@ -36,6 +36,7 @@
 #include "ft2_events.h"
 #include "ft2_bmp.h"
 #include "ft2_structs.h"
+#include "ft2_x11visual.h"
 #include "ft2_hpc.h"
 #include "ft2_smpfx.h"
 
@@ -135,6 +136,10 @@ int main(int argc, char *argv[])
 
 	disableWasapi(); // disable problematic WASAPI SDL2 audio driver on Windows (causes clicks/pops sometimes...)
 	                 // 13.03.2020: This is still needed with SDL 2.0.12...
+#endif
+
+#ifdef __sgi
+	selectX11VisualForSoftwareRenderer(video.forceSoftwareRenderer); // must be done before SDL_Init()
 #endif
 
 	/* SDL 2.0.9 for Windows has a serious bug where you need to initialize the joystick subsystem

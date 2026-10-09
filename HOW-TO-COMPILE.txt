@@ -65,3 +65,5 @@ Static SDL2:
  To link against libSDL2.a instead of the shared library, build with:
  cmake -DFT2_STATIC_SDL2=ON ..
  
+To force startup with software renderer:
+$ ft2-clone --software

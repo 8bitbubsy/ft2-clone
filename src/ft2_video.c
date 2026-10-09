@@ -1205,6 +1205,8 @@ bool setupRenderer(void)
 		{
 			printf("Falling back to software renderer\n");
 			video.renderer = createSoftwareRenderer(rendererFlags);
+			if (video.renderer == NULL)
+				printf("Try starting the program with --software\n"); // selects an X11 visual it can draw to
 		}
 #else
 		video.renderer = createRenderer(-1, rendererFlags);
