@@ -94,6 +94,10 @@ int main(int argc, char *argv[])
 	{
 		if (!strcmp(argv[i], "--software"))
 			video.forceSoftwareRenderer = true;
+#ifdef __sgi
+		else if (!strcmp(argv[i], "--fps") && i+1 < argc)
+			video.presentFps = atoi(argv[++i]);
+#endif
 		else
 			argv[numArgs++] = argv[i];
 	}

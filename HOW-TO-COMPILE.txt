@@ -67,3 +67,7 @@ Static SDL2:
  
 To force startup with software renderer:
 $ ft2-clone --software
+
+To lower the screen update rate (default 30 fps) and the CPU load on slow machines:
+$ ft2-clone --fps 20
+Only frames that changed are drawn, so an idle UI uses little CPU at any rate.
