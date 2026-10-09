@@ -199,7 +199,8 @@ static screenTile_t screenTiles[MAX_SCREEN_TILES];
 
 static void destroyScreenTextures(void);
 
-static void drawScreenTiles(void)
+// only rows updateY1..updateY2-1 of the frame buffer are uploaded, all tiles are always drawn
+static void drawScreenTiles(int32_t updateY1, int32_t updateY2)
 {
 	SDL_Rect dstArea;
 	if (video.useCustomRenderRect)
@@ -217,19 +218,79 @@ static void drawScreenTiles(void)
 		const screenTile_t *tile = &screenTiles[i];
 		const SDL_Rect texRect = { 0, 0, tile->src.w, tile->src.h };
 
-		SDL_UpdateTexture(tile->texture, &texRect, &video.frameBuffer[(tile->src.y * SCREEN_W) + tile->src.x],
-			SCREEN_W * sizeof (int32_t));
+		const int32_t y1 = MAX(updateY1, tile->src.y);
+		const int32_t y2 = MIN(updateY2, tile->src.y + tile->src.h);
+		if (y1 < y2)
+		{
+			const SDL_Rect updateRect = { 0, y1 - tile->src.y, tile->src.w, y2 - y1 };
+			SDL_UpdateTexture(tile->texture, &updateRect, &video.frameBuffer[(y1 * SCREEN_W) + tile->src.x],
+				SCREEN_W * sizeof (int32_t));
+		}
 
 		// calculate both edges from the screen coords, so that neighbouring tiles never leave gaps when scaled
-		const int32_t x1 = dstArea.x + ((tile->src.x               * dstArea.w) / SCREEN_W);
-		const int32_t x2 = dstArea.x + (((tile->src.x+tile->src.w) * dstArea.w) / SCREEN_W);
-		const int32_t y1 = dstArea.y + ((tile->src.y               * dstArea.h) / SCREEN_H);
-		const int32_t y2 = dstArea.y + (((tile->src.y+tile->src.h) * dstArea.h) / SCREEN_H);
-		const SDL_Rect dstRect = { x1, y1, x2-x1, y2-y1 };
+		const int32_t dstX1 = dstArea.x + ((tile->src.x               * dstArea.w) / SCREEN_W);
+		const int32_t dstX2 = dstArea.x + (((tile->src.x+tile->src.w) * dstArea.w) / SCREEN_W);
+		const int32_t dstY1 = dstArea.y + ((tile->src.y               * dstArea.h) / SCREEN_H);
+		const int32_t dstY2 = dstArea.y + (((tile->src.y+tile->src.h) * dstArea.h) / SCREEN_H);
+		const SDL_Rect dstRect = { dstX1, dstY1, dstX2-dstX1, dstY2-dstY1 };
 
 		SDL_RenderCopy(video.renderer, tile->texture, &texRect, &dstRect);
 	}
 }
+
+#ifdef __sgi
+static uint32_t *lastPresentedFrame;
+
+/* Finds the rows that changed since the last presented frame, and copies them to lastPresentedFrame.
+** Returns false if nothing changed. Comparing is much cheaper than uploading and presenting the
+** whole screen, which is what makes an idle UI expensive on old SGI machines.
+*/
+static bool getChangedRows(int32_t *y1Out, int32_t *y2Out)
+{
+	const size_t rowBytes = SCREEN_W * sizeof (uint32_t);
+
+	if (lastPresentedFrame == NULL)
+	{
+		lastPresentedFrame = (uint32_t *)malloc(SCREEN_H * rowBytes);
+		video.forceFullRedraw = true;
+	}
+
+	if (lastPresentedFrame == NULL || video.forceFullRedraw)
+	{
+		if (lastPresentedFrame != NULL)
+			memcpy(lastPresentedFrame, video.frameBuffer, SCREEN_H * rowBytes);
+
+		video.forceFullRedraw = false;
+		*y1Out = 0;
+		*y2Out = SCREEN_H;
+		return true;
+	}
+
+	int32_t y1 = SCREEN_H, y2 = 0;
+
+	const uint32_t *src = video.frameBuffer;
+	uint32_t *dst = lastPresentedFrame;
+	for (int32_t y = 0; y < SCREEN_H; y++, src += SCREEN_W, dst += SCREEN_W)
+	{
+		if (memcmp(src, dst, rowBytes) != 0)
+		{
+			memcpy(dst, src, rowBytes);
+			if (y1 == SCREEN_H)
+				y1 = y;
+			y2 = y + 1;
+		}
+	}
+
+	*y1Out = y1;
+	*y2Out = y2;
+	return y1 < y2;
+}
+
+static int32_t getPresentFps(void)
+{
+	return (video.presentFps >= 1 && video.presentFps <= VBLANK_HZ) ? video.presentFps : 30;
+}
+#endif
 
 void flipFrame(void)
 {
@@ -242,22 +303,36 @@ void flipFrame(void)
 		drawFPSCounter();
 
 #ifdef __sgi
-	/* SDL_UpdateTexture()+SDL_RenderPresent() is the dominant per-frame cost on this hardware/driver
-	   Only push a new frame to the screen every other call - sprite/input/audio-sync state elsewhere in the main
+	/* Uploading and presenting the screen is the dominant per-frame cost on old SGI machines, so:
+	** - only update the screen at getPresentFps() (--fps, default 30), the main loop still runs at 60Hz
+	** - skip the update completely if nothing changed (idle UI), and only upload the changed rows
 	*/
-	static bool skipPresentFrame;
-	skipPresentFrame = !skipPresentFrame;
-	if (!skipPresentFrame)
-#endif
+	static int32_t presentFrameCounter;
+	const int32_t presentFrameDivider = (VBLANK_HZ + (getPresentFps() / 2)) / getPresentFps();
+
+	if (++presentFrameCounter >= presentFrameDivider)
 	{
-		// SDL 2.0.14 bug on Windows (?): This function consumes ever-increasing memory if the program is minimized
-		if (!minimized)
-			SDL_RenderClear(video.renderer);
+		presentFrameCounter = 0;
 
-		drawScreenTiles();
+		int32_t y1, y2;
+		if (!minimized && !video.windowHidden && getChangedRows(&y1, &y2))
+		{
+			// only needed if the screen doesn't cover the whole window (centered fullscreen)
+			if (video.useCustomRenderRect)
+				SDL_RenderClear(video.renderer);
 
-		SDL_RenderPresent(video.renderer);
+			drawScreenTiles(y1, y2);
+			SDL_RenderPresent(video.renderer);
+		}
 	}
+#else
+	// SDL 2.0.14 bug on Windows (?): This function consumes ever-increasing memory if the program is minimized
+	if (!minimized)
+		SDL_RenderClear(video.renderer);
+
+	drawScreenTiles(0, SCREEN_H);
+	SDL_RenderPresent(video.renderer);
+#endif
 
 	eraseSprites();
 
@@ -836,6 +911,14 @@ void closeVideo(void)
 		free(video.frameBuffer);
 		video.frameBuffer = NULL;
 	}
+
+#ifdef __sgi
+	if (lastPresentedFrame != NULL)
+	{
+		free(lastPresentedFrame);
+		lastPresentedFrame = NULL;
+	}
+#endif
 }
 
 void setWindowSizeFromConfig(bool updateRenderer)
@@ -955,6 +1038,7 @@ bool recreateTexture(void)
 	SDL_RendererInfo info;
 
 	destroyScreenTextures();
+	video.forceFullRedraw = true; // new textures are empty
 
 	if (config.windowFlags & PIXEL_FILTER)
 		SDL_SetHint("SDL_RENDER_SCALE_QUALITY", "best");
@@ -1185,6 +1269,9 @@ static void printSelectedRenderer(void)
 			info.max_texture_width, info.max_texture_height);
 
 	printf("\n");
+#ifdef __sgi
+	printf("Screen update rate: %d fps (only changed frames are drawn)\n", getPresentFps());
+#endif
 	fflush(stdout);
 }
 

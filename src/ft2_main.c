@@ -42,6 +42,7 @@
 
 static void initializeVars(void);
 static void cleanUpAndExit(void); // never call this inside the main loop
+static void printUsage(const char *programName);
 #ifdef __APPLE__
 static void osxSetDirToProgramDirFromArgs(char **argv);
 #endif
@@ -92,8 +93,17 @@ int main(int argc, char *argv[])
 	int32_t numArgs = 1;
 	for (int32_t i = 1; i < argc; i++)
 	{
-		if (!strcmp(argv[i], "--software"))
+		if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h"))
+		{
+			printUsage(argv[0]);
+			return 0;
+		}
+		else if (!strcmp(argv[i], "--software"))
 			video.forceSoftwareRenderer = true;
+#ifdef __sgi
+		else if (!strcmp(argv[i], "--fps") && i+1 < argc)
+			video.presentFps = atoi(argv[++i]);
+#endif
 		else
 			argv[numArgs++] = argv[i];
 	}
@@ -277,6 +287,19 @@ int main(int argc, char *argv[])
 
 	cleanUpAndExit();
 	return 0;
+}
+
+static void printUsage(const char *programName)
+{
+	printf("Fasttracker II clone v%s\n\n", PROG_VER_STR);
+	printf("Usage: %s [options] [module]\n\n", programName);
+	printf("Options:\n");
+	printf("  --software  Always use the software renderer (don't try OpenGL)\n");
+#ifdef __sgi
+	printf("  --fps N     Screen update rate in frames per second, 1..%d (default: 30).\n", VBLANK_HZ);
+	printf("              Lower values reduce the CPU load on slow machines.\n");
+#endif
+	printf("  -h, --help  Show this help and exit\n");
 }
 
 static void initializeVars(void)

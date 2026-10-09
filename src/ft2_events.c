@@ -372,6 +372,11 @@ void handleWaitVblQuirk(SDL_Event *event)
 		else if (event->window.event == SDL_WINDOWEVENT_SHOWN)
 			video.windowHidden = false;
 
+		// the window contents need to be redrawn, even if our frame buffer hasn't changed
+		if (event->window.event == SDL_WINDOWEVENT_EXPOSED || event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
+			event->window.event == SDL_WINDOWEVENT_RESTORED || event->window.event == SDL_WINDOWEVENT_SHOWN)
+			video.forceFullRedraw = true;
+
 		// reset vblank end time if we minimize window
 		if (event->window.event == SDL_WINDOWEVENT_MINIMIZED || event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
 			hpc_ResetCounters(&video.vblankHpc);
