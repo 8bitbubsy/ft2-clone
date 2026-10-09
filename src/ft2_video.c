@@ -1151,6 +1151,22 @@ static SDL_Renderer *createGLRenderer(void)
 }
 #endif
 
+static SDL_Renderer *createSoftwareRenderer(uint32_t rendererFlags)
+{
+	/* The software renderer draws into the window's framebuffer. Get it here first, because if that
+	** fails, SDL_CreateRenderer() only reports "Couldn't find matching render driver" instead of the
+	** real reason (unsupported X11 visual, etc.)
+	*/
+	if (SDL_GetWindowSurface(video.window) == NULL)
+	{
+		printf("Software renderer unavailable, couldn't get window framebuffer: %s\n", SDL_GetError());
+		fflush(stdout);
+		return NULL;
+	}
+
+	return createRenderer(-1, rendererFlags | SDL_RENDERER_SOFTWARE);
+}
+
 static void printSelectedRenderer(void)
 {
 	SDL_RendererInfo info;
@@ -1178,7 +1194,7 @@ bool setupRenderer(void)
 	if (video.forceSoftwareRenderer)
 	{
 		printf("Software renderer forced by --software\n");
-		video.renderer = createRenderer(-1, rendererFlags | SDL_RENDERER_SOFTWARE);
+		video.renderer = createSoftwareRenderer(rendererFlags);
 	}
 	else
 	{
@@ -1188,7 +1204,7 @@ bool setupRenderer(void)
 		if (video.renderer == NULL)
 		{
 			printf("Falling back to software renderer\n");
-			video.renderer = createRenderer(-1, rendererFlags | SDL_RENDERER_SOFTWARE);
+			video.renderer = createSoftwareRenderer(rendererFlags);
 		}
 #else
 		video.renderer = createRenderer(-1, rendererFlags);
