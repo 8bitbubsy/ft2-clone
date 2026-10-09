@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 #include <math.h>
 #ifdef _WIN32
@@ -185,6 +186,51 @@ void endFPSCounter(void)
 		runningFrameDuration += SDL_GetPerformanceCounter() - frameStartTime;
 }
 
+#define MAX_SCREEN_TILES 64
+
+typedef struct screenTile_t
+{
+	SDL_Texture *texture;
+	SDL_Rect src; // part of the frame buffer this texture holds (always starts at 0,0 in the texture)
+} screenTile_t;
+
+static int32_t numScreenTiles;
+static screenTile_t screenTiles[MAX_SCREEN_TILES];
+
+static void destroyScreenTextures(void);
+
+static void drawScreenTiles(void)
+{
+	SDL_Rect dstArea;
+	if (video.useCustomRenderRect)
+	{
+		dstArea = video.renderRect;
+	}
+	else
+	{
+		dstArea.x = dstArea.y = 0;
+		SDL_GetRendererOutputSize(video.renderer, &dstArea.w, &dstArea.h);
+	}
+
+	for (int32_t i = 0; i < numScreenTiles; i++)
+	{
+		const screenTile_t *tile = &screenTiles[i];
+		const SDL_Rect texRect = { 0, 0, tile->src.w, tile->src.h };
+
+		SDL_UpdateTexture(tile->texture, &texRect, &video.frameBuffer[(tile->src.y * SCREEN_W) + tile->src.x],
+			SCREEN_W * sizeof (int32_t));
+
+		// calculate both edges from the screen coords, so that neighbouring tiles never leave gaps when scaled
+		const int32_t x1 = dstArea.x + ((tile->src.x               * dstArea.w) / SCREEN_W);
+		const int32_t x2 = dstArea.x + (((tile->src.x+tile->src.w) * dstArea.w) / SCREEN_W);
+		const int32_t y1 = dstArea.y + ((tile->src.y               * dstArea.h) / SCREEN_H);
+		const int32_t y2 = dstArea.y + (((tile->src.y+tile->src.h) * dstArea.h) / SCREEN_H);
+		const SDL_Rect dstRect = { x1, y1, x2-x1, y2-y1 };
+
+		SDL_RenderCopy(video.renderer, tile->texture, &texRect, &dstRect);
+	}
+}
+
 void flipFrame(void)
 {
 	const uint32_t windowFlags = SDL_GetWindowFlags(video.window);
@@ -204,16 +250,11 @@ void flipFrame(void)
 	if (!skipPresentFrame)
 #endif
 	{
-		SDL_UpdateTexture(video.texture, NULL, video.frameBuffer, SCREEN_W * sizeof (int32_t));
-
 		// SDL 2.0.14 bug on Windows (?): This function consumes ever-increasing memory if the program is minimized
 		if (!minimized)
 			SDL_RenderClear(video.renderer);
 
-		if (video.useCustomRenderRect)
-			SDL_RenderCopy(video.renderer, video.texture, NULL, &video.renderRect);
-		else
-			SDL_RenderCopy(video.renderer, video.texture, NULL, NULL);
+		drawScreenTiles();
 
 		SDL_RenderPresent(video.renderer);
 	}
@@ -776,11 +817,7 @@ void renderLoopPins(void)
 
 void closeVideo(void)
 {
-	if (video.texture != NULL)
-	{
-		SDL_DestroyTexture(video.texture);
-		video.texture = NULL;
-	}
+	destroyScreenTextures();
 
 	if (video.renderer != NULL)
 	{
@@ -884,29 +921,106 @@ void updateWindowTitle(bool forceUpdate)
 	songIsModified = song.isModified;
 }
 
+static void destroyScreenTextures(void)
+{
+	for (int32_t i = 0; i < numScreenTiles; i++)
+	{
+		if (screenTiles[i].texture != NULL)
+			SDL_DestroyTexture(screenTiles[i].texture);
+	}
+
+	numScreenTiles = 0;
+}
+
+static int32_t floorPow2(int32_t x)
+{
+	int32_t p = 1;
+	while (p*2 <= x)
+		p *= 2;
+
+	return p;
+}
+
+static int32_t ceilPow2(int32_t x)
+{
+	int32_t p = 1;
+	while (p < x)
+		p *= 2;
+
+	return p;
+}
+
 bool recreateTexture(void)
 {
-	if (video.texture != NULL)
-	{
-		SDL_DestroyTexture(video.texture);
-		video.texture = NULL;
-	}
+	SDL_RendererInfo info;
+
+	destroyScreenTextures();
 
 	if (config.windowFlags & PIXEL_FILTER)
 		SDL_SetHint("SDL_RENDER_SCALE_QUALITY", "best");
 	else
 		SDL_SetHint("SDL_RENDER_SCALE_QUALITY", "nearest");
 
-	// SDL_PIXELFORMAT_ARGB8888 is the fastest mode when using texture streaming
-	video.texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, SCREEN_W, SCREEN_H);
-	if (video.texture == NULL)
+	if (SDL_GetRendererInfo(video.renderer, &info) != 0)
 	{
-		showErrorMsgBox("Couldn't create a %dx%d GPU texture:\n\"%s\"\n\nIs your GPU (+ driver) too old?", SCREEN_W, SCREEN_H, SDL_GetError());
-		return false;
+		info.flags = 0;
+		info.max_texture_width = info.max_texture_height = 0;
 	}
 
-	// disable alpha blending as we store the palette number in the MSB (0xXX000000)
-	SDL_SetTextureBlendMode(video.texture, SDL_BLENDMODE_NONE);
+	/* The screen is split into several textures if the renderer's max texture size is smaller than
+	** the screen. On IRIX, old SGI GL implementations also need power-of-two texture sizes, so
+	** each tile's texture is rounded up to a power of two there, and only the used part is drawn.
+	*/
+#ifdef __sgi
+	const bool usePow2 = (info.flags & SDL_RENDERER_ACCELERATED) ? true : false;
+#else
+	const bool usePow2 = false;
+#endif
+
+	int32_t maxTileW = (info.max_texture_width  > 0) ? info.max_texture_width  : SCREEN_W;
+	int32_t maxTileH = (info.max_texture_height > 0) ? info.max_texture_height : SCREEN_H;
+	if (usePow2)
+	{
+		maxTileW = (info.max_texture_width  > 0) ? floorPow2(maxTileW) : ceilPow2(SCREEN_W);
+		maxTileH = (info.max_texture_height > 0) ? floorPow2(maxTileH) : ceilPow2(SCREEN_H);
+	}
+
+	for (int32_t y = 0; y < SCREEN_H; y += maxTileH)
+	{
+		for (int32_t x = 0; x < SCREEN_W; x += maxTileW)
+		{
+			if (numScreenTiles >= MAX_SCREEN_TILES)
+			{
+				showErrorMsgBox("Couldn't create the GPU textures:\nMax texture size (%dx%d) is too small!",
+					info.max_texture_width, info.max_texture_height);
+				destroyScreenTextures();
+				return false;
+			}
+
+			screenTile_t *tile = &screenTiles[numScreenTiles];
+			tile->src.x = x;
+			tile->src.y = y;
+			tile->src.w = MIN(maxTileW, SCREEN_W - x);
+			tile->src.h = MIN(maxTileH, SCREEN_H - y);
+
+			const int32_t texW = usePow2 ? ceilPow2(tile->src.w) : tile->src.w;
+			const int32_t texH = usePow2 ? ceilPow2(tile->src.h) : tile->src.h;
+
+			// SDL_PIXELFORMAT_ARGB8888 is the fastest mode when using texture streaming
+			tile->texture = SDL_CreateTexture(video.renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, texW, texH);
+			if (tile->texture == NULL)
+			{
+				showErrorMsgBox("Couldn't create a %dx%d GPU texture:\n\"%s\"\n\nIs your GPU (+ driver) too old?", texW, texH, SDL_GetError());
+				destroyScreenTextures();
+				return false;
+			}
+			numScreenTiles++;
+
+			// disable alpha blending as we store the palette number in the MSB (0xXX000000)
+			SDL_SetTextureBlendMode(tile->texture, SDL_BLENDMODE_NONE);
+		}
+	}
+
 	return true;
 }
 
@@ -966,51 +1080,63 @@ bool setupWindow(void)
 	return true;
 }
 
-bool setupRenderer(void)
+static SDL_Renderer *createRenderer(int32_t driverIndex, uint32_t rendererFlags)
 {
-	uint32_t rendererFlags = 0;
+	SDL_Renderer *renderer = SDL_CreateRenderer(video.window, driverIndex, rendererFlags);
+	if (renderer == NULL && (rendererFlags & SDL_RENDERER_PRESENTVSYNC))
+	{
+		// try again without vsync flag
+		video.vsync60HzPresent = false;
 
-#ifdef FT2_SDL2_HAS_GL_RENDERER
-	// only requested when built against an SDL2 with an actual OpenGL renderer driver (see CMakeLists.txt)
-	rendererFlags |= SDL_RENDERER_ACCELERATED;
-	SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
-#endif
+		rendererFlags &= ~SDL_RENDERER_PRESENTVSYNC;
+		renderer = SDL_CreateRenderer(video.window, driverIndex, rendererFlags);
+	}
 
+	return renderer;
+}
+
+#ifdef __sgi
+static int32_t getRenderDriverIndex(const char *name)
+{
+	const int32_t numDrivers = SDL_GetNumRenderDrivers();
+	for (int32_t i = 0; i < numDrivers; i++)
+	{
+		SDL_RendererInfo info;
+		if (SDL_GetRenderDriverInfo(i, &info) == 0 && strcmp(info.name, name) == 0)
+			return i;
+	}
+
+	return -1;
+}
+
+static SDL_Renderer *createGLRenderer(void)
+{
+	const int32_t glDriverIndex = getRenderDriverIndex("opengl");
+	if (glDriverIndex < 0)
+	{
+		printf("OpenGL unavailable: SDL2 was built without the OpenGL renderer\n");
+		return NULL;
+	}
+
+	// check that a GL library can actually be loaded (no GLX on the display, missing libGL, etc.)
+	if (SDL_GL_LoadLibrary(NULL) != 0)
+	{
+		printf("OpenGL unavailable: %s\n", SDL_GetError());
+		return NULL;
+	}
+	SDL_GL_UnloadLibrary();
+
+	uint32_t rendererFlags = SDL_RENDERER_ACCELERATED;
 	if (video.vsync60HzPresent)
 		rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
 
-	video.renderer = SDL_CreateRenderer(video.window, -1, rendererFlags);
-	if (video.renderer == NULL)
+	SDL_Renderer *renderer = createRenderer(glDriverIndex, rendererFlags);
+	if (renderer == NULL)
 	{
-		if (video.vsync60HzPresent)
-		{
-			// try again without vsync flag
-			video.vsync60HzPresent = false;
-
-			rendererFlags &= ~SDL_RENDERER_PRESENTVSYNC;
-			video.renderer = SDL_CreateRenderer(video.window, -1, rendererFlags);
-		}
-
-#ifdef FT2_SDL2_HAS_GL_RENDERER
-		if (video.renderer == NULL)
-		{
-			// GL renderer unavailable for some reason, fall back to whatever SDL2 picks by default
-			rendererFlags &= ~SDL_RENDERER_ACCELERATED;
-			video.renderer = SDL_CreateRenderer(video.window, -1, rendererFlags);
-		}
-#endif
-
-		if (video.renderer == NULL)
-		{
-			showErrorMsgBox("Couldn't create SDL renderer:\n\"%s\"\n\nIs your GPU (+ driver) too old?",
-				SDL_GetError());
-			return false;
-		}
+		printf("OpenGL renderer failed: %s\n", SDL_GetError());
+		return NULL;
 	}
 
-	SDL_SetRenderDrawBlendMode(video.renderer, SDL_BLENDMODE_NONE);
-
-#ifdef FT2_SDL2_HAS_GL_RENDERER
 	if (!video.vsync60HzPresent)
 	{
 		// SDL_CreateRenderer() is supposed to disable the swap interval itself when
@@ -1020,14 +1146,90 @@ bool setupRenderer(void)
 		// of EXT_swap_control, leaving the default swap behavior in place otherwise.
 		SDL_GL_SetSwapInterval(0);
 	}
+
+	return renderer;
+}
 #endif
 
-	if (!recreateTexture())
+static SDL_Renderer *createSoftwareRenderer(uint32_t rendererFlags)
+{
+	SDL_Renderer *renderer = createRenderer(-1, rendererFlags | SDL_RENDERER_SOFTWARE);
+	if (renderer == NULL)
 	{
-		showErrorMsgBox("Couldn't create a %dx%d GPU texture:\n\"%s\"\n\nIs your GPU (+ driver) too old?",
-			SCREEN_W, SCREEN_H, SDL_GetError());
+		/* The software renderer draws into the window's framebuffer. If that fails, SDL_CreateRenderer()
+		** only reports "Couldn't find matching render driver", so get the framebuffer here to get the real
+		** reason (unsupported X11 visual, etc.). This must not be done before SDL_CreateRenderer(), as
+		** SDL 2.28+ refuses to create a renderer for a window that already has a framebuffer surface.
+		*/
+		if (SDL_GetWindowSurface(video.window) == NULL)
+		{
+			printf("Software renderer unavailable, couldn't get window framebuffer: %s\n", SDL_GetError());
+			fflush(stdout);
+		}
+	}
+
+	return renderer;
+}
+
+static void printSelectedRenderer(void)
+{
+	SDL_RendererInfo info;
+	if (SDL_GetRendererInfo(video.renderer, &info) != 0)
+		return;
+
+	printf("Renderer: %s (%s)", info.name,
+		(info.flags & SDL_RENDERER_ACCELERATED) ? "hardware accelerated" : "software");
+
+	if (numScreenTiles > 1)
+		printf(", screen split into %d textures (max texture size %dx%d)", numScreenTiles,
+			info.max_texture_width, info.max_texture_height);
+
+	printf("\n");
+	fflush(stdout);
+}
+
+bool setupRenderer(void)
+{
+	uint32_t rendererFlags = 0;
+
+	if (video.vsync60HzPresent)
+		rendererFlags |= SDL_RENDERER_PRESENTVSYNC;
+
+	if (video.forceSoftwareRenderer)
+	{
+		printf("Software renderer forced by --software\n");
+		video.renderer = createSoftwareRenderer(rendererFlags);
+	}
+	else
+	{
+#ifdef __sgi
+		// prefer OpenGL if this SDL2 build and the display support it, otherwise fall back to software
+		video.renderer = createGLRenderer();
+		if (video.renderer == NULL)
+		{
+			printf("Falling back to software renderer\n");
+			video.renderer = createSoftwareRenderer(rendererFlags);
+			if (video.renderer == NULL)
+				printf("Try starting the program with --software\n"); // selects an X11 visual it can draw to
+		}
+#else
+		video.renderer = createRenderer(-1, rendererFlags);
+#endif
+	}
+
+	if (video.renderer == NULL)
+	{
+		showErrorMsgBox("Couldn't create SDL renderer:\n\"%s\"\n\nIs your GPU (+ driver) too old?",
+			SDL_GetError());
 		return false;
 	}
+
+	SDL_SetRenderDrawBlendMode(video.renderer, SDL_BLENDMODE_NONE);
+
+	if (!recreateTexture())
+		return false; // error message was shown in recreateTexture()
+
+	printSelectedRenderer();
 
 	// framebuffer used by SDL (for texture)
 	video.frameBuffer = (uint32_t *)malloc(SCREEN_W * SCREEN_H * sizeof (uint32_t));
