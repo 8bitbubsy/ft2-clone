@@ -56,6 +56,9 @@ MIDI support (rtmidi) is disabled on IRIX.
 SDL2 software / hardware rendering:
  On startup the app uses SDL2's OpenGL renderer if it's available, otherwise it falls back to
  software rendering. The selected renderer is printed to the terminal.
+ If the GL driver only supports small power-of-two textures (e.g. max 512x512), the screen is
+ drawn as several power-of-two textures.
+ To always use the software renderer, start the program with: ./ft2-clone --software
  SGUG-RSE SDL2 does not support HW acceleration, so it will always use software rendering.
 
 Static SDL2:

@@ -87,6 +87,18 @@ int main(int argc, char *argv[])
 	initializeVars();
 	setupCrashHandler();
 
+	// remove our own options from argv, so that the module loader still only sees the module filename
+	int32_t numArgs = 1;
+	for (int32_t i = 1; i < argc; i++)
+	{
+		if (!strcmp(argv[i], "--software"))
+			video.forceSoftwareRenderer = true;
+		else
+			argv[numArgs++] = argv[i];
+	}
+	argv[numArgs] = NULL;
+	argc = numArgs;
+
 	// on Windows and macOS, test what version SDL2.DLL is (against library version used in compilation)
 #if defined _WIN32 || defined __APPLE__
 	SDL_GetVersion(&sdlVer);
