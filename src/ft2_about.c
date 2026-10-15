@@ -11,7 +11,7 @@
 #include "ft2_random.h"
 
 #define NUM_STARS 1500
-#define STARSHINE_ALPHA_PERCENTAGE 31
+#define STARSHINE_ALPHA_PERCENTAGE 33
 #define ABOUT_SCREEN_X 3
 #define ABOUT_SCREEN_Y 3
 #define ABOUT_SCREEN_W 626
@@ -20,6 +20,7 @@
 #define ABOUT_LOGO_H 78
 #define BG_COLORKEY 0xFF000000
 #define STAR_PIXEL_ID 0xFE000000
+#define STAR_Z_SPEED 3
 
 typedef struct
 {
@@ -103,7 +104,7 @@ static void starfield(void)
 			clearPixel(x,   y+1);
 		}
 
-		star->z += 3;
+		star->z += STAR_Z_SPEED;
 		if (star->z > 16384)
 			star->z -= 32768;
 
@@ -208,8 +209,6 @@ void renderAboutScreenFrame(void)
 	starRotation.y -= 0.0002f;
 	starRotation.z += 0.0001f;
 	rotateStarfieldMatrix();
-
-	showPushButton(PB_EXIT_ABOUT); // yes, we also have to redraw the exit button per frame :)
 }
 
 void showAboutScreen(void) // called once when about screen is opened
