@@ -16,17 +16,17 @@ typedef struct
 } sincKernel_t;
 
 // what sinc kernel to use based on resampling ratio
-#define KERNEL1_RATIO_LIMIT 1.1875 /*      if ratio < x, kernel[0] */
-#define KERNEL2_RATIO_LIMIT 1.5002 /* else if ratio < x, kernel[1] */
-#define KERNEL3_RATIO_LIMIT 2.1000 /* else if ratio < x, kernel[2], else kernel[3] */
+#define KERNEL1_RATIO_LIMIT 1.1875 /*      if ratio <= x, kernel[0] */
+#define KERNEL2_RATIO_LIMIT 1.5000 /* else if ratio <= x, kernel[1] */
+#define KERNEL3_RATIO_LIMIT 2.0000 /* else if ratio <= x, kernel[2], else kernel[3] */
 
 static sincKernel_t sincKernelConfig[SINC_KERNELS] =
 {
 	// kaiser-beta   cutoff
-	{    9.6568,      1.00  }, // kernel #1
-	{    8.1933,      0.77  }, // kernel #2
-	{    7.1939,      0.52  }, // kernel #3
-	{    3.6517,      0.33  }  // kernel #4
+	{   10.1326,     1.0000  }, // kernel #1
+	{    8.3378,     0.7639  }, // kernel #2
+	{    7.1979,     0.5212  }, // kernel #3
+	{    7.0000,     0.3333  }  // kernel #4
 };
 
 static float *fSinc8[SINC_KERNELS], *fSinc16[SINC_KERNELS];
@@ -86,11 +86,11 @@ void setWindowedSincIntrpTable(voice_t *v)
 {
 	float **fSincLUT = (config.interpolation == INTERPOLATION_SINC16) ? fSinc16 : fSinc8;
 
-	if (v->delta < (uint64_t)(KERNEL1_RATIO_LIMIT * MIXER_FRAC_SCALE))
+	if (v->delta <= (uint64_t)(KERNEL1_RATIO_LIMIT * MIXER_FRAC_SCALE))
 		v->fSincLUT = fSincLUT[0];
-	else if (v->delta < (uint64_t)(KERNEL2_RATIO_LIMIT * MIXER_FRAC_SCALE))
+	else if (v->delta <= (uint64_t)(KERNEL2_RATIO_LIMIT * MIXER_FRAC_SCALE))
 		v->fSincLUT = fSincLUT[1];
-	else if (v->delta < (uint64_t)(KERNEL3_RATIO_LIMIT * MIXER_FRAC_SCALE))
+	else if (v->delta <= (uint64_t)(KERNEL3_RATIO_LIMIT * MIXER_FRAC_SCALE))
 		v->fSincLUT = fSincLUT[2];
 	else
 		v->fSincLUT = fSincLUT[3];
@@ -108,7 +108,7 @@ static inline double besselI0(double z)
 		s += ds;
 		d += 2.0;
 	}
-	while (ds > s*(1E-10));
+	while (ds > s*(1E-11));
 
 	return s;
 }
