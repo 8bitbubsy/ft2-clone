@@ -189,10 +189,10 @@ void calcPanningTable(void)
 	for (int32_t i = 0; i <= 256; i++)
 	{
 		// bit-accurate to how FT2 calculates it
-		int32_t ft2SqrtPan = (int32_t)round(65536.0 * sqrt(i / 256.0));
+		int32_t ft2SqrtPan = (int32_t)round(65536.0 * sqrt(i * (1.0 / 256.0)));
 
 		// scale to 0.0 .. 1.0f for our float mixer
-		fSqrtPanningTable[i] = (float)ft2SqrtPan / 65536.0f;
+		fSqrtPanningTable[i] = (float)(ft2SqrtPan * (1.0 / 65536.0));
 	}
 }
 
