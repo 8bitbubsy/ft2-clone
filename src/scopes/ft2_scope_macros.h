@@ -56,20 +56,40 @@
 }
 
 #define CUBIC_BSPLINE_SMP8(frac) \
-	const int16_t *t = scopeIntrpLUT + (((uint32_t)(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+{ \
+	const int32_t frac31 = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-31); \
+	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
 	\
-	sample = ((s8[-1] * t[0]) + \
-	          ( s8[0] * t[1]) + \
-	          ( s8[1] * t[2]) + \
-	          ( s8[2] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8);
+	const float s1 = s8[-1]; \
+	const float s2 =  s8[0]; \
+	const float s3 =  s8[1]; \
+	const float s4 =  s8[2]; \
+	\
+	const float a = ((s4 - s1) * (1.0f / 6.0f)) + ((s2 - s3) * (3.0f / 6.0f)); \
+	const float b = ((s1 + s3) * (3.0f / 6.0f)) - s2; \
+	const float c =  (s3 - s1) * (3.0f / 6.0f); \
+	const float d = ((s1 + s3) * (1.0f / 6.0f)) + (s2 * (4.0f / 6.0f)); \
+	\
+	sample = (int32_t)((((a * t + b) * t + c) * t + d) * 256.0f); \
+} 
 
 #define CUBIC_BSPLINE_SMP16(frac) \
-	const int16_t *t = scopeIntrpLUT + (((uint32_t)(frac) >> (SCOPE_FRAC_BITS-SCOPE_INTRP_PHASES_BITS)) << SCOPE_INTRP_WIDTH_BITS); \
+{ \
+	const int32_t frac31 = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-31); \
+	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
 	\
-	sample = ((s16[-1] * t[0]) + \
-	          ( s16[0] * t[1]) + \
-	          ( s16[1] * t[2]) + \
-	          ( s16[2] * t[3])) >> SCOPE_INTRP_SCALE_BITS;
+	const float s1 = s16[-1]; \
+	const float s2 =  s16[0]; \
+	const float s3 =  s16[1]; \
+	const float s4 =  s16[2]; \
+	\
+	const float a = ((s4 - s1) * (1.0f / 6.0f)) + ((s2 - s3) * (3.0f / 6.0f)); \
+	const float b = ((s1 + s3) * (3.0f / 6.0f)) - s2; \
+	const float c =  (s3 - s1) * (3.0f / 6.0f); \
+	const float d = ((s1 + s3) * (1.0f / 6.0f)) + (s2 * (4.0f / 6.0f)); \
+	\
+	sample = (int32_t)(((a * t + b) * t + c) * t + d); \
+} 
 
 #define CUBIC_BSPLINE_INTERPOLATION8(frac) \
 { \
