@@ -106,8 +106,8 @@
 
 #define LINEAR_INTERPOLATION(s, f, scale) \
 { \
-	const int32_t frac24 = (uint32_t)f >> (MIXER_FRAC_BITS-24); \
-	const float t = (float)frac24 * (1.0f / (1 << 24)); \
+	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
+	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
 	\
 	const float s1 = s[0]; \
 	const float s2 = s[1]; \
@@ -132,8 +132,8 @@
 
 #define QUADRATIC_SPLINE_INTERPOLATION(s, f, scale) \
 { \
-	const int32_t frac24 = (uint32_t)f >> (MIXER_FRAC_BITS-24); \
-	const float t = (float)frac24 * (1.0f / (1 << 24)); \
+	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
+	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
 	\
 	const float s1 = s[-1]; \
 	const float s2 =  s[0]; \
@@ -179,8 +179,8 @@
 // Catmull-Rom algorithm
 #define CUBIC_SPLINE_INTERPOLATION(s, f, scale) \
 { \
-	const int32_t frac24 = (uint32_t)f >> (MIXER_FRAC_BITS-24); \
-	const float t = (float)frac24 * (1.0f / (1 << 24)); \
+	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
+	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
 	\
 	const float s1 = s[-1]; \
 	const float s2 =  s[0]; \
