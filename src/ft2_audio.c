@@ -191,7 +191,7 @@ void calcPanningTable(void)
 		// bit-accurate to how FT2 calculates it
 		int32_t ft2SqrtPan = (int32_t)round(65536.0 * sqrt(i * (1.0 / 256.0)));
 
-		// scale to 0.0 .. 1.0f for our float mixer
+		// scale to 0.0f .. 1.0f for our float mixer
 		fSqrtPanningTable[i] = (float)(ft2SqrtPan * (1.0 / 65536.0));
 	}
 }
@@ -351,7 +351,7 @@ void updateVoices(void)
 		if (status & CS_UPDATE_VOL)
 		{
 			v->fVolume = ch->fFinalVol; // 0.0f .. 1.0f
-			v->scopeVolume = (uint8_t)((ch->fFinalVol * (SCOPE_HEIGHT*4.0f)) + 0.5f);
+			v->scopeVolume = (int16_t)(int32_t)((ch->fFinalVol * (SCOPE_HEIGHT*512)) + 0.5f);
 		}
 
 		if (status & CS_UPDATE_PAN)
@@ -397,7 +397,7 @@ static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 	for (uint32_t i = 0; i < sampleBlockLength; i++)
 	{
 		// left channel - 1-bit triangular dithering
-		fPrng = (float)random32() * (1.0f / ((float)UINT32_MAX+1.0f)); // -0.5f .. 0.5f
+		fPrng = (float)random32() * (float)(1.0 / (UINT32_MAX+1.0)); // -0.5f .. 0.5f
 		fOut = audio.fMixBufferL[i] * fAudioNormalizeMul;
 		fOut = (fOut + fPrng) - fPrngStateL;
 		fPrngStateL = fPrng;
@@ -405,7 +405,7 @@ static void sendSamples16BitStereo(void *stream, uint32_t sampleBlockLength)
 		*streamPtr16++ = (int16_t)(CLAMP(out32, INT16_MIN, INT16_MAX));
 
 		// right channel - 1-bit triangular dithering
-		fPrng = (float)random32() * (1.0f / ((float)UINT32_MAX+1.0f)); // -0.5f .. 0.5f
+		fPrng = (float)random32() * (float)(1.0 / (UINT32_MAX+1.0)); // -0.5f .. 0.5f
 		fOut = audio.fMixBufferR[i] * fAudioNormalizeMul;
 		fOut = (fOut + fPrng) - fPrngStateR;
 		fPrngStateR = fPrng;

@@ -43,53 +43,73 @@
 	sample = s16[0]; \
 }
 
+// linear interpolation
+
 #define LINEAR_INTERPOLATION8(frac) \
 { \
-	const int32_t f = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-15); \
-	sample = (s8[0] << 8) + ((((s8[1] - s8[0]) << 8) * f) >> 15); \
+	const int32_t frac15 = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-15); \
+	\
+	const int16_t s1 = s8[0] << 8; \
+	const int16_t s2 = s8[1] << 8; \
+	\
+	sample = s1 + (((s2 - s1) * frac15) >> 15); \
 }
 
 #define LINEAR_INTERPOLATION16(frac) \
 { \
-	const int32_t f = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-15); \
-	sample = s16[0] + (((s16[1] - s16[0]) * f) >> 15); \
+	const int32_t frac15 = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-15); \
+	\
+	const int16_t s1 = s16[0]; \
+	const int16_t s2 = s16[1]; \
+	\
+	sample = s1 + (((s2 - s1) * frac15) >> 15); \
 }
+
+/* 4-point cubic B-spline interpolation (32 phases with interpolation between them).
+** The LUT has an extra inverted phase at the end for interpolation wrap-around.
+*/
 
 #define CUBIC_BSPLINE_SMP8(frac) \
 { \
-	const int32_t frac31 = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-31); \
-	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const uint32_t fracReduced = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-INTRP_BITS); \
+	const uint32_t phaseInt = fracReduced >> INTRP_PHASE_SHIFT; \
+	const int32_t phaseFrac = fracReduced & INTRP_PHASE_MASK; \
 	\
-	const float s1 = s8[-1]; \
-	const float s2 =  s8[0]; \
-	const float s3 =  s8[1]; \
-	const float s4 =  s8[2]; \
+	const int16_t *t = scopeIntrpLUT + (phaseInt << SCOPE_INTRP_WIDTH_BITS); \
 	\
-	const float a = ((s4 - s1) * (1.0f / 6.0f)) + ((s2 - s3) * (3.0f / 6.0f)); \
-	const float b = ((s1 + s3) * (3.0f / 6.0f)) - s2; \
-	const float c =  (s3 - s1) * (3.0f / 6.0f); \
-	const float d = ((s1 + s3) * (1.0f / 6.0f)) + (s2 * (4.0f / 6.0f)); \
+	const int32_t s1 = ((s8[-1] * t[0]) + \
+	                    ( s8[0] * t[1]) + \
+	                    ( s8[1] * t[2]) + \
+	                    ( s8[2] * t[3])) >> (SCOPE_INTRP_SCALE_BITS-8); \
 	\
-	sample = (int32_t)((((a * t + b) * t + c) * t + d) * 256.0f); \
-} 
+	const int32_t s2 = ((s8[-1] * t[SCOPE_INTRP_WIDTH+0]) + \
+	                    ( s8[0] * t[SCOPE_INTRP_WIDTH+1]) + \
+	                    ( s8[1] * t[SCOPE_INTRP_WIDTH+2]) + \
+	                    ( s8[2] * t[SCOPE_INTRP_WIDTH+3])) >> (SCOPE_INTRP_SCALE_BITS-8); \
+	\
+	sample = s1 + (((s2 - s1) * phaseFrac) >> INTRP_PHASE_SHIFT); \
+}
 
 #define CUBIC_BSPLINE_SMP16(frac) \
 { \
-	const int32_t frac31 = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-31); \
-	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const uint32_t fracReduced = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-INTRP_BITS); \
+	const uint32_t phaseInt = fracReduced >> INTRP_PHASE_SHIFT; \
+	const int32_t phaseFrac = fracReduced & INTRP_PHASE_MASK; \
 	\
-	const float s1 = s16[-1]; \
-	const float s2 =  s16[0]; \
-	const float s3 =  s16[1]; \
-	const float s4 =  s16[2]; \
+	const int16_t *t = scopeIntrpLUT + (phaseInt << SCOPE_INTRP_WIDTH_BITS); \
 	\
-	const float a = ((s4 - s1) * (1.0f / 6.0f)) + ((s2 - s3) * (3.0f / 6.0f)); \
-	const float b = ((s1 + s3) * (3.0f / 6.0f)) - s2; \
-	const float c =  (s3 - s1) * (3.0f / 6.0f); \
-	const float d = ((s1 + s3) * (1.0f / 6.0f)) + (s2 * (4.0f / 6.0f)); \
+	const int32_t s1 = ((s16[-1] * t[0]) + \
+	                    ( s16[0] * t[1]) + \
+	                    ( s16[1] * t[2]) + \
+	                    ( s16[2] * t[3])) >> SCOPE_INTRP_SCALE_BITS; \
 	\
-	sample = (int32_t)(((a * t + b) * t + c) * t + d); \
-} 
+	const int32_t s2 = ((s16[-1] * t[SCOPE_INTRP_WIDTH+0]) + \
+	                    ( s16[0] * t[SCOPE_INTRP_WIDTH+1]) + \
+	                    ( s16[1] * t[SCOPE_INTRP_WIDTH+2]) + \
+	                    ( s16[2] * t[SCOPE_INTRP_WIDTH+3])) >> SCOPE_INTRP_SCALE_BITS; \
+	\
+	sample = s1 + (((s2 - s1) * phaseFrac) >> INTRP_PHASE_SHIFT); \
+}
 
 #define CUBIC_BSPLINE_INTERPOLATION8(frac) \
 { \
@@ -125,7 +145,7 @@
 		LINEAR_INTERPOLATION8(frac) \
 	else \
 		CUBIC_BSPLINE_INTERPOLATION8(frac) \
-	sample = (sample * s->volume) >> (16+2);
+	sample = (sample * s->volume) >> (16+9);
 
 #define INTERPOLATE_SMP16(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -135,7 +155,7 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		CUBIC_BSPLINE_INTERPOLATION16(frac) \
-	sample = (sample * s->volume) >> (16+2);
+	sample = (sample * s->volume) >> (16+9);
 
 #define INTERPOLATE_SMP8_LOOP(pos, frac) \
 	const int8_t *s8 = s->base8 + pos; \
@@ -145,7 +165,7 @@
 		LINEAR_INTERPOLATION8(frac) \
 	else \
 		CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, frac) \
-	sample = (sample * s->volume) >> (16+2);
+	sample = (sample * s->volume) >> (16+9);
 
 #define INTERPOLATE_SMP16_LOOP(pos, frac) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -155,17 +175,17 @@
 		LINEAR_INTERPOLATION16(frac) \
 	else \
 		CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, frac) \
-	sample = (sample * s->volume) >> (16+2);
+	sample = (sample * s->volume) >> (16+9);
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
-		sample = (s->base8[position] * s->volume) >> (8+2); \
+		sample = (s->base8[position] * s->volume) >> (8+9); \
 	else \
 		sample = 0;
 
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
-		sample = (s->base16[position] * s->volume) >> (16+2); \
+		sample = (s->base16[position] * s->volume) >> (16+9); \
 	else \
 		sample = 0;
 
@@ -173,7 +193,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		sample = (s->base8[actualPos] * s->volume) >> (8+2); \
+		sample = (s->base8[actualPos] * s->volume) >> (8+9); \
 	} \
 	else \
 	{ \
@@ -184,7 +204,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		sample = (s->base16[actualPos] * s->volume) >> (16+2); \
+		sample = (s->base16[actualPos] * s->volume) >> (16+9); \
 	} \
 	else \
 	{ \

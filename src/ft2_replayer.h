@@ -197,7 +197,8 @@ note_t;
 
 typedef struct syncedChannel_t // used for audio/video sync queue (pack to save RAM)
 {
-	uint8_t status, pianoNoteNum, smpNum, instrNum, scopeVolume;
+	uint8_t status, pianoNoteNum, smpNum, instrNum;
+	int16_t scopeVolume;
 	uint16_t period;
 	int32_t smpStartPos;
 }
