@@ -482,6 +482,7 @@ void drawScopeFramework(void)
 void handleScopesFromChQueue(chSyncData_t *chSyncData, uint8_t *scopeUpdateStatus)
 {
 	volatile scope_t *sc = scope;
+
 	syncedChannel_t *ch = chSyncData->channels;
 	for (int32_t i = 0; i < song.numChannels; i++, sc++, ch++)
 	{
