@@ -223,7 +223,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP8_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ SCOPE_FRAC_MASK) : (uint32_t)positionFrac) \
+		INTERPOLATE_SMP8_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ (uint32_t)SCOPE_FRAC_MASK) : (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
@@ -234,7 +234,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		INTERPOLATE_SMP16_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ SCOPE_FRAC_MASK) : (uint32_t)positionFrac) \
+		INTERPOLATE_SMP16_LOOP(actualPos, samplingBackwards ? ((uint32_t)positionFrac ^ (uint32_t)SCOPE_FRAC_MASK) : (uint32_t)positionFrac) \
 	} \
 	else \
 	{ \
