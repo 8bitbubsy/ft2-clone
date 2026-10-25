@@ -5,6 +5,11 @@
 ** Do NOT close the file handle!
 */
 
+// for finding memory leaks in debug mode with Visual Studio
+#if defined _DEBUG && defined _MSC_VER
+#include <crtdbg.h>
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -93,6 +98,7 @@ bool loadOGG(FILE *f, uint32_t filesize)
 	uint8_t *smpBuffer = (uint8_t *)malloc(SAMPLE_BUFFER_SIZE);
 	if (smpBuffer == NULL)
 	{
+		ov_clear(&vorbis);
 		loaderMsgBox("Not enough memory!");
 		return false;
 	}
@@ -101,7 +107,7 @@ bool loadOGG(FILE *f, uint32_t filesize)
 	if (numChannels == 2)
 	{
 		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true);
+		setMouseBusy(true); // kludge
 	}
 
 	const int32_t shift = (numChannels == 2) ? 2 : 1;
@@ -124,8 +130,8 @@ bool loadOGG(FILE *f, uint32_t filesize)
 			int32_t numSamples = sampleCounter >> shift;
 			if (!reallocateSmpData(s, sampleLength + numSamples, true))
 			{
-				free(smpBuffer);
 				ov_clear(&vorbis);
+				free(smpBuffer);
 				loaderMsgBox("Not enough memory!");
 				return false;
 			}
@@ -165,8 +171,8 @@ bool loadOGG(FILE *f, uint32_t filesize)
 			break;
 	}
 
-	free(smpBuffer);
 	ov_clear(&vorbis);
+	free(smpBuffer);
 
 	s->length = sampleLength;
 	s->volume = 64;
@@ -175,6 +181,4 @@ bool loadOGG(FILE *f, uint32_t filesize)
 	setSampleC4Hz(s, sampleRate);
 
 	return true;
-
-	(void)filesize;
 }

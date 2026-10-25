@@ -5,6 +5,11 @@
 ** Do NOT close the file handle!
 */
 
+// for finding memory leaks in debug mode with Visual Studio
+#if defined _DEBUG && defined _MSC_VER
+#include <crtdbg.h>
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -190,7 +195,7 @@ bool loadWAV(FILE *f, uint32_t filesize)
 	if (wavIsStereo(f))
 	{
 		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true);
+		setMouseBusy(true); // kludge
 	}
 
 	if (bitsPerSample == 8) // 8-BIT INTEGER SAMPLE

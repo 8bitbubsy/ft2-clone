@@ -8,6 +8,11 @@
 ** Do NOT close the file handle!
 */
 
+// for finding memory leaks in debug mode with Visual Studio
+#if defined _DEBUG && defined _MSC_VER
+#include <crtdbg.h>
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>

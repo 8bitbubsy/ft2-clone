@@ -1,9 +1,16 @@
+
+
 /* MP3 sample loader (using minimp3)
 **
 ** Note: Vol/loop sanitation is done in the last stage
 ** of sample loading, so you don't need to do that here.
 ** Do NOT close the file handle!
 */
+
+// for finding memory leaks in debug mode with Visual Studio
+#if defined _DEBUG && defined _MSC_VER
+#include <crtdbg.h>
+#endif
 
 #include <stdio.h>
 #include <stdint.h>
@@ -100,7 +107,7 @@ bool loadMP3(FILE *f, uint32_t filesize)
 	if (mp3IsStereo)
 	{
 		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true);
+		setMouseBusy(true); // kludge
 	}
 
 	if (fread(buf, 1, filesize, f) != filesize)
