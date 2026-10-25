@@ -8,13 +8,26 @@
 #include "ft2_scopedraw.h"
 #include "ft2_scope_macros.h"
 
-static void scopeLine(int32_t x1, int32_t y1, int32_t y2, const uint32_t color);
-
-/* 4-point cubic B-spline (no overshoot) interpolation LUT at 32 phases.
-**
+/* 4-point cubic B-spline (no overshoot) interpolation LUT (32 phases).
 ** Used on the scopes when using quadratic/cubic/sinc mixing interpolation,
-** together with linear interpolation between the phases.
-*/
+** together with linear interpolation between the phases in the LUT.
+**
+** ----------------- C code for making LUT (has unity gain) ----------------
+** #define SCALE 32768
+** #define PHASES 32
+** for (int32_t i = 0; i < PHASES; i++)
+** {
+** 		double t1 = i / (double)PHASES, t2 = t1 * t1, t3 = t2 * t1;
+** 		double a = SCALE * ((1.0 - 3.0*t1 + 3.0*t2 - t3) / 6.0);
+** 		double b = SCALE * ((4.0 - 6.0*t2 + 3.0*t3) / 6.0);
+** 		double c = SCALE * ((1.0 + 3.0*t1 + 3.0*t2 - 3.0*t3) / 6.0);
+** 		double d = SCALE * (t3 / 6.0);
+** 		printf("%d, %d, %d, %d,\n", (int32_t)a, (int32_t)b, (int32_t)c, (int32_t)d);
+** 	}
+** 	printf("%d, %d, %d, %d // inverted copy of first phase (for interpolation)\n",
+** 		0, (int32_t)(SCALE * (1.0 / 6.0)), (int32_t)(SCALE * (4.0 / 6.0)),
+** 		(int32_t)(SCALE * (1.0 / 6.0)));
+** ------------------------------------------------------------------------- */
 static const int16_t scopeIntrpLUT[SCOPE_INTRP_WIDTH * (SCOPE_INTRP_PHASES+1)] =
 {
 	5461, 21845,  5461,    0,
@@ -49,10 +62,10 @@ static const int16_t scopeIntrpLUT[SCOPE_INTRP_WIDTH * (SCOPE_INTRP_PHASES+1)] =
 	   4,  7127, 21570, 4064,
 	   1,  6545, 21721, 4500,
 	   0,  5988, 21813, 4965,
-
-	// inverted copy of first phase for interpolation wrap-around
-	   0,  5461, 21845, 5461
+	   0,  5461, 21845, 5461 // inverted copy of first phase (for interpolation)
 };
+
+static void scopeLine(int32_t x1, int32_t y1, int32_t y2, const uint32_t color);
 
 /* ----------------------------------------------------------------------- */
 /*                    NON-LINED SCOPE DRAWING ROUTINES                     */
