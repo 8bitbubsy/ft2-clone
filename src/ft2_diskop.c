@@ -1333,8 +1333,7 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 				if (!_stricmp("xi", extPtr))
 					break;
 
-				if (!sampleExtensionAccepted(extPtr))
-					goto skipEntry;
+				goto skipEntry;
 			}
 			break;
 
