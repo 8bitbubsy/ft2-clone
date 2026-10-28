@@ -7,17 +7,19 @@
 #define SCOPE_INIT \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
-	int32_t sample; \
-	int32_t position = s->position; \
-	uint64_t positionFrac = s->positionFrac;
+	int32_t sample, position = s->position; \
+	uint64_t positionFrac = s->positionFrac; \
+	float fSample; \
+	const float fVolume = (float)s->volume * (float)((SCOPE_HEIGHT / 2.0) / 32768.0);
 
 #define SCOPE_INIT_PINGPONG \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
 	uint32_t width = x + w; \
-	int32_t sample; \
-	int32_t actualPos, position = s->position; \
+	int32_t sample, actualPos, position = s->position; \
 	uint64_t positionFrac = s->positionFrac; \
-	bool samplingBackwards = s->samplingBackwards;
+	bool samplingBackwards = s->samplingBackwards; \
+	float fSample; \
+	const float fVolume = (float)s->volume * (float)((SCOPE_HEIGHT / 2.0) / 32768.0);
 
 #define LINED_SCOPE_INIT \
 	SCOPE_INIT \
@@ -33,15 +35,8 @@
 ** so that out-of-bounds reads get the correct interpolation tap data.
 */
 
-#define NO_INTERPOLATION8 \
-{ \
-	sample = s8[0] * (256 * SCOPE_HEIGHT); \
-}
-
-#define NO_INTERPOLATION16 \
-{ \
-	sample = s16[0] * SCOPE_HEIGHT; \
-}
+#define NO_INTERPOLATION8  fSample =  s8[0] * (1.0f /   128.0f);
+#define NO_INTERPOLATION16 fSample = s16[0] * (1.0f / 32768.0f);
 
 // 2-point linear interpolation
 
@@ -51,11 +46,11 @@
 	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
 	const float s1 = s[0], s2 = s[1]; \
 	\
-	sample = (int32_t)((s1 + ((s2 - s1) * t)) * (float)(SCOPE_HEIGHT * (1 << (16-smpBits)))); \
+	fSample = (s1 + ((s2 - s1) * t)) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
-#define LINEAR_INTERPOLATION8(frac) LINEAR_INTERPOLATION(s8, frac, 8)
-#define LINEAR_INTERPOLATION16(frac) LINEAR_INTERPOLATION(s16, frac, 16)
+#define LINEAR_INTERPOLATION8(f)  LINEAR_INTERPOLATION(s8,  f,  8)
+#define LINEAR_INTERPOLATION16(f) LINEAR_INTERPOLATION(s16, f, 16)
 
 // 4-point cubic B-spline interpolation
 
@@ -70,10 +65,10 @@
 	const float c =  (s3 - s1) * (3.0f / 6.0f); \
 	const float d = ((s1 + s3) * (1.0f / 6.0f)) + (s2 * (4.0f / 6.0f)); \
 	\
-	sample = (int32_t)((((a * t + b) * t + c) * t + d) * (float)(SCOPE_HEIGHT * (1 << (16-smpBits)))); \
+	fSample = (((a * t + b) * t + c) * t + d) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
-#define CUBIC_BSPLINE_INTERPOLATION8(f) CUBIC_BSPLINE_INTERPOLATION(s8, f, 8)
+#define CUBIC_BSPLINE_INTERPOLATION8(f)  CUBIC_BSPLINE_INTERPOLATION(s8,  f,  8)
 #define CUBIC_BSPLINE_INTERPOLATION16(f) CUBIC_BSPLINE_INTERPOLATION(s16, f, 16)
 
 #define CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, f) \
@@ -92,6 +87,11 @@
 	CUBIC_BSPLINE_INTERPOLATION(s16, f, 16) \
 } \
 
+/* Note:
+** floorf() is needed for proper negative rounding, or else
+** the scopes will not look correct.
+*/
+
 #define INTERPOLATE_SMP8(pos, f) \
 	const int8_t *s8 = s->base8 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
@@ -100,7 +100,7 @@
 		LINEAR_INTERPOLATION8(f) \
 	else \
 		CUBIC_BSPLINE_INTERPOLATION8(f) \
-	sample = (sample * s->volume) >> (16+10);
+	sample = (int32_t)floorf(fSample * fVolume);
 
 #define INTERPOLATE_SMP16(pos, f) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -110,7 +110,7 @@
 		LINEAR_INTERPOLATION16(f) \
 	else \
 		CUBIC_BSPLINE_INTERPOLATION16(f) \
-	sample = (sample * s->volume) >> (16+10);
+	sample = (int32_t)floorf(fSample * fVolume);
 
 #define INTERPOLATE_SMP8_LOOP(pos, f) \
 	const int8_t *s8 = s->base8 + pos; \
@@ -120,7 +120,7 @@
 		LINEAR_INTERPOLATION8(f) \
 	else \
 		CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, f) \
-	sample = (sample * s->volume) >> (16+10);
+	sample = (int32_t)floorf(fSample * fVolume);
 
 #define INTERPOLATE_SMP16_LOOP(pos, f) \
 	const int16_t *s16 = s->base16 + pos; \
@@ -130,25 +130,36 @@
 		LINEAR_INTERPOLATION16(f) \
 	else \
 		CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, f) \
-	sample = (sample * s->volume) >> (16+10);
+	sample = (int32_t)floorf(fSample * fVolume);
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
-		sample = ((s->base8[position] * (256*SCOPE_HEIGHT)) * s->volume) >> (16+10); \
+	{ \
+		fSample = s->base8[position] * (1.0f / 128.0f); \
+		sample = (int32_t)floorf(fSample * fVolume); \
+	} \
 	else \
-		sample = 0;
+	{ \
+		sample = 0; \
+	}
 
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
-		sample = ((s->base16[position] * SCOPE_HEIGHT) * s->volume) >> (16+10); \
+	{ \
+		fSample = s->base16[position] * (1.0f / 32768.0f); \
+		sample = (int32_t)floorf(fSample * fVolume); \
+	} \
 	else \
-		sample = 0;
+	{ \
+		sample = 0; \
+	}
 
 #define SCOPE_GET_SMP8_PINGPONG \
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		sample = ((s->base8[actualPos] * (256*SCOPE_HEIGHT)) * s->volume) >> (16+10); \
+		fSample = s->base8[actualPos] * (1.0f / 128.0f); \
+		sample = (int32_t)floorf(fSample * fVolume); \
 	} \
 	else \
 	{ \
@@ -159,7 +170,8 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		sample = ((s->base16[actualPos] * SCOPE_HEIGHT) * s->volume) >> (16+10); \
+		fSample = s->base16[actualPos] * (1.0f / 32768.0f); \
+		sample = (int32_t)floorf(fSample * fVolume); \
 	} \
 	else \
 	{ \

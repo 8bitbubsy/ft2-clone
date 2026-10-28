@@ -351,7 +351,7 @@ void updateVoices(void)
 		if (status & CS_UPDATE_VOL)
 		{
 			v->fVolume = ch->fFinalVol; // 0.0f .. 1.0f
-			v->scopeVolume = (int16_t)(int32_t)((ch->fFinalVol * 1024.0f) + 0.5f);
+			v->scopeVolume = (uint16_t)(int32_t)((ch->fFinalVol * 32768.0f) + 0.5f);
 		}
 
 		if (status & CS_UPDATE_PAN)

@@ -33,8 +33,7 @@ typedef struct scope_t
 	const int16_t *base16;
 	bool wasCleared, sample16Bit, samplingBackwards, hasLooped;
 	uint8_t loopType;
-	int16_t volume;
-	int32_t loopStart, loopLength, loopEnd, sampleEnd, position;
+	int32_t volume, loopStart, loopLength, loopEnd, sampleEnd, position;
 	uint64_t drawDelta;
 	uint64_t delta, positionFrac;
 
