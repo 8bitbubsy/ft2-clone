@@ -3587,14 +3587,14 @@ static int32_t fixDCThread(void *ptr)
 
 	if (s->flags & SAMPLE_16BIT)
 	{
+		ptr16 = (int16_t *)s->dataPtr;
 		if (!sampleDataMarked)
 		{
-			ptr16 = (int16_t *)s->dataPtr;
 			length = s->length;
 		}
 		else
 		{
-			ptr16 = (int16_t *)&s->dataPtr + smpEd_Rx1;
+			ptr16 += smpEd_Rx1;
 			length = smpEd_Rx2 - smpEd_Rx1;
 		}
 
@@ -3610,6 +3610,7 @@ static int32_t fixDCThread(void *ptr)
 		int64_t averageDC = 0;
 		for (int32_t i = 0; i < length; i++)
 			averageDC += ptr16[i];
+
 		averageDC = (averageDC + (length>>1)) / length; // rounded
 
 		const int32_t smpSub = (int32_t)averageDC;
@@ -3624,14 +3625,14 @@ static int32_t fixDCThread(void *ptr)
 	}
 	else // 8-bit
 	{
+		ptr8 = s->dataPtr;
 		if (!sampleDataMarked)
 		{
-			ptr8 = s->dataPtr;
 			length = s->length;
 		}
 		else
 		{
-			ptr8 = &s->dataPtr[smpEd_Rx1];
+			ptr8 += smpEd_Rx1;
 			length = smpEd_Rx2 - smpEd_Rx1;
 		}
 
