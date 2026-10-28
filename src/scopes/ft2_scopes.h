@@ -17,16 +17,6 @@
 #define SCOPE_FRAC_SCALE ((int64_t)1 << SCOPE_FRAC_BITS)
 #define SCOPE_FRAC_MASK (SCOPE_FRAC_SCALE-1)
 
-#define SCOPE_INTRP_WIDTH 4
-#define SCOPE_INTRP_WIDTH_BITS 2 /* log2(SCOPE_INTRP_WIDTH) */
-#define SCOPE_INTRP_SCALE_BITS 15
-#define SCOPE_INTRP_PHASES 32 /* good enough */
-#define SCOPE_INTRP_PHASES_BITS 5 /* log2(SCOPE_INTRP_PHASES) */
-
-#define INTRP_BITS (15+SCOPE_INTRP_PHASES_BITS)
-#define INTRP_PHASE_SHIFT (INTRP_BITS-SCOPE_INTRP_PHASES_BITS)
-#define INTRP_PHASE_MASK ((1 << INTRP_PHASE_SHIFT)-1)
-
 int32_t getSamplePositionFromScopes(uint8_t ch);
 void stopAllScopes(void);
 void refreshScopes(void);

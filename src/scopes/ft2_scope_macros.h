@@ -35,119 +35,112 @@
 
 #define NO_INTERPOLATION8 \
 { \
-	sample = s8[0] << 8; \
+	sample = s8[0] * (256 * SCOPE_HEIGHT); \
 }
 
 #define NO_INTERPOLATION16 \
 { \
-	sample = s16[0]; \
+	sample = s16[0] * SCOPE_HEIGHT; \
 }
 
-// linear interpolation
+// 2-point linear interpolation
 
-#define LINEAR_INTERPOLATION(smp1, smp2, frac) \
+#define LINEAR_INTERPOLATION(s, f, smpBits) \
 { \
-	const int32_t frac15 = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-15); \
-	const int32_t s1 = smp1, s2 = smp2; \
+	const int32_t frac31 = (uint32_t)(f) >> (SCOPE_FRAC_BITS-31); \
+	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float s1 = s[0], s2 = s[1]; \
 	\
-	sample = s1 + (((s2 - s1) * frac15) >> 15); \
+	sample = (int32_t)((s1 + ((s2 - s1) * t)) * (float)(SCOPE_HEIGHT * (1 << (16-smpBits)))); \
 }
 
-#define LINEAR_INTERPOLATION8(frac) LINEAR_INTERPOLATION(s8[0] << 8, s8[1] << 8, frac)
-#define LINEAR_INTERPOLATION16(frac) LINEAR_INTERPOLATION(s16[0], s16[1], frac)
+#define LINEAR_INTERPOLATION8(frac) LINEAR_INTERPOLATION(s8, frac, 8)
+#define LINEAR_INTERPOLATION16(frac) LINEAR_INTERPOLATION(s16, frac, 16)
 
-/* 4-point cubic B-spline interpolation (32 phases with interpolation between them).
-** The LUT has an extra inverted phase at the end for interpolation wrap-around.
-*/
+// 4-point cubic B-spline interpolation
 
-#define CUBIC_BSPLINE_INTERPOLATION(data, shift, frac) \
+#define CUBIC_BSPLINE_INTERPOLATION(s, f, smpBits) \
 { \
-	const uint32_t fracReduced = (uint32_t)(frac) >> (SCOPE_FRAC_BITS-INTRP_BITS); \
-	const uint32_t phaseInt5 = fracReduced >> INTRP_PHASE_SHIFT; \
-	const int32_t phaseFrac15 = fracReduced & INTRP_PHASE_MASK; \
-	const int16_t *t = scopeIntrpLUT + (phaseInt5 << SCOPE_INTRP_WIDTH_BITS); \
+	const int32_t frac31 = (uint32_t)(f) >> (SCOPE_FRAC_BITS-31); \
+	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float s1 = s[-1], s2 = s[0], s3 = s[1], s4 = s[2]; \
 	\
-	const int32_t s1 = ((data[-1] * t[0]) + \
-	                    ( data[0] * t[1]) + \
-	                    ( data[1] * t[2]) + \
-	                    ( data[2] * t[3])) >> (shift); \
+	const float a = ((s4 - s1) * (1.0f / 6.0f)) + ((s2 - s3) * (3.0f / 6.0f)); \
+	const float b = ((s1 + s3) * (3.0f / 6.0f)) - s2; \
+	const float c =  (s3 - s1) * (3.0f / 6.0f); \
+	const float d = ((s1 + s3) * (1.0f / 6.0f)) + (s2 * (4.0f / 6.0f)); \
 	\
-	const int32_t s2 = ((data[-1] * t[SCOPE_INTRP_WIDTH+0]) + \
-	                    ( data[0] * t[SCOPE_INTRP_WIDTH+1]) + \
-	                    ( data[1] * t[SCOPE_INTRP_WIDTH+2]) + \
-	                    ( data[2] * t[SCOPE_INTRP_WIDTH+3])) >> (shift); \
-	\
-	sample = s1 + (((s2 - s1) * phaseFrac15) >> INTRP_PHASE_SHIFT); \
+	sample = (int32_t)((((a * t + b) * t + c) * t + d) * (float)(SCOPE_HEIGHT * (1 << (16-smpBits)))); \
 }
 
-#define CUBIC_BSPLINE_INTERPOLATION8(frac) CUBIC_BSPLINE_INTERPOLATION(s8, SCOPE_INTRP_SCALE_BITS-8, frac)
-#define CUBIC_BSPLINE_INTERPOLATION16(frac) CUBIC_BSPLINE_INTERPOLATION(s16, SCOPE_INTRP_SCALE_BITS, frac)
+#define CUBIC_BSPLINE_INTERPOLATION8(f) CUBIC_BSPLINE_INTERPOLATION(s8, f, 8)
+#define CUBIC_BSPLINE_INTERPOLATION16(f) CUBIC_BSPLINE_INTERPOLATION(s16, f, 16)
 
-#define CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, frac) \
+#define CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, f) \
 { \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
 		s8 = s->leftEdgeTaps8 + (pos - s->loopStart); \
 	\
-	CUBIC_BSPLINE_INTERPOLATION(s8, SCOPE_INTRP_SCALE_BITS-8, frac) \
+	CUBIC_BSPLINE_INTERPOLATION(s8, f, 8) \
 } \
 
-#define CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, frac) \
+#define CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, f) \
 { \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
 		s16 = s->leftEdgeTaps16 + (pos - s->loopStart); \
 	\
-	CUBIC_BSPLINE_INTERPOLATION(s16, SCOPE_INTRP_SCALE_BITS, frac) \
+	CUBIC_BSPLINE_INTERPOLATION(s16, f, 16) \
 } \
 
-#define INTERPOLATE_SMP8(pos, frac) \
+#define INTERPOLATE_SMP8(pos, f) \
 	const int8_t *s8 = s->base8 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
 		NO_INTERPOLATION8 \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
-		LINEAR_INTERPOLATION8(frac) \
+		LINEAR_INTERPOLATION8(f) \
 	else \
-		CUBIC_BSPLINE_INTERPOLATION8(frac) \
-	sample = (sample * s->volume) >> (16+9);
+		CUBIC_BSPLINE_INTERPOLATION8(f) \
+	sample = (sample * s->volume) >> (16+10);
 
-#define INTERPOLATE_SMP16(pos, frac) \
+#define INTERPOLATE_SMP16(pos, f) \
 	const int16_t *s16 = s->base16 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
 		NO_INTERPOLATION16 \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
-		LINEAR_INTERPOLATION16(frac) \
+		LINEAR_INTERPOLATION16(f) \
 	else \
-		CUBIC_BSPLINE_INTERPOLATION16(frac) \
-	sample = (sample * s->volume) >> (16+9);
+		CUBIC_BSPLINE_INTERPOLATION16(f) \
+	sample = (sample * s->volume) >> (16+10);
 
-#define INTERPOLATE_SMP8_LOOP(pos, frac) \
+#define INTERPOLATE_SMP8_LOOP(pos, f) \
 	const int8_t *s8 = s->base8 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
 		NO_INTERPOLATION8 \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
-		LINEAR_INTERPOLATION8(frac) \
+		LINEAR_INTERPOLATION8(f) \
 	else \
-		CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, frac) \
-	sample = (sample * s->volume) >> (16+9);
+		CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, f) \
+	sample = (sample * s->volume) >> (16+10);
 
-#define INTERPOLATE_SMP16_LOOP(pos, frac) \
+#define INTERPOLATE_SMP16_LOOP(pos, f) \
 	const int16_t *s16 = s->base16 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
 		NO_INTERPOLATION16 \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
-		LINEAR_INTERPOLATION16(frac) \
+		LINEAR_INTERPOLATION16(f) \
 	else \
-		CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, frac) \
-	sample = (sample * s->volume) >> (16+9);
+		CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, f) \
+	sample = (sample * s->volume) >> (16+10);
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
-		sample = (s->base8[position] * s->volume) >> (8+9); \
+		sample = ((s->base8[position] * (256*SCOPE_HEIGHT)) * s->volume) >> (16+10); \
 	else \
 		sample = 0;
 
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
-		sample = (s->base16[position] * s->volume) >> (16+9); \
+		sample = ((s->base16[position] * SCOPE_HEIGHT) * s->volume) >> (16+10); \
 	else \
 		sample = 0;
 
@@ -155,7 +148,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		sample = (s->base8[actualPos] * s->volume) >> (8+9); \
+		sample = ((s->base8[actualPos] * (256*SCOPE_HEIGHT)) * s->volume) >> (16+10); \
 	} \
 	else \
 	{ \
@@ -166,7 +159,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		sample = (s->base16[actualPos] * s->volume) >> (16+9); \
+		sample = ((s->base16[actualPos] * SCOPE_HEIGHT) * s->volume) >> (16+10); \
 	} \
 	else \
 	{ \
