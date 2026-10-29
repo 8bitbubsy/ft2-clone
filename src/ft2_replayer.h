@@ -273,7 +273,6 @@ typedef struct song_t
 	int16_t songPos, pattNum, row, currNumRows;
 	uint16_t songLength, songLoopStart, BPM, speed, initialSpeed, globalVolume, tick;
 	int32_t numChannels;
-
 	double dPlaybackSeconds;
 } song_t;
 
