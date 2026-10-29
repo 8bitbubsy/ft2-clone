@@ -23,3 +23,12 @@ vs2026_project/ft2-clone/x64/*
 *.recipe
 *.iobj
 *.enc
+
+# Local CMake build
+/build/
+
+# Generated macOS application bundle
+/FastTracker.app/
+
+# Locally compiled executable
+/release/other/ft2-clone
