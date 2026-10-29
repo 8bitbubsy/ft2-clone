@@ -180,16 +180,16 @@ void pbSfxTriangle(void)
 	memset(lengthStr, '\0', sizeof (lengthStr));
 	snprintf(lengthStr, sizeof (lengthStr), "%d", lastWaveLength);
 
-	if (inputBox(1, "Enter new waveform length:", lengthStr, sizeof (lengthStr)-1) != 1)
+	if (inputBox(1, "Enter new waveform length (3..9999):", lengthStr, sizeof (lengthStr)-1) != 1)
 		return;
 
 	if (lengthStr[0] == '\0')
 		return;
 
 	lastWaveLength = (int32_t)atoi(lengthStr);
-	if (lastWaveLength <= 1 || lastWaveLength > 65536)
+	if (lastWaveLength < 3 || lastWaveLength > 9999)
 	{
-		okBox(0, "System message", "Illegal range! Allowed range is 2..65535", NULL);
+		okBox(0, "System message", "Illegal length! Allowed range is 3..9999", NULL);
 		return;
 	}
 
@@ -207,20 +207,23 @@ void pbSfxTriangle(void)
 		return;
 	}
 
-	const double delta = 4.0 / lastWaveLength;
-	double phase = 0.0;
-
 	int16_t *ptr16 = (int16_t *)s->dataPtr;
+
+	const double dDelta = 4.0 / (double)lastWaveLength;
+	double dPhase = 0.0;
+
 	for (int32_t i = 0; i < newLength; i++)
 	{
-		double t = phase;
-		if (t > 3.0)
-			t -= 4.0;
-		else if (t >= 1.0)
-			t = 2.0 - t;
+		double dT = dPhase;
+		if (dT > 3.0)
+			dT -= 4.0;
+		else if (dT >= 1.0)
+			dT = 2.0 - dT;
 
-		*ptr16++ = (int16_t)(t * INT16_MAX);
-		phase = fmod(phase + delta, 4.0);
+		dPhase = fmod(dPhase + dDelta, 4.0);
+
+		int32_t smp = (int32_t)round(INT16_MAX * dT);
+		*ptr16++ = (int16_t)smp;
 	}
 
 	s->loopLength = newLength;
@@ -238,16 +241,16 @@ void pbSfxSaw(void)
 	memset(lengthStr, '\0', sizeof (lengthStr));
 	snprintf(lengthStr, sizeof (lengthStr), "%d", lastWaveLength);
 
-	if (inputBox(1, "Enter new waveform length:", lengthStr, sizeof (lengthStr)-1) != 1)
+	if (inputBox(1, "Enter new waveform length (3..9999):", lengthStr, sizeof (lengthStr)-1) != 1)
 		return;
 
 	if (lengthStr[0] == '\0')
 		return;
 
 	lastWaveLength = (int32_t)atoi(lengthStr);
-	if (lastWaveLength <= 1 || lastWaveLength > 65536)
+	if (lastWaveLength < 3 || lastWaveLength > 9999)
 	{
-		okBox(0, "System message", "Illegal range! Allowed range is 2..65535", NULL);
+		okBox(0, "System message", "Illegal length! Allowed range is 3..9999", NULL);
 		return;
 	}
 
@@ -264,15 +267,17 @@ void pbSfxSaw(void)
 		okBox(0, "System message", "Not enough memory!", NULL);
 		return;
 	}
-
-	uint64_t point64 = 0;
-	uint64_t delta64 = ((uint64_t)(INT16_MAX*2) << 32ULL) / lastWaveLength;
-
+	
 	int16_t *ptr16 = (int16_t *)s->dataPtr;
+
+	const double dDelta = (INT16_MAX * 2.0) / (double)lastWaveLength;
+	double dPoint = 0.0;
+
 	for (int32_t i = 0; i < newLength; i++)
 	{
-		*ptr16++ = (int16_t)(point64 >> 32);
-		point64 += delta64;
+		int32_t smp = (int32_t)round(dPoint);
+		*ptr16++ = (int16_t)smp;
+		dPoint += dDelta;
 	}
 
 	s->loopLength = newLength;
@@ -290,16 +295,16 @@ void pbSfxSine(void)
 	memset(lengthStr, '\0', sizeof (lengthStr));
 	snprintf(lengthStr, sizeof (lengthStr), "%d", lastWaveLength);
 
-	if (inputBox(1, "Enter new waveform length:", lengthStr, sizeof (lengthStr)-1) != 1)
+	if (inputBox(1, "Enter new waveform length (6..9999):", lengthStr, sizeof (lengthStr)-1) != 1)
 		return;
 
 	if (lengthStr[0] == '\0')
 		return;
 
 	lastWaveLength = (int32_t)atoi(lengthStr);
-	if (lastWaveLength <= 1 || lastWaveLength > 65536)
+	if (lastWaveLength < 6 || lastWaveLength > 9999)
 	{
-		okBox(0, "System message", "Illegal range! Allowed range is 2..65535", NULL);
+		okBox(0, "System message", "Illegal length! Allowed range is 6..9999", NULL);
 		return;
 	}
 
@@ -317,11 +322,14 @@ void pbSfxSine(void)
 		return;
 	}
 
-	const double dMul = (2.0 * M_PI) / lastWaveLength;
-
 	int16_t *ptr16 = (int16_t *)s->dataPtr;
+
+	const double dMul = (2.0 * M_PI) / (double)lastWaveLength;
 	for (int32_t i = 0; i < newLength; i++)
-		*ptr16++ = (int16_t)(INT16_MAX * sin(i * dMul));
+	{
+		int32_t smp = (int32_t)round(INT16_MAX * sin(i * dMul));
+		*ptr16++ = (int16_t)smp;
+	}
 
 	s->loopLength = newLength;
 	s->flags |= LOOP_FORWARD;
@@ -338,16 +346,22 @@ void pbSfxSquare(void)
 	memset(lengthStr, '\0', sizeof (lengthStr));
 	snprintf(lengthStr, sizeof (lengthStr), "%d", lastWaveLength);
 
-	if (inputBox(1, "Enter new waveform length:", lengthStr, sizeof (lengthStr)-1) != 1)
+	if (inputBox(1, "Enter new waveform length (2..9999, even):", lengthStr, sizeof (lengthStr)-1) != 1)
 		return;
 
 	if (lengthStr[0] == '\0')
 		return;
 
 	lastWaveLength = (int32_t)atoi(lengthStr);
-	if (lastWaveLength <= 1 || lastWaveLength > 65536)
+	if (lastWaveLength < 2 || lastWaveLength > 9999)
 	{
-		okBox(0, "System message", "Illegal range! Allowed range is 2..65535", NULL);
+		okBox(0, "System message", "Illegal length! Allowed range is 2..9999", NULL);
+		return;
+	}
+
+	if (lastWaveLength & 1)
+	{
+		okBox(0, "System message", "Illegal length! Length must be an even number (2, 4, 6, 8, ...)", NULL);
 		return;
 	}
 
