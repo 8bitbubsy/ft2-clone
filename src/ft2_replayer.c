@@ -30,8 +30,7 @@
 #include "mixer/ft2_windowed_sinc.h"
 
 static uint32_t logTab[4*12*16], frequencyMulFactor, frequencyDivFactor;
-static uint64_t songTickDuration52fp[(MAX_BPM-MIN_BPM)+1];
-static double dDeltaMul, dScopeDeltaMul, dScopeDrawDeltaMul;
+static double dSongTickDuration[(MAX_BPM-MIN_BPM)+1], dDeltaMul, dScopeDeltaMul, dScopeDrawDeltaMul;
 static bool bxxOverflow;
 static note_t nilPatternLine[MAX_CHANNELS];
 
@@ -490,7 +489,9 @@ void calcReplayerVars(int32_t referenceFt2AudioFreq, int32_t audioFreq)
 		const int32_t i = bpm - MIN_BPM;
 		audio.samplesPerTickIntTab[i] = (uint32_t)dSamplesPerTickInt;
 		audio.samplesPerTickFracTab[i] = (uint64_t)(dSamplesPerTickFrac * BPM_FRAC_SCALE);
-		songTickDuration52fp[i] = (uint64_t)round((1ULL << 52ULL) / dFt2BPMHz);
+
+		dSongTickDuration[i] = 1.0 / dFt2BPMHz;
+
 		audio.tickTimeIntTab[i] = (uint32_t)dTickTimeInt;
 		audio.tickTimeFracTab[i] = (uint64_t)(dTickTimeFrac * TICK_TIME_FRAC_SCALE);
 	}
@@ -2374,12 +2375,10 @@ void tickReplayer(void) // periodically called from audio callback
 	// for song playback counter (hh:mm:ss)
 	if (song.BPM >= MIN_BPM && song.BPM <= MAX_BPM) // just in case
 	{
-		song.playbackSecondsFrac += songTickDuration52fp[song.BPM-MIN_BPM];
-		if (song.playbackSecondsFrac >= 1ULL << 52)
-		{
-			song.playbackSecondsFrac &= (1ULL << 52)-1;
-			song.playbackSeconds++;
-		}
+		song.dPlaybackSeconds += dSongTickDuration[song.BPM-MIN_BPM];
+
+		if (song.dPlaybackSeconds >= (99.0*60.0*60.0)+60.0) // wrap around 99:59:59 -> 00:00:00
+			song.dPlaybackSeconds = 0.0;
 	}
 
 	bool tickZero = false;
