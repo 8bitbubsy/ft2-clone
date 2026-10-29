@@ -542,15 +542,16 @@ static bool applyResoFilter(sample_t *s, resoFilter_t *f)
 			int16_t *ptr16 = (int16_t *)s->dataPtr + x1;
 			for (int32_t i = 0; i < len; i++)
 			{
-				double out = (f->a1*ptr16[i]) + (f->a2*f->inTmp[0]) + (f->a3*f->inTmp[1]) - (f->b1*f->outTmp[0]) - (f->b2*f->outTmp[1]);
+				double dOut = (f->a1*ptr16[i]) + (f->a2*f->inTmp[0]) + (f->a3*f->inTmp[1]) - (f->b1*f->outTmp[0]) - (f->b2*f->outTmp[1]);
 
 				f->inTmp[1] = f->inTmp[0];
 				f->inTmp[0] = ptr16[i];
 
 				f->outTmp[1] = f->outTmp[0];
-				f->outTmp[0] = out;
+				f->outTmp[0] = dOut;
 
-				ptr16[i] = (int16_t)CLAMP(out, INT16_MIN, INT16_MAX);
+				int32_t sample = (int32_t)CLAMP(dOut, INT16_MIN, INT16_MAX);
+				ptr16[i] = (int16_t)sample;
 			}
 		}
 		else
@@ -558,15 +559,16 @@ static bool applyResoFilter(sample_t *s, resoFilter_t *f)
 			int8_t *ptr8 = (int8_t *)s->dataPtr + x1;
 			for (int32_t i = 0; i < len; i++)
 			{
-				double out = (f->a1*ptr8[i]) + (f->a2*f->inTmp[0]) + (f->a3*f->inTmp[1]) - (f->b1*f->outTmp[0]) - (f->b2*f->outTmp[1]);
+				double dOut = (f->a1*ptr8[i]) + (f->a2*f->inTmp[0]) + (f->a3*f->inTmp[1]) - (f->b1*f->outTmp[0]) - (f->b2*f->outTmp[1]);
 
 				f->inTmp[1] = f->inTmp[0];
 				f->inTmp[0] = ptr8[i];
 
 				f->outTmp[1] = f->outTmp[0];
-				f->outTmp[0] = out;
+				f->outTmp[0] = dOut;
 
-				ptr8[i] = (int8_t)CLAMP(out, INT8_MIN, INT8_MAX);
+				int32_t sample = (int32_t)CLAMP(dOut, INT8_MIN, INT8_MAX);
+				ptr8[i] = (int8_t)sample;
 			}
 		}
 
@@ -601,36 +603,42 @@ static bool applyResoFilter(sample_t *s, resoFilter_t *f)
 		double peak = 0.0;
 		for (int32_t i = 0; i < len; i++)
 		{
-			const double out = (f->a1*dSmp[i]) + (f->a2*f->inTmp[0]) + (f->a3*f->inTmp[1]) - (f->b1*f->outTmp[0]) - (f->b2*f->outTmp[1]);
+			const double dOut = (f->a1*dSmp[i]) + (f->a2*f->inTmp[0]) + (f->a3*f->inTmp[1]) - (f->b1*f->outTmp[0]) - (f->b2*f->outTmp[1]);
 
 			f->inTmp[1] = f->inTmp[0];
 			f->inTmp[0] = dSmp[i];
 
 			f->outTmp[1] = f->outTmp[0];
-			f->outTmp[0] = out;
+			f->outTmp[0] = dOut;
 
-			dSmp[i] = out;
+			dSmp[i] = dOut;
 
-			const double outAbs = fabs(out);
+			const double outAbs = fabs(dOut);
 			if (outAbs > peak)
 				peak = outAbs;
 		}
 
 		if (s->flags & SAMPLE_16BIT)
 		{
-			const double scale = INT16_MAX / peak;
+			const double dScale = INT16_MAX / peak;
 
 			int16_t *ptr16 = (int16_t *)s->dataPtr + x1;
 			for (int32_t i = 0; i < len; i++)
-				ptr16[i] = (int16_t)(dSmp[i] * scale);
+			{
+				int32_t sample = (int32_t)(dSmp[i] * dScale);
+				ptr16[i] = (int16_t)sample;
+			}
 		}
 		else
 		{
-			const double scale = INT8_MAX / peak;
+			const double dScale = INT8_MAX / peak;
 
 			int8_t *ptr8 = (int8_t *)s->dataPtr + x1;
 			for (int32_t i = 0; i < len; i++)
-				ptr8[i] = (int8_t)(dSmp[i] * scale);
+			{
+				int32_t sample = (int32_t)(dSmp[i] * dScale);
+				ptr8[i] = (int8_t)sample;
+			}
 		}
 
 		free(dSmp);
