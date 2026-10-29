@@ -1007,7 +1007,9 @@ bool setupRenderer(void)
 
 	SDL_SetRenderDrawColor(video.renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
 
+	// for CTRL+SHIFT+F info screen
 	dFrameDurationDiv = (1000.0 * FPS_SCAN_FRAMES) / hpcFreq.dFreqMulMs;
+
 	return true;
 }
 
