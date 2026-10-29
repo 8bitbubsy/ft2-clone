@@ -103,10 +103,7 @@ bool loadMP3(FILE *f, uint32_t filesize)
 
 	int16_t stereoAction = -1;
 	if (mp3IsStereo)
-	{
 		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true); // kludge
-	}
 
 	if (fread(buf, 1, filesize, f) != filesize)
 	{

@@ -106,10 +106,7 @@ bool loadOGG(FILE *f, uint32_t filesize)
 
 	int16_t stereoAction = -1;
 	if (numChannels == 2)
-	{
 		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true); // kludge
-	}
 
 	const int32_t shift = (numChannels == 2) ? 2 : 1;
 	const int32_t bufferSamples = SAMPLE_BUFFER_SIZE >> shift;

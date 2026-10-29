@@ -155,10 +155,7 @@ bool loadAIFF(FILE *f, uint32_t filesize)
 
 	int16_t stereoAction = -1;
 	if (aiffIsStereo(f))
-	{
 		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true); // kludge
-	}
 
 	// read sample data
 

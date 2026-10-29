@@ -196,6 +196,8 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 	pushButton_t *p;
 	SDL_Event inputEvent;
 
+	volatile bool wasBusy = editor.busy;
+
 	if (editor.editTextFlag)
 	{
 		exitTextEditing();
@@ -402,6 +404,10 @@ int16_t okBox(int16_t type, const char *headline, const char *text, void (*check
 	showBottomScreen();
 
 	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+
+	if (wasBusy)
+		mouseAnimOn();
+
 	return returnVal;
 }
 
@@ -415,6 +421,8 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 #define TEXTBOX_W 250
 
 	SDL_Event inputEvent;
+
+	volatile bool wasBusy = editor.busy;
 
 	if (editor.editTextFlag)
 	{
@@ -673,6 +681,10 @@ int16_t inputBox(int16_t type, const char *headline, char *edText, uint16_t maxS
 	showBottomScreen();
 
 	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+
+	if (wasBusy)
+		mouseAnimOn();
+
 	return returnVal;
 }
 

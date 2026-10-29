@@ -193,10 +193,7 @@ bool loadWAV(FILE *f, uint32_t filesize)
 
 	int16_t stereoAction = -1;
 	if (wavIsStereo(f))
-	{
 		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true); // kludge
-	}
 
 	if (bitsPerSample == 8) // 8-BIT INTEGER SAMPLE
 	{

@@ -191,10 +191,7 @@ bool loadFLAC(FILE *f, uint32_t filesize)
 
 	stereoAction = -1;
 	if (numChannels == 2)
-	{
 		stereoAction = loaderSysReq(4, "System request", "This is a stereo sample. Which channel do you want to read?", NULL);
-		setMouseBusy(true); // kludge
-	}
 
 	bool sample16Bit = (bitDepth >= 16);
 	if (sample16Bit)
