@@ -116,10 +116,10 @@
 #define LINEAR_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
-	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
-	const float s1 = s[0], s2 = s[1]; \
+	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float p1 = s[0], p2 = s[1]; \
 	\
-	fSample = (s1 + ((s2 - s1) * t)) * (1.0f / (1 << (smpBits-1))); \
+	fSample = (p1 + ((p2 - p1) * x)) * (1.0f / (1 << (smpBits-1))); \
 }
 
 #define RENDER_8BIT_SMP_LINTRP \
@@ -138,13 +138,14 @@
 #define QUADRATIC_SPLINE_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
-	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
-	const float s1 = s[-1], s2 = s[0], s3 = s[1]; \
+	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float p1 = s[-1], p2 = s[0], p3 = s[1]; \
 	\
-	const float a = ((s1 + s3) * 0.5f) - s2; \
-	const float b =  (s3 - s1) * 0.5f; \
+	const float a = ((p1 + p3) * 0.5f) - p2; \
+	const float b = (p3 - p1) * 0.5f; \
+	const float c = p2; \
 	\
-	fSample = ((a * t + b) * t + s2) * (float)(1.0 / (1 << (smpBits-1))); \
+	fSample = ((a * x + b) * x + c) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
 #define RENDER_8BIT_SMP_QINTRP \
@@ -167,21 +168,21 @@
 
 
 /* ----------------------------------------------------------------------- */
-/*                   4-POINT CUBIC SPLINE INTERPOLATION                    */
+/*            4-POINT CUBIC SPLINE ("Catmull-Rom") INTERPOLATION           */
 /* ----------------------------------------------------------------------- */
 
-// Catmull-Rom algorithm
 #define CUBIC_SPLINE_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
-	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
-	const float s1 = s[-1], s2 = s[0], s3 = s[1], s4 = s[2]; \
+	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float p1 = s[-1], p2 = s[0], p3 = s[1], p4 = s[2]; \
 	\
-	const float a = ((s4 - s1) * 0.5f) + ((s2 - s3) * 1.5f); \
-	const float b = ((s1 - (s2 * 2.5f)) + (s3 * 2.0f)) - (s4 * 0.5f); \
-	const float c = (s3 - s1) * 0.5f; \
+	const float a = ((p4 - p1) * 0.5f) + ((p2 - p3) * 1.5f); \
+	const float b = ((p1 - (p2 * 2.5f)) + (p3 * 2.0f)) - (p4 * 0.5f); \
+	const float c = (p3 - p1) * 0.5f; \
+	const float d = p2; \
 	\
-	fSample = (((a * t + b) * t + c) * t + s2) * (float)(1.0 / (1 << (smpBits-1))); \
+	fSample = (((a * x + b) * x + c) * x + d) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
 #define RENDER_8BIT_SMP_CINTRP \

@@ -6,7 +6,7 @@
 
 #define SCOPE_INIT \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
-	uint32_t width = x + w; \
+	uint32_t width = sx + w; \
 	int32_t sample, position = s->position; \
 	uint64_t positionFrac = s->positionFrac; \
 	float fSample; \
@@ -14,7 +14,7 @@
 
 #define SCOPE_INIT_PINGPONG \
 	const uint32_t color = video.palette[PAL_PATTEXT]; \
-	uint32_t width = x + w; \
+	uint32_t width = sx + w; \
 	int32_t sample, actualPos, position = s->position; \
 	uint64_t positionFrac = s->positionFrac; \
 	bool samplingBackwards = s->samplingBackwards; \
@@ -43,10 +43,10 @@
 #define LINEAR_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)(f) >> (SCOPE_FRAC_BITS-31); \
-	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
-	const float s1 = s[0], s2 = s[1]; \
+	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float p1 = s[0], p2 = s[1]; \
 	\
-	fSample = (s1 + ((s2 - s1) * t)) * (float)(1.0 / (1 << (smpBits-1))); \
+	fSample = (p1 + ((p2 - p1) * x)) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
 #define LINEAR_INTERPOLATION8(f) LINEAR_INTERPOLATION(s8, f, 8)
@@ -57,15 +57,15 @@
 #define CUBIC_BSPLINE_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)(f) >> (SCOPE_FRAC_BITS-31); \
-	const float t = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
-	const float s1 = s[-1], s2 = s[0], s3 = s[1], s4 = s[2]; \
+	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float p1 = s[-1], p2 = s[0], p3 = s[1], p4 = s[2]; \
 	\
-	const float a = ((s4 - s1) * (1.0f / 6.0f)) + ((s2 - s3) * (3.0f / 6.0f)); \
-	const float b = ((s1 + s3) * (3.0f / 6.0f)) - s2; \
-	const float c =  (s3 - s1) * (3.0f / 6.0f); \
-	const float d = ((s1 + s3) * (1.0f / 6.0f)) + (s2 * (4.0f / 6.0f)); \
+	const float a = ((p4 - p1) * (1.0f / 6.0f)) + ((p2 - p3) * (3.0f / 6.0f)); \
+	const float b = ((p1 + p3) * (3.0f / 6.0f)) - p2; \
+	const float c =  (p3 - p1) * (3.0f / 6.0f); \
+	const float d = ((p1 + p3) * (1.0f / 6.0f)) + (p2 * (4.0f / 6.0f)); \
 	\
-	fSample = (((a * t + b) * t + c) * t + d) * (float)(1.0 / (1 << (smpBits-1))); \
+	fSample = (((a * x + b) * x + c) * x + d) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
 #define CUBIC_BSPLINE_INTERPOLATION8(f) CUBIC_BSPLINE_INTERPOLATION(s8, f, 8)
@@ -248,7 +248,7 @@
 	positionFrac &= SCOPE_FRAC_MASK;
 
 #define SCOPE_DRAW_SMP \
-	video.frameBuffer[((lineY - sample) * SCREEN_W) + x] = color;
+	video.frameBuffer[((lineY - sample) * SCREEN_W) + sx] = color;
 
 #define LINED_SCOPE_PREPARE_SMP8 \
 	SCOPE_GET_INTERPOLATED_SMP8 \
@@ -282,7 +282,7 @@
 
 #define LINED_SCOPE_DRAW_SMP \
 	smpY2 = lineY - sample; \
-	scopeLine(x, smpY1, smpY2, color); \
+	scopeLine(sx, smpY1, smpY2, color); \
 	smpY1 = smpY2;
 
 #define SCOPE_HANDLE_POS_NO_LOOP \

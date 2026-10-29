@@ -14,11 +14,11 @@ static void scopeLine(int32_t x1, int32_t y1, int32_t y2, const uint32_t color);
 /*                    NON-LINED SCOPE DRAWING ROUTINES                     */
 /* ----------------------------------------------------------------------- */
 
-static void scopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawNoLoop_8bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	SCOPE_INIT
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_SMP8
 		SCOPE_DRAW_SMP
@@ -27,11 +27,11 @@ static void scopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_
 	}
 }
 
-static void scopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawLoop_8bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	SCOPE_INIT
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_SMP8
 		SCOPE_DRAW_SMP
@@ -40,11 +40,11 @@ static void scopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t 
 	}
 }
 
-static void scopeDrawPingpongLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawPingpongLoop_8bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	SCOPE_INIT_PINGPONG
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_SMP8_PINGPONG
 		SCOPE_DRAW_SMP
@@ -53,11 +53,11 @@ static void scopeDrawPingpongLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, u
 	}
 }
 
-static void scopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawNoLoop_16bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	SCOPE_INIT
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_SMP16
 		SCOPE_DRAW_SMP
@@ -66,11 +66,11 @@ static void scopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32
 	}
 }
 
-static void scopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawLoop_16bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	SCOPE_INIT
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_SMP16
 		SCOPE_DRAW_SMP
@@ -79,11 +79,11 @@ static void scopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t
 	}
 }
 
-static void scopeDrawPingpongLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void scopeDrawPingpongLoop_16bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	SCOPE_INIT_PINGPONG
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_SMP16_PINGPONG
 		SCOPE_DRAW_SMP
@@ -96,13 +96,13 @@ static void scopeDrawPingpongLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, 
 /*                       LINED SCOPE DRAWING ROUTINES                      */
 /* ----------------------------------------------------------------------- */
 
-static void linedScopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawNoLoop_8bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	LINED_SCOPE_INIT
 	LINED_SCOPE_PREPARE_SMP8
 	SCOPE_HANDLE_POS_NO_LOOP
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_INTERPOLATED_SMP8
 		LINED_SCOPE_DRAW_SMP
@@ -111,13 +111,13 @@ static void linedScopeDrawNoLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, ui
 	}
 }
 
-static void linedScopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawLoop_8bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	LINED_SCOPE_INIT
 	LINED_SCOPE_PREPARE_SMP8_LOOP
 	SCOPE_HANDLE_POS_LOOP
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_INTERPOLATED_SMP8_LOOP
 		LINED_SCOPE_DRAW_SMP
@@ -126,13 +126,13 @@ static void linedScopeDrawLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint
 	}
 }
 
-static void linedScopeDrawPingpongLoop_8bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawPingpongLoop_8bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	LINED_SCOPE_INIT_PINGPONG
 	LINED_SCOPE_PREPARE_SMP8_PINGPONG
 	SCOPE_HANDLE_POS_PINGPONG
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_INTERPOLATED_SMP8_PINGPONG
 		LINED_SCOPE_DRAW_SMP
@@ -141,13 +141,13 @@ static void linedScopeDrawPingpongLoop_8bit(scope_t *s, uint32_t x, uint32_t lin
 	}
 }
 
-static void linedScopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawNoLoop_16bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	LINED_SCOPE_INIT
 	LINED_SCOPE_PREPARE_SMP16
 	SCOPE_HANDLE_POS_NO_LOOP
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_INTERPOLATED_SMP16
 		LINED_SCOPE_DRAW_SMP
@@ -156,13 +156,13 @@ static void linedScopeDrawNoLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, u
 	}
 }
 
-static void linedScopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawLoop_16bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	LINED_SCOPE_INIT
 	LINED_SCOPE_PREPARE_SMP16_LOOP
 	SCOPE_HANDLE_POS_LOOP
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_INTERPOLATED_SMP16_LOOP
 		LINED_SCOPE_DRAW_SMP
@@ -171,13 +171,13 @@ static void linedScopeDrawLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uin
 	}
 }
 
-static void linedScopeDrawPingpongLoop_16bit(scope_t *s, uint32_t x, uint32_t lineY, uint32_t w)
+static void linedScopeDrawPingpongLoop_16bit(scope_t *s, uint32_t sx, uint32_t lineY, uint32_t w)
 {
 	LINED_SCOPE_INIT_PINGPONG
 	LINED_SCOPE_PREPARE_SMP16_PINGPONG
 	SCOPE_HANDLE_POS_PINGPONG
 
-	for (; x < width; x++)
+	for (; sx < width; sx++)
 	{
 		SCOPE_GET_INTERPOLATED_SMP16_PINGPONG
 		LINED_SCOPE_DRAW_SMP
