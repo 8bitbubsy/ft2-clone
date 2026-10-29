@@ -353,7 +353,7 @@ void leaveFullscreen(void)
 	SDL_SetWindowFullscreen(video.window, 0);
 	SDL_Delay(15); // fixes possible issues
 
-	setWindowSizeFromConfig(false); // false = do not change actual window size, only update variables
+	setWindowSizeFromConfig(DONT_UPDATE_RENDERER);
 	SDL_SetWindowSize(video.window, SCREEN_W * video.windowModeUpscaleFactor, SCREEN_H * video.windowModeUpscaleFactor);
 
 	updateRenderSizeVars();
@@ -911,7 +911,7 @@ bool setupWindow(void)
 	windowFlags |= SDL_WINDOW_HIDDEN;
 #endif
 
-	setWindowSizeFromConfig(false);
+	setWindowSizeFromConfig(DONT_UPDATE_RENDERER);
 
 	int32_t di = SDL_GetWindowDisplayIndex(video.window);
 	if (di < 0)

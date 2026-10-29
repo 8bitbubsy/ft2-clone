@@ -556,16 +556,6 @@ void textOut(uint16_t x, uint16_t y, uint8_t paletteIndex, const char *textPtr)
 	}
 }
 
-void textOutBorder(uint16_t x, uint16_t y, uint8_t paletteIndex, uint8_t borderPaletteIndex, const char *textPtr)
-{
-	textOut(x,   y-1, borderPaletteIndex, textPtr); // top
-	textOut(x+1, y,   borderPaletteIndex, textPtr); // right
-	textOut(x,   y+1, borderPaletteIndex, textPtr); // bottom
-	textOut(x-1, y,   borderPaletteIndex, textPtr); // left
-
-	textOut(x, y, paletteIndex, textPtr);
-}
-
 // fixed width
 void textOutFixed(uint16_t x, uint16_t y, uint8_t fgPaltete, uint8_t bgPalette, const char *textPtr)
 {
@@ -855,7 +845,7 @@ void vLine(uint16_t x, uint16_t y, uint16_t h, uint8_t paletteIndex)
 	for (int32_t i = 0; i < h; i++)
 	{
 		*dstPtr = pixVal;
-		 dstPtr += SCREEN_W;
+		dstPtr += SCREEN_W;
 	}
 }
 
@@ -879,8 +869,8 @@ void line(int16_t x1, int16_t x2, int16_t y1, int16_t y2, uint8_t paletteIndex)
 	const int16_t dy = y2 - y1;
 	const uint16_t ay = ABS(dy) * 2;
 	const int16_t sy = SGN(dy);
-	int16_t x = x1;
-	int16_t y  = y1;
+
+	int16_t x = x1, y = y1;
 
 	uint32_t pixVal = video.palette[paletteIndex];
 	const int32_t pitch  = sy * SCREEN_W;
@@ -1257,7 +1247,7 @@ void showTopScreen(bool restoreScreens)
 	}
 	else
 	{
-		showTopLeftMainScreen(restoreScreens); // updates ui.scopesShown
+		showTopLeftMainScreen(restoreScreens); // also sets ui.scopesShown
 		showTopRightMainScreen();
 	}
 }
@@ -1276,7 +1266,7 @@ void drawGUIOnRunTime(void)
 {
 	setScrollBarPos(SB_POS_ED, 0, DONT_TRIGGER_CALLBACK);
 
-	showTopScreen(DONT_RESTORE_SCREENS); // false = don't restore screens
+	showTopScreen(DONT_RESTORE_SCREENS);
 	showPatternEditor();
 
 	ui.updatePosSections = true;

@@ -259,7 +259,7 @@ void resetConfig(void)
 	showTopScreen(DONT_RESTORE_SCREENS);
 	showBottomScreen();
 
-	setWindowSizeFromConfig(true);
+	setWindowSizeFromConfig(UPDATE_RENDERER);
 	updateImageStretchAndPixelFilter(oldWindowFlags, oldSpecialFlags2);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
@@ -369,7 +369,7 @@ void loadConfig2(void) // called by "Load config" button
 	showTopScreen(DONT_RESTORE_SCREENS);
 	showBottomScreen();
 
-	setWindowSizeFromConfig(true);
+	setWindowSizeFromConfig(UPDATE_RENDERER);
 	updateImageStretchAndPixelFilter(oldWindowFlags, oldSpecialFlags2);
 
 	if (config.specialFlags2 & HARDWARE_MOUSE)
@@ -1988,7 +1988,7 @@ void rbWinSizeAuto(void)
 
 	config.windowFlags &= ~(WINSIZE_1X + WINSIZE_2X + WINSIZE_3X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_AUTO;
-	setWindowSizeFromConfig(true);
+	setWindowSizeFromConfig(UPDATE_RENDERER);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_AUTO);
 }
 
@@ -2002,7 +2002,7 @@ void rbWinSize1x(void)
 
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_2X + WINSIZE_3X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_1X;
-	setWindowSizeFromConfig(true);
+	setWindowSizeFromConfig(UPDATE_RENDERER);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_1X);
 }
 
@@ -2016,7 +2016,7 @@ void rbWinSize2x(void)
 
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_1X + WINSIZE_3X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_2X;
-	setWindowSizeFromConfig(true);
+	setWindowSizeFromConfig(UPDATE_RENDERER);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_2X);
 }
 
@@ -2030,7 +2030,7 @@ void rbWinSize3x(void)
 
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_1X + WINSIZE_2X + WINSIZE_4X);
 	config.windowFlags |= WINSIZE_3X;
-	setWindowSizeFromConfig(true);
+	setWindowSizeFromConfig(UPDATE_RENDERER);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_3X);
 }
 
@@ -2044,7 +2044,7 @@ void rbWinSize4x(void)
 
 	config.windowFlags &= ~(WINSIZE_AUTO + WINSIZE_1X + WINSIZE_2X + WINSIZE_3X);
 	config.windowFlags |= WINSIZE_4X;
-	setWindowSizeFromConfig(true);
+	setWindowSizeFromConfig(UPDATE_RENDERER);
 	checkRadioButton(RB_CONFIG_WIN_SIZE_4X);
 }
 
