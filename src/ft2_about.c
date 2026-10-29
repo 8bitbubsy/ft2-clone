@@ -10,7 +10,7 @@
 #include "ft2_config.h"
 #include "ft2_random.h"
 
-#define NUM_STARS 1500
+#define NUM_STARS 2048
 #define STARSHINE_ALPHA_PERCENTAGE 33
 #define ABOUT_SCREEN_X 3
 #define ABOUT_SCREEN_Y 3
