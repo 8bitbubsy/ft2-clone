@@ -78,12 +78,23 @@
 	fVolumeL += fVolumeLDelta; \
 	fVolumeR += fVolumeRDelta;
 
-/* It may look like we are potentially going out of bounds while looking up the sample points,
-** but the sample data is actually padded on both the left (negative) and right side, where correct tap
-** samples are stored according to loop mode (or no loop).
+#define MIX_SAMPLE \
+	*fMixBufferL++ += fSample * fVolumeL; \
+	*fMixBufferR++ += fSample * fVolumeR;
+
+
+/* ----------------------------------------------------------------------- */
+/*                       SAMPLE INTERPOLATION MACROS                       */
+/* ----------------------------------------------------------------------- */
+/* Notes:
+**  It may look like we are potentially going out of bounds while looking
+**  up the sample points and interpolation LUT data, but we have the
+**  correct data stored at the correct places for this.
 **
-** There is also a second special case for the left edge (negative taps) after the sample has looped once.
+**  The _TAP_FIX macros are for special left-edge cases to get proper tap
+**  data after one loop cycle. These are only used on looped samples.
 */
+
 
 /* ----------------------------------------------------------------------- */
 /*                            NO INTERPOLATION                             */
@@ -91,13 +102,11 @@
 
 #define RENDER_8BIT_SMP \
 	fSample = *smpPtr * (1.0f / 128.0f); \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP \
 	fSample = *smpPtr * (1.0f / 32768.0f); \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 
 /* ----------------------------------------------------------------------- */
@@ -115,13 +124,11 @@
 
 #define RENDER_8BIT_SMP_LINTRP \
 	LINEAR_INTERPOLATION(smpPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_LINTRP \
 	LINEAR_INTERPOLATION(smpPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 
 /* ----------------------------------------------------------------------- */
@@ -137,34 +144,26 @@
 	const float a = ((s1 + s3) * 0.5f) - s2; \
 	const float b =  (s3 - s1) * 0.5f; \
 	\
-	fSample = ((a * t + b) * t + s2) * (1.0f / (1 << (smpBits-1))); \
+	fSample = ((a * t + b) * t + s2) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
 #define RENDER_8BIT_SMP_QINTRP \
 	QUADRATIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_QINTRP \
 	QUADRATIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
-
-/* The TAP_FIX macros are for special left-edge cases get proper tap data after one loop cycle.
-** These are only used on looped samples.
-*/
+	MIX_SAMPLE
 
 #define RENDER_8BIT_SMP_QINTRP_TAP_FIX  \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
 	QUADRATIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_QINTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
 	QUADRATIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 
 /* ----------------------------------------------------------------------- */
@@ -182,133 +181,95 @@
 	const float b = ((s1 - (s2 * 2.5f)) + (s3 * 2.0f)) - (s4 * 0.5f); \
 	const float c = (s3 - s1) * 0.5f; \
 	\
-	fSample = (((a * t + b) * t + c) * t + s2) * (1.0f / (1 << (smpBits-1))); \
+	fSample = (((a * t + b) * t + c) * t + s2) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
 #define RENDER_8BIT_SMP_CINTRP \
 	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_CINTRP \
 	CUBIC_SPLINE_INTERPOLATION(smpPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 #define RENDER_8BIT_SMP_CINTRP_TAP_FIX  \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
 	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_CINTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
 	CUBIC_SPLINE_INTERPOLATION(smpTapPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	MIX_SAMPLE
 
 
 /* ----------------------------------------------------------------------- */
-/*                   8-POINT WINDOWED-SINC INTERPOLATION                   */
+/*                       WINDOWED-SINC INTERPOLATION                       */
 /* ----------------------------------------------------------------------- */
-
-/* Uses linear interpolation between the phases in the kernels to achieve
-** very good precision at a low pre-computed phase count.
-**
-** It may look like we go out of bounds for fSinc[] and s[], but we have
-** extra data at the correct places to account for this.
+/* Note:
+**  Uses linear interpolation between the phases in the kernels to achieve
+**  very good precision at a low pre-computed phase count (256).
 */
 
-#define WINDOWED_SINC8_INTERPOLATION(s, f, smpBits) \
+#define WSINC_INTRP(NUM_TAPS, NUM_TAPS_BITS, s, f, smpBits) \
 { \
 	const uint32_t frac32 = (uint32_t)f; \
 	const uint32_t phaseInt = frac32 >> SINC_PHASE_SHIFT; \
 	const float fPhaseFrac = (int32_t)(frac32 & SINC_PHASE_MASK) * (1.0f / SINC_PHASE_SCALE); \
 	\
-	const float *fSinc = v->fSincLUT + (phaseInt << SINC8_TAPS_BITS); \
+	const float *fSinc = v->fSincLUT + (phaseInt << NUM_TAPS_BITS); \
 	\
 	float fSum = 0.0f; \
-	for (int32_t tap = 0; tap < SINC8_TAPS; tap++) \
+	for (int32_t tap = 0; tap < NUM_TAPS; tap++) \
 	{ \
 		const float fY1 = fSinc[tap]; \
-		const float fY2 = fSinc[SINC8_TAPS+tap]; /* next phase */ \
+		const float fY2 = fSinc[NUM_TAPS+tap]; /* next phase */ \
 		\
 		/* do linear interpolation between phases */ \
-		fSum += s[tap-SINC8_CENTER_TAP] * (fY1 + ((fY2 - fY1) * fPhaseFrac)); \
+		fSum += s[tap-((NUM_TAPS/2)-1)] * (fY1 + ((fY2 - fY1) * fPhaseFrac)); \
 	} \
 	\
-	fSample = fSum * (1.0f / (1 << (smpBits-1))); \
+	fSample = fSum * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
+#define WSINC8_INTERPOLATION(s, f, smpBits) WSINC_INTRP(SINC8_TAPS, SINC8_TAPS_BITS, s, f, smpBits)
+#define WSINC16_INTERPOLATION(s, f, smpBits) WSINC_INTRP(SINC16_TAPS, SINC16_TAPS_BITS, s, f, smpBits)
+
 #define RENDER_8BIT_SMP_S8INTRP \
-	WINDOWED_SINC8_INTERPOLATION(smpPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	WSINC8_INTERPOLATION(smpPtr, positionFrac, 8) \
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_S8INTRP \
-	WINDOWED_SINC8_INTERPOLATION(smpPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	WSINC8_INTERPOLATION(smpPtr, positionFrac, 16) \
+	MIX_SAMPLE
 
 #define RENDER_8BIT_SMP_S8INTRP_TAP_FIX  \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC8_INTERPOLATION(smpTapPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	WSINC8_INTERPOLATION(smpTapPtr, positionFrac, 8) \
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_S8INTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC8_INTERPOLATION(smpTapPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
-
-
-/* ----------------------------------------------------------------------- */
-/*                  16-POINT WINDOWED-SINC INTERPOLATION                   */
-/* ----------------------------------------------------------------------- */
-
-#define WINDOWED_SINC16_INTERPOLATION(s, f, smpBits) \
-{ \
-	const uint32_t frac32 = (uint32_t)f; \
-	const uint32_t phaseInt = frac32 >> SINC_PHASE_SHIFT; \
-	const float fPhaseFrac = (int32_t)(frac32 & SINC_PHASE_MASK) * (1.0f / SINC_PHASE_SCALE); \
-	\
-	const float *fSinc = v->fSincLUT + (phaseInt << SINC16_TAPS_BITS); \
-	\
-	float fSum = 0.0f; \
-	for (int32_t tap = 0; tap < SINC16_TAPS; tap++) \
-	{ \
-		const float fY1 = fSinc[tap]; \
-		const float fY2 = fSinc[SINC16_TAPS+tap]; /* next phase */ \
-		\
-		/* do linear interpolation between phases */ \
-		fSum += s[tap-SINC16_CENTER_TAP] * (fY1 + ((fY2 - fY1) * fPhaseFrac)); \
-	} \
-	\
-	fSample = fSum * (1.0f / (1 << (smpBits-1))); \
-}
+	WSINC8_INTERPOLATION(smpTapPtr, positionFrac, 16) \
+	MIX_SAMPLE
 
 #define RENDER_8BIT_SMP_S16INTRP \
-	WINDOWED_SINC16_INTERPOLATION(smpPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	WSINC16_INTERPOLATION(smpPtr, positionFrac, 8) \
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_S16INTRP \
-	WINDOWED_SINC16_INTERPOLATION(smpPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	WSINC16_INTERPOLATION(smpPtr, positionFrac, 16) \
+	MIX_SAMPLE
 
 #define RENDER_8BIT_SMP_S16INTRP_TAP_FIX  \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int8_t *)&v->leftEdgeTaps8[(int32_t)(smpPtr-loopStartPtr)] : (int8_t *)smpPtr; \
-	WINDOWED_SINC16_INTERPOLATION(smpTapPtr, positionFrac, 8) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	WSINC16_INTERPOLATION(smpTapPtr, positionFrac, 8) \
+	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP_S16INTRP_TAP_FIX \
 	smpTapPtr = (smpPtr <= leftEdgePtr) ? (int16_t *)&v->leftEdgeTaps16[(int32_t)(smpPtr-loopStartPtr)] : (int16_t *)smpPtr; \
-	WINDOWED_SINC16_INTERPOLATION(smpTapPtr, positionFrac, 16) \
-	*fMixBufferL++ += fSample * fVolumeL; \
-	*fMixBufferR++ += fSample * fVolumeR;
+	WSINC16_INTERPOLATION(smpTapPtr, positionFrac, 16) \
+	MIX_SAMPLE
 
 
 /* ----------------------------------------------------------------------- */

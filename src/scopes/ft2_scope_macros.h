@@ -35,7 +35,7 @@
 ** so that out-of-bounds reads get the correct interpolation tap data.
 */
 
-#define NO_INTERPOLATION8  fSample =  s8[0] * (1.0f /   128.0f);
+#define NO_INTERPOLATION8 fSample = s8[0] * (1.0f / 128.0f);
 #define NO_INTERPOLATION16 fSample = s16[0] * (1.0f / 32768.0f);
 
 // 2-point linear interpolation
@@ -49,7 +49,7 @@
 	fSample = (s1 + ((s2 - s1) * t)) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
-#define LINEAR_INTERPOLATION8(f)  LINEAR_INTERPOLATION(s8,  f,  8)
+#define LINEAR_INTERPOLATION8(f) LINEAR_INTERPOLATION(s8, f, 8)
 #define LINEAR_INTERPOLATION16(f) LINEAR_INTERPOLATION(s16, f, 16)
 
 // 4-point cubic B-spline interpolation
@@ -68,24 +68,20 @@
 	fSample = (((a * t + b) * t + c) * t + d) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
-#define CUBIC_BSPLINE_INTERPOLATION8(f)  CUBIC_BSPLINE_INTERPOLATION(s8,  f,  8)
+#define CUBIC_BSPLINE_INTERPOLATION8(f) CUBIC_BSPLINE_INTERPOLATION(s8, f, 8)
 #define CUBIC_BSPLINE_INTERPOLATION16(f) CUBIC_BSPLINE_INTERPOLATION(s16, f, 16)
 
 #define CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, f) \
-{ \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
 		s8 = s->leftEdgeTaps8 + (pos - s->loopStart); \
 	\
 	CUBIC_BSPLINE_INTERPOLATION(s8, f, 8) \
-} \
 
 #define CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, f) \
-{ \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
 		s16 = s->leftEdgeTaps16 + (pos - s->loopStart); \
 	\
 	CUBIC_BSPLINE_INTERPOLATION(s16, f, 16) \
-} \
 
 /* Note:
 ** floorf() is needed for proper negative rounding, or else
