@@ -101,11 +101,11 @@
 /* ----------------------------------------------------------------------- */
 
 #define RENDER_8BIT_SMP \
-	fSample = *smpPtr * (1.0f / 128.0f); \
+	fSample = (*smpPtr) * (float)(1.0 / 128.0); \
 	MIX_SAMPLE
 
 #define RENDER_16BIT_SMP \
-	fSample = *smpPtr * (1.0f / 32768.0f); \
+	fSample = (*smpPtr) * (float)(1.0 / 32768.0); \
 	MIX_SAMPLE
 
 
@@ -119,7 +119,7 @@
 	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
 	const float p1 = s[0], p2 = s[1]; \
 	\
-	fSample = (p1 + ((p2 - p1) * x)) * (1.0f / (1 << (smpBits-1))); \
+	fSample = (p1 + ((p2 - p1) * x)) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
 #define RENDER_8BIT_SMP_LINTRP \
