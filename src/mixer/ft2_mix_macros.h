@@ -116,7 +116,7 @@
 #define LINEAR_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
-	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float x = (float)frac31 * (float)(1.0 / (1UL << 31)); \
 	const float p1 = s[0], p2 = s[1]; \
 	\
 	fSample = (p1 + ((p2 - p1) * x)) * (float)(1.0 / (1 << (smpBits-1))); \
@@ -138,7 +138,7 @@
 #define QUADRATIC_SPLINE_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
-	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float x = (float)frac31 * (float)(1.0 / (1UL << 31)); \
 	const float p1 = s[-1], p2 = s[0], p3 = s[1]; \
 	\
 	const float a = ((p1 + p3) * 0.5f) - p2; \
@@ -174,7 +174,7 @@
 #define CUBIC_SPLINE_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)f >> (MIXER_FRAC_BITS-31); \
-	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float x = (float)frac31 * (float)(1.0 / (1UL << 31)); \
 	const float p1 = s[-1], p2 = s[0], p3 = s[1], p4 = s[2]; \
 	\
 	const float a = ((p4 - p1) * 0.5f) + ((p2 - p3) * 1.5f); \
@@ -216,7 +216,7 @@
 { \
 	const uint32_t frac32 = (uint32_t)f; \
 	const uint32_t phaseInt = frac32 >> SINC_PHASE_SHIFT; \
-	const float fPhaseFrac = (int32_t)(frac32 & SINC_PHASE_MASK) * (1.0f / SINC_PHASE_SCALE); \
+	const float fPhaseFrac = (float)(int32_t)(frac32 & SINC_PHASE_MASK) * (float)(1.0 / SINC_PHASE_SCALE); \
 	\
 	const float *fSinc = v->fSincLUT + (phaseInt << NUM_TAPS_BITS); \
 	\
