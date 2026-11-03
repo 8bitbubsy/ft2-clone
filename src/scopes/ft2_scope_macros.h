@@ -31,33 +31,51 @@
 	int32_t smpY1, smpY2; \
 	width--;
 
-/* Note: Sample data already has fixed tap samples at the end of the sample,
-** so that out-of-bounds reads get the correct interpolation tap data.
+/* Note: Sample data already has fixed tap samples before and at the end
+** of the sample/loop, so that out-of-bounds reads get the correct sample
+** tap data.
 */
 
-#define NO_INTERPOLATION8 fSample = s8[0] * (1.0f / 128.0f);
-#define NO_INTERPOLATION16 fSample = s16[0] * (1.0f / 32768.0f);
 
-// 2-point linear interpolation
+/* ----------------------------------------------------------------------- */
+/*                            NO INTERPOLATION                             */
+/* ----------------------------------------------------------------------- */
+
+#define NO_INTERPOLATION8 \
+	fSample = s8[0] * (float)(1.0 / 128.0);
+
+#define NO_INTERPOLATION16 \
+	fSample = s16[0] * (float)(1.0 / 32768.0);
+
+
+/* ----------------------------------------------------------------------- */
+/*                      2-POINT LINEAR INTERPOLATION                       */
+/* ----------------------------------------------------------------------- */
 
 #define LINEAR_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)(f) >> (SCOPE_FRAC_BITS-31); \
-	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float x = (float)frac31 * (float)(1.0 / (1UL << 31)); \
 	const float p1 = s[0], p2 = s[1]; \
 	\
 	fSample = (p1 + ((p2 - p1) * x)) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
-#define LINEAR_INTERPOLATION8(f) LINEAR_INTERPOLATION(s8, f, 8)
-#define LINEAR_INTERPOLATION16(f) LINEAR_INTERPOLATION(s16, f, 16)
+#define LINEAR_INTERPOLATION8(f) \
+	LINEAR_INTERPOLATION(s8, f, 8)
 
-// 4-point cubic B-spline interpolation
+#define LINEAR_INTERPOLATION16(f) \
+	LINEAR_INTERPOLATION(s16, f, 16)
+
+
+/* ----------------------------------------------------------------------- */
+/*           4-POINT CUBIC B-SPLINE INTERPOLATION (no overshoot)           */
+/* ----------------------------------------------------------------------- */
 
 #define CUBIC_BSPLINE_INTERPOLATION(s, f, smpBits) \
 { \
 	const int32_t frac31 = (uint32_t)(f) >> (SCOPE_FRAC_BITS-31); \
-	const float x = (float)frac31 * (float)(1.0 / (INT32_MAX+1.0)); \
+	const float x = (float)frac31 * (float)(1.0 / (1UL << 31)); \
 	const float p1 = s[-1], p2 = s[0], p3 = s[1], p4 = s[2]; \
 	\
 	const float a = ((p4 - p1) * (1.0f / 6.0f)) + ((p2 - p3) * (3.0f / 6.0f)); \
@@ -68,8 +86,11 @@
 	fSample = (((a * x + b) * x + c) * x + d) * (float)(1.0 / (1 << (smpBits-1))); \
 }
 
-#define CUBIC_BSPLINE_INTERPOLATION8(f) CUBIC_BSPLINE_INTERPOLATION(s8, f, 8)
-#define CUBIC_BSPLINE_INTERPOLATION16(f) CUBIC_BSPLINE_INTERPOLATION(s16, f, 16)
+#define CUBIC_BSPLINE_INTERPOLATION8(f) \
+	CUBIC_BSPLINE_INTERPOLATION(s8, f, 8)
+
+#define CUBIC_BSPLINE_INTERPOLATION16(f) \
+	CUBIC_BSPLINE_INTERPOLATION(s16, f, 16)
 
 #define CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, f) \
 	if (s->hasLooped && pos <= s->loopStart+MAX_LEFT_TAPS) \
@@ -91,47 +112,71 @@
 #define INTERPOLATE_SMP8(pos, f) \
 	const int8_t *s8 = s->base8 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
+	{ \
 		NO_INTERPOLATION8 \
+	} \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
+	{ \
 		LINEAR_INTERPOLATION8(f) \
+	} \
 	else \
+	{ \
 		CUBIC_BSPLINE_INTERPOLATION8(f) \
+	} \
 	sample = (int32_t)floorf(fSample * fVolume);
 
 #define INTERPOLATE_SMP16(pos, f) \
 	const int16_t *s16 = s->base16 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
+	{ \
 		NO_INTERPOLATION16 \
+	} \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
+	{ \
 		LINEAR_INTERPOLATION16(f) \
+	} \
 	else \
+	{ \
 		CUBIC_BSPLINE_INTERPOLATION16(f) \
+	} \
 	sample = (int32_t)floorf(fSample * fVolume);
 
 #define INTERPOLATE_SMP8_LOOP(pos, f) \
 	const int8_t *s8 = s->base8 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
+	{ \
 		NO_INTERPOLATION8 \
+	} \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
+	{ \
 		LINEAR_INTERPOLATION8(f) \
+	} \
 	else \
+	{ \
 		CUBIC_BSPLINE_INTERPOLATION8_LOOP(pos, f) \
+	} \
 	sample = (int32_t)floorf(fSample * fVolume);
 
 #define INTERPOLATE_SMP16_LOOP(pos, f) \
 	const int16_t *s16 = s->base16 + pos; \
 	if (config.interpolation == INTERPOLATION_DISABLED) \
+	{ \
 		NO_INTERPOLATION16 \
+	} \
 	else if (config.interpolation == INTERPOLATION_LINEAR) \
+	{ \
 		LINEAR_INTERPOLATION16(f) \
+	} \
 	else \
+	{ \
 		CUBIC_BSPLINE_INTERPOLATION16_LOOP(pos, f) \
+	} \
 	sample = (int32_t)floorf(fSample * fVolume);
 
 #define SCOPE_GET_SMP8 \
 	if (s->active) \
 	{ \
-		fSample = s->base8[position] * (1.0f / 128.0f); \
+		fSample = s->base8[position] * (float)(1.0 / 128.0); \
 		sample = (int32_t)floorf(fSample * fVolume); \
 	} \
 	else \
@@ -142,7 +187,7 @@
 #define SCOPE_GET_SMP16 \
 	if (s->active) \
 	{ \
-		fSample = s->base16[position] * (1.0f / 32768.0f); \
+		fSample = s->base16[position] * (float)(1.0 / 32768.0); \
 		sample = (int32_t)floorf(fSample * fVolume); \
 	} \
 	else \
@@ -154,7 +199,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		fSample = s->base8[actualPos] * (1.0f / 128.0f); \
+		fSample = s->base8[actualPos] * (float)(1.0 / 128.0); \
 		sample = (int32_t)floorf(fSample * fVolume); \
 	} \
 	else \
@@ -166,7 +211,7 @@
 	if (s->active) \
 	{ \
 		GET_PINGPONG_POSITION \
-		fSample = s->base16[actualPos] * (1.0f / 32768.0f); \
+		fSample = s->base16[actualPos] * (float)(1.0 / 32768.0); \
 		sample = (int32_t)floorf(fSample * fVolume); \
 	} \
 	else \
