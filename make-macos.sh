@@ -36,7 +36,8 @@ fi
 #
 function compile() {
     rm $1 &> /dev/null
-    clang $VERBOSE $CFLAGS -F /Library/Frameworks -g0 -DNDEBUG -DHAS_MIDI -D__MACOSX_CORE__ -stdlib=libc++ src/rtmidi/*.cpp src/gfxdata/*.c src/mixer/*.c src/scopes/*.c src/modloaders/*.c src/smploaders/*.c src/*.c -ffast-math -Winit-self -Wno-deprecated -Wextra -Wunused -mno-ms-bitfields -Wno-missing-field-initializers $LDFLAGS -L /Library/Frameworks -framework SDL2 -framework CoreMidi -framework CoreAudio -framework Cocoa -liconv -lpthread -lm -lstdc++ -o $1
+    clang++ -c $VERBOSE $CFLAGS -F -g0 -DNDEBUG -D__MACOSX_CORE__ -x c++ -std=c++17 src/rtmidi/RtMidi.cpp src/rtmidi/rtmidi_c.cpp
+    clang $VERBOSE $CFLAGS -F /Library/Frameworks -g0 -DNDEBUG -DHAS_MIDI -D__MACOSX_CORE__ src/gfxdata/*.c src/mixer/*.c src/scopes/*.c src/modloaders/*.c src/smploaders/*.c src/*.c -ffast-math -Winit-self -Wno-deprecated -Wextra -Wunused -mno-ms-bitfields -Wno-missing-field-initializers $LDFLAGS -L /Library/Frameworks -framework SDL2 -framework CoreMidi -framework CoreAudio -framework Cocoa -liconv -lpthread -lm -lstdc++ *.o -o $1
     return $?
 }
 
