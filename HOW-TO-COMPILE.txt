@@ -3,7 +3,6 @@
 
 Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
 
-
 == COMPILING ON LINUX ==
  1. Install the following packages:
     Ubuntu/Debian and similar: build-essential libsdl2-dev
@@ -19,7 +18,7 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
  Note: If you don't have libstdc++ and/or can't compile rtmidi, try running
        make-linux-nomidi.sh or make-linux-appimage-nomidi.sh
        instead.
-       
+
  Known issues: Audio recording (sampling) can update VERY slowly or not work at
                all... I have no idea why, it works really well on Windows/maCOS.
 
@@ -32,7 +31,6 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
     SDK version used in the project settings for both debug and release x86/x64.
  6. Compile (make sure it's in Release mode. Also note x86/x64)
 
-
 == COMPILING ON MAC OS X 10.15 OR NEWER ==
  1. Download and install the "Command Line Tools" XCode package (google it)
  2. Download the SDL 2 framework at https://www.libsdl.org
@@ -40,3 +38,50 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
  4. Compile the FT2 clone:      (folder: "ft2-clone")
     chmod +x make-macos.sh      (only needed once)
    ./make-macos.sh
+
+== COMPILING ON macOS 26.7 OR NEWER WITH HOMEBREW (APPLE SILICON) ==
+
+This method builds a native ARM64 executable using CMake and Homebrew.
+It does not require installing SDL2.framework in /Library/Frameworks/.
+
+ 1. Install Apple's Command Line Tools:
+    xcode-select --install
+
+ 2. Install the required dependencies using Homebrew:
+    brew install cmake sdl2
+
+    Alternatively, SDL2 compatibility can be provided by sdl2-compat,
+    which uses SDL3 internally.
+
+ 3. Configure the project: (folder: "ft2-clone")
+    cmake -S . -B build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_OSX_ARCHITECTURES=arm64 \
+      -DCMAKE_PREFIX_PATH="$(brew --prefix sdl2)"
+
+ 4. Compile:
+    cmake --build build --parallel "$(sysctl -n hw.ncpu)"
+
+ 5. Run the compiled executable:
+    ./release/other/ft2-clone
+
+ 6. Optional: Create a native macOS application bundle:
+    chmod +x macos-appification.sh
+    ./macos-appification.sh
+
+    This creates FastTracker.app in the project root directory,
+    reusing the official macOS icon and application metadata.
+
+ 7. Launch the application:
+    open FastTracker.app
+
+ 8. Optional: Install the application:
+    ditto FastTracker.app /Applications/FastTracker.app
+
+ NOTES:
+ - The resulting executable is native ARM64 (Apple Silicon).
+ - The application bundle is signed locally using an ad hoc signature.
+ - SDL2 is loaded dynamically from Homebrew.
+ - The application is not standalone and requires its Homebrew
+   dependencies to remain installed.
+ - The existing make-macos.sh procedure remains unchanged.
