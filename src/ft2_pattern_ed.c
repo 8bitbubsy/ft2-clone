@@ -2167,7 +2167,8 @@ void drawIDAdd(void)
 
 void resetPlaybackTime(void)
 {
-	song.dPlaybackSeconds = 0.0;
+	song.playbackSecondsFrac56fp = 0;
+	song.playbackSeconds = 0;
 	last_TimeH = last_TimeM = last_TimeS = 0;
 }
 
@@ -2175,7 +2176,7 @@ void drawPlaybackTime(void)
 {
 	if (songPlaying)
 	{
-		uint32_t seconds = (int32_t)song.dPlaybackSeconds;
+		volatile uint32_t seconds = song.playbackSeconds;
 
 		last_TimeH = seconds / 3600;
 		seconds -= last_TimeH * 3600;
