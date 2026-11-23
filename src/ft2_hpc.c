@@ -21,7 +21,7 @@
 #include <stdbool.h>
 #include "ft2_hpc.h"
 
-#define DURATION_FRAC_BITS 52 /* more makes little sense */
+#define DURATION_FRAC_BITS 56 /* more makes little sense */
 #define DURATION_FRAC_SCALE (1ULL << DURATION_FRAC_BITS)
 #define DURATION_FRAC_MASK (DURATION_FRAC_SCALE-1)
 

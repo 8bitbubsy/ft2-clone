@@ -20,11 +20,11 @@ enum
 
 // more bits makes little sense here
 
-#define BPM_FRAC_BITS 52
+#define BPM_FRAC_BITS 56
 #define BPM_FRAC_SCALE (1ULL << BPM_FRAC_BITS)
 #define BPM_FRAC_MASK (BPM_FRAC_SCALE-1)
 
-#define TICK_TIME_FRAC_BITS 52
+#define TICK_TIME_FRAC_BITS 56
 #define TICK_TIME_FRAC_SCALE (1ULL << TICK_TIME_FRAC_BITS)
 #define TICK_TIME_FRAC_MASK (TICK_TIME_FRAC_SCALE-1)
 
