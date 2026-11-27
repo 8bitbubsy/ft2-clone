@@ -29,6 +29,10 @@ bool askUnsavedChanges(uint8_t type);
 
 void myLoaderMsgBoxThreadSafe(const char *fmt, ...);
 void myLoaderMsgBox(const char *fmt, ...);
+#ifdef __EMSCRIPTEN__
+void webLoaderMsgBox(const char *fmt, ...);
+int16_t webLoaderSysReq(int16_t type, const char *headline, const char *text, void (*checkBoxCallback)(void));
+#endif
 
  // ft2_sysreqs.c
 extern okBoxData_t okBoxData;

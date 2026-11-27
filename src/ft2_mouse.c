@@ -856,6 +856,9 @@ void readMouseXY(void)
 		return;
 	}
 
+#ifdef __EMSCRIPTEN__
+	mouse.buttonState = SDL_GetMouseState(&mx, &my);
+#else
 	if (video.fullscreen)
 	{
 		mouse.buttonState = SDL_GetMouseState(&mx, &my);
@@ -876,6 +879,7 @@ void readMouseXY(void)
 		mx -= windowX;
 		my -= windowY;
 	}
+#endif
 
 	mouse.rawX = mx;
 	mouse.rawY = my;

@@ -17,10 +17,15 @@
 #else
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef __EMSCRIPTEN__
 #include <fts.h> // for fts_open() and stuff in recursiveDelete()
+#endif
 #include <unistd.h>
 #include <dirent.h>
 #include <errno.h>
+#endif
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
 #endif
 #include <wchar.h>
 #include <sys/stat.h>
@@ -49,6 +54,11 @@
 #define FILENAME_TEXT_X 170
 #define FILESIZE_TEXT_X 295
 #define DISKOP_MAX_DRIVE_BUTTONS 8
+#ifdef __EMSCRIPTEN__
+#define DISKOP_FILELIST_TEXT_COLOR PAL_FORGRND
+#else
+#define DISKOP_FILELIST_TEXT_COLOR PAL_BLCKTXT
+#endif
 
 #ifdef _WIN32
 #define PARENT_DIR_STR L".."
@@ -78,12 +88,57 @@ static char *modTmpFName, *insTmpFName, *smpTmpFName, *patTmpFName, *trkTmpFName
 static char *modTmpFNameUTF8; // for window title
 static uint8_t FReq_Item;
 static bool FReq_ShowAllFiles, insPathSet, smpPathSet, patPathSet, trkPathSet, firstTimeOpeningDiskOp = true;
+#ifdef __EMSCRIPTEN__
+static bool webDiskOpPending, webLibraryMode;
+#endif
 static int32_t FReq_EntrySelected = -1, FReq_FileCount, FReq_DirPos, lastMouseY;
 static UNICHAR *FReq_CurPathU, *FReq_ModCurPathU, *FReq_InsCurPathU, *FReq_SmpCurPathU, *FReq_PatCurPathU, *FReq_TrkCurPathU;
 static DirRec *FReq_Buffer;
 static SDL_Thread *thread;
 
 static void setDiskOpItem(uint8_t item);
+#ifdef __EMSCRIPTEN__
+int32_t webDiskOpBeginLibrary(void);
+#endif
+
+static char *diskOpNameToCp850(UNICHAR *nameU, bool removeIllegalChars)
+{
+#ifdef __EMSCRIPTEN__
+	if (nameU == NULL)
+		return NULL;
+
+	(void)removeIllegalChars;
+	const uint32_t len = (uint32_t)strlen(nameU);
+	char *name = (char *)malloc(len + 1);
+	if (name == NULL)
+		return NULL;
+
+	uint32_t srcPos = 0, dstPos = 0;
+	while (srcPos < len)
+	{
+		const uint8_t ch = (uint8_t)nameU[srcPos];
+		if (ch < 0x80)
+		{
+			name[dstPos++] = (char)ch;
+			srcPos++;
+		}
+		else
+		{
+			name[dstPos++] = '?';
+			do
+			{
+				srcPos++;
+			}
+			while (srcPos < len && ((uint8_t)nameU[srcPos] & 0xC0) == 0x80);
+		}
+	}
+
+	name[dstPos] = '\0';
+	return name;
+#else
+	return unicharToCp850(nameU, removeIllegalChars);
+#endif
+}
 
 bool setupExecutablePath(void)
 {
@@ -502,6 +557,7 @@ bool fileExistsAnsi(char *str)
 	return (retVal != -1);
 }
 
+#ifndef __EMSCRIPTEN__
 static bool deleteDirRecursive(UNICHAR *strU)
 {
 	FTSENT *curr;
@@ -547,6 +603,7 @@ static bool deleteDirRecursive(UNICHAR *strU)
 
 	return ret;
 }
+#endif
 
 static bool makeDirAnsi(char *str)
 {
@@ -711,6 +768,16 @@ void diskOpSetFilename(uint8_t type, UNICHAR *pathU)
 
 static void openFile(UNICHAR *filenameU)
 {
+#ifdef __EMSCRIPTEN__
+	if (webLibraryMode)
+	{
+		EM_ASM({
+			Module.loadWebModule(UTF8ToString($0));
+		}, filenameU);
+		return;
+	}
+#endif
+
 	// first check if we can actually open the requested file
 	FILE *f = UNICHAR_FOPEN(filenameU, "rb");
 	if (f == NULL)
@@ -1061,6 +1128,14 @@ static void fileListPressed(int32_t index)
 	diskOp_DrawFilelist();
 
 	DirRec *dirEntry = &FReq_Buffer[entryIndex];
+#ifdef __EMSCRIPTEN__
+	if (webLibraryMode && mode != MOUSE_MODE_NORMAL)
+	{
+		okBox(0, "System message", "The web module library is read-only.", NULL);
+		return;
+	}
+#endif
+
 	switch (mode)
 	{
 		// open file/folder
@@ -1096,11 +1171,15 @@ static void fileListPressed(int32_t index)
 				{
 					if (dirEntry->isDir)
 					{
+#ifdef __EMSCRIPTEN__
+						okBox(0, "System message", "Deleting directories is not supported in the browser version.", NULL);
+#else
 						result = deleteDirRecursive(dirEntry->nameU);
 						if (!result)
 							okBox(0, "System message", "Couldn't delete folder: Access denied!", NULL);
 						else
 							editor.diskOpReadDir = true;
+#endif
 					}
 					else
 					{
@@ -1273,7 +1352,7 @@ static uint8_t handleEntrySkip(UNICHAR *nameU, bool isDir)
 	if (nameU == NULL)
 		return true;
 
-	char *name = unicharToCp850(nameU, false);
+	char *name = diskOpNameToCp850(nameU, false);
 	if (name == NULL)
 		return true;
 	
@@ -1573,7 +1652,7 @@ static char *ach(int32_t rad) // used for sortDirectory()
 {
 	DirRec *dirEntry = &FReq_Buffer[rad];
 
-	char *name = unicharToCp850(dirEntry->nameU, true);
+	char *name = diskOpNameToCp850(dirEntry->nameU, true);
 	if (name == NULL)
 		return NULL;
 
@@ -1712,7 +1791,7 @@ static void printFormattedFilesize(uint16_t x, uint16_t y, uint32_t bufEntry)
 	if (filesize == -1)
 	{
 		x += 6;
-		textOut(x, y, PAL_BLCKTXT, ">2GB");
+		textOut(x, y, DISKOP_FILELIST_TEXT_COLOR, ">2GB");
 		return;
 	}
 
@@ -1741,13 +1820,16 @@ forceMB:
 		sprintf(sizeStrBuffer, "%d", printFilesize);
 	}
 
-	textOut(x, y, PAL_BLCKTXT, sizeStrBuffer);
+	textOut(x, y, DISKOP_FILELIST_TEXT_COLOR, sizeStrBuffer);
 }
 
 static void displayCurrPath(void)
 {
 	fillRect(4, 145, 162, 10, PAL_DESKTOP);
 
+#ifdef __EMSCRIPTEN__
+	textOut(4, 145, PAL_FORGRND, webLibraryMode ? "Web module library" : "Browser file storage");
+#else
 	if (FReq_CurPathU == NULL)
 		return;
 
@@ -1811,6 +1893,7 @@ static void displayCurrPath(void)
 	}
 
 	free(asciiPath);
+#endif
 }
 
 void diskOp_DrawFilelist(void)
@@ -1837,7 +1920,7 @@ void diskOp_DrawFilelist(void)
 			continue;
 
 		// convert unichar name to codepage 437
-		char *readName = unicharToCp850(FReq_Buffer[bufEntry].nameU, true);
+		char *readName = diskOpNameToCp850(FReq_Buffer[bufEntry].nameU, true);
 		if (readName == NULL)
 			continue;
 
@@ -1849,13 +1932,13 @@ void diskOp_DrawFilelist(void)
 		if (FReq_Buffer[bufEntry].isDir)
 		{
 			// directory
-			charOut(FILENAME_TEXT_X, y, PAL_BLCKTXT, DIR_DELIMITER);
-			textOut(FILENAME_TEXT_X + FONT1_CHAR_W, y, PAL_BLCKTXT, readName);
+			charOut(FILENAME_TEXT_X, y, DISKOP_FILELIST_TEXT_COLOR, DIR_DELIMITER);
+			textOut(FILENAME_TEXT_X + FONT1_CHAR_W, y, DISKOP_FILELIST_TEXT_COLOR, readName);
 		}
 		else
 		{
 			// filename
-			textOut(FILENAME_TEXT_X, y, PAL_BLCKTXT, readName);
+			textOut(FILENAME_TEXT_X, y, DISKOP_FILELIST_TEXT_COLOR, readName);
 		}
 
 		free(readName);
@@ -1898,6 +1981,63 @@ static DirRec *bufferCreateEmptyDir(void) // special case: creates a dir entry w
 
 	return dirEntry;
 }
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE int32_t webDiskOpBeginLibrary(void)
+{
+	webLibraryMode = true;
+	FReq_DirPos = 0;
+	FReq_EntrySelected = -1;
+	freeDirRecBuffer();
+
+	editor.diskOpReadDone = false;
+	return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE int32_t webDiskOpAddLibraryEntry(const char *filename, int32_t filesize)
+{
+	if (!webLibraryMode || filename == NULL || filename[0] == '\0' ||
+		strchr(filename, '/') != NULL || strchr(filename, '\\') != NULL ||
+		strcmp(filename, ".") == 0 || strcmp(filename, "..") == 0)
+	{
+		return 0;
+	}
+
+	const int32_t filenameLen = (int32_t)strlen(filename);
+	const int32_t extOffset = getExtOffset((char *)filename, filenameLen);
+	if (extOffset < 0 || !moduleExtensionAccepted((char *)&filename[extOffset + 1]))
+		return 0;
+
+	UNICHAR *nameU = UNICHAR_STRDUP(filename);
+	if (nameU == NULL)
+		return 0;
+
+	DirRec *newPtr = (DirRec *)realloc(FReq_Buffer, sizeof (DirRec) * (FReq_FileCount + 1));
+	if (newPtr == NULL)
+	{
+		free(nameU);
+		return 0;
+	}
+
+	FReq_Buffer = newPtr;
+	FReq_Buffer[FReq_FileCount].nameU = nameU;
+	FReq_Buffer[FReq_FileCount].isDir = false;
+	FReq_Buffer[FReq_FileCount].filesize = filesize < 0 ? -1 : filesize;
+	FReq_FileCount++;
+	return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE void webDiskOpFinishLibrary(void)
+{
+	editor.diskOpReadDone = true;
+	setMouseBusy(false);
+	if (ui.diskOpShown)
+	{
+		editor.diskOpReadDone = false;
+		diskOp_DrawDirectory();
+	}
+}
+#endif
 
 static int32_t diskOp_ReadDirectoryThread(void *ptr)
 {
@@ -1985,6 +2125,24 @@ void diskOp_StartDirReadThread(void)
 	editor.diskOpReadDone = false;
 
 	mouseAnimOn();
+#ifdef __EMSCRIPTEN__
+	if (FReq_Item == DISKOP_ITEM_MODULE)
+	{
+		if (!webDiskOpBeginLibrary())
+		{
+			editor.diskOpReadDone = true;
+			setMouseBusy(false);
+			okBox(0, "System message", "Not enough memory!", NULL);
+			return;
+		}
+
+		EM_ASM({
+			Module.loadWebLibrary();
+		});
+		return;
+	}
+#endif
+
 	thread = SDL_CreateThread(diskOp_ReadDirectoryThread, "file lister thread", NULL);
 	if (thread == NULL)
 	{
@@ -2081,6 +2239,11 @@ static void setDiskOpItem(uint8_t item)
 
 	if (item > 4)
 		item = 4;
+
+#ifdef __EMSCRIPTEN__
+	if (item != DISKOP_ITEM_MODULE)
+		webLibraryMode = false;
+#endif
 
 	FReq_Item = item;
 	switch (FReq_Item)
@@ -2258,6 +2421,9 @@ void showDiskOpScreen(void)
 		// first test if we can change the dir to the one stored in the config (if present)
 		if (FReq_ModCurPathU[0] == '\0' || UNICHAR_CHDIR(FReq_ModCurPathU) != 0)
 		{
+#ifdef __EMSCRIPTEN__
+			UNICHAR_STRCPY(FReq_ModCurPathU, "/");
+#else
 			// nope, couldn't do that, set Disk Op. path to the user's desktop directory
 #ifdef _WIN32
 			SHGetFolderPathW(NULL, CSIDL_DESKTOPDIRECTORY, NULL, 0, FReq_ModCurPathU);
@@ -2270,6 +2436,7 @@ void showDiskOpScreen(void)
 
 				UNICHAR_STRCAT(FReq_ModCurPathU, "/Desktop");
 			}
+#endif
 #endif
 			UNICHAR_CHDIR(FReq_ModCurPathU);
 		}
@@ -2295,6 +2462,23 @@ void showDiskOpScreen(void)
 		editor.diskOpReadDir = true;
 	}
 }
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE void webShowDiskOp(void)
+{
+	webDiskOpPending = true;
+}
+
+void handleWebDiskOpRequest(void)
+{
+	if (webDiskOpPending)
+	{
+		webDiskOpPending = false;
+		if (!ui.diskOpShown)
+			showDiskOpScreen();
+	}
+}
+#endif
 
 void hideDiskOpScreen(void)
 {
@@ -2338,10 +2522,20 @@ void exitDiskOpScreen(void)
 
 void toggleDiskOpScreen(void)
 {
+#ifdef __EMSCRIPTEN__
+	if (ui.diskOpShown)
+		exitDiskOpScreen();
+	else
+	{
+		setDiskOpItem(DISKOP_ITEM_MODULE);
+		showDiskOpScreen();
+	}
+#else
 	if (ui.diskOpShown)
 		exitDiskOpScreen();
 	else
 		showDiskOpScreen();
+#endif
 }
 
 void sbDiskOpSetPos(uint32_t pos)
@@ -2367,11 +2561,23 @@ void pbDiskOpListDown(void)
 
 void pbDiskOpParent(void)
 {
+#ifdef __EMSCRIPTEN__
+	if (webLibraryMode)
+	{
+		webLibraryMode = false;
+		editor.diskOpReadDir = true;
+		return;
+	}
+#endif
+
 	diskOpGoParent();
 }
 
 void pbDiskOpRoot(void)
 {
+#ifdef __EMSCRIPTEN__
+	webLibraryMode = false;
+#endif
 #ifdef _WIN32
 	openDirectory(L"\\");
 #else
@@ -2381,6 +2587,11 @@ void pbDiskOpRoot(void)
 
 void cbDiskOpAllFiles(void)
 {
+#ifdef __EMSCRIPTEN__
+	if (webLibraryMode)
+		return;
+#endif
+
 	FReq_ShowAllFiles ^= 1;
 	editor.diskOpReadDir = true; // refresh dir
 }
@@ -2426,6 +2637,24 @@ void pbDiskOpMakeDir(void)
 
 void pbDiskOpRefresh(void)
 {
+#ifdef __EMSCRIPTEN__
+	if (webLibraryMode)
+	{
+		mouseAnimOn();
+		if (!webDiskOpBeginLibrary())
+		{
+			setMouseBusy(false);
+			okBox(0, "System message", "Not enough memory!", NULL);
+			return;
+		}
+
+		EM_ASM({
+			Module.loadWebLibrary();
+		});
+		return;
+	}
+#endif
+
 	editor.diskOpReadDir = true; // refresh dir
 #ifdef _WIN32
 	setupDiskOpDrives();

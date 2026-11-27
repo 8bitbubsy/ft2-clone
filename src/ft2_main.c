@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h> // modf()
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
 #include <windows.h>
@@ -42,6 +45,7 @@
 
 static void initializeVars(void);
 static void cleanUpAndExit(void); // never call this inside the main loop
+static void mainLoop(void);
 #ifdef __APPLE__
 static void osxSetDirToProgramDirFromArgs(char **argv);
 #endif
@@ -245,22 +249,48 @@ int main(int argc, char *argv[])
 	editor.mainLoopOngoing = true;
 	hpc_ResetCounters(&video.vblankHpc); // this must be the last thing we do before entering the main loop
 
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(mainLoop, 0, 1);
+#else
 	while (editor.programRunning)
 	{
-		beginFPSCounter();
-		handleThreadEvents();
-		readInput();
-		handleEvents();
-		handleRedrawing();
-		flipFrame();
-		endFPSCounter();
+		mainLoop();
 	}
 
 	if (config.cfg_AutoSave)
 		saveConfig(CONFIG_HIDE_ERRORS);
 
 	cleanUpAndExit();
+#endif
 	return 0;
+}
+
+static void mainLoop(void)
+{
+#ifdef __EMSCRIPTEN__
+	if (!editor.programRunning)
+	{
+		emscripten_cancel_main_loop();
+
+		if (config.cfg_AutoSave)
+			saveConfig(CONFIG_HIDE_ERRORS);
+
+		cleanUpAndExit();
+		return;
+	}
+#endif
+
+	beginFPSCounter();
+	handleThreadEvents();
+	readInput();
+	handleEvents();
+#ifdef __EMSCRIPTEN__
+	handleWebDiskOpRequest();
+	updateScopesFromMainLoop();
+#endif
+	handleRedrawing();
+	flipFrame();
+	endFPSCounter();
 }
 
 static void initializeVars(void)

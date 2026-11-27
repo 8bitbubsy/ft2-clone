@@ -40,3 +40,35 @@ Compiled Windows/macOS binaries are always available at 16-bits.org/ft2.php
  4. Compile the FT2 clone:      (folder: "ft2-clone")
     chmod +x make-macos.sh      (only needed once)
    ./make-macos.sh
+
+
+== COMPILING FOR WEBASSEMBLY ==
+ 1. Install Emscripten, CMake and Ninja. On macOS with Homebrew:
+    brew install emscripten cmake ninja
+ 2. Compile the web version:
+    Python 3 is required. Put modules in the local mods/ directory before
+    building. Supported files are copied to build-web/web/mods/ and indexed;
+    an empty or missing mods/ directory produces an empty library.
+    ./make-web.sh
+    To download modules from https://mod.crh.ovh/mods/ instead, run:
+    MODS_SOURCE=remote ./make-web.sh
+    Remote mode requires internet access; a download failure stops the build.
+    The GitHub Pages workflow uses remote mode. Rebuild to update the library.
+    Upload the complete build-web/web/ directory to publish the app and modules.
+ 3. Serve the files over HTTP (do not open index.html via file://):
+    python3 -m http.server 8080 --directory build-web/web
+ 4. Open http://localhost:8080/ in a browser.
+    Press Ctrl+O or Ctrl+D (Cmd+O or Cmd+D on macOS), or drop a module/sample
+    onto the page to load a local file.
+    Web defaults are the "Why colors?" palette and Linear (FT2) interpolation.
+    The Disk Op. button opens the in-app browser, which directly lists public
+    modules from mods/index.json; a module is fetched only when selected. It
+    cannot browse folders on your computer. Modules saved in the virtual file
+    system are downloaded by the browser. Virtual files are temporary and are
+    lost when the page is reloaded.
+    S3M is supported only partially; its warning is shown as a temporary
+    status message, and web-only dialogs continue with their default option.
+
+ The web build uses Emscripten's SDL2 port, omits native MIDI support, and
+ executes SDL worker tasks on the main browser thread. Long-running operations
+ can therefore temporarily block the page.

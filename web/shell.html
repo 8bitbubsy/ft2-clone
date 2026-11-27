@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+	<meta name="theme-color" content="#000000">
+	<title>Fasttracker II clone</title>
+	<style>
+		:root, html, body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			overflow: hidden;
+			background: #000;
+		}
+
+		body {
+			display: grid;
+			place-items: center;
+		}
+
+		canvas {
+			display: block;
+			width: min(100vw, 158vh);
+			height: min(100vh, 63.29114vw);
+			background: #000;
+			image-rendering: pixelated;
+			outline: none;
+		}
+
+		#status {
+			position: fixed;
+			inset: auto 0 1rem;
+			padding: 0.4rem;
+			color: #fff;
+			font: 14px sans-serif;
+			text-align: center;
+			pointer-events: none;
+		}
+
+		#file-input {
+			display: none;
+		}
+	</style>
+</head>
+<body>
+	<canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+	<div id="status">Loading Fasttracker II clone...</div>
+	<input id="file-input" type="file" accept=".xm,.mod,.s3m,.stm,.it,.xi,.wav,.aif,.aiff,.ogg,.mp3,.flac,.raw">
+	<script>
+		var statusElement = document.getElementById("status");
+		var fileInput = document.getElementById("file-input");
+		var Module = {
+			canvas: document.getElementById("canvas"),
+			openFilePicker: function () {
+				fileInput.click();
+			},
+			setStatus: function (status) {
+				statusElement.textContent = status;
+				statusElement.hidden = status.length === 0;
+			},
+			notify: function (status) {
+				if (this.statusTimeout !== null)
+					clearTimeout(this.statusTimeout);
+				this.setStatus(status);
+				this.statusTimeout = setTimeout(() => this.setStatus(""), 6000);
+			},
+			statusTimeout: null,
+			webLibraryRequestId: 0,
+			webModuleLoading: false,
+			onRuntimeInitialized: function () {
+				this.notify("Drop a file or press Ctrl+O to open it. Ctrl+D opens Disk Op.");
+				if (navigator.platform.toLowerCase().includes("mac"))
+					this.notify("Drop a file or press Cmd+O to open it. Cmd+D opens Disk Op.");
+				this.canvas.focus();
+			},
+			loadWebLibrary: async function () {
+				const requestId = ++this.webLibraryRequestId;
+				try {
+					const response = await fetch(new URL("mods/index.json", document.baseURI), { cache: "no-cache" });
+					if (!response.ok)
+						throw new Error("Module index request failed: " + response.status);
+
+					const index = await response.json();
+					if (!index || !Array.isArray(index.files))
+						throw new Error("Module index has an invalid format");
+
+					for (const entry of index.files) {
+						if (!entry || typeof entry.name !== "string" ||
+							entry.name.length === 0 || /[\/\\]/.test(entry.name) ||
+							!/\.(xm|ft|nst|stk|mod|s3m|stm|fst|digi|bem|it)$/i.test(entry.name) ||
+							!Number.isSafeInteger(entry.size) || entry.size < 0)
+						{
+							throw new Error("Module index contains an invalid entry");
+						}
+					}
+
+					if (requestId !== this.webLibraryRequestId)
+						return;
+
+					for (const entry of index.files) {
+						if (!this.ccall("webDiskOpAddLibraryEntry", "number", ["string", "number"], [entry.name, entry.size]))
+							throw new Error("Could not add module to Disk Op. list: " + entry.name);
+					}
+
+					this.ccall("webDiskOpFinishLibrary", null, [], []);
+					if (index.files.length === 0)
+						this.notify("The web module library is empty.");
+				} catch (error) {
+					if (requestId !== this.webLibraryRequestId)
+						return;
+					console.error("Could not load the web module library:", error);
+					this.ccall("webDiskOpFinishLibrary", null, [], []);
+					this.notify("Could not load the web module library.");
+				}
+			},
+			loadWebModule: async function (name) {
+				if (this.webModuleLoading)
+					return;
+
+				this.webModuleLoading = true;
+				let path;
+				try {
+					this.notify("Loading " + name + "...");
+					const response = await fetch(new URL("mods/" + encodeURIComponent(name), document.baseURI));
+					if (!response.ok)
+						throw new Error("Module request failed: " + response.status);
+
+					const contents = new Uint8Array(await response.arrayBuffer());
+					this.FS.mkdirTree("/web-library");
+					path = "/web-library/" + name;
+					this.FS.writeFile(path, contents);
+					const moduleLoaded = this.ccall("webLoadDroppedFile", "number", ["string"], [path]);
+					if (moduleLoaded)
+						updateDocumentTitle(name);
+					else
+						this.notify("Could not load " + name);
+				} catch (error) {
+					console.error("Could not open a module from the web library:", error);
+					this.notify("Could not open " + name);
+				} finally {
+					try {
+						if (path && this.FS.analyzePath(path).exists)
+							this.FS.unlink(path);
+					} finally {
+						this.webModuleLoading = false;
+					}
+				}
+			},
+			printErr: function (text) {
+				console.error(text);
+			}
+		};
+
+		function updateDocumentTitle(fileName) {
+			const titlePrefix = document.title.split(" - ")[0];
+			document.title = titlePrefix + " - \"" + fileName + "\"";
+		}
+
+		async function loadBrowserFile(file) {
+			if (!file) return;
+			try {
+				const path = "/" + file.name;
+				const contents = new Uint8Array(await file.arrayBuffer());
+				Module.FS.writeFile(path, contents);
+				const moduleLoaded = Module.ccall("webLoadDroppedFile", "number", ["string"], [path]);
+				if (moduleLoaded)
+					updateDocumentTitle(file.name);
+			} catch (error) {
+				console.error("Could not open the selected file:", error);
+				Module.notify("Could not open " + file.name);
+			}
+		}
+
+		fileInput.addEventListener("change", function () {
+			loadBrowserFile(fileInput.files[0]);
+			fileInput.value = "";
+		});
+
+		document.addEventListener("keydown", function (event) {
+			if (event.repeat || !(event.ctrlKey || event.metaKey))
+				return;
+
+			if (event.key.toLowerCase() === "o") {
+				event.preventDefault();
+				Module.openFilePicker();
+			}
+			else if (event.key.toLowerCase() === "d") {
+				event.preventDefault();
+				Module.openFilePicker();
+			}
+		});
+
+		document.addEventListener("dragover", function (event) {
+			if (event.dataTransfer.types.includes("Files"))
+				event.preventDefault();
+		});
+
+		document.addEventListener("drop", function (event) {
+			const files = event.dataTransfer.files;
+			if (files.length > 0) {
+				event.preventDefault();
+				event.stopPropagation();
+				loadBrowserFile(files[0]);
+			}
+		});
+	</script>
+	{{{ SCRIPT }}}
+</body>
+</html>

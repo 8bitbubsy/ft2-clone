@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include "ft2_sysreqs.h"
+#endif
 #ifdef _WIN32
 #define _WIN32_IE 0x0500
 #define WIN32_MEAN_AND_LEAN
@@ -73,7 +77,13 @@ static void loadConfigFromBuffer(bool defaults)
 	memcpy(&config, configBuffer, CONFIG_FILE_SIZE);
 
 	if (defaults)
+	{
 		config.audioFreq = DEFAULT_AUDIO_FREQ;
+#ifdef __EMSCRIPTEN__
+		config.cfg_StdPalNum = PAL_WHY_COLORS;
+		config.interpolation = INTERPOLATION_LINEAR;
+#endif
+	}
 
 	if (config.audioFreq > MAX_AUDIO_FREQ)
 		config.audioFreq = MAX_AUDIO_FREQ;
@@ -243,8 +253,13 @@ static void updateImageStretchAndPixelFilter(uint8_t oldWindowFlags, uint8_t old
 
 void resetConfig(void)
 {
+#ifdef __EMSCRIPTEN__
+	if (!EM_ASM_INT({ return window.confirm(UTF8ToString($0)) ? 1 : 0; }, "Are you sure you want to reset your FT2 configuration?"))
+		return;
+#else
 	if (okBox(2, "System request", "Are you sure you want to reset your FT2 configuration?", NULL) != 1)
 		return;
+#endif
 
 	const uint8_t oldWindowFlags = config.windowFlags;
 	const uint8_t oldSpecialFlags2 = config.specialFlags2;
@@ -253,7 +268,11 @@ void resetConfig(void)
 	setToDefaultAudioOutputDevice();
 	setToDefaultAudioInputDevice();
 
+#ifdef __EMSCRIPTEN__
+	const bool configSaved = saveConfig(false);
+#else
 	saveConfig(false);
+#endif
 
 	// redraw new changes
 	showTopScreen(DONT_RESTORE_SCREENS);
@@ -266,6 +285,13 @@ void resetConfig(void)
 		SDL_ShowCursor(SDL_TRUE);
 	else
 		SDL_ShowCursor(SDL_FALSE);
+
+#ifdef __EMSCRIPTEN__
+	if (configSaved)
+		webLoaderMsgBox("%s", "Configuration reset. It is saved for this browser session only.");
+	else
+		webLoaderMsgBox("%s", "Configuration reset, but could not be saved.");
+#endif
 }
 
 bool loadConfig(bool showErrorFlag)
@@ -363,7 +389,12 @@ void loadConfig2(void) // called by "Load config" button
 	const uint8_t oldWindowFlags = config.windowFlags;
 	const uint8_t oldSpecialFlags2 = config.specialFlags2;
 
+#ifdef __EMSCRIPTEN__
+	const bool configLoaded = loadConfig(false);
+	webLoaderMsgBox("%s", configLoaded ? "Configuration loaded." : "Could not load the configuration.");
+#else
 	loadConfig(CONFIG_SHOW_ERRORS);
+#endif
 
 	// redraw new changes
 	showTopScreen(DONT_RESTORE_SCREENS);
@@ -434,7 +465,14 @@ bool saveConfig(bool showErrorFlag)
 
 void saveConfig2(void) // called by "Save config" button
 {
+#ifdef __EMSCRIPTEN__
+	if (saveConfig(false))
+		webLoaderMsgBox("%s", "Configuration saved for this browser session only.");
+	else
+		webLoaderMsgBox("%s", "Could not save the configuration.");
+#else
 	saveConfig(CONFIG_SHOW_ERRORS);
+#endif
 }
 
 static UNICHAR *getFullAudDevConfigPathU(void) // kinda hackish

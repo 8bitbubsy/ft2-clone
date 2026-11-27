@@ -12,6 +12,7 @@
 #include "ft2_unicode.h"
 #include "ft2_audio.h"
 #include "ft2_sample_ed.h"
+#include "ft2_sysreqs.h"
 #include "ft2_mouse.h"
 #include "ft2_diskop.h"
 #include "ft2_structs.h"
@@ -241,8 +242,13 @@ bool loadSample(UNICHAR *filenameU, uint8_t smpNr, bool instrFlag)
 		return false;
 
 	// setup message box functions
+#ifdef __EMSCRIPTEN__
+	loaderMsgBox = webLoaderMsgBox;
+	loaderSysReq = webLoaderSysReq;
+#else
 	loaderMsgBox = myLoaderMsgBoxThreadSafe;
 	loaderSysReq = okBoxThreadSafe;
+#endif
 
 	if (editor.curInstr == 0)
 	{

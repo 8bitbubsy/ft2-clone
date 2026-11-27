@@ -285,7 +285,7 @@ char *cp850ToUtf8(char *src)
 		return NULL;
 	}
 
-	outBuf[outLen] = '\0';
+	*outPtr = '\0';
 
 	return outBuf;
 }
@@ -335,7 +335,7 @@ char *utf8ToCp850(char *src, bool removeIllegalChars)
 		return NULL;
 	}
 
-	outBuf[outLen] = '\0';
+	*outPtr = '\0';
 
 	if (removeIllegalChars)
 	{

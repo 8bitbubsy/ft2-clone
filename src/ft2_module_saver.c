@@ -4,6 +4,29 @@
 #endif
 
 #include <stdio.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+EM_JS(void, webDownloadFile, (const char *path), {
+	try {
+		const filePath = UTF8ToString(path);
+		const fileData = FS.readFile(filePath);
+		const blob = new Blob([fileData], { type: "application/octet-stream" });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = filePath.substring(filePath.lastIndexOf("/") + 1);
+		link.click();
+		setTimeout(() => URL.revokeObjectURL(url), 1000);
+		Module.setStatus("Downloaded " + link.download);
+		setTimeout(() => Module.setStatus(""), 3000);
+	} catch (error) {
+		console.error("Could not download the saved module:", error);
+		Module.setStatus("Could not download the saved module");
+		setTimeout(() => Module.setStatus(""), 5000);
+	}
+});
+#endif
 #include <stdbool.h>
 #include "ft2_header.h"
 #include "ft2_audio.h"
@@ -653,12 +676,19 @@ static int32_t saveMusicThread(void *ptr)
 
 	pauseAudio();
 
+	bool saved;
 	if (editor.moduleSaveMode == 1)
-		saveXM(editor.tmpFilenameU);
+		saved = saveXM(editor.tmpFilenameU);
 	else
-		saveMOD(editor.tmpFilenameU);
+		saved = saveMOD(editor.tmpFilenameU);
 
 	resumeAudio();
+#ifdef __EMSCRIPTEN__
+	if (saved)
+		webDownloadFile(editor.tmpFilenameU);
+#else
+	(void)saved;
+#endif
 	return true;
 
 	(void)ptr;

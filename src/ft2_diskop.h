@@ -46,6 +46,9 @@ void diskOp_StartDirReadThread(void);
 void diskOp_DrawFilelist(void);
 void diskOp_DrawDirectory(void);
 void showDiskOpScreen(void);
+#ifdef __EMSCRIPTEN__
+void handleWebDiskOpRequest(void);
+#endif
 void hideDiskOpScreen(void);
 void exitDiskOpScreen(void);
 void toggleDiskOpScreen(void);

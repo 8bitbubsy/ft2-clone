@@ -3,6 +3,17 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 #include <stdbool.h>
+#ifdef __EMSCRIPTEN__
+static inline SDL_Thread *ft2RunThreadInline(SDL_ThreadFunction fn, const char *name, void *data)
+{
+	(void)name;
+	fn(data);
+	return (SDL_Thread *)(uintptr_t)1;
+}
+
+#define SDL_CreateThread(fn, name, data) ft2RunThreadInline((fn), (name), (data))
+#define SDL_DetachThread(thread) ((void)(thread))
+#endif
 #ifdef _DEBUG
 #include <assert.h>
 #endif

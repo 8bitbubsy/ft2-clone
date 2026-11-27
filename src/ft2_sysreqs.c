@@ -1,7 +1,11 @@
 #include <stdio.h> // vsnprintf()
+#include <stdarg.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include "ft2_config.h"
 #include "ft2_gui.h"
 #include "ft2_mouse.h"
@@ -104,6 +108,35 @@ void myLoaderMsgBox(const char *fmt, ...)
 
 	okBox(0, "System message", fmt, NULL);
 }
+
+#ifdef __EMSCRIPTEN__
+void webLoaderMsgBox(const char *fmt, ...)
+{
+	char strBuf[512];
+	va_list args;
+
+	va_start(args, fmt);
+	vsnprintf(strBuf, sizeof (strBuf), fmt, args);
+	va_end(args);
+
+	EM_ASM({
+		Module.notify(UTF8ToString($0));
+	}, strBuf);
+}
+
+int16_t webLoaderSysReq(int16_t type, const char *headline, const char *text, void (*checkBoxCallback)(void))
+{
+	(void)headline;
+	(void)checkBoxCallback;
+
+	if (type == 4)
+		webLoaderMsgBox("%s Web version uses the left channel.", text);
+	else
+		webLoaderMsgBox("%s Web version continues with the default option.", text);
+
+	return 1;
+}
+#endif
 
 static void drawWindow(uint16_t w)
 {

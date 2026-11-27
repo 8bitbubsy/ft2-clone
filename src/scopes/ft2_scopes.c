@@ -545,6 +545,9 @@ static int32_t scopeThreadFunc(void *ptr)
 
 bool initScopes(void)
 {
+#ifdef __EMSCRIPTEN__
+	return true;
+#else
 	scopeThread = SDL_CreateThread(scopeThreadFunc, "scope thread", NULL);
 	if (scopeThread == NULL)
 	{
@@ -554,4 +557,14 @@ bool initScopes(void)
 
 	SDL_DetachThread(scopeThread);
 	return true;
+#endif
 }
+
+#ifdef __EMSCRIPTEN__
+void updateScopesFromMainLoop(void)
+{
+	editor.scopeThreadBusy = true;
+	updateScopes();
+	editor.scopeThreadBusy = false;
+}
+#endif

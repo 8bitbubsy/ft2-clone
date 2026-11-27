@@ -4,6 +4,9 @@
 #endif
 
 #include <stdio.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 #ifndef _WIN32
@@ -173,8 +176,14 @@ static int8_t detectModule(FILE *f)
 static bool doLoadMusic(bool externalThreadFlag)
 {
 	// setup message box functions
+#ifdef __EMSCRIPTEN__
+	(void)externalThreadFlag;
+	loaderMsgBox = webLoaderMsgBox;
+	loaderSysReq = webLoaderSysReq;
+#else
 	loaderMsgBox = externalThreadFlag ? myLoaderMsgBoxThreadSafe : myLoaderMsgBox;
 	loaderSysReq = externalThreadFlag ? okBoxThreadSafe : okBox;
+#endif
 
 	if (editor.tmpFilenameU == NULL)
 	{
@@ -726,6 +735,15 @@ void loadDroppedFile(char *fullPathUTF8)
 
 	free(fullPathU);
 }
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE int32_t webLoadDroppedFile(const char *fullPathUTF8)
+{
+	editor.autoPlayOnDrop = false;
+	loadDroppedFile((char *)fullPathUTF8);
+	return moduleLoaded ? 1 : 0;
+}
+#endif
 
 static void handleOldPlayMode(void)
 {

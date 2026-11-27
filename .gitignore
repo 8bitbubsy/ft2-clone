@@ -1,4 +1,7 @@
 .DS_Store
+/build-web/
+/web/dist/
+/mods/
 release/macos/ft2-clone-macos.app/Contents/MacOS/ft2-clone-macos
 vs2026_project/.vs/*
 vs2026_project/enc_temp_folder/*

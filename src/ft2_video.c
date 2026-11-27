@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #ifdef _WIN32
 #define WIN32_MEAN_AND_LEAN
 #include <windows.h>
@@ -865,12 +868,15 @@ void updateWindowTitle(bool forceUpdate)
 	else
 	{
 		if (song.isModified)
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled\" (unsaved)", PROG_VER_STR);
+			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled.xm\" (unsaved)", PROG_VER_STR);
 		else
-			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled\"", PROG_VER_STR);
+			sprintf(wndTitle, "Fasttracker II clone v%s - \"untitled.xm\"", PROG_VER_STR);
 	}
 
 	SDL_SetWindowTitle(video.window, wndTitle);
+#ifdef __EMSCRIPTEN__
+	EM_ASM({ document.title = UTF8ToString($0); }, wndTitle);
+#endif
 	songIsModified = song.isModified;
 }
 
